@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AuroraX Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient"></div>
+  <main class="shell">
+    <header>
+      <button class="brand" data-view="home" aria-label="Início"><span class="orb">X</span><strong>AURORA<span>X</span></strong></button>
+      <div class="status"><span id="network">● ONLINE</span><span>HDD 68%</span><span id="clock">21:37</span><div class="avatar">AX</div></div>
+    </header>
+
+    <section id="home" class="view active">
+      <div class="hero-copy"><p class="eyebrow">BEM-VINDO DE VOLTA</p><h1>Sua coleção.<br><em>Do seu jeito.</em></h1><p>Jogos, homebrew, emuladores e sistema em uma experiência rápida e elegante.</p></div>
+      <div class="temperature"><span>CPU <b>52°</b></span><span>GPU <b>55°</b></span><span>MEM <b>61%</b></span></div>
+      <nav class="tiles" aria-label="Menu principal">
+        <button class="tile featured" data-view="games"><span class="icon">▰</span><span><b>JOGOS</b><small>24 títulos instalados</small></span><i>→</i></button>
+        <button class="tile purple" data-view="apps"><span class="icon">⌘</span><span><b>APLICATIVOS</b><small>Homebrew & utilitários</small></span></button>
+        <button class="tile blue" data-view="emulators"><span class="icon">◈</span><span><b>EMULADORES</b><small>8 sistemas disponíveis</small></span></button>
+        <button class="tile orange" data-view="files"><span class="icon">▱</span><span><b>ARQUIVOS</b><small>HDD, USB e rede</small></span></button>
+        <button class="tile slate" data-view="system"><span class="icon">⚙</span><span><b>SISTEMA</b><small>Status & configurações</small></span></button>
+      </nav>
+      <div class="now-playing"><div class="mini-cover"></div><span><small>JOGADO RECENTEMENTE</small><b>FORZA HORIZON</b></span><button data-toast="Iniciando Forza Horizon…">▶ CONTINUAR</button></div>
+    </section>
+
+    <section id="games" class="view library">
+      <div class="section-title"><button class="back" data-view="home">←</button><div><p class="eyebrow">BIBLIOTECA</p><h2>Meus jogos</h2></div><label class="search">⌕ <input id="search" placeholder="Buscar jogo…"></label></div>
+      <div class="filters"><button class="selected" data-filter="all">TODOS <b>24</b></button><button data-filter="favorite">FAVORITOS <b>6</b></button><button data-filter="recent">RECENTES</button><select id="sort" aria-label="Ordenação"><option value="name">A–Z</option><option value="played">Mais jogados</option></select></div>
+      <div class="game-grid" id="gameGrid"></div>
+    </section>
+
+    <section id="generic" class="view generic">
+      <button class="back" data-view="home">← INÍCIO</button><div class="generic-card"><div id="genericIcon" class="huge-icon">⚙</div><p class="eyebrow" id="genericKicker">AURORAX</p><h2 id="genericTitle">Sistema</h2><p id="genericText">Gerencie sua dashboard.</p><div class="quick-grid" id="quickGrid"></div></div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" aria-hidden="true"><div class="modal-box"><button class="modal-close">×</button><div class="modal-cover" id="modalCover"></div><div><p class="eyebrow">DETALHES DO JOGO</p><h2 id="modalTitle"></h2><p id="modalMeta"></p><div class="actions"><button class="play" data-toast="Preparando execução do default.xex…">▶ JOGAR</button><button id="favorite">♡ FAVORITO</button></div><small>Title ID · TU mais recente · DLC detectado · 16 conquistas</small></div></div></div>
+  <div id="toast" role="status"></div>
+  <footer><span><kbd>A</kbd> SELECIONAR</span><span><kbd>B</kbd> VOLTAR</span><span><kbd>X</kbd> FAVORITO</span><span><kbd>Y</kbd> ATUALIZAR</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
