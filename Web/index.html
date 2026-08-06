@@ -29,7 +29,7 @@
 
     <section id="games" class="view library">
       <div class="section-title"><button class="back" data-view="home">←</button><div><p class="eyebrow">BIBLIOTECA</p><h2>Meus jogos</h2></div><label class="search">⌕ <input id="search" placeholder="Buscar jogo…"></label></div>
-      <div class="filters"><button class="selected" data-filter="all">TODOS <b>24</b></button><button data-filter="favorite">FAVORITOS <b>6</b></button><button data-filter="recent">RECENTES</button><select id="sort" aria-label="Ordenação"><option value="name">A–Z</option><option value="played">Mais jogados</option></select></div>
+      <div class="filters"><button class="selected" data-filter="all">TODOS <b id="allCount">0</b></button><button data-filter="favorite">FAVORITOS <b id="favoriteCount">0</b></button><button data-filter="recent">RECENTES</button><button data-filter="installed">INSTALADOS</button><select id="sort" aria-label="Ordenação"><option value="name">A–Z</option><option value="played">Mais jogados</option><option value="size">Maior tamanho</option></select></div>
       <div class="game-grid" id="gameGrid"></div>
     </section>
 
@@ -39,8 +39,10 @@
   </main>
 
   <div id="modal" class="modal" aria-hidden="true"><div class="modal-box"><button class="modal-close">×</button><div class="modal-cover" id="modalCover"></div><div><p class="eyebrow">DETALHES DO JOGO</p><h2 id="modalTitle"></h2><p id="modalMeta"></p><div class="actions"><button class="play" data-toast="Preparando execução do default.xex…">▶ JOGAR</button><button id="favorite">♡ FAVORITO</button></div><small>Title ID · TU mais recente · DLC detectado · 16 conquistas</small></div></div></div>
+  <aside id="guide" class="guide" aria-hidden="true"><div class="guide-head"><span class="orb">X</span><div><b>MENU AURORAX</b><small id="guideTime">Sessão ativa</small></div><button id="closeGuide">×</button></div><button data-view="home">⌂ Início</button><button data-view="games">▰ Biblioteca</button><button data-guide="downloads">⇩ Downloads <i>2</i></button><button data-guide="network">◎ Rede & FTP</button><button data-guide="settings">⚙ Preferências</button><button data-guide="power">⏻ Energia</button><div class="guide-storage"><span>HDD1: 320 GB</span><progress value="68" max="100"></progress><small>102 GB disponíveis</small></div></aside>
+  <div id="settingsPanel" class="modal" aria-hidden="true"><div class="settings-box"><button class="settings-close">×</button><p class="eyebrow">PREFERÊNCIAS</p><h2>Personalizar AuroraX</h2><label>Cor principal <input id="accent" type="color" value="#78e819"></label><label><span>Reduzir animações</span><input id="reduceMotion" type="checkbox"></label><label><span>Som da interface</span><input id="sound" type="checkbox" checked></label><label>Nome do perfil <input id="profileName" maxlength="12" value="AX"></label><button id="saveSettings" class="play">SALVAR</button></div></div>
   <div id="toast" role="status"></div>
-  <footer><span><kbd>A</kbd> SELECIONAR</span><span><kbd>B</kbd> VOLTAR</span><span><kbd>X</kbd> FAVORITO</span><span><kbd>Y</kbd> ATUALIZAR</span></footer>
+  <footer><span><kbd>A</kbd> SELECIONAR</span><span><kbd>B</kbd> VOLTAR</span><span><kbd>X</kbd> FAVORITO</span><span><kbd>Y</kbd> ATUALIZAR</span><span><kbd>☰</kbd> GUIDE</span></footer>
   <script src="app.js"></script>
 </body>
 </html>

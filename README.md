@@ -16,7 +16,11 @@ Crie jogos de teste como `Games/Nome do jogo/default.xex`. Comandos: `left`, `ri
 
 ## Interface gráfica
 
-Uma demonstração visual completa e responsiva está disponível em `Web/index.html`. Abra o arquivo em um navegador moderno ou execute `python3 -m http.server 8080 -d Web` e acesse `http://localhost:8080`. A demonstração inclui tela inicial, biblioteca pesquisável, filtros, ordenação, favoritos, detalhes dos jogos, aplicativos, emuladores, arquivos, sistema e simulação das ações do controle.
+Uma demonstração visual completa e responsiva está disponível em `Web/index.html`. Abra o arquivo em um navegador moderno ou execute `python3 -m http.server 8080 -d Web` e acesse `http://localhost:8080`.
+
+A demonstração inclui tela inicial, biblioteca pesquisável, filtros reais (todos, favoritos, recentes e instalados), ordenação, favoritos persistentes, detalhes, tamanhos, aplicativos, emuladores, arquivos, sistema, menu Guide, status de downloads/FTP e preferências persistentes de tema, perfil, som e movimento. Use `G` ou `Tab` para abrir o Guide, `B`/`Esc` para voltar, `X` para favoritar o item focado e `Y` para atualizar.
+
+As telas web são uma especificação visual interativa. Para executar no hardware, os providers indicados no roadmap precisam ser conectados às APIs autorizadas do ambiente Xbox 360; valores de temperatura, rede, downloads e armazenamento na demonstração são simulados.
 
 ## Roadmap do console
 
