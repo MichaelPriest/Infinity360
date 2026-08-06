@@ -14,4 +14,6 @@ assert 'data-filter="recent"' in html
 assert 'data-filter="installed"' in html
 for platform in ("xbox360", "arcade", "kinect", "homebrew", "apps"):
     assert f'data-platform="{platform}"' in html
+for module_feature in ("renderModule", "moduleContent", "wireModuleActions", "fileItems", "fanRange"):
+    assert module_feature in script or module_feature in html
 print("AuroraX web smoke test passed")
