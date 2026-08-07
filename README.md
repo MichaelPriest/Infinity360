@@ -28,6 +28,8 @@ As telas web são uma especificação visual interativa. Para executar no hardwa
 
 ## Roadmap do console
 
+Uma primeira configuração nativa para gerar `default.xex` com um XDK autorizado está documentada em `Platform/Xbox360/README.md`. O bootstrap valida Direct3D, apresentação a 60 Hz e controle antes da integração de todas as telas.
+
 - Adaptador XInput/XDK e renderizador Direct3D 9 para tiles, capas e animações.
 - Provider SMC para temperaturas, ventoinha, CPU/GPU/RAM e armazenamento.
 - Launcher de XEX com confirmação, retorno à dashboard e histórico.

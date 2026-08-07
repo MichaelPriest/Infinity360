@@ -20,3 +20,6 @@ find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
     add_test(NAME web_smoke COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/WebSmokeTest.py)
 endif()
+
+# Xbox 360 uses the XDK project in Platform/Xbox360. The native bootstrap is
+# intentionally excluded from desktop builds because it depends on XTL/D3D9.
