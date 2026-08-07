@@ -1,0 +1,7 @@
+/build/
+*.xex
+*.iso
+/dist/
+*.suo
+*.user
+*.xdb

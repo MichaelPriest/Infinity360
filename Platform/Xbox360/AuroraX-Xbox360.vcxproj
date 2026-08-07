@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Xbox 360"><Configuration>Debug</Configuration><Platform>Xbox 360</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Xbox 360"><Configuration>Release</Configuration><Platform>Xbox 360</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{A7D845D0-7F09-4DC0-AE2C-8E366F099360}</ProjectGuid><RootNamespace>AuroraX</RootNamespace><Keyword>Xbox360Proj</Keyword></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries>true</UseDebugLibraries><CharacterSet>MultiByte</CharacterSet></PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><WholeProgramOptimization>true</WholeProgramOptimization><CharacterSet>MultiByte</CharacterSet></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><OutDir>$(ProjectDir)..\..\dist\Xbox360\</OutDir><TargetName>default</TargetName><TargetExt>.xex</TargetExt></PropertyGroup>
+  <ItemDefinitionGroup><ClCompile><PreprocessorDefinitions>_XBOX;XBOX360;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(ProjectDir)..\..\Source;$(ProjectDir)..\..\Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><WarningLevel>Level3</WarningLevel></ClCompile><Link><AdditionalDependencies>xboxkrnl.lib;d3d9.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="XboxMain.cpp" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
