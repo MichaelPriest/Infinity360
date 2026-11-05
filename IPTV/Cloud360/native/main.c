@@ -51,6 +51,8 @@ static void reload(void) {
     int code=cloud_load_m3u(&catalog,"game:\\playlist.m3u");
     playlist_status=code;
     refresh_view();
+    xsdk_log_write("%s: catalog read game:\\playlist.m3u rc=%d items=%u",
+        (code==0 && catalog.count>0) ? "PASS" : "WARN", code, (unsigned)catalog.count);
     snprintf(message,sizeof message,"Playlist: %u entradas (codigo %d)",(unsigned)catalog.count,code);
     xsdk_log_write("cloud360 reload: code=%d count=%u",code,(unsigned)catalog.count);
 }
@@ -59,7 +61,7 @@ static void text(int x,int y,uint32_t color,const char *str) {
 }
 static void render(void) {
     xsdk_text_draw(55,35,2,BLUE,"CLOUD360");
-    text(56,88,MUTED,"IPTV  |  Xbox 360  |  Protótipo nativo");
+    text(56,88,MUTED,"IPTV  |  Xbox 360  |  Alpha v0.5.1");
     for(int i=0;i<6;i++) {
         char label[58];
         snprintf(label,sizeof label,"%c %s",tab==i?'>':' ',tabs[i]);
@@ -110,12 +112,24 @@ int main(void) {
     (void)cloud_favorites_load(&favorites,"game:\\favorites.txt");
     reload();
     NTSTATUS status=xsdk_gpu_open();
-    if(!NT_SUCCESS(status)) return 1;
+    if(!NT_SUCCESS(status)) {
+        xsdk_log_write("FAIL: xsdk_gpu_open status=0x%08X", (unsigned)status);
+        return 1;
+    }
+    xsdk_log_write("PASS: GPU initialized");
     uint32_t width=0,height=0;
     status=xsdk_present_open(XSDK_DISPLAY_720P,2,1,&width,&height);
-    if(!NT_SUCCESS(status)) { xsdk_gpu_close(); return 2; }
+    if(!NT_SUCCESS(status)) {
+        xsdk_log_write("FAIL: xsdk_present_open status=0x%08X",(unsigned)status);
+        xsdk_gpu_close(); return 2;
+    }
+    xsdk_log_write("PASS: display opened %ux%u", (unsigned)width, (unsigned)height);
     status=xsdk_text_open();
-    if(!NT_SUCCESS(status)) { xsdk_present_close(); xsdk_gpu_close(); return 3; }
+    if(!NT_SUCCESS(status)) {
+        xsdk_log_write("FAIL: xsdk_text_open status=0x%08X",(unsigned)status);
+        xsdk_present_close(); xsdk_gpu_close(); return 3;
+    }
+    xsdk_log_write("PASS: text renderer initialized");
     logo_ready=(cloud_logo_init()==0);
     xsdk_log_write("cloud360: logo adapter %s",logo_ready?"ready":"disabled");
     xsdk_log_write("cloud360: XSDK display %ux%u", (unsigned)width,(unsigned)height);
@@ -161,7 +175,11 @@ int main(void) {
                 item->name,cloud_format_label(cloud_format(item->url)));
         }
         uint32_t addr=0;
-        if(!NT_SUCCESS(xsdk_present_begin(&addr,5000))) break;
+        status=xsdk_present_begin(&addr,5000);
+        if(!NT_SUCCESS(status)) {
+            xsdk_log_write("FAIL: present_begin status=0x%08X",(unsigned)status);
+            break;
+        }
         xsdk_gpu_set_target(width,height);
         render();
         xsdk_gpu_resolve(addr,width,height,BG);
@@ -171,6 +189,6 @@ int main(void) {
     xsdk_text_close();
     xsdk_present_close();
     xsdk_gpu_close();
-    xsdk_log_write("cloud360: clean exit");
+    xsdk_log_write("PASS: Cloud360 smoke terminated gracefully");
     return 0;
 }

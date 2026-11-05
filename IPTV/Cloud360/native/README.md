@@ -26,3 +26,25 @@ Não configure como dashboard padrão e não modifique NAND nem launch.ini.
 ## Pendências
 O botão A apresenta apenas informações do item. Player A/V real, rede HTTP/TLS,
 Xtream, EPG e logos online no Xbox 360 ainda precisam ser implementados e testados.
+
+
+## Diagnóstico de execução pelo Aurora
+
+A variante smoke usa CLOUD360_WITH_FFMPEG=OFF e CLOUD360_WITH_LOGOS=OFF.
+Se a compilação automatizada passar, baixe o ZIP em GitHub Actions,
+extraia em Hdd1:/Homebrew/Cloud360-Test e execute default.xex pelo Aurora.
+
+A aplicação escreve default.log ao lado do executável. Verifique:
+- PASS: GPU initialized indica inicialização da GPU.
+- PASS: display opened 1280x720 indica inicialização da imagem 720p.
+- PASS: text renderer initialized indica que o modo de texto abriu.
+- PASS: catalog read ... indica que uma playlist local foi lida.
+- PASS: Cloud360 smoke terminated gracefully indica saída pelo Back.
+- FAIL: ... identifica a etapa onde a inicialização falhou.
+
+O arquivo playlist.m3u incluído no pacote é somente demonstrativo
+e não contém assinatura privada. Nesta versão, pressionar A mostra
+informações e não reproduz vídeo. O FFmpeg fica para uma build posterior.
+
+O workflow experimental roda no push da branch CI e disponibiliza ZIP
+somente quando a toolchain gerou um XEX2 real. Não reutiliza o XEX Orbita.

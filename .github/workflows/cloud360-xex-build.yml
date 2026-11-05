@@ -1,40 +1,86 @@
-name: Cloud360 Xbox 360 — manual XEX smoke build
+name: Cloud360 X360 XEX smoke (experimental)
+
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/cloud360-xex-ci
+    paths:
+      - .github/workflows/cloud360-xex-build.yml
+      - IPTV/Cloud360/native/**
+      - IPTV/Cloud360/tools/build_xex.sh
+      - IPTV/Cloud360/tools/package_xex.py
+
+permissions:
+  contents: read
+
 jobs:
-  build-xex:
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    permissions:
-      contents: read
+  smoke-xex:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Install open-source XSDK build prerequisites
+      - name: Install build dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y build-essential bison flex texinfo \
             libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 \
             cmake ninja-build git
-      - name: Fetch reviewed XSDK source revision
+
+      - name: Retrieve pinned XSDK version
         run: |
           git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
           git -C "$HOME/xsdk" checkout 74dfcca8d21c5fe83b59079ef0e032e62994c1a2
-      - name: Build free PowerPC/XSDK toolchain and SDK
+
+      - name: Restore cross-compiler cache
+        id: crosscache
+        uses: actions/cache@v4
+        with:
+          path: ~/xsdk-gcc
+          key: xsdk-gcc-powerpc-74dfcca8-ubuntu-2404-v1
+
+      - name: Build free XSDK PowerPC compiler
+        if: steps.crosscache.outputs.cache-hit != 'true'
         run: |
           cd "$HOME/xsdk"
-          PREFIX="$HOME/xsdk-gcc" WORK="$HOME/xsdk-gcc-work" JOBS=3 \
-            tools/toolchain/build.sh
-          make -j3
-      - name: Compile a real Cloud360 XEX (catalog UI, without decoder)
+          PREFIX="$HOME/xsdk-gcc" WORK="$RUNNER_TEMP/xsdk-gcc-work" \
+            JOBS=4 tools/toolchain/build.sh
+
+      - name: Build only required XSDK library
+        run: |
+          cd "$HOME/xsdk"
+          make -j4 build/libxsdk.a
+          test -s build/libxsdk.a
+
+      - name: Compile Cloud360 interface as real XEX
         run: |
           cd IPTV/Cloud360
-          CLOUD360_WITH_FFMPEG=OFF CLOUD360_WITH_LOGOS=OFF \
+          XSDK_ROOT="$HOME/xsdk" XSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+            CLOUD360_WITH_FFMPEG=OFF CLOUD360_WITH_LOGOS=OFF \
             bash tools/build_xex.sh
-          test -s Cloud360-Xbox360-smoke-v0.5.zip
-      - name: Publish generated XEX test package
+          test -s native/build/cloud360.xex
+
+      - name: Verify compiled XEX and ZIP integrity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          root = Path('IPTV/Cloud360')
+          binary = root/'native/build/cloud360.xex'
+          archive = root/'Cloud360-Xbox360-smoke-v0.5.zip'
+          assert binary.stat().st_size >= 4096, "Suspiciously small XEX"
+          assert binary.read_bytes()[:4] == b'XEX2', "Missing XEX2 header"
+          with ZipFile(archive) as z:
+              assert z.testzip() is None, "ZIP checksum failure"
+              assert {'default.xex', 'playlist.m3u', 'LEIA-ME-TESTE.txt'} <= set(z.namelist())
+              assert z.read('default.xex') == binary.read_bytes()
+          print('PASS: native XEX2 and smoke package are well formed')
+          PY
+
+      - name: Upload console smoke ZIP
         uses: actions/upload-artifact@v4
         with:
           name: Cloud360-Xbox360-smoke-v0.5
           path: IPTV/Cloud360/Cloud360-Xbox360-smoke-v0.5.zip
-          if-no-files-found: error
           retention-days: 7
+          if-no-files-found: error
