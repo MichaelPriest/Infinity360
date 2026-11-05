@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cloud360 IPTV — Prévia</title>
+<style>
+:root{color-scheme:dark;--blue:#4db8ff;--ink:#ecf6ff;--muted:#8ca9c9;--line:#29425b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% 5%,#164574,#071323 53%,#060d1b);font:16px/1.4 "Segoe UI",Arial,sans-serif;color:var(--ink)}
+.shell{max-width:1420px;margin:auto;padding:32px 42px}
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:30px;border-bottom:1px solid var(--line)}
+.logo{font-size:32px;font-weight:800;letter-spacing:-1px}.logo span{color:var(--blue)}
+.small{font-size:12px;color:var(--muted)}.online{color:#55ddac}h1{font-size:38px;margin:8px 0 15px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px;margin-top:28px;border:1px solid #316391;border-radius:20px;background:linear-gradient(110deg,#164879,#0e223e);min-height:166px}
+.hero p{max-width:570px;color:#c5d8ed}.hero .art{font-size:90px;opacity:.55}
+.layout{display:grid;grid-template-columns:230px 1fr;gap:22px;margin-top:26px}
+nav{display:grid;align-content:start;gap:7px}button{font:inherit;cursor:pointer;color:inherit}
+nav button{border:1px solid transparent;padding:14px 17px;background:transparent;border-radius:11px;text-align:left}
+nav button.active,nav button:focus-visible{background:#183e62;border-color:#4db8ff;outline:none}
+nav button:hover{background:#1e3049}
+.panel{min-width:0;padding:25px;background:#0c1a2dbe;border:1px solid var(--line);border-radius:17px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
+input[type=search],select{background:#091725;border:1px solid #375775;color:white;padding:12px;border-radius:10px;font:inherit;min-width:180px}
+input[type=search]{flex:1}.upload{display:inline-block;background:#2168a5;padding:12px 18px;border-radius:10px;cursor:pointer}
+.upload input{display:none}.upload:hover{background:#2a7abc}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.channel{background:#14263d;border:1px solid #2e4863;border-radius:13px;padding:16px;min-height:147px;display:flex;flex-direction:column;justify-content:space-between;gap:8px}
+.channel:focus-within{border-color:var(--blue)}.channel strong{font-size:15px;overflow-wrap:anywhere}
+.channel .tag{color:#9db8d4;font-size:11px}.actions{display:flex;gap:9px}
+.actions button{padding:7px 10px;font-size:12px;background:#21425f;border:0;border-radius:7px}
+.actions button:hover{background:#2974a8}
+.empty{padding:50px 16px;text-align:center;color:var(--muted);border:1px dashed #42617c;border-radius:12px}
+footer{font-size:12px;color:var(--muted);margin-top:28px}
+@media(max-width:720px){.shell{padding:18px}.layout{grid-template-columns:1fr}.hero .art{display:none}nav{grid-template-columns:repeat(3,1fr)}nav button{padding:10px;font-size:12px}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header><div class="logo">Cloud<span>360</span> <small class="small">IPTV</small></div>
+<div class="small"><span class="online">● PRÉVIA PC</span> · Projeto Xbox 360</div></header>
+<section class="hero"><div><div class="small">CENTRAL DE ENTRETENIMENTO</div>
+<h1>TV, filmes e séries no seu Xbox 360</h1>
+<p>Uma experiência azul-escura preparada para o controle do console. Importe uma lista M3U autorizada e explore o catálogo sem reproduzir streams.</p></div><div class="art">▣</div></section>
+<div class="layout">
+<nav aria-label="Seções">
+<button class="active" data-tab="all">⌂ Início</button>
+<button data-tab="live">▤ TV ao vivo</button>
+<button data-tab="movies">▣ Filmes</button>
+<button data-tab="series">▥ Séries</button>
+<button data-tab="favorites">☆ Favoritos</button>
+<button data-tab="settings">⚙ Configurações</button>
+</nav>
+<main class="panel">
+<div class="small" id="subtitle">BIBLIOTECA LOCAL</div><h1 id="heading">Explorar catálogo</h1>
+<div class="toolbar">
+<label class="upload">＋ Importar M3U<input type="file" id="file" accept=".m3u,.m3u8,text/plain"></label>
+<input id="query" type="search" placeholder="Buscar canal, filme ou série…" aria-label="Buscar">
+<select id="group" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+</div>
+<p class="small" id="count">0 itens carregados</p>
+<div class="list" id="list"></div>
+</main>
+</div>
+<footer>Prévia HTML — não é o aplicativo nativo e não reproduz vídeos. A conversão Xtream é feita localmente no PC; não armazene senhas no GitHub.</footer>
+</div>
+<script>
+"use strict";
+const dom={list:document.getElementById("list"),group:document.getElementById("group"),count:document.getElementById("count"),heading:document.getElementById("heading"),subtitle:document.getElementById("subtitle"),query:document.getElementById("query")};
+let items=[],tab="all",favorites=new Set();
+const title={all:"Explorar catálogo",live:"TV ao vivo",movies:"Filmes",series:"Séries",favorites:"Meus favoritos",settings:"Configurações"};
+const category=(c)=>{const group=c.group.toLowerCase();if(/s[eé]rie|temporada/.test(group))return "series";if(/filme|movie|vod/.test(group)||/\.mp4(\?|$)/i.test(c.url))return "movies";return "live";};
+const format=(u)=>{const path=u.split("?")[0].toLowerCase();if(path.endsWith(".m3u8"))return "HLS";if(path.endsWith(".ts"))return "MPEG-TS";if(path.endsWith(".mp4"))return "MP4";if(path.endsWith(".mpd"))return "DASH";return "HTTP/outro";};
+function parse(text){
+ const result=[];let metadata=null;
+ for(const lineRaw of text.split(/\r?\n/)){
+   const line=lineRaw.trim();
+   if(line.startsWith("#EXTINF:")){
+     const matches=[...line.matchAll(/([a-zA-Z0-9-]+)="([^"]*)"/g)];
+     const attrs=Object.fromEntries(matches.map(m=>[m[1],m[2]]));
+     let quote=false,comma=-1;
+     for(let i=0;i<line.length;i++){if(line[i]==='"')quote=!quote;else if(line[i]===","&&!quote)comma=i;}
+     metadata={name:comma>=0?line.slice(comma+1).trim():"Sem nome",group:attrs["group-title"]||"Outros"};
+   }else if(line.startsWith("#EXTGRP:")&&metadata){metadata.group=line.slice(8).trim();}
+   else if(line&&!line.startsWith("#")&&metadata){
+     result.push({name:metadata.name,group:metadata.group,url:line,id:metadata.name+"|"+line});
+     metadata=null;
+     if(result.length>=1500)break;
+   }
+ }
+ return result;
+}
+function refreshGroups(){
+ const selected=dom.group.value;dom.group.replaceChildren(new Option("Todas as categorias",""));
+ [...new Set(items.map(x=>x.group))].sort().forEach(g=>dom.group.add(new Option(g,g)));
+ if([...dom.group.options].some(o=>o.value===selected))dom.group.value=selected;
+}
+function render(){
+ dom.heading.textContent=title[tab];dom.subtitle.textContent=tab==="settings"?"FONTES":"BIBLIOTECA LOCAL";
+ const search=dom.query.value.trim().toLowerCase(),group=dom.group.value;
+ const filtered=items.filter(x=>(tab==="all"||tab==="settings"||tab==="favorites"&&favorites.has(x.id)||category(x)===tab)&&(!group||x.group===group)&&(!search||(x.name+" "+x.group).toLowerCase().includes(search)));
+ dom.count.textContent=filtered.length+" itens exibidos · "+items.length+" carregados";
+ dom.list.replaceChildren();
+ if(!filtered.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=items.length?"Nenhum item encontrado nesta seção.":"Importe uma playlist M3U autorizada para visualizar seus canais.";dom.list.append(empty);return;}
+ filtered.slice(0,200).forEach(x=>{
+   const card=document.createElement("article");card.className="channel";
+   const small=document.createElement("div");small.className="tag";small.textContent=x.group;
+   const name=document.createElement("strong");name.textContent=x.name;
+   const actions=document.createElement("div");actions.className="actions";
+   const fav=document.createElement("button");fav.textContent=favorites.has(x.id)?"★ Favorito":"☆ Favoritar";
+   fav.addEventListener("click",()=>{if(favorites.has(x.id))favorites.delete(x.id);else favorites.add(x.id);render();});
+   const detail=document.createElement("button");detail.textContent="Detalhes";
+   detail.addEventListener("click",()=>alert(x.name+"\nGrupo: "+x.group+"\nFormato sugerido: "+format(x.url)+"\nReprodução nativa ainda não implementada."));
+   actions.append(fav,detail);card.append(small,name,actions);dom.list.append(card);
+ });
+ if(filtered.length>200){const info=document.createElement("div");info.className="small";info.textContent="Mostrando 200 itens para manter a prévia rápida.";dom.list.append(info);}
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
+ tab=b.dataset.tab;document.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("active",a===b));render();
+}));
+dom.group.addEventListener("change",render);dom.query.addEventListener("input",render);
+document.getElementById("file").addEventListener("change",async e=>{
+ const f=e.target.files[0];if(!f)return;
+ if(f.size>6*1024*1024){alert("Máximo de 6 MB nesta prévia. Prepare uma lista menor no computador.");return;}
+ items=parse(await f.text());favorites.clear();refreshGroups();render();
+});
+render();
+</script>
+</body></html>

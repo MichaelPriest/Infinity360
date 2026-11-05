@@ -1,0 +1,13 @@
+# Never publish provider credentials or private playlist URLs.
+playlist.m3u
+*.m3u
+*.m3u8
+*.xex
+*.log
+favorites.txt
+.env
+.env.*
+build/
+native/build/
+__pycache__/
+*.pyc
