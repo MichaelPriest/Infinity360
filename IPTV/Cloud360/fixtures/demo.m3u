@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="demo.nature" group-title="Documentarios",Natureza Demo
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+#EXTINF:-1 group-title="Educacao",Aula Experimental
+https://example.org/videos/aula.m3u8
+#EXTINF:-1 group-title="Radio",Radio Teste
+https://example.org/radio/stream.mp3

@@ -1,0 +1,22 @@
+name: Cloud360 IPTV catalog tests
+on:
+  push:
+    paths:
+      - 'IPTV/Cloud360/**'
+      - '.github/workflows/cloud360-catalog.yml'
+  pull_request:
+    paths:
+      - 'IPTV/Cloud360/**'
+      - '.github/workflows/cloud360-catalog.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build portable catalog
+        run: |
+          cmake -S IPTV/Cloud360 -B /tmp/cloud360-build
+          cmake --build /tmp/cloud360-build --parallel
+          ctest --test-dir /tmp/cloud360-build --output-on-failure
+      - name: Python Xtream tests
+        run: python3 -m unittest discover -s IPTV/Cloud360/tests -p "test_*.py" -v

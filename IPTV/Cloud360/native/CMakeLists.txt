@@ -1,0 +1,8 @@
+# Cross-compile only after installing the XSDK toolchain.
+cmake_minimum_required(VERSION 3.25)
+project(cloud360 C)
+add_executable(cloud360 main.c ../core/cloud360.c)
+set_target_properties(cloud360 PROPERTIES C_STANDARD 17 C_EXTENSIONS ON)
+target_include_directories(cloud360 PRIVATE ../core)
+target_compile_options(cloud360 PRIVATE -Wall -Wextra -Werror)
+xsdk_add_xex(cloud360)
