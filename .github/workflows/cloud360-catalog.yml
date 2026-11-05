@@ -1,4 +1,4 @@
-name: Cloud360 IPTV catalog and preview tests
+name: Cloud360 IPTV portable + real FFmpeg software decode tests
 on:
   push:
     paths:
@@ -13,15 +13,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build portable native catalog
+      - name: Portable M3U/TS tests
         run: |
           cmake -S IPTV/Cloud360 -B /tmp/cloud360-build
           cmake --build /tmp/cloud360-build --parallel
           ctest --test-dir /tmp/cloud360-build --output-on-failure
-      - name: Python Xtream and logo preparation tests
+      - name: Python tests
         run: python3 -m unittest discover -s IPTV/Cloud360/tests -p "test_*.py" -v
-      - name: JavaScript catalog, EPG and preview syntax tests
+      - name: UI/catalog syntax
         run: |
           node --check IPTV/Cloud360/preview/app.mjs
           node --check IPTV/Cloud360/preview/catalog.mjs
           node --test IPTV/Cloud360/preview/tests/catalog.test.mjs
+      - name: Install FFmpeg native development libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libavcodec-dev libavutil-dev pkg-config
+      - name: Create original video/audio test streams
+        run: |
+          set -eu
+          cd IPTV/Cloud360
+          mkdir -p fixtures/generated
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=5" -frames:v 6 -c:v libx264 -pix_fmt yuv420p -preset ultrafast -threads 1 -f h264 fixtures/generated/test.h264
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=5" -frames:v 6 -c:v mpeg2video -f mpeg2video fixtures/generated/test.mpeg2
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a aac -f adts fixtures/generated/test.aac
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a libmp3lame -f mp3 fixtures/generated/test.mp3
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a ac3 -f ac3 fixtures/generated/test.ac3
+      - name: Build and run actual libavcodec decoder tests on host
+        run: |
+          cmake -S IPTV/Cloud360 -B /tmp/cloud360-decode -DCLOUD360_WITH_HOST_FFMPEG=ON
+          cmake --build /tmp/cloud360-decode --parallel
+          ctest --test-dir /tmp/cloud360-decode --output-on-failure

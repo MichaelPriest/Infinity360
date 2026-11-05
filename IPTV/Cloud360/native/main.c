@@ -1,6 +1,7 @@
 /*
  * Cloud360 IPTV: native Xbox 360 XSDK shell.
- * Catalog browsing only. No network client or video decoder yet.
+ * Local catalog UI with an optional real FFmpeg software decoder smoke test.
+ * The A/V presentation pipeline and remote IPTV playback are not implemented.
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -11,6 +12,9 @@
 #include "xsdk/log.h"
 #include "cloud360.h"
 #include "logo.h"
+#ifdef CLOUD360_WITH_FFMPEG
+#include "offline_decode.h"
+#endif
 #define BG 0xFF071426u
 #define BLUE 0xFF49A8FFu
 #define WHITE 0xFFF8FBFFu
@@ -64,13 +68,17 @@ static void render(void) {
     xsdk_text_draw(363,110,2,WHITE,tabs[tab]);
     char line[160];
     if(tab==5) {
-        text(365,153,WHITE,"BUILD: Cloud360 X360 Smoke v0.5");
-        text(365,157+68,MUTED,"Playlist no diretorio do .xex");
-        text(365,157+102,MUTED,"Nao implementa player de video.");
-        text(365,188,WHITE,"Fonte: game:/playlist.m3u");
-        text(365,226,MUTED,"Xtream: exportacao pelo computador");
-        text(365,264,MUTED,"O player e a rede estao em desenvolvimento.");
-        text(365,302,MUTED,"Y: recarregar catalogo");
+        text(365,165,WHITE,"Cloud360 Xbox 360 - prova de conceito");
+        text(365,211,MUTED,"Fonte: game:\\playlist.m3u");
+        text(365,252,MUTED,"Y: recarregar o catalogo");
+#ifdef CLOUD360_WITH_FFMPEG
+        text(365,294,LIME,"Decoder FFmpeg: ativo (software)");
+        text(365,330,WHITE,"A: testar game:\\sample.h264");
+#else
+        text(365,294,MUTED,"Decoder FFmpeg: nao incluido nesta build");
+        text(365,330,MUTED,"Compilar com CLOUD360_WITH_FFMPEG=ON");
+#endif
+        text(365,378,MUTED,"Streaming em rede ainda pendente.");
     } else {
         snprintf(line,sizeof line,"Entradas visiveis: %u",(unsigned)visible_count);
         text(365,169,MUTED,line);
@@ -93,7 +101,7 @@ static void render(void) {
             text(365,598,MUTED,line);
         }
     }
-    text(56,657,LIME,"D-PAD navegar   X favorito   Y atualizar   A detalhes   BACK sair");
+    text(56,657,LIME,"D-PAD navegar  X favorito  Y atualizar  A detalhes/teste  BACK sair");
     text(56,683,MUTED,message);
     cloud_logo_draw();
 }
@@ -132,6 +140,20 @@ int main(void) {
             snprintf(message,sizeof message,"Favorito %s (salvar: %d)",
                 added>0?"adicionado":"removido",saved);
             refresh_view();
+        }
+        if((pressed & INPUT_GAMEPAD_A) && tab==5) {
+#ifdef CLOUD360_WITH_FFMPEG
+            CloudDecodeReport report;
+            xsdk_log_write("cloud360: start local H264 decode diagnostic");
+            int decode_status=cloud_offline_decode_file("game:\\sample.h264",CLOUD_CODEC_H264,&report);
+            snprintf(message,sizeof message,
+                "H264: rc=%d frames=%u %ux%u bytes=%llu",
+                decode_status,report.frames,report.video_width,report.video_height,
+                (unsigned long long)report.bytes_read);
+            xsdk_log_write("cloud360: %s",message);
+#else
+            snprintf(message,sizeof message,"Ative CLOUD360_WITH_FFMPEG para testar H264");
+#endif
         }
         if((pressed & INPUT_GAMEPAD_A) && visible_count && tab!=5) {
             const CloudItem *item=&catalog.items[visible[current]];
