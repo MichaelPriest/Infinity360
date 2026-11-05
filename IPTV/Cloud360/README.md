@@ -1,4 +1,4 @@
-# Cloud360 IPTV — Xbox 360 (alpha 0.4)
+# Cloud360 IPTV — Xbox 360 (alpha 0.5.1)
 
 Módulo IPTV separado, salvo no repositório AuroraX. A dashboard, launcher e builds já existentes não foram substituídos.
 
@@ -67,3 +67,23 @@ nativo funcional.
 Não faça commits de listas com senhas, URLs de assinatura, chaves, logos convertidos ou
 dados privados. As exclusões estão em .gitignore. Use somente provedores que autorizam
 aplicativos externos e disponibilizam legalmente seus streams.
+
+
+## Desenvolvimento atual: decoder FFmpeg v0.5.1
+
+O software FFmpeg foi integrado como decoder opcional à compilação XSDK.
+Os arquivos core/ffmpeg_decoder.c e core/offline_decode.c fazem decodificação
+real de elementary streams. Na opção CLOUD360_WITH_FFMPEG=ON, a aba
+CONFIG, botão A, decodifica game:\sample.h264 e relata os quadros produzidos.
+
+**Os testes de decode no computador passaram para H.264, MPEG-2,
+AAC, MP3 e AC-3. Ainda não houve compilação/execução desse decoder no Xbox 360.**
+A conversão de quadros para GPU, envio de PCM ao áudio e ingestão
+HTTP/HLS/MPEG-TS ainda não estão implementados.
+
+Instruções: docs/DECODER-NATIVE.md. Para gerar um smoke XEX sem FFmpeg
+na toolchain XSDK: bash tools/build_xex.sh.
+
+O workflow manual Cloud360 Xbox 360 — manual XEX smoke build pode gerar
+o primeiro pacote de diagnóstico no GitHub Actions, após execução manual;
+não pressupõe sucesso até ser finalizado. Esse workflow não inclui codecs.
