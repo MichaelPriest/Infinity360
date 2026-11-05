@@ -25,6 +25,26 @@ static void on_decoded_frame(void *opaque, CloudCodec codec, const AVFrame *fram
         report->audio_sample_frames += (unsigned)frame->nb_samples;
 }
 
+/* Skip ID3v2 metadata that a container demuxer would normally strip.
+ * The elementary MP3 parser expects MPEG audio frames, not an ID3 tag.
+ */
+static int skip_id3v2(FILE *file)
+{
+    unsigned char h[10];
+    size_t n = fread(h, 1, sizeof h, file);
+    if (n < sizeof h || memcmp(h, "ID3", 3) != 0) {
+        return fseek(file, 0, SEEK_SET) == 0 ? 0 : -1;
+    }
+    /* Each tag size byte is a 7-bit "synchsafe" integer. */
+    for (unsigned i = 6; i < 10; i++)
+        if (h[i] & 0x80) return -1;
+    unsigned long tag_size =
+        ((unsigned long)h[6] << 21) | ((unsigned long)h[7] << 14) |
+        ((unsigned long)h[8] << 7) | (unsigned long)h[9];
+    unsigned long offset = 10u + tag_size + ((h[5] & 0x10) ? 10u : 0u);
+    if (offset > 1024u * 1024u) return -1;
+    return fseek(file, (long)offset, SEEK_SET) == 0 ? 0 : -1;
+}
 int cloud_offline_decode_file(const char *path, CloudCodec codec, CloudDecodeReport *report)
 {
     if (!path || !report)
@@ -33,6 +53,10 @@ int cloud_offline_decode_file(const char *path, CloudCodec codec, CloudDecodeRep
     FILE *file = fopen(path, "rb");
     if (!file)
         return -2;
+    if (codec == CLOUD_CODEC_MP3 && skip_id3v2(file) != 0) {
+        fclose(file);
+        return -9;
+    }
     DecodeObserver observer = { report, codec };
     CloudVideoDecoder *decoder = cloud_decoder_open(codec, on_decoded_frame, &observer);
     if (!decoder) {
