@@ -10,6 +10,7 @@
 #include "xsdk/text.h"
 #include "xsdk/log.h"
 #include "cloud360.h"
+#include "logo.h"
 #define BG 0xFF071426u
 #define BLUE 0xFF49A8FFu
 #define WHITE 0xFFF8FBFFu
@@ -20,6 +21,10 @@ static CloudCatalog catalog;
 static CloudFavorites favorites;
 static size_t visible[CLOUD_MAX], visible_count, current;
 static int tab;
+static int logo_ready=0;
+static void sync_logo(void) {
+    if(logo_ready && visible_count) (void)cloud_logo_select(visible[current]);
+}
 static const char *tabs[]={"INICIO","TV AO VIVO","FILMES","SERIES","FAVORITOS","CONFIG"};
 static char message[180]="Leitor de catalogo - ainda sem player";
 
@@ -35,6 +40,7 @@ static CloudTab section(void) {
 static void refresh_view(void) {
     visible_count=cloud_filter(&catalog, section(), &favorites, NULL, NULL, visible, CLOUD_MAX);
     if(current >= visible_count) current=0;
+    sync_logo();
 }
 static void reload(void) {
     int code=cloud_load_m3u(&catalog,"game:/playlist.m3u");
@@ -84,6 +90,7 @@ static void render(void) {
     }
     text(56,657,LIME,"D-PAD navegar   X favorito   Y atualizar   A detalhes   BACK sair");
     text(56,683,MUTED,message);
+    cloud_logo_draw();
 }
 int main(void) {
     cloud_init(&catalog,channels,CLOUD_MAX);
@@ -96,6 +103,8 @@ int main(void) {
     if(!NT_SUCCESS(status)) { xsdk_gpu_close(); return 2; }
     status=xsdk_text_open();
     if(!NT_SUCCESS(status)) { xsdk_present_close(); xsdk_gpu_close(); return 3; }
+    logo_ready=(cloud_logo_init()==0);
+    sync_logo();
     uint16_t previous=0;
     for(;;) {
         INPUT_STATE input={0};
@@ -108,6 +117,7 @@ int main(void) {
         if(pressed & INPUT_GAMEPAD_DPAD_RIGHT) { tab=(tab+1)%6; current=0;refresh_view(); }
         if((pressed & INPUT_GAMEPAD_DPAD_UP) && current>0) current--;
         if((pressed & INPUT_GAMEPAD_DPAD_DOWN) && current+1<visible_count) current++;
+        if(pressed & (INPUT_GAMEPAD_DPAD_UP | INPUT_GAMEPAD_DPAD_DOWN)) sync_logo();
         if(pressed & INPUT_GAMEPAD_Y) reload();
         if((pressed & INPUT_GAMEPAD_X) && visible_count && tab!=5) {
             int added=cloud_favorite_toggle(&favorites,&catalog.items[visible[current]]);
@@ -128,6 +138,7 @@ int main(void) {
         xsdk_gpu_resolve(addr,width,height,BG);
         xsdk_present_end();
     }
+    if(logo_ready) cloud_logo_close();
     xsdk_text_close();
     xsdk_present_close();
     xsdk_gpu_close();

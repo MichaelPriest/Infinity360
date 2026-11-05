@@ -98,6 +98,7 @@ const char *cloud_format_label(CloudFormat f) {
 }
 CloudTab cloud_item_type(const CloudItem *item) {
   if(!item) return CLOUD_ALL;
+  if(contains(item->group,"CANAIS") || contains(item->group,"TV AO VIVO")) return CLOUD_LIVE;
   if(contains(item->group,"serie") || contains(item->group,"série") ||
      contains(item->group,"temporada")) return CLOUD_SERIES;
   if(contains(item->group,"filme") || contains(item->group,"movie") ||

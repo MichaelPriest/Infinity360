@@ -1,127 +1,86 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cloud360 IPTV — Prévia</title>
-<style>
-:root{color-scheme:dark;--blue:#4db8ff;--ink:#ecf6ff;--muted:#8ca9c9;--line:#29425b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% 5%,#164574,#071323 53%,#060d1b);font:16px/1.4 "Segoe UI",Arial,sans-serif;color:var(--ink)}
-.shell{max-width:1420px;margin:auto;padding:32px 42px}
-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:30px;border-bottom:1px solid var(--line)}
-.logo{font-size:32px;font-weight:800;letter-spacing:-1px}.logo span{color:var(--blue)}
-.small{font-size:12px;color:var(--muted)}.online{color:#55ddac}h1{font-size:38px;margin:8px 0 15px}
-.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px;margin-top:28px;border:1px solid #316391;border-radius:20px;background:linear-gradient(110deg,#164879,#0e223e);min-height:166px}
-.hero p{max-width:570px;color:#c5d8ed}.hero .art{font-size:90px;opacity:.55}
-.layout{display:grid;grid-template-columns:230px 1fr;gap:22px;margin-top:26px}
-nav{display:grid;align-content:start;gap:7px}button{font:inherit;cursor:pointer;color:inherit}
-nav button{border:1px solid transparent;padding:14px 17px;background:transparent;border-radius:11px;text-align:left}
-nav button.active,nav button:focus-visible{background:#183e62;border-color:#4db8ff;outline:none}
-nav button:hover{background:#1e3049}
-.panel{min-width:0;padding:25px;background:#0c1a2dbe;border:1px solid var(--line);border-radius:17px}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
-input[type=search],select{background:#091725;border:1px solid #375775;color:white;padding:12px;border-radius:10px;font:inherit;min-width:180px}
-input[type=search]{flex:1}.upload{display:inline-block;background:#2168a5;padding:12px 18px;border-radius:10px;cursor:pointer}
-.upload input{display:none}.upload:hover{background:#2a7abc}
-.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.channel{background:#14263d;border:1px solid #2e4863;border-radius:13px;padding:16px;min-height:147px;display:flex;flex-direction:column;justify-content:space-between;gap:8px}
-.channel:focus-within{border-color:var(--blue)}.channel strong{font-size:15px;overflow-wrap:anywhere}
-.channel .tag{color:#9db8d4;font-size:11px}.actions{display:flex;gap:9px}
-.actions button{padding:7px 10px;font-size:12px;background:#21425f;border:0;border-radius:7px}
-.actions button:hover{background:#2974a8}
-.empty{padding:50px 16px;text-align:center;color:var(--muted);border:1px dashed #42617c;border-radius:12px}
-footer{font-size:12px;color:var(--muted);margin-top:28px}
-@media(max-width:720px){.shell{padding:18px}.layout{grid-template-columns:1fr}.hero .art{display:none}nav{grid-template-columns:repeat(3,1fr)}nav button{padding:10px;font-size:12px}h1{font-size:28px}}
-</style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08152a">
+<title>Cloud360 IPTV — TV, filmes e séries</title>
+<link rel="stylesheet" href="./style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dashjs@4.7.4/dist/dash.all.min.js"></script>
+<script type="module" src="./app.mjs"></script>
 </head>
 <body>
-<div class="shell">
-<header><div class="logo">Cloud<span>360</span> <small class="small">IPTV</small></div>
-<div class="small"><span class="online">● PRÉVIA PC</span> · Projeto Xbox 360</div></header>
-<section class="hero"><div><div class="small">CENTRAL DE ENTRETENIMENTO</div>
-<h1>TV, filmes e séries no seu Xbox 360</h1>
-<p>Uma experiência azul-escura preparada para o controle do console. Importe uma lista M3U autorizada e explore o catálogo sem reproduzir streams.</p></div><div class="art">▣</div></section>
-<div class="layout">
-<nav aria-label="Seções">
-<button class="active" data-tab="all">⌂ Início</button>
-<button data-tab="live">▤ TV ao vivo</button>
-<button data-tab="movies">▣ Filmes</button>
-<button data-tab="series">▥ Séries</button>
-<button data-tab="favorites">☆ Favoritos</button>
-<button data-tab="settings">⚙ Configurações</button>
-</nav>
-<main class="panel">
-<div class="small" id="subtitle">BIBLIOTECA LOCAL</div><h1 id="heading">Explorar catálogo</h1>
-<div class="toolbar">
-<label class="upload">＋ Importar M3U<input type="file" id="file" accept=".m3u,.m3u8,text/plain"></label>
-<input id="query" type="search" placeholder="Buscar canal, filme ou série…" aria-label="Buscar">
-<select id="group" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+<div class="app">
+  <header class="header">
+    <a class="brand" href="#home" id="brand"><span class="symbol">◈</span><span>CLOUD<b>360</b></span><small>IPTV</small></a>
+    <div class="header-info"><span id="sourceStatus" class="status">● Sem catálogo</span><span id="clock"></span><span class="device-tag">XBOX 360 · INTERFACE WEB</span></div>
+  </header>
+  <div class="workspace">
+    <nav class="side" aria-label="Navegação principal">
+      <button class="nav-btn selected" data-tab="home" type="button"><span>⌂</span> Início</button>
+      <button class="nav-btn" data-tab="live" type="button"><span>▤</span> TV ao vivo</button>
+      <button class="nav-btn" data-tab="movies" type="button"><span>▣</span> Filmes</button>
+      <button class="nav-btn" data-tab="series" type="button"><span>▧</span> Séries</button>
+      <button class="nav-btn" data-tab="favorites" type="button"><span>☆</span> Favoritos</button>
+      <button class="nav-btn" data-tab="recent" type="button"><span>◷</span> Recentes</button>
+      <button class="nav-btn" data-tab="guide" type="button"><span>☷</span> Guia EPG</button>
+      <div class="nav-divider"></div>
+      <button class="nav-btn" data-tab="settings" type="button"><span>⚙</span> Fontes e ajustes</button>
+      <div class="side-bottom"><span class="small">PLAYER IPTV</span><span class="side-sub">M3U · Xtream · XMLTV</span><span class="side-sub">Controle / teclado</span></div>
+    </nav>
+    <main class="content">
+      <div class="hero" id="hero">
+        <div class="hero-copy"><span class="eyebrow">SUA CENTRAL DE STREAMING</span>
+          <h1>TV, filmes e séries.<br><em>Do seu jeito.</em></h1>
+          <p>Carregue sua lista autorizada e aproveite um catálogo com logos, programação e reprodução no navegador.</p>
+          <button id="heroImport" class="primary" type="button">＋ Adicionar lista IPTV</button>
+        </div><div class="hero-mark" aria-hidden="true">▶</div>
+      </div>
+      <div class="heading"><div><span id="sectionKicker" class="eyebrow">BIBLIOTECA</span><h2 id="sectionTitle">Explorar conteúdo</h2></div><div id="sectionCount" class="count">0 itens</div></div>
+      <div id="settingsPanel" class="settings" hidden>
+        <section class="setting-card"><h3>Importar playlist M3U</h3><p>Abra uma lista local ou informe uma URL de uma playlist que permita acesso externo.</p>
+          <label class="filebtn" for="playlistFile">▣ Escolher arquivo M3U</label><input hidden type="file" id="playlistFile" accept=".m3u,.m3u8,.txt">
+          <form id="urlForm"><label for="playlistUrl">URL da lista</label><div class="form-row"><input type="url" id="playlistUrl" placeholder="https://provedor.example/playlist.m3u"><button type="submit">Carregar URL</button></div></form>
+          <p class="fine">URLs carregadas pelo navegador dependem de CORS. Não cole links de assinaturas em repositórios públicos.</p>
+        </section>
+        <section class="setting-card"><h3>Xtream Codes compatível</h3><p>Conexão autorizada: servidor, usuário e senha. Os dados ficam apenas na memória desta página, até fechar/recarregar.</p>
+          <form id="xtreamForm">
+            <label for="xtreamServer">Servidor HTTPS</label><input id="xtreamServer" type="url" placeholder="https://provedor.example:443" required>
+            <div class="form-two"><div><label for="xtreamUsername">Usuário</label><input id="xtreamUsername" autocomplete="off" required></div><div><label for="xtreamPassword">Senha</label><input id="xtreamPassword" type="password" autocomplete="off" required></div></div>
+            <label class="checkbox-row"><input type="checkbox" id="includeVod" checked> Importar filmes e séries</label>
+            <button type="submit">Conectar conta Xtream</button>
+          </form>
+          <p class="fine">O provedor deve permitir acesso pelo navegador (CORS), streams externos e uso licenciado. Caso contrário, utilize o exportador Xtream do projeto no PC.</p>
+        </section>
+        <section class="setting-card"><h3>Guia de programação — XMLTV</h3><p>Associamos programas ao campo <code>tvg-id</code> presente na lista.</p>
+          <label class="filebtn" for="epgFile">▤ Importar XMLTV</label><input hidden type="file" id="epgFile" accept=".xml,.xmltv,.txt">
+          <div class="form-row"><button id="clearHistory" class="ghost" type="button">Limpar recentes</button><button id="clearList" class="ghost" type="button">Remover catálogo</button></div>
+        </section>
+      </div>
+      <div id="catalogControls" class="toolbar">
+        <label class="search">⌕ <input id="search" type="search" placeholder="Buscar canal, filme ou série…" autocomplete="off"></label>
+        <select id="groupFilter" aria-label="Filtrar categoria"><option value="">Todas as categorias</option></select>
+        <select id="sortFilter" aria-label="Ordenar"><option value="original">Ordem original</option><option value="name">Nome A–Z</option></select>
+        <button id="refreshView" class="ghost" type="button" title="Atualizar">↻</button>
+      </div>
+      <div id="catalog" class="catalog" aria-live="polite"></div>
+      <div id="paging" class="paging" hidden><button id="moreBtn" type="button">Carregar mais itens</button></div>
+    </main>
+    <aside class="viewer" id="viewer" aria-label="Reprodutor">
+      <div class="viewer-head"><span class="eyebrow">AGORA ASSISTINDO</span><button class="close-player" id="closePlayer" title="Fechar reprodução" type="button">✕</button></div>
+      <div class="video-box"><video id="video" controls playsinline preload="none"></video><div id="videoBlank" class="video-blank"><span>▶</span><strong>Selecione um canal</strong><small>O player abrirá aqui.</small></div></div>
+      <div class="watch-meta"><div class="watch-title"><img id="watchLogo" alt="" hidden><div><strong id="watchName">Nenhuma mídia selecionada</strong><small id="watchGroup">Importe uma lista M3U ou Xtream</small></div></div>
+      <div id="playbackStatus" role="status" class="playback-status">Aguardando conteúdo</div>
+      <div class="watch-actions">
+        <button id="prevChannel" title="Anterior" type="button">⏮</button><button id="nextChannel" title="Próximo" type="button">⏭</button>
+        <button id="watchFavorite" title="Favorito" type="button">☆</button><button id="fullScreen" title="Tela cheia" type="button">⛶</button>
+      </div><div class="epg-card"><span class="eyebrow">PROGRAMAÇÃO</span><p id="epgNow">Agora: programação indisponível</p><p id="epgNext">A seguir: —</p><div class="progress"><span id="epgProgress"></span></div></div>
+      <p class="fine">O navegador reproduz formatos compatíveis. HLS/DASH dependem de suporte da biblioteca e CORS; streams DRM e codecs incompatíveis não são desbloqueados.</p>
+      </div>
+    </aside>
+  </div>
+  <footer class="footer"><span>Cloud360 IPTV · prévia executável no navegador</span><span>Direcional: navegar · Enter/A: abrir · Esc/B: fechar · Y: favorito · RB/LB: canais</span></footer>
 </div>
-<p class="small" id="count">0 itens carregados</p>
-<div class="list" id="list"></div>
-</main>
-</div>
-<footer>Prévia HTML — não é o aplicativo nativo e não reproduz vídeos. A conversão Xtream é feita localmente no PC; não armazene senhas no GitHub.</footer>
-</div>
-<script>
-"use strict";
-const dom={list:document.getElementById("list"),group:document.getElementById("group"),count:document.getElementById("count"),heading:document.getElementById("heading"),subtitle:document.getElementById("subtitle"),query:document.getElementById("query")};
-let items=[],tab="all",favorites=new Set();
-const title={all:"Explorar catálogo",live:"TV ao vivo",movies:"Filmes",series:"Séries",favorites:"Meus favoritos",settings:"Configurações"};
-const category=(c)=>{const group=c.group.toLowerCase();if(/s[eé]rie|temporada/.test(group))return "series";if(/filme|movie|vod/.test(group)||/\.mp4(\?|$)/i.test(c.url))return "movies";return "live";};
-const format=(u)=>{const path=u.split("?")[0].toLowerCase();if(path.endsWith(".m3u8"))return "HLS";if(path.endsWith(".ts"))return "MPEG-TS";if(path.endsWith(".mp4"))return "MP4";if(path.endsWith(".mpd"))return "DASH";return "HTTP/outro";};
-function parse(text){
- const result=[];let metadata=null;
- for(const lineRaw of text.split(/\r?\n/)){
-   const line=lineRaw.trim();
-   if(line.startsWith("#EXTINF:")){
-     const matches=[...line.matchAll(/([a-zA-Z0-9-]+)="([^"]*)"/g)];
-     const attrs=Object.fromEntries(matches.map(m=>[m[1],m[2]]));
-     let quote=false,comma=-1;
-     for(let i=0;i<line.length;i++){if(line[i]==='"')quote=!quote;else if(line[i]===","&&!quote)comma=i;}
-     metadata={name:comma>=0?line.slice(comma+1).trim():"Sem nome",group:attrs["group-title"]||"Outros"};
-   }else if(line.startsWith("#EXTGRP:")&&metadata){metadata.group=line.slice(8).trim();}
-   else if(line&&!line.startsWith("#")&&metadata){
-     result.push({name:metadata.name,group:metadata.group,url:line,id:metadata.name+"|"+line});
-     metadata=null;
-     if(result.length>=1500)break;
-   }
- }
- return result;
-}
-function refreshGroups(){
- const selected=dom.group.value;dom.group.replaceChildren(new Option("Todas as categorias",""));
- [...new Set(items.map(x=>x.group))].sort().forEach(g=>dom.group.add(new Option(g,g)));
- if([...dom.group.options].some(o=>o.value===selected))dom.group.value=selected;
-}
-function render(){
- dom.heading.textContent=title[tab];dom.subtitle.textContent=tab==="settings"?"FONTES":"BIBLIOTECA LOCAL";
- const search=dom.query.value.trim().toLowerCase(),group=dom.group.value;
- const filtered=items.filter(x=>(tab==="all"||tab==="settings"||tab==="favorites"&&favorites.has(x.id)||category(x)===tab)&&(!group||x.group===group)&&(!search||(x.name+" "+x.group).toLowerCase().includes(search)));
- dom.count.textContent=filtered.length+" itens exibidos · "+items.length+" carregados";
- dom.list.replaceChildren();
- if(!filtered.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=items.length?"Nenhum item encontrado nesta seção.":"Importe uma playlist M3U autorizada para visualizar seus canais.";dom.list.append(empty);return;}
- filtered.slice(0,200).forEach(x=>{
-   const card=document.createElement("article");card.className="channel";
-   const small=document.createElement("div");small.className="tag";small.textContent=x.group;
-   const name=document.createElement("strong");name.textContent=x.name;
-   const actions=document.createElement("div");actions.className="actions";
-   const fav=document.createElement("button");fav.textContent=favorites.has(x.id)?"★ Favorito":"☆ Favoritar";
-   fav.addEventListener("click",()=>{if(favorites.has(x.id))favorites.delete(x.id);else favorites.add(x.id);render();});
-   const detail=document.createElement("button");detail.textContent="Detalhes";
-   detail.addEventListener("click",()=>alert(x.name+"\nGrupo: "+x.group+"\nFormato sugerido: "+format(x.url)+"\nReprodução nativa ainda não implementada."));
-   actions.append(fav,detail);card.append(small,name,actions);dom.list.append(card);
- });
- if(filtered.length>200){const info=document.createElement("div");info.className="small";info.textContent="Mostrando 200 itens para manter a prévia rápida.";dom.list.append(info);}
-}
-document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
- tab=b.dataset.tab;document.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("active",a===b));render();
-}));
-dom.group.addEventListener("change",render);dom.query.addEventListener("input",render);
-document.getElementById("file").addEventListener("change",async e=>{
- const f=e.target.files[0];if(!f)return;
- if(f.size>6*1024*1024){alert("Máximo de 6 MB nesta prévia. Prepare uma lista menor no computador.");return;}
- items=parse(await f.text());favorites.clear();refreshGroups();render();
-});
-render();
-</script>
+<dialog id="seriesDialog"><div class="dialog-head"><h2 id="seriesTitle">Temporadas</h2><button id="seriesClose" type="button">✕</button></div><div id="seriesEpisodes"></div></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body></html>

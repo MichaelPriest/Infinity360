@@ -1,4 +1,4 @@
-name: Cloud360 IPTV catalog tests
+name: Cloud360 IPTV catalog and preview tests
 on:
   push:
     paths:
@@ -13,10 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build portable catalog
+      - name: Build portable native catalog
         run: |
           cmake -S IPTV/Cloud360 -B /tmp/cloud360-build
           cmake --build /tmp/cloud360-build --parallel
           ctest --test-dir /tmp/cloud360-build --output-on-failure
-      - name: Python Xtream tests
+      - name: Python Xtream and logo preparation tests
         run: python3 -m unittest discover -s IPTV/Cloud360/tests -p "test_*.py" -v
+      - name: JavaScript catalog, EPG and preview syntax tests
+        run: |
+          node --check IPTV/Cloud360/preview/app.mjs
+          node --check IPTV/Cloud360/preview/catalog.mjs
+          node --test IPTV/Cloud360/preview/tests/catalog.test.mjs
