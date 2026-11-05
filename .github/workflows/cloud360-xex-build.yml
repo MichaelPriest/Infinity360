@@ -44,7 +44,7 @@ jobs:
         run: |
           cd "$HOME/xsdk"
           PREFIX="$HOME/xsdk-gcc" WORK="$RUNNER_TEMP/xsdk-gcc-work" \
-            JOBS=4 tools/toolchain/build.sh
+            JOBS=4 bash tools/toolchain/build.sh
 
       - name: Build only required XSDK library
         run: |
