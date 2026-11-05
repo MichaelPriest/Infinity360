@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "logo_shaders.h"
+#include "cloud360_shaders.h"
 #include "xsdk/kernel.h"
 #include "xsdk/gpu.h"
 #include "xsdk/shader.h"
@@ -62,7 +62,7 @@ int cloud_logo_select(size_t channel_index) {
   loaded_index=channel_index;
   available=false;
   char path[80];
-  snprintf(path,sizeof path,"game:/logos/%u.rgba",(unsigned)channel_index);
+  snprintf(path,sizeof path,"game:\\logos\\%u.rgba",(unsigned)channel_index);
   FILE *f=fopen(path,"rb");
   if(!f) return -3;
   size_t n=fread(rgba,1,sizeof rgba,f);

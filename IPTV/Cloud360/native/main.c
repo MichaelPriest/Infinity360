@@ -26,7 +26,8 @@ static void sync_logo(void) {
     if(logo_ready && visible_count) (void)cloud_logo_select(visible[current]);
 }
 static const char *tabs[]={"INICIO","TV AO VIVO","FILMES","SERIES","FAVORITOS","CONFIG"};
-static char message[180]="Leitor de catalogo - ainda sem player";
+static char message[180]="Cloud360 teste: controles, M3U e favoritos. Player em desenvolvimento.";
+static int playlist_status=-3;
 
 static CloudTab section(void) {
     switch(tab) {
@@ -43,7 +44,8 @@ static void refresh_view(void) {
     sync_logo();
 }
 static void reload(void) {
-    int code=cloud_load_m3u(&catalog,"game:/playlist.m3u");
+    int code=cloud_load_m3u(&catalog,"game:\\playlist.m3u");
+    playlist_status=code;
     refresh_view();
     snprintf(message,sizeof message,"Playlist: %u entradas (codigo %d)",(unsigned)catalog.count,code);
     xsdk_log_write("cloud360 reload: code=%d count=%u",code,(unsigned)catalog.count);
@@ -62,6 +64,9 @@ static void render(void) {
     xsdk_text_draw(363,110,2,WHITE,tabs[tab]);
     char line[160];
     if(tab==5) {
+        text(365,153,WHITE,"BUILD: Cloud360 X360 Smoke v0.5");
+        text(365,157+68,MUTED,"Playlist no diretorio do .xex");
+        text(365,157+102,MUTED,"Nao implementa player de video.");
         text(365,188,WHITE,"Fonte: game:/playlist.m3u");
         text(365,226,MUTED,"Xtream: exportacao pelo computador");
         text(365,264,MUTED,"O player e a rede estao em desenvolvimento.");
@@ -70,7 +75,7 @@ static void render(void) {
         snprintf(line,sizeof line,"Entradas visiveis: %u",(unsigned)visible_count);
         text(365,169,MUTED,line);
         if(!visible_count) {
-            text(365,226,WHITE,"Nenhum item nesta categoria.");
+            text(365,226,WHITE,playlist_status==-3?"playlist.m3u nao encontrada.":"Nenhum item nesta categoria.");
             text(365,264,MUTED,"Copie uma playlist.m3u autorizada");
             text(365,301,MUTED,"para a pasta do aplicativo.");
         }
@@ -94,7 +99,7 @@ static void render(void) {
 }
 int main(void) {
     cloud_init(&catalog,channels,CLOUD_MAX);
-    (void)cloud_favorites_load(&favorites,"game:/favorites.txt");
+    (void)cloud_favorites_load(&favorites,"game:\\favorites.txt");
     reload();
     NTSTATUS status=xsdk_gpu_open();
     if(!NT_SUCCESS(status)) return 1;
@@ -104,6 +109,8 @@ int main(void) {
     status=xsdk_text_open();
     if(!NT_SUCCESS(status)) { xsdk_present_close(); xsdk_gpu_close(); return 3; }
     logo_ready=(cloud_logo_init()==0);
+    xsdk_log_write("cloud360: logo adapter %s",logo_ready?"ready":"disabled");
+    xsdk_log_write("cloud360: XSDK display %ux%u", (unsigned)width,(unsigned)height);
     sync_logo();
     uint16_t previous=0;
     for(;;) {
@@ -121,7 +128,7 @@ int main(void) {
         if(pressed & INPUT_GAMEPAD_Y) reload();
         if((pressed & INPUT_GAMEPAD_X) && visible_count && tab!=5) {
             int added=cloud_favorite_toggle(&favorites,&catalog.items[visible[current]]);
-            int saved=cloud_favorites_save(&favorites,"game:/favorites.txt");
+            int saved=cloud_favorites_save(&favorites,"game:\\favorites.txt");
             snprintf(message,sizeof message,"Favorito %s (salvar: %d)",
                 added>0?"adicionado":"removido",saved);
             refresh_view();
@@ -142,5 +149,6 @@ int main(void) {
     xsdk_text_close();
     xsdk_present_close();
     xsdk_gpu_close();
+    xsdk_log_write("cloud360: clean exit");
     return 0;
 }
