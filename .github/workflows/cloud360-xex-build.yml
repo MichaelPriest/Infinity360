@@ -9,6 +9,7 @@ on:
     paths:
       - .github/workflows/cloud360-xex-build.yml
       - IPTV/Cloud360/native/**
+      - IPTV/Cloud360/core/**
       - IPTV/Cloud360/tools/build_xex.sh
       - IPTV/Cloud360/tools/package_xex.py
 

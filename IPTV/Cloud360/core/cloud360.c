@@ -3,7 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 static void copy(char *dst, size_t n, const char *src) {
-  if(n) snprintf(dst,n,"%s",src?src:"");
+  if (!dst || !n) return;
+  if (!src) src = "";
+  size_t i = 0;
+  while (i + 1 < n && src[i]) {
+    dst[i] = src[i];
+    i++;
+  }
+  dst[i] = 0;
 }
 static void trim(char *s) {
   size_t n=strlen(s),i=0;
