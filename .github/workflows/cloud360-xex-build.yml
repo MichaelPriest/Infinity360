@@ -1,8 +1,11 @@
-name: Cloud360 Xbox 360 — manual XEX smoke build
+name: Cloud360 legacy XEX v0.5.1 — DISABLED (unsafe display)
 on:
   workflow_dispatch:
 jobs:
   build-xex:
+    # Old v0.5.1 was observed to disturb Aurora display state on real hardware.
+    # Keep this legacy job disabled; use the isolated v0.5.2 workflow instead.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:

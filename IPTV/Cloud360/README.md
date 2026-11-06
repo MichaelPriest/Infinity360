@@ -1,5 +1,9 @@
 # Cloud360 IPTV — Xbox 360 (alpha 0.5.1)
 
+> **ATENÇÃO — NÃO EXECUTE O XEX v0.5.1 NO XBOX 360.** Um teste real apresentou interface desconfigurada e alterações visuais no menu do Aurora/Xbox após sair. A causa exata ainda está sob investigação. Reinicie o console caso o menu permaneça com artefatos; não use a build antiga.
+>
+> **Nova versão de diagnóstico v0.5.2 (ainda não validada no hardware):** use somente após ler as precauções e testar primeiro o executável sem GPU: https://github.com/MichaelPriest/AuroraX/blob/feature/cloud360-xex-ci/IPTV/Cloud360/docs/GPU-RESTORE-v052.md . A build fica na branch feature/cloud360-xex-ci.
+
 Módulo IPTV separado, salvo no repositório AuroraX. A dashboard, launcher e builds já existentes não foram substituídos.
 
 ## Funcionalidades executáveis no navegador
