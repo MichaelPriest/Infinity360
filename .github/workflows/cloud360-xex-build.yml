@@ -1,10 +1,11 @@
-name: Cloud360 X360 XEX smoke (experimental)
+name: Cloud360 Xbox 360 SAFE graphics diagnostic
 
 on:
   workflow_dispatch:
   push:
     branches:
       - feature/cloud360-xex-ci
+      - feature/cloud360-gpu-safe-v052
     paths:
       - .github/workflows/cloud360-xex-build.yml
       - IPTV/Cloud360/native/**
@@ -15,72 +16,64 @@ permissions:
   contents: read
 
 jobs:
-  smoke-xex:
+  native-smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Install build dependencies
+      - name: Install XSDK build dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y build-essential bison flex texinfo \
             libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 \
             cmake ninja-build git
-
-      - name: Retrieve pinned XSDK version
+      - name: Pin reviewed XSDK version
         run: |
           git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
           git -C "$HOME/xsdk" checkout 74dfcca8d21c5fe83b59079ef0e032e62994c1a2
-
-      - name: Restore cross-compiler cache
-        id: crosscache
+      - name: Restore PowerPC cross compiler
+        id: cache
         uses: actions/cache@v4
         with:
           path: ~/xsdk-gcc
           key: xsdk-gcc-powerpc-74dfcca8-ubuntu-2404-v1
-
-      - name: Build free XSDK PowerPC compiler
-        if: steps.crosscache.outputs.cache-hit != 'true'
+      - name: Build PowerPC cross compiler when not cached
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           cd "$HOME/xsdk"
           PREFIX="$HOME/xsdk-gcc" WORK="$RUNNER_TEMP/xsdk-gcc-work" \
             JOBS=4 bash tools/toolchain/build.sh
-
-      - name: Build only required XSDK library
+      - name: Build required XSDK library
         run: |
           cd "$HOME/xsdk"
           make -j4 build/libxsdk.a
           test -s build/libxsdk.a
-
-      - name: Compile Cloud360 interface as real XEX
+      - name: Compile Cloud360 no-GPU probe and responsive UI
         run: |
           cd IPTV/Cloud360
           XSDK_ROOT="$HOME/xsdk" XSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
-            CLOUD360_WITH_FFMPEG=OFF CLOUD360_WITH_LOGOS=OFF \
             bash tools/build_xex.sh
-          test -s native/build/cloud360.xex
-
-      - name: Verify compiled XEX and ZIP integrity
+      - name: Verify two XEX2 binaries and ZIP
         run: |
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-          root = Path('IPTV/Cloud360')
-          binary = root/'native/build/cloud360.xex'
-          archive = root/'Cloud360-Xbox360-smoke-v0.5.zip'
-          assert binary.stat().st_size >= 4096, "Suspiciously small XEX"
-          assert binary.read_bytes()[:4] == b'XEX2', "Missing XEX2 header"
-          with ZipFile(archive) as z:
-              assert z.testzip() is None, "ZIP checksum failure"
-              assert {'default.xex', 'playlist.m3u', 'LEIA-ME-TESTE.txt'} <= set(z.namelist())
-              assert z.read('default.xex') == binary.read_bytes()
-          print('PASS: native XEX2 and smoke package are well formed')
+          root = Path("IPTV/Cloud360")
+          path = root / "Cloud360-Xbox360-SAFE-v0.5.2.zip"
+          assert path.is_file()
+          with ZipFile(path) as archive:
+              assert archive.testzip() is None
+              assert {"cloud360_probe.xex", "default.xex", "playlist.m3u",
+                      "LEIA-ME-TESTE.txt"} == set(archive.namelist())
+              for filename in ("cloud360_probe.xex", "default.xex"):
+                  raw = archive.read(filename)
+                  assert len(raw) > 4096 and raw[:4] == b"XEX2"
+          print("PASS: compiled XEX2 probe and UI included")
           PY
-
-      - name: Upload console smoke ZIP
+      - name: Publish SAFE test package
         uses: actions/upload-artifact@v4
         with:
-          name: Cloud360-Xbox360-smoke-v0.5
-          path: IPTV/Cloud360/Cloud360-Xbox360-smoke-v0.5.zip
+          name: Cloud360-Xbox360-SAFE-v0.5.2
+          path: IPTV/Cloud360/Cloud360-Xbox360-SAFE-v0.5.2.zip
           retention-days: 7
           if-no-files-found: error
