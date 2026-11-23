@@ -20,7 +20,7 @@ void clampRow(int& row,size_t count) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),tv_(dataDir),focus_(0),row_(0),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
@@ -62,9 +62,13 @@ void ConsoleHome::Rebuild() {
     if (section_==Recent || section_==Favorites) {
         const std::vector<std::string>& paths = section_==Recent ? history_ : favorites_;
         for(size_t i=0;i<paths.size();++i) { const Game* g=Installed(paths[i]); if(g) visible_.push_back(g); }
-    } else if (section_==Library || section_==Apps || section_==Emulators) {
-        const std::vector<Game>& items=section_==Library ? games_ : tools_;
-        for(size_t i=0;i<items.size();++i) visible_.push_back(&items[i]);
+    } else if (section_==Library) {
+        for(size_t i=0;i<games_.size();++i) visible_.push_back(&games_[i]);
+    } else if (section_==Apps || section_==Emulators) {
+        // Tabs are filters over the same installed XEX catalogue.
+        // 0 Todos; 1 Instalados; 2 Plugins; 3 Homebrew (Apps only).
+        for(size_t i=0;i<tools_.size() && i<toolKinds_.size();++i)
+            if(subtab_==0 || toolKinds_[i]==subtab_) visible_.push_back(&tools_[i]);
     }
     clampRow(row_,Count());
 }
@@ -79,8 +83,8 @@ void ConsoleHome::Reload() {
             roots.push_back(roots_[i].substr(0,sep+1)+(section_==Apps?"Apps":"Emulators"));
         }
         tools_=GameScanner(roots).Scan();
-        // Extend existing Apps/Emulators with opt-in local XEX plugins.
-        // The renderer and eight main home tiles remain unchanged.
+        toolKinds_.assign(tools_.size(),1);
+        // Installed homebrew plugins are opt-in local XEX applications.
         const std::vector<PluginDescriptor> plugins=
             PluginRegistry(PluginRegistry::DefaultRoots(dir_)).Scan();
         const std::string category=section_==Apps?"app":"emulator";
@@ -88,12 +92,36 @@ void ConsoleHome::Reload() {
             Game app={plugins[i].name,plugins[i].executable,
                       "Plugin "+plugins[i].version,false};
             tools_.push_back(app);
+            toolKinds_.push_back(2);
+        }
+        if(section_==Apps) {
+            // Dedicated Homebrew tab: scan app-relative, HDD and USB folders.
+            std::vector<std::string> homeRoots;
+            const char separator=dir_.find('\\')!=std::string::npos?'\\':'/';
+            homeRoots.push_back(dir_+(dir_.empty() || dir_[dir_.size()-1]==separator
+                                      ?"":std::string(1,separator))+"Homebrew");
+            for(size_t i=0;i<roots_.size();++i) {
+                const size_t split=roots_[i].find_last_of("\\/");
+                homeRoots.push_back(roots_[i].substr(0,split==std::string::npos?0:split+1)+"Homebrew");
+            }
+            const std::vector<Game> homebrew=GameScanner(homeRoots).Scan();
+            for(size_t i=0;i<homebrew.size();++i) {
+                bool duplicate=false;
+                for(size_t j=0;j<tools_.size();++j)
+                    if(tools_[j].executable==homebrew[i].executable) {duplicate=true;break;}
+                if(!duplicate) {
+                    Game app=homebrew[i];
+                    app.device="Homebrew";
+                    tools_.push_back(app);
+                    toolKinds_.push_back(3);
+                }
+            }
         }
     } else games_=GameScanner(roots_).Scan();
     Rebuild();
 }
 void ConsoleHome::Enter(Section s) {
-    section_=s; page_=Listing; row_=0;
+    section_=s; page_=Listing; row_=0; subtab_=0;
     if(s==Iptv) {tv_.Open();return;}
     if (s==Files) {folders_.clear(); folders_.push_back(dir_);}
     Reload();
@@ -129,6 +157,16 @@ std::string ConsoleHome::Press(Key key) {
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
         if(key==Accept) Enter(static_cast<Section>(focus_));
+        return "";
+    }
+    if(page_==Listing && (section_==Apps || section_==Emulators) &&
+       (key==Left || key==Right)) {
+        const int last=section_==Apps?3:2;
+        if(key==Left && subtab_>0) --subtab_;
+        if(key==Right && subtab_<last) ++subtab_;
+        row_=0;
+        notice_.clear();
+        Rebuild();
         return "";
     }
     if(page_==Details) {
@@ -249,13 +287,25 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(77,384,hint,21,Lime,1110);
         return;
     }
-    if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
+    const bool tabbed=(section_==Apps || section_==Emulators);
+    if(tabbed) {
+        static const char* const tabs[]={"Todos","Instalados","Plugins","Homebrew"};
+        const int numTabs=section_==Apps?4:3;
+        const int tabWidth=section_==Apps?207:244;
+        for(int i=0;i<numTabs;++i) {
+            const int x=45+i*(tabWidth+9);
+            panel(c,x,148,tabWidth,43,Panel,i==subtab_);
+            c.Text(x+15,155,tabs[i],21,i==subtab_?Lime:White,tabWidth-25);
+        }
+        c.Text(49,200,number(Count())+" itens nesta aba",21,Muted,1120);
+    } else if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
-    if(!Count() && notice_.empty()) c.Text(56,246,"Nenhum item nesta seção.",25,Muted,1120);
+    if(!Count() && notice_.empty())
+        c.Text(56,tabbed?275:246,"Nenhum item nesta seção.",25,Muted,1120);
     int start=row_/7*7;
     for(int i=start;i<static_cast<int>(Count()) && i<start+7;++i) {
-        int y=212+(i-start)*59;
-        panel(c,45,y,1189,52,Panel,i==row_);
+        int y=(tabbed?240:212)+(i-start)*(tabbed?55:59);
+        panel(c,45,y,1189,tabbed?49:52,Panel,i==row_);
         std::string name,detail;
         if(section_==Files) {
             name=files_[i].name; detail=files_[i].directory?"Pasta":"Arquivo";
