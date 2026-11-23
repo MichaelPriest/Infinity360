@@ -28,7 +28,7 @@ int main(int argc,char** argv) {
     {std::ifstream profile(root/"aurorax-profile.txt");
      const std::string data((std::istreambuf_iterator<char>(profile)),
                             std::istreambuf_iterator<char>());
-     assert(data.find("R\\t")==std::string::npos); // Not recently played yet
+     assert(data.find("R\t")==std::string::npos); // Not recently played yet
     }
     assert(menu.Press(ConsoleHome::Accept)==exe);
     ConsoleHome restored(dir,roots); restored.Load();
