@@ -46,6 +46,12 @@ caminhos. A operação é **somente leitura**.
 pasta `Content`. Esse indexador, a leitura de dados do Aurora e a UI
 de configuração pelo controle estão previstos na matriz.
 
+A tela **Biblioteca** agora tem abas **Todos**, **Xbox 360**,
+**XBLA** e **Original**. Essas categorias são inferidas pelo diretório
+do `default.xex`, ainda sem interpretar TitleID de pacotes. O botão
+**RS** alterna a ordenação **Nome A–Z**, **Nome Z–A** e **Dispositivo**;
+a busca textual de jogos permanece no backlog.
+
 ## Aplicativos, plugins e Homebrew
 
 A seção **Aplicativos** contém quatro abas navegadas pelo direcional
