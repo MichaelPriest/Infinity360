@@ -74,6 +74,18 @@ Na **Biblioteca**:
 contêineres STFS/SVOD. A integração com o lançador de conteúdo do console
 fica pendente de testes no XDK e em hardware.
 
+### Nunca abertos pela AuroraX
+
+A aba **Nunca** lista executáveis `default.xex` que ainda não tiveram
+uma tentativa de abertura confirmada pelo botão A **dentro da AuroraX**.
+Essas ações são registradas em linhas `P` do arquivo
+`aurorax-profile.txt` e preservadas separadamente dos 24 Recentes.
+
+Esse registro não mede tempo jogado, não lê conquistas do perfil Xbox
+e não conhece jogos abertos anteriormente em outras dashboards.
+Pacotes GOD/STFS somente leitura não entram nessa aba até serem
+suportados por um lançador de conteúdo real.
+
 ### Coleções personalizadas
 
 A aba **Coleções** da Biblioteca permite organizar títulos sem mover ou
