@@ -17,3 +17,10 @@ add_executable(cloud360_probe probe.c)
 set_target_properties(cloud360_probe PROPERTIES C_STANDARD 17 C_EXTENSIONS ON)
 target_compile_options(cloud360_probe PRIVATE -Wall -Wextra -Werror)
 xsdk_add_xex(cloud360_probe TITLE_ID 0x43333631 NAME "Cloud360 GPU Probe" VERSION 0.5.2.0)
+
+# AuroraX visual navigation test, separate from Cloud360 diagnostics.
+add_executable(aurorax_alpha aurorax_alpha.c ../core/cloud360.c)
+set_target_properties(aurorax_alpha PROPERTIES C_STANDARD 17 C_EXTENSIONS ON)
+target_include_directories(aurorax_alpha PRIVATE ../core)
+target_compile_options(aurorax_alpha PRIVATE -Wall -Wextra -Werror)
+xsdk_add_xex(aurorax_alpha TITLE_ID 0x41555831 NAME "AuroraX Alpha GPU Test" VERSION 0.1.0.0)
