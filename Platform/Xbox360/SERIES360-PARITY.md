@@ -193,3 +193,17 @@ jogado nem integra estatísticas de outros dashboards. Os pacotes STFS
 somente leitura não entram nesse filtro até terem lançamento nativo
 homologado.
 
+## Ajuste de interoperabilidade STFS — nomes e idiomas
+
+O indexador de conteudo foi revisado: os nomes dos pacotes usam **UTF-16BE**
+com ate nove campos de idioma nos offsets XContent, incluindo caracteres
+acentuados e pares substitutos Unicode. Os testes agora constroem
+metadados UTF-16BE validos e cobrem leitura do segundo idioma quando o
+primeiro estiver vazio.
+
+Fontes tecnicas de referencia (layout STFS):
+- https://reverseengineering.wiki/index.php/Fact:STFS_(Xbox_360_package)/struct/Package_header
+- https://github.com/Free60Project/wiki/blob/master/docs/System-Software/Formats/STFS.md
+
+O modulo continua **somente leitura**, nao verifica licencas ou
+assinaturas criptograficas e nao habilita launch nativo de GOD/XBLA.
