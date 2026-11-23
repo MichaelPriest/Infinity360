@@ -71,6 +71,7 @@ bool readManifest(const std::string& path, PluginDescriptor& plugin,
     if(!file) return false;
     plugin=PluginDescriptor();
     enabled=true;
+    bool schemaFound=false;
     size_t bytes=0;
     std::string line;
     while(std::getline(file,line)) {
@@ -82,7 +83,7 @@ bool readManifest(const std::string& path, PluginDescriptor& plugin,
         if(equal==std::string::npos) return false;
         const std::string key=trim(line.substr(0,equal));
         const std::string value=trim(line.substr(equal+1));
-        if(key=="schema") { if(value!="1") return false; }
+        if(key=="schema") { if(value!="1") return false; schemaFound=true; }
         else if(key=="id") plugin.id=value;
         else if(key=="name") plugin.name=value;
         else if(key=="version") plugin.version=value;
@@ -94,7 +95,7 @@ bool readManifest(const std::string& path, PluginDescriptor& plugin,
             else return false;
         } else return false;
     }
-    return !file.bad() && safeId(plugin.id) && displayName(plugin.name) &&
+    return !file.bad() && schemaFound && safeId(plugin.id) && displayName(plugin.name) &&
         plugin.version.size()<=24 &&
         (plugin.category=="app" || plugin.category=="emulator") &&
         isXex(entry);
