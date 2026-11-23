@@ -1,0 +1,107 @@
+name: AuroraX first XEX - XSDK visual alpha
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - IPTV/Cloud360/native/aurorax_alpha.c
+      - IPTV/Cloud360/native/probe.c
+      - IPTV/Cloud360/native/CMakeLists.txt
+      - IPTV/Cloud360/core/**
+      - .github/workflows/aurorax-xsdk-alpha.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  xsdk-xex:
+    name: Cross-compile real PowerPC XEX2 (XSDK)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XSDK dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential bison flex texinfo \
+            libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 \
+            cmake ninja-build git
+      - name: Pin reviewed open-source Xbox 360 XSDK
+        run: |
+          git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
+          git -C "$HOME/xsdk" checkout 74dfcca8d21c5fe83b59079ef0e032e62994c1a2
+      - name: Restore PowerPC compiler cache
+        id: toolchain-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/xsdk-gcc
+          key: xsdk-gcc-powerpc-74dfcca8-ubuntu-2404-v1
+      - name: Build cross compiler (cache miss)
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: |
+          cd "$HOME/xsdk"
+          PREFIX="$HOME/xsdk-gcc" WORK="$RUNNER_TEMP/xsdk-gcc-work" \
+            JOBS=4 bash tools/toolchain/build.sh
+      - name: Compile XSDK support library
+        run: |
+          cd "$HOME/xsdk"
+          make -j4 build/libxsdk.a
+          test -s build/libxsdk.a
+      - name: Compile isolated AuroraX Alpha and no-GPU probe
+        run: |
+          cmake -S IPTV/Cloud360/native -B IPTV/Cloud360/native/build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" \
+            -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+            -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe
+      - name: Verify real XEX2 and publish separate test package
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib
+
+          base = Path("IPTV/Cloud360/native/build")
+          outputs = {
+              "default.xex": base / "aurorax_alpha.xex",
+              "aurorax_gpu_probe.xex": base / "cloud360_probe.xex",
+          }
+          for title, path in outputs.items():
+              raw = path.read_bytes()
+              if len(raw) < 4096 or raw[:4] != b"XEX2":
+                  raise SystemExit(f"INVALID XEX2: {title}")
+          dest = Path("IPTV/Cloud360/AuroraX-Alpha-XSDK-0.1.0.zip")
+          note = (
+              "AuroraX XSDK Alpha 0.1.0 - GPU / navigation diagnostic ONLY\n"
+              "This is not the full XDK dashboard nor the finished PDF UI.\n"
+              "No game launch, no IPTV playback, no themes, no autoboot.\n"
+              "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
+              "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
+              "Follow docs/GPU-RESTORE-v052.md before opening default.xex.\n"
+              "Never overwrite the dashboard currently booting your console.\n"
+              "The XEX requires a homebrew-enabled Xbox 360 console.\n"
+          )
+          playlist = "#EXTM3U\n"
+          with ZipFile(dest, "w", ZIP_DEFLATED) as archive:
+              for title, path in outputs.items():
+                  archive.write(path, title)
+              archive.writestr("playlist.m3u", playlist)
+              archive.writestr("LEIA-ME-SEGURANCA.txt", note)
+              archive.writestr("SHA256SUMS.txt", "".join(
+                  f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {title}\n"
+                  for title, path in outputs.items()))
+          with ZipFile(dest) as archive:
+              assert archive.testzip() is None
+              assert archive.read("default.xex")[:4] == b"XEX2"
+          print("Build XEX2 packaged:", dest)
+          PY
+      - name: Upload actual first AuroraX XEX package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraX-Alpha-XSDK-0.1.0
+          path: IPTV/Cloud360/AuroraX-Alpha-XSDK-0.1.0.zip
+          retention-days: 14
+          if-no-files-found: error
