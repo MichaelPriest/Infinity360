@@ -1,6 +1,7 @@
 #include "ConsoleHome.h"
 #include "MediaUrl.h"
 #include <cassert>
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <filesystem>
@@ -189,6 +190,24 @@ int main(int argc,char** argv) {
     assert(tabsMenu.Press(ConsoleHome::Accept)==(music/"default.xex").string());
     tabsMenu.Press(ConsoleHome::Back);
     tabsMenu.Draw(canvas,"19:42");                // Render Homebrew/Plugins tab UI
+
+    // System panel keeps the AuroraX theme, and clearly marks providers
+    // which are not yet supported on physical Xbox 360 hardware.
+    ConsoleHome sysMenu(dir,roots); sysMenu.Load();
+    sysMenu.Press(ConsoleHome::Right);  // Cloud360
+    sysMenu.Press(ConsoleHome::Down);   // Arquivos
+    sysMenu.Press(ConsoleHome::Right);  // Sistema
+    sysMenu.Press(ConsoleHome::Accept);
+    sysMenu.Draw(canvas,"19:45");
+    std::vector<unsigned> storageScreen(canvas.Pixels(),
+        canvas.Pixels()+HomeCanvas::Width*HomeCanvas::Height);
+    sysMenu.Press(ConsoleHome::Right);  // Rede e FTP card
+    sysMenu.Draw(canvas,"19:45");
+    assert(!std::equal(storageScreen.begin(),storageScreen.end(),canvas.Pixels()));
+    sysMenu.Press(ConsoleHome::Accept);
+    sysMenu.Draw(canvas,"19:45");
+    sysMenu.Press(ConsoleHome::Back);  // System listing
+    sysMenu.Press(ConsoleHome::Back);  // Home
 
     fs::remove_all(root);
 }
