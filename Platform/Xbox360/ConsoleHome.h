@@ -34,6 +34,7 @@ private:
     void Enter(Section section);
     void Rebuild();
     void Reload();
+    void ScanLibrary();
     bool SaveProfile() const;
     bool Starred(const Game& game) const;
     const Game* Installed(const std::string& path) const;
