@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
+add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/PluginRegistry.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
 target_include_directories(aurorax_core PUBLIC Source Engine)
 target_compile_options(aurorax_core PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -38,3 +38,8 @@ if(Python3_Interpreter_FOUND AND FFMPEG_PROGRAM)
         $<TARGET_FILE:mpeg_playback_probe> ${FFMPEG_PROGRAM})
     set_tests_properties(stream_playback PROPERTIES TIMEOUT 70)
 endif()
+
+# Manifest scanner is compiled for both PC tests and Xbox 360 target.
+add_executable(plugin_registry_tests Tests/PluginRegistryTests.cpp)
+target_link_libraries(plugin_registry_tests PRIVATE aurorax_core)
+add_test(NAME plugins COMMAND plugin_registry_tests)
