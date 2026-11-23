@@ -43,3 +43,8 @@ endif()
 add_executable(plugin_registry_tests Tests/PluginRegistryTests.cpp)
 target_link_libraries(plugin_registry_tests PRIVATE aurorax_core)
 add_test(NAME plugins COMMAND plugin_registry_tests)
+
+# Series360 parity: configurable scan paths for extracted XEX libraries.
+add_executable(scan_paths_tests Tests/ScanPathsTests.cpp)
+target_link_libraries(scan_paths_tests PRIVATE aurorax_core)
+add_test(NAME scan_paths COMMAND scan_paths_tests)
