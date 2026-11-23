@@ -58,3 +58,16 @@ Esta é a **decisão arquitetural documentada**. O renderer Direct3D/XDK
 já existe. O uso de recursos XUI/XUR e as chamadas de atalhos padrão
 ainda **não foram implementados nem homologados**. A Alpha XSDK atual é
 um teste gráfico de escopo reduzido; não equivale às telas completas.
+
+## Extensibilidade sem alterar a interface
+
+A decisão posterior foi preservar as funcionalidades da dashboard e permitir
+integração gradual com utilitários existentes e novos plugins. Foi adicionado
+um catálogo local de aplicações e emuladores em `Source/PluginRegistry.*`,
+com manifesto `plugin.axplugin`, mantendo os oito blocos da home e os
+atalhos originais. A descoberta aparece nas listagens existentes de Apps e
+Emuladores; detalhes e confirmação de lançamento reutilizam o fluxo nativo.
+
+Isso **não** equivale a suporte universal aos plugins binários de Aurora,
+Freestyle ou DashLaunch, nem incorpora módulos externos ao processo da
+dashboard. Veja [especificação v1, instalação e limitações](PLUGINS.md).
