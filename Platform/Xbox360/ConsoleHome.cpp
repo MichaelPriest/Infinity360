@@ -94,7 +94,7 @@ void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
-    history_.clear(); favorites_.clear(); hidden_.clear();
+    history_.clear(); favorites_.clear(); hidden_.clear(); launched_.clear();
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -103,6 +103,8 @@ void ConsoleHome::Load() {
         if(line[0]=='R' && history_.size()<HistoryLimit && !contains(history_,file)) history_.push_back(file);
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
         if(line[0]=='H' && !contains(hidden_,file)) hidden_.push_back(file);
+        if(line[0]=='P' && launched_.size()<4096 && !contains(launched_,file))
+            launched_.push_back(file);
     }
     ScanLibrary();
     Rebuild();
@@ -128,6 +130,7 @@ bool ConsoleHome::SaveProfile() const {
     for (size_t i=0;i<history_.size();++i) out<<"R\t"<<history_[i]<<"\n";
     for (size_t i=0;i<favorites_.size();++i) out<<"F\t"<<favorites_[i]<<"\n";
     for (size_t i=0;i<hidden_.size();++i) out<<"H\t"<<hidden_[i]<<"\n";
+    for (size_t i=0;i<launched_.size();++i) out<<"P\t"<<launched_[i]<<"\n";
     out.close();
     if (!out) return false;
     return replaceSavedFile(path);
@@ -154,9 +157,12 @@ void ConsoleHome::Rebuild() {
                 static_cast<size_t>(collectionIndex_)<collections_.Items().size() &&
                 collections_.Contains(static_cast<size_t>(collectionIndex_),
                                       games_[i].executable);
-            const bool allowed=subtab_==6?hidden:
-                 (!hidden && (subtab_==5?inCollection:
-                               libraryTabMatch(games_[i],subtab_)));
+            const bool neverOpened=!isContentPackage(games_[i]) &&
+                !contains(launched_,games_[i].executable);
+            const bool allowed=subtab_==7?hidden:
+                 (!hidden && (subtab_==6?neverOpened:
+                              subtab_==5?inCollection:
+                              libraryTabMatch(games_[i],subtab_)));
             if(allowed && matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
         }
@@ -475,7 +481,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing &&
        (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Emulators?2:section_==Library?6:3;
+        const int last=section_==Emulators?2:section_==Library?7:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
@@ -491,6 +497,8 @@ std::string ConsoleHome::Press(Key key) {
                 return "";
             }
             if(section_==Library || section_==Favorites || section_==Recent) {
+                if(launched_.size()<4096 && !contains(launched_,path))
+                    launched_.push_back(path);
                 history_.erase(std::remove(history_.begin(),history_.end(),path),
                                history_.end());
                 history_.insert(history_.begin(),path);
@@ -687,10 +695,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Ocultos"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Nunca","Ocultos"};
         const char* const* tabs=section_==Library?gameTabs:appTabs;
-        const int numTabs=section_==Library?7:section_==Emulators?3:4;
-        const int tabWidth=numTabs==7?123:numTabs==3?244:207;
+        const int numTabs=section_==Library?8:section_==Emulators?3:4;
+        const int tabWidth=numTabs==8?109:numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
