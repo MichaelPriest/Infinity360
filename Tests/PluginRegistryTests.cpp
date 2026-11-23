@@ -57,10 +57,10 @@ int main() {
     {
         const fs::path manifest=p1/"NoSchema"/"plugin.axplugin";
         std::ofstream file(manifest,std::ios::trunc);
-        file<<"id=aurorax.noschema\\n"
-            <<"name=NoSchema\\n"
-            <<"category=app\\n"
-            <<"entry=default.xex\\n";
+        file<<"id=aurorax.noschema\n"
+            <<"name=NoSchema\n"
+            <<"category=app\n"
+            <<"entry=default.xex\n";
     }
     assert(registry.Scan().size()==2);
 
