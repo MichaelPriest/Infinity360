@@ -74,6 +74,31 @@ Na **Biblioteca**:
 contêineres STFS/SVOD. A integração com o lançador de conteúdo do console
 fica pendente de testes no XDK e em hardware.
 
+### Coleções personalizadas
+
+A aba **Coleções** da Biblioteca permite organizar títulos sem mover ou
+alterar os arquivos do console. O recurso utiliza
+`aurorax-collections.txt`, com até 16 coleções e até 512 itens por
+coleção. Também aceita títulos identificados em pacotes GOD apenas como
+referências de catálogo; isso **não** libera a execução de um pacote
+STFS como se fosse um XEX.
+
+Para gerenciar com o controle:
+
+- **RB**, na lista de jogos, abre o gerenciador de coleções;
+  **A** na coleção inclui ou remove o título selecionado.
+- **+ Nova coleção** abre o teclado na tela; **A** escolhe letras,
+  **Y** salva, **B** cancela.
+- **X** no gerenciador renomeia a coleção selecionada.
+- **Y duas vezes** solicita e confirma a exclusão **somente da coleção**.
+- Na aba Coleções, **LB** alterna a coleção exibida e **RB** gerencia
+  associação de jogos e criação de outras coleções.
+
+O armazenamento usa escrita temporária e backup para reduzir o risco
+de corrupção em um desligamento. Não oferece sincronização de coleção
+com perfis Xbox Live nem importação automática da organização antiga
+do Series360. O fluxo exige validação no console físico.
+
 ## Aplicativos, plugins e Homebrew
 
 A seção **Aplicativos** contém quatro abas navegadas pelo direcional
