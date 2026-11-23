@@ -54,3 +54,17 @@ catálogo M3U e favoritos; não abre jogos nem reproduz IPTV. Não substitui
 a versão integrada em `Platform/Xbox360`, que ainda depende de compilação
 com XDK e testes no hardware para entregar as telas do PDF de referência.
 Um sucesso do workflow comprova a geração de XEX2, não segurança no console.
+
+## Plugins locais da AuroraX
+
+A primeira arquitetura de extensões v1 está integrada às seções **Aplicativos** e
+**Emuladores** da versão XDK. O arquivo `plugin.axplugin` descreve um XEX
+local autorizado; a dashboard verifica manifesto, categoria, habilitação e
+existência do executável antes de apresentá-lo. As oito entradas da home e a
+identidade visual do PDF permanecem inalteradas.
+
+**Não confundir o catálogo v1 com plugins binários carregados em memória.**
+Compatibilidade com plugins de outras dashboards precisa ser verificada caso
+a caso; atualização/download/instalação automática não estão implementados.
+
+Veja [instalação, formato do manifesto, testes e backlog](Platform/Xbox360/PLUGINS.md).
