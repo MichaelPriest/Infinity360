@@ -145,6 +145,10 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(key==Refresh) {
+        if(section_==System && page_!=Home) {
+            notice_="Temperatura, rede e downloads precisam de providers nativos.";
+            return "";
+        }
         if(page_==Details) page_=Listing;
         Reload();
         if(notice_.empty()) notice_="Atualizado";
