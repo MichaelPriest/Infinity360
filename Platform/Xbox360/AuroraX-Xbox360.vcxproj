@@ -31,6 +31,7 @@
     <ClCompile Include="TvGuide.cpp" />
     <ClCompile Include="third_party\yxml\yxml.c" />
     <ClCompile Include="..\..\Source\GameScanner.cpp" />
+    <ClCompile Include="..\..\Source\PluginRegistry.cpp" />
     <ClCompile Include="..\..\IPTV\Cloud360\core\cloud360.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
