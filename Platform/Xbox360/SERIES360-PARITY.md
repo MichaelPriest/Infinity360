@@ -34,11 +34,11 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | Nativo parcial | Fixar/desafixar, ordenação, horas jogadas, blocos customizados |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
-| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | Nativo parcial | Classificador por TitleID/content type, indexador GOD e discos |
+| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Abas Xbox 360/XBLA/Original para XEX extraídos**; demais formatos parciais | Classificador por TitleID/content type, indexador GOD e discos |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
 | 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
-| 07 | Pesquisa e ordenação da biblioteca | T | Web demonstrativo / IPTV nativo com busca | Busca/ordenação nativa de jogos |
+| 07 | Pesquisa e ordenação da biblioteca | T | **Ordenação nativa por RS implementada**; pesquisa de jogos ainda pendente | Busca nativa pelo controle e outros modos de ordenação |
 | 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | Nativo parcial | Coleções e filtros de biblioteca reais |
 | 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | Pendente | Leitura de metadados do título |
 | 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
@@ -137,6 +137,9 @@ hardware. Documentação ou prévia web isolada não satisfazem este critério.
 - `ConsoleHome` relê o arquivo ao abrir e atualizar a biblioteca.
 - Testes adicionados em `Tests/ScanPathsTests.cpp` e
   `Tests/ConsoleHomeTests.cpp`.
+
+- `ConsoleHome` oferece abas Todos/Xbox 360/XBLA/Original e
+  ordenação RS por Nome A-Z, Nome Z-A ou Dispositivo.
 
 **Não afirmar** que isso indexa `Content`/GOD, XBLA em contêiner
 ou Title Updates: a primeira entrega reconhece `default.xex` em
