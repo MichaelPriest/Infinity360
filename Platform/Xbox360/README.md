@@ -41,16 +41,17 @@ Reinicie ou pressione **Y / Atualizar** na biblioteca. Até 32 raízes
 únicas são consideradas, com limites de tamanho e validação simples de
 caminhos. A operação é **somente leitura**.
 
-**Importante:** isso encontra jogos já extraídos cujo diretório possui
-`default.xex`; não significa ainda suporte a contêineres GOD/XBLA na
-pasta `Content`. Esse indexador, a leitura de dados do Aurora e a UI
-de configuração pelo controle estão previstos na matriz.
+**Importante:** a varredura desses diretórios encontra jogos extraídos
+com `default.xex`. Um indexador **separado, somente leitura**, agora
+identifica cabeçalhos GOD/XBLA na pasta `Content`, mas o lançamento
+dessas mídias, a leitura do banco Aurora e a configuração dos caminhos
+pelo controle continuam pendentes.
 
 A tela **Biblioteca** agora tem abas **Todos**, **Xbox 360**,
 **XBLA** e **Original**. Essas categorias são inferidas pelo diretório
 do `default.xex`, ainda sem interpretar TitleID de pacotes. O botão
-**RS** alterna a ordenação **Nome A–Z**, **Nome Z–A** e **Dispositivo**;
-a busca textual de jogos permanece no backlog.
+**RS** alterna a ordenação **Nome A–Z**, **Nome Z–A** e **Dispositivo**.
+A busca nativa por nome já está disponível pelo botão **Start**.
 
 ### Busca, itens ocultos e pacotes GOD/XBLA
 
