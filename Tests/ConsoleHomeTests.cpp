@@ -226,5 +226,31 @@ int main(int argc,char** argv) {
     extraMenu.Press(ConsoleHome::Accept);
     assert(extraMenu.Press(ConsoleHome::Accept)==exe);
 
+    // Series360 categories: only extracted XEX entries are indexed here.
+    const fs::path arcade=root/"XBLA"/"Geometry Wars 2";
+    const fs::path original=root/"Xbox Original"/"Fable";
+    fs::create_directories(arcade);
+    fs::create_directories(original);
+    std::ofstream(arcade/"default.xex")<<"arcade fixture";
+    std::ofstream(original/"default.xex")<<"original fixture";
+    std::ofstream(scanConfig)
+        <<extraDir.parent_path().string()<<"\n"
+        <<arcade.parent_path().string()<<"\n"
+        <<original.parent_path().string()<<"\n";
+    ConsoleHome categoryMenu(dir,roots); categoryMenu.Load();
+    categoryMenu.Press(ConsoleHome::Accept);  // Library
+    categoryMenu.Press(ConsoleHome::Right);   // Xbox 360 (Forza + Halo)
+    categoryMenu.Press(ConsoleHome::Accept);
+    assert(categoryMenu.Press(ConsoleHome::Accept)==(extraDir/"default.xex").string());
+    categoryMenu.Press(ConsoleHome::Back);
+    categoryMenu.Press(ConsoleHome::Right);   // XBLA
+    categoryMenu.Press(ConsoleHome::Accept);
+    assert(categoryMenu.Press(ConsoleHome::Accept)==(arcade/"default.xex").string());
+    categoryMenu.Press(ConsoleHome::Back);
+    categoryMenu.Press(ConsoleHome::Right);   // Xbox Original
+    categoryMenu.Press(ConsoleHome::Accept);
+    assert(categoryMenu.Press(ConsoleHome::Accept)==(original/"default.xex").string());
+    categoryMenu.Draw(canvas,"19:45");
+
     fs::remove_all(root);
 }
