@@ -53,6 +53,17 @@ int main() {
     }
     assert(registry.Scan().size()==2);
 
+    install(p1,"NoSchema","aurorax.noschema","app");
+    {
+        const fs::path manifest=p1/"NoSchema"/"plugin.axplugin";
+        std::ofstream file(manifest,std::ios::trunc);
+        file<<"id=aurorax.noschema\\n"
+            <<"name=NoSchema\\n"
+            <<"category=app\\n"
+            <<"entry=default.xex\\n";
+    }
+    assert(registry.Scan().size()==2);
+
 #ifndef _WIN32
     // Filesystem links cannot evade the allowed local plugin directories.
     std::error_code error;
