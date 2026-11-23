@@ -2,6 +2,13 @@
 
 A tela nativa em 1280 × 720 apresenta a Biblioteca e o Cloud360 IPTV, com atalhos para Aplicativos, Emuladores, Arquivos e Sistema. Recentes e Favoritos são preenchidos pelos títulos encontrados no dispositivo. O controle usa o direcional ou o analógico esquerdo, A para selecionar, B para voltar, X para favoritar, Y para recarregar e Back para sair.
 
+
+## Arquitetura visual: dashboard própria e atalhos padrão
+
+A interface AuroraX é **100% própria**, baseada nas telas do `AuroraX_Telas.pdf`, usando C++ e Direct3D. Atalhos de controle e eventuais funções padrão do Xbox 360 poderão utilizar APIs nativas autorizadas e, quando tecnicamente adequado, recursos XUI/XUR opcionais; as telas principais **não** serão migradas para `.xur`.
+
+Leia a [decisão de arquitetura e critérios de aceite](UI-ARCHITECTURE.md). A integração efetiva de atalhos XUI/XAM ainda precisa ser desenvolvida e validada no hardware.
+
 ## Compilação e instalação
 
 1. Em um Developer Command Prompt com o Xbox 360 XDK configurado, execute `build-xex.bat` nesta pasta.
