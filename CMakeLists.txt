@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/PluginRegistry.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
+add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/ContentCatalog.cpp Source/PluginRegistry.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
 target_include_directories(aurorax_core PUBLIC Source Engine)
 target_compile_options(aurorax_core PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -48,3 +48,8 @@ add_test(NAME plugins COMMAND plugin_registry_tests)
 add_executable(scan_paths_tests Tests/ScanPathsTests.cpp)
 target_link_libraries(scan_paths_tests PRIVATE aurorax_core)
 add_test(NAME scan_paths COMMAND scan_paths_tests)
+
+# Read-only Xbox Content/STFS header discovery. Does not launch GOD packages.
+add_executable(content_catalog_tests Tests/ContentCatalogTests.cpp)
+target_link_libraries(content_catalog_tests PRIVATE aurorax_core)
+add_test(NAME content_catalog COMMAND content_catalog_tests)
