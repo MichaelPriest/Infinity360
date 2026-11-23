@@ -84,6 +84,28 @@ HDD1:\AuroraX\Plugins\MeuPlayer\
 | Temperaturas/ventoinha, FTP/SMB e downloads | Aparecem em protótipos web ou roadmap; não comprovados no hardware | Criar providers |
 | Temas/perfis/conquistas/DLC/TU/multidisco | Recursos parciais ou planejados | Implementar como módulos opcionais |
 
+## Aba Homebrew (nova)
+
+**Homebrew** é uma aba de navegação própria dentro de
+**Aplicativos**, ao lado de **Todos**, **Instalados** e **Plugins**.
+Nela, a dashboard procura recursivamente arquivos
+`default.xex` em `Homebrew` junto à aplicação e nas raízes
+`game:\Homebrew`, `HDD1:\Homebrew`, `USB0:\Homebrew` e
+`USB1:\Homebrew`.
+
+Essa aba serve para homebrews **sem manifesto de plugin**. Emuladores
+continuam aparecendo também na seção Emuladores quando instalados
+nas pastas configuradas para ela. Não é necessário converter o
+aplicativo para `.xur` ou modificar o formato original do XEX.
+
+- **Esquerda/direita** alterna abas.
+- **Cima/baixo** seleciona o programa.
+- **A** abre a ficha; **A novamente** solicita execução.
+- **Y** revarre a pasta; **B** volta.
+
+A aba **Plugins** exibe somente extensões com manifesto compatível.
+`Todos` mostra a união das categorias. A aparência da home não muda.
+
 ## Backlog de extensões (não implementadas ainda)
 
 1. **Provider de metadados e capas:** cache, fontes selecionáveis e modo offline.
