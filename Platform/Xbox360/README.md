@@ -9,6 +9,43 @@ A interface AuroraX é **100% própria**, baseada nas telas do `AuroraX_Telas.pd
 
 Leia a [decisão de arquitetura e critérios de aceite](UI-ARCHITECTURE.md). A integração efetiva de atalhos XUI/XAM ainda precisa ser desenvolvida e validada no hardware.
 
+## Compatibilidade funcional com Series360
+
+O arquivo original `Series360.zip` (versão 0.12.69) foi auditado pelo
+`LEIA-ME.txt`, pelas localizações e pelos recursos XUR presentes.
+A [matriz de 46 funcionalidades](SERIES360-PARITY.md) registra o que
+existe, o que é somente demonstrativo e o que ainda está pendente de
+implementação/homologação. A identidade visual continua 100% AuroraX.
+
+### Mais pastas de jogos
+
+A biblioteca agora procura `default.xex` também em:
+
+- `HDD1:\XBOX 360`, `HDD1:\XBLA`, `HDD1:\Xbox Original`
+- `USB0:\XBOX 360`, `USB0:\XBLA`, `USB0:\Xbox Original`
+- `USB1:\XBOX 360`, `USB1:\XBLA`, `USB1:\Xbox Original`
+- As pastas anteriores `game:\Games`, `HDD1:\Games`,
+  `USB0:\Games` e `USB1:\Games` permanecem.
+
+Para incluir mais pastas, crie `aurorax-scanpaths.txt` na pasta da
+dashboard (ao lado de `default.xex`), com um caminho absoluto por
+linha e comentários precedidos de `#`:
+
+```text
+# Meus caminhos adicionais
+HDD1:\Jogos Extras
+USB0:\Minha Colecao
+```
+
+Reinicie ou pressione **Y / Atualizar** na biblioteca. Até 32 raízes
+únicas são consideradas, com limites de tamanho e validação simples de
+caminhos. A operação é **somente leitura**.
+
+**Importante:** isso encontra jogos já extraídos cujo diretório possui
+`default.xex`; não significa ainda suporte a contêineres GOD/XBLA na
+pasta `Content`. Esse indexador, a leitura de dados do Aurora e a UI
+de configuração pelo controle estão previstos na matriz.
+
 ## Aplicativos, plugins e Homebrew
 
 A seção **Aplicativos** contém quatro abas navegadas pelo direcional
