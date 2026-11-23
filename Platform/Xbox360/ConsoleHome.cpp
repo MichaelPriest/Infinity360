@@ -591,7 +591,9 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     c.Text(44,78,labels[section_],43,White,1190);
     if(section_==Library && page_==Listing && searchActive_) {
-        c.Text(45,139,"Buscar jogos instalados",26,White,1100);
+        c.Text(45,139,keyboardMode_==1?"Nova colecao":
+               keyboardMode_==2?"Renomear colecao":"Buscar jogos instalados",
+               26,White,1100);
         c.Box(42,176,1196,49,Panel,9);
         c.Text(58,181,searchDraft_.empty()?"Digite um nome...":searchDraft_,
                26,Lime,1156);
@@ -603,6 +605,32 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         c.Text(48,619,"A Digitar  X Apagar  Y Buscar  B Cancelar",
                19,Muted,1160);
+        return;
+    }
+    if(section_==Library && page_==Listing && collectionPicker_) {
+        const std::vector<GameCollection>& lists=collections_.Items();
+        c.Text(46,142,"Gerenciar colecoes",30,White,1050);
+        c.Text(47,192,pickerGame_.empty()?
+               "Escolha uma colecao ou crie uma nova.":
+               "Escolha uma colecao para incluir ou remover o jogo.",
+               20,Muted,1130);
+        const int total=static_cast<int>(lists.size())+1;
+        const int first=(collectionRow_/7)*7;
+        for(int i=first;i<total && i<first+7;++i) {
+            const int y=229+(i-first)*57;
+            panel(c,45,y,1189,50,Panel,i==collectionRow_);
+            const bool creation=static_cast<size_t>(i)==lists.size();
+            const std::string name=creation?"+ Nova colecao":lists[i].name;
+            const bool assigned=!creation && !pickerGame_.empty() &&
+                collections_.Contains(static_cast<size_t>(i),pickerGame_);
+            c.Text(63,y+7,name,25,i==collectionRow_?Lime:White,780);
+            if(assigned)c.Text(886,y+9,"Jogo incluido",19,Lime,325);
+            else if(!creation)c.Text(886,y+9,"Colecao local",19,Muted,325);
+        }
+        c.Text(47,633,deleteCollectionConfirm_?
+               "Y novamente: confirmar exclusao da colecao | B cancelar":
+               "A Incluir/Remover | X Renomear | Y Excluir | B Voltar",
+               18,Muted,1190);
         return;
     }
     if(section_==System) {
@@ -659,10 +687,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Ocultos"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Ocultos"};
         const char* const* tabs=section_==Library?gameTabs:appTabs;
-        const int numTabs=section_==Library?6:section_==Emulators?3:4;
-        const int tabWidth=numTabs==6?145:numTabs==3?244:207;
+        const int numTabs=section_==Library?7:section_==Emulators?3:4;
+        const int tabWidth=numTabs==7?123:numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
@@ -672,12 +700,23 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
             c.Text(861,201,std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
-            c.Text(46,621,"Start Buscar | RS Ordenar | LB Ocultar/Reexibir | Y Atualizar",18,Muted,1170);
+            if(subtab_==5 && !collections_.Items().empty()) {
+                const size_t current=static_cast<size_t>(collectionIndex_);
+                if(current<collections_.Items().size())
+                    c.Text(315,200,collections_.Items()[current].name,21,Lime,510);
+            }
+            c.Text(45,621,subtab_==5?
+                   "Start Buscar | LB Proxima colecao | RB Gerenciar | RS Ordenar":
+                   "Start Buscar | LB Ocultar | RB Colecoes | RS Ordenar",
+                   18,Muted,1170);
         }
     } else if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
     if(!Count() && notice_.empty())
-        c.Text(56,tabbed?275:246,"Nenhum item nesta seção.",25,Muted,1120);
+        c.Text(56,tabbed?275:246,
+               section_==Library && subtab_==5?
+               "Colecao vazia. RB gerencia colecoes ou cria uma nova.":
+               "Nenhum item nesta seção.",25,Muted,1120);
     int start=row_/7*7;
     for(int i=start;i<static_cast<int>(Count()) && i<start+7;++i) {
         int y=(tabbed?240:212)+(i-start)*(tabbed?55:59);
