@@ -68,3 +68,17 @@ Compatibilidade com plugins de outras dashboards precisa ser verificada caso
 a caso; atualização/download/instalação automática não estão implementados.
 
 Veja [instalação, formato do manifesto, testes e backlog](Platform/Xbox360/PLUGINS.md).
+
+## Compatibilidade com todas as funcionalidades do Series360
+
+O arquivo `Series360.zip` **0.12.69** foi auditado pelos executáveis,
+manual, localizações e cenas XUR. A [matriz de paridade](Platform/Xbox360/SERIES360-PARITY.md)
+organiza **46 recursos** e distingue o que tem código nativo, o que só existe
+na prévia web e o que falta. O escopo está acompanhado na
+[issue #8](https://github.com/MichaelPriest/AuroraX/issues/8).
+
+Nesta etapa, a biblioteca nativa passou a reconhecer pastas extras de jogos
+extraídos (`XBOX 360`, `XBLA`, `Xbox Original`), aceitar caminhos adicionais
+em `aurorax-scanpaths.txt` e oferecer abas de categoria para `default.xex`.
+**Contêineres GOD/XBLA na pasta Content ainda exigem um indexador próprio.**
+Essas mudanças não substituem a interface aprovada nem removem o Cloud360 IPTV.
