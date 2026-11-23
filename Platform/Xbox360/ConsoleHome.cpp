@@ -20,9 +20,10 @@ void clampRow(int& row,size_t count) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
@@ -74,6 +75,7 @@ void ConsoleHome::Rebuild() {
 }
 void ConsoleHome::Reload() {
     notice_.clear();
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
     if (section_==Files && page_!=Home) {
         if (!ReadFolder(folders_.back(),files_)) notice_="Não foi possível ler esta pasta.";
     } else if ((section_==Apps || section_==Emulators) && page_!=Home) {
