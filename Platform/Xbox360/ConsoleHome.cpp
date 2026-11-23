@@ -69,7 +69,7 @@ void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
-    history_.clear(); favorites_.clear();
+    history_.clear(); favorites_.clear(); hidden_.clear();
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -77,6 +77,7 @@ void ConsoleHome::Load() {
         const std::string file=line.substr(2);
         if(line[0]=='R' && history_.size()<HistoryLimit && !contains(history_,file)) history_.push_back(file);
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
+        if(line[0]=='H' && !contains(hidden_,file)) hidden_.push_back(file);
     }
     games_=GameScanner(roots_).Scan();
     Rebuild();
@@ -86,6 +87,7 @@ bool ConsoleHome::SaveProfile() const {
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     for (size_t i=0;i<history_.size();++i) out<<"R\t"<<history_[i]<<"\n";
     for (size_t i=0;i<favorites_.size();++i) out<<"F\t"<<favorites_[i]<<"\n";
+    for (size_t i=0;i<hidden_.size();++i) out<<"H\t"<<hidden_[i]<<"\n";
     out.close();
     if (!out) return false;
     return replaceSavedFile(path);
@@ -106,10 +108,12 @@ void ConsoleHome::Rebuild() {
         const std::vector<std::string>& paths = section_==Recent ? history_ : favorites_;
         for(size_t i=0;i<paths.size();++i) { const Game* g=Installed(paths[i]); if(g) visible_.push_back(g); }
     } else if (section_==Library) {
-        for(size_t i=0;i<games_.size();++i)
-            if(libraryTabMatch(games_[i],subtab_) &&
+        for(size_t i=0;i<games_.size();++i) {
+            const bool hidden=contains(hidden_,games_[i].executable);
+            if((subtab_==4?hidden:(!hidden && libraryTabMatch(games_[i],subtab_))) &&
                matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
+        }
         std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
     } else if (section_==Apps || section_==Emulators) {
         // Tabs are filters over the same installed XEX catalogue.
@@ -256,6 +260,20 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Accept) Enter(static_cast<Section>(focus_));
         return "";
     }
+    if(page_==Listing && section_==Library && key==PageUp && Count()) {
+        const std::string path=visible_[row_]->executable;
+        std::vector<std::string>::iterator i=
+            std::find(hidden_.begin(),hidden_.end(),path);
+        const bool makeHidden=i==hidden_.end();
+        if(makeHidden) hidden_.push_back(path);
+        else hidden_.erase(i);
+        const bool saved=SaveProfile();
+        row_=0;
+        Rebuild();
+        notice_=makeHidden?"Jogo ocultado (aba Ocultos)":"Jogo reexibido";
+        if(!saved) notice_+=" - falha ao salvar no dispositivo";
+        return "";
+    }
     if(page_==Listing && section_==Library && key==Guide) {
         searchDraft_=searchTerm_;
         searchCursor_=0;
@@ -274,7 +292,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing &&
        (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Emulators?2:3;
+        const int last=section_==Emulators?2:section_==Library?4:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
@@ -447,10 +465,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Ocultos"};
         const char* const* tabs=section_==Library?gameTabs:appTabs;
-        const int numTabs=section_==Emulators?3:4;
-        const int tabWidth=numTabs==3?244:207;
+        const int numTabs=section_==Library?5:section_==Emulators?3:4;
+        const int tabWidth=numTabs==5?170:numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
@@ -460,7 +478,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
             c.Text(861,201,std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
-            c.Text(46,621,"Start Buscar  |  RS Ordenar  |  Y Atualizar",18,Muted,1125);
+            c.Text(46,621,"Start Buscar | RS Ordenar | LB Ocultar/Reexibir | Y Atualizar",18,Muted,1170);
         }
     } else if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
