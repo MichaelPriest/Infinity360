@@ -252,5 +252,15 @@ int main(int argc,char** argv) {
     assert(categoryMenu.Press(ConsoleHome::Accept)==(original/"default.xex").string());
     categoryMenu.Draw(canvas,"19:45");
 
+    // Series360 RS Ordenar: stable native sort, no web mockup required.
+    ConsoleHome orderedMenu(dir,roots); orderedMenu.Load();
+    orderedMenu.Press(ConsoleHome::Accept); // Library: A-Z
+    orderedMenu.Press(ConsoleHome::Search); // RS -> Z-A
+    orderedMenu.Press(ConsoleHome::Accept);
+    assert(orderedMenu.Press(ConsoleHome::Accept)==exe); // Halo 3 sorts first
+    orderedMenu.Press(ConsoleHome::Back);
+    orderedMenu.Press(ConsoleHome::Search); // RS -> device ordering
+    orderedMenu.Draw(canvas,"19:45");
+
     fs::remove_all(root);
 }
