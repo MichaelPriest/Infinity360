@@ -20,10 +20,11 @@ private:
     std::string dir_, notice_;
     std::vector<std::string> roots_, history_, favorites_, folders_;
     std::vector<Game> games_, tools_;
+    std::vector<int> toolKinds_; // 1 = installed, 2 = plugin, 3 = homebrew
     std::vector<const Game*> visible_;
     std::vector<FolderEntry> files_;
     CloudTv tv_;
-    int focus_, row_;
+    int focus_, row_, subtab_;
     Section section_;
     Page page_;
     size_t Count() const;
