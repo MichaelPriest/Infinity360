@@ -139,5 +139,33 @@ int main(int argc,char** argv) {
         streamMenu.Press(ConsoleHome::Accept);assert(streamMenu.Press(ConsoleHome::Accept).empty());
         assert(streamMenu.TakeMovie().empty());
     }
+
+    // Optional local XEX plugins extend Apps and Emulators without changing Home.
+    const fs::path music=root/"Plugins"/"Music";
+    fs::create_directories(music);
+    std::ofstream(music/"default.xex")<<"test plugin";
+    std::ofstream(music/"plugin.axplugin")
+        <<"schema=1\n"<<"id=aurorax.music\n"<<"name=Music Player\n"
+        <<"version=0.1\n"<<"category=app\n"
+        <<"entry=default.xex\n"<<"enabled=true\n";
+    const fs::path emulator=root/"Plugins"/"Retro";
+    fs::create_directories(emulator);
+    std::ofstream(emulator/"default.xex")<<"test plugin";
+    std::ofstream(emulator/"plugin.axplugin")
+        <<"schema=1\n"<<"id=aurorax.retro\n"<<"name=Retro Plugin\n"
+        <<"version=0.1\n"<<"category=emulator\n"
+        <<"entry=default.xex\n"<<"enabled=true\n";
+    ConsoleHome pluginMenu(dir,roots); pluginMenu.Load();
+    pluginMenu.Press(ConsoleHome::Down);   // Apps at home position 2
+    pluginMenu.Press(ConsoleHome::Accept); // Apps listing
+    pluginMenu.Press(ConsoleHome::Accept); // App details
+    assert(pluginMenu.Press(ConsoleHome::Accept)==(music/"default.xex").string());
+    pluginMenu.Press(ConsoleHome::Back);
+    pluginMenu.Press(ConsoleHome::Back);
+    pluginMenu.Press(ConsoleHome::Right);  // Emulators at home position 3
+    pluginMenu.Press(ConsoleHome::Accept);
+    pluginMenu.Press(ConsoleHome::Accept);
+    assert(pluginMenu.Press(ConsoleHome::Accept)==(emulator/"default.xex").string());
+
     fs::remove_all(root);
 }
