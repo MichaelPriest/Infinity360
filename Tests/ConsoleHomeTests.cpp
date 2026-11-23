@@ -6,6 +6,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 
 int main(int argc,char** argv) {
     assert(argc==2);
