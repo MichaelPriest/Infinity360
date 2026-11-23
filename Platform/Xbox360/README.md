@@ -9,6 +9,43 @@ A interface AuroraX é **100% própria**, baseada nas telas do `AuroraX_Telas.pd
 
 Leia a [decisão de arquitetura e critérios de aceite](UI-ARCHITECTURE.md). A integração efetiva de atalhos XUI/XAM ainda precisa ser desenvolvida e validada no hardware.
 
+## Aplicativos, plugins e Homebrew
+
+A seção **Aplicativos** contém quatro abas navegadas pelo direcional
+esquerda/direita: **Todos**, **Instalados**, **Plugins** e **Homebrew**.
+A seção **Emuladores** mantém **Todos**, **Instalados** e **Plugins**.
+
+- **Instalados:** aplicativos e emuladores encontrados nas pastas `Apps`
+  e `Emulators` vinculadas aos dispositivos.
+- **Plugins:** programas XEX independentes habilitados por manifesto
+  `plugin.axplugin` e classificados como `app` ou `emulator`.
+- **Homebrew:** aplicativos descobertos recursivamente em `Homebrew`
+  ao lado da dashboard ou nas raízes `game:\Homebrew`,
+  `HDD1:\Homebrew`, `USB0:\Homebrew` e `USB1:\Homebrew`.
+  Apenas diretórios com um `default.xex` aparecem.
+- **Todos:** reúne os itens das abas anteriores, sem alterar os atalhos
+  da tela inicial.
+
+Selecione um programa com cima/baixo, **A** para abrir detalhes e
+**A novamente** para solicitar execução. **B** volta para a lista e,
+depois, para o início. **Y** atualiza a lista. O lançamento real
+do XEX precisa ser validado no Xbox 360 físico.
+
+Para instalar plugins por manifesto, consulte [PLUGINS.md](PLUGINS.md).
+A interface é própria da AuroraX, não usa XUI como base da dashboard.
+
+## Sistema (navegação nativa)
+
+O painel **Sistema** agora exibe quatro cartões navegáveis:
+**Armazenamento**, **Rede e FTP**, **Temperaturas** e **Downloads**,
+com detalhes pelo botão A e retorno pelo B. O resumo informa a
+quantidade de jogos encontrados e itens do catálogo IPTV.
+
+**Atenção:** capacidade disponível, leitura SMC, FTP/SMB e downloads
+ainda dependem de providers reais. Os cartões informam explicitamente
+quando a função ainda não está conectada; não apresentam temperaturas,
+capacidade ou estado de rede inventados.
+
 ## Compilação e instalação
 
 1. Em um Developer Command Prompt com o Xbox 360 XDK configurado, execute `build-xex.bat` nesta pasta.
