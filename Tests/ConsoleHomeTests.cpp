@@ -328,5 +328,44 @@ int main(int argc,char** argv) {
     assert(godMenu.Press(ConsoleHome::Accept).empty()); // Safe: no XEX launch
     godMenu.Draw(canvas,"19:48");
 
+    // Series360 collection workflow: create, assign, rename, remove and delete
+    // entirely with the controller; no title data is modified.
+    ConsoleHome collectionMenu(dir,roots); collectionMenu.Load();
+    collectionMenu.Press(ConsoleHome::Accept);  // Library
+    for(int i=0;i<5;++i) collectionMenu.Press(ConsoleHome::Right); // Collections
+    collectionMenu.Press(ConsoleHome::PageDown);  // Manage
+    collectionMenu.Press(ConsoleHome::Accept);    // + New collection
+    collectionMenu.Press(ConsoleHome::Accept);    // Type "A"
+    collectionMenu.Press(ConsoleHome::Refresh);   // Save collection name
+    CollectionStore collectionData((root/"aurorax-collections.txt").string());
+    assert(collectionData.Load());
+    assert(collectionData.Items().size()==1);
+    assert(collectionData.Items()[0].name=="A");
+    for(int i=0;i<2;++i) collectionMenu.Press(ConsoleHome::Left); // Original
+    collectionMenu.Press(ConsoleHome::PageDown);  // Add selected Fable
+    collectionMenu.Press(ConsoleHome::Accept);    // Toggle membership
+    assert(collectionData.Load());
+    assert(collectionData.Contains(0,(original/"default.xex").string()));
+    collectionMenu.Press(ConsoleHome::Accept);    // Collection game details
+    assert(collectionMenu.Press(ConsoleHome::Accept)==
+           (original/"default.xex").string());
+    collectionMenu.Press(ConsoleHome::Back);
+    collectionMenu.Press(ConsoleHome::PageDown);  // Manage selected collection
+    collectionMenu.Press(ConsoleHome::Favorite);  // X: Rename
+    collectionMenu.Press(ConsoleHome::Right);     // B key on keyboard
+    collectionMenu.Press(ConsoleHome::Accept);    // Append B => AB
+    collectionMenu.Press(ConsoleHome::Refresh);   // Save
+    assert(collectionData.Load());
+    assert(collectionData.Items()[0].name=="AB");
+    collectionMenu.Press(ConsoleHome::PageDown);  // Manage membership
+    collectionMenu.Press(ConsoleHome::Accept);    // Remove Fable
+    assert(collectionData.Load());
+    assert(collectionData.Items()[0].games.empty());
+    collectionMenu.Press(ConsoleHome::PageDown);  // Manage empty collection
+    collectionMenu.Press(ConsoleHome::Refresh);   // Y: request delete
+    collectionMenu.Press(ConsoleHome::Refresh);   // Y: confirm delete
+    assert(collectionData.Load() && collectionData.Items().empty());
+    collectionMenu.Draw(canvas,"19:49");
+
     fs::remove_all(root);
 }
