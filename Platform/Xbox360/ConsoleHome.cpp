@@ -340,6 +340,14 @@ std::string ConsoleHome::Press(Key key) {
                 notice_="Pacote de conteudo: launch nativo ainda nao integrado.";
                 return "";
             }
+            if(section_==Library || section_==Favorites || section_==Recent) {
+                history_.erase(std::remove(history_.begin(),history_.end(),path),
+                               history_.end());
+                history_.insert(history_.begin(),path);
+                if(history_.size()>HistoryLimit) history_.resize(HistoryLimit);
+                if(!SaveProfile())
+                    notice_="Historico desta sessao. Nao foi possivel salvar.";
+            }
             return path;
         }
     } else {
@@ -362,13 +370,8 @@ std::string ConsoleHome::Press(Key key) {
             folders_.push_back(child);row_=0;Reload();
         } else {
             page_=Details;
-            if(section_==Library || section_==Favorites || section_==Recent) {
-                const std::string path=visible_[row_]->executable;
-                history_.erase(std::remove(history_.begin(),history_.end(),path),history_.end());
-                history_.insert(history_.begin(),path);
-                if(history_.size()>HistoryLimit) history_.resize(HistoryLimit);
-                if(!SaveProfile()) notice_="Histórico desta sessão. Falha ao gravar no dispositivo.";
-            }
+            // Viewing details alone must not change Recently Played.
+
         }
     }
     return "";
