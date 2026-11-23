@@ -81,10 +81,16 @@ bool libraryTabMatch(const Game& item,int tab) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),searchActive_(false),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
+      collections_(dataDir+"aurorax-collections.txt"),
+      focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
+      collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
+      searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
+      section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
+    collections_.Load();
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
@@ -144,8 +150,14 @@ void ConsoleHome::Rebuild() {
     } else if (section_==Library) {
         for(size_t i=0;i<games_.size();++i) {
             const bool hidden=contains(hidden_,games_[i].executable);
-            if((subtab_==5?hidden:(!hidden && libraryTabMatch(games_[i],subtab_))) &&
-               matchesLibraryQuery(games_[i],searchTerm_))
+            const bool inCollection=collectionIndex_>=0 &&
+                static_cast<size_t>(collectionIndex_)<collections_.Items().size() &&
+                collections_.Contains(static_cast<size_t>(collectionIndex_),
+                                      games_[i].executable);
+            const bool allowed=subtab_==6?hidden:
+                 (!hidden && (subtab_==5?inCollection:
+                               libraryTabMatch(games_[i],subtab_)));
+            if(allowed && matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
         }
         std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
@@ -208,6 +220,7 @@ void ConsoleHome::Reload() {
 }
 void ConsoleHome::Enter(Section s) {
     section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;
+    collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
     if (s==Files) {folders_.clear(); folders_.push_back(dir_);}
     Reload();
