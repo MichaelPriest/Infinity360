@@ -295,7 +295,7 @@ int main(int argc,char** argv) {
     assert(hideMenu.Press(ConsoleHome::Accept)==
            (extraDir/"default.xex").string());
     hideMenu.Press(ConsoleHome::Back);
-    for(int i=0;i<4;++i) hideMenu.Press(ConsoleHome::Right);
+    for(int i=0;i<7;++i) hideMenu.Press(ConsoleHome::Right); // Ocultos tab
     hideMenu.Press(ConsoleHome::Accept);
     assert(hideMenu.Press(ConsoleHome::Accept)==
            (original/"default.xex").string());
@@ -366,6 +366,25 @@ int main(int argc,char** argv) {
     collectionMenu.Press(ConsoleHome::Refresh);   // Y: confirm delete
     assert(collectionData.Load() && collectionData.Items().empty());
     collectionMenu.Draw(canvas,"19:49");
+
+    // "Nunca" includes only XEX not yet requested for launch from AuroraX.
+    const fs::path fresh=root/"Games"/"NeverOpened"/"default.xex";
+    fs::create_directories(fresh.parent_path());
+    std::ofstream(fresh)<<"unlaunched game fixture";
+    ConsoleHome neverMenu(dir,roots); neverMenu.Load();
+    neverMenu.Press(ConsoleHome::Accept); // Library
+    for(int i=0;i<6;++i) neverMenu.Press(ConsoleHome::Right); // Nunca
+    neverMenu.Press(ConsoleHome::Accept); // Details
+    assert(neverMenu.Press(ConsoleHome::Accept)==fresh.string());
+    neverMenu.Press(ConsoleHome::Back);
+    neverMenu.Press(ConsoleHome::Refresh); // Rebuild filters with play ledger
+    assert(neverMenu.Press(ConsoleHome::Accept).empty());
+    {
+        std::ifstream ledger(root/"aurorax-profile.txt");
+        const std::string data((std::istreambuf_iterator<char>(ledger)),
+                               std::istreambuf_iterator<char>());
+        assert(data.find(std::string("P\t")+fresh.string())!=std::string::npos);
+    }
 
     fs::remove_all(root);
 }
