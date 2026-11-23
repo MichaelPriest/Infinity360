@@ -226,6 +226,41 @@ void ConsoleHome::Enter(Section s) {
     Reload();
 }
 void ConsoleHome::ApplySearch() {
+    if(keyboardMode_==1) {
+        // New collection; optionally assign the selected game immediately.
+        if(!collections_.Create(searchDraft_)) {
+            notice_="Nome invalido, repetido ou limite de colecoes atingido.";
+            return;
+        }
+        collectionIndex_=static_cast<int>(collections_.Items().size()-1);
+        if(!pickerGame_.empty())
+            collections_.Toggle(static_cast<size_t>(collectionIndex_),pickerGame_);
+        const bool persisted=collections_.Save();
+        searchActive_=false;
+        collectionPicker_=false;
+        keyboardMode_=0;
+        subtab_=5;
+        row_=0;
+        Rebuild();
+        notice_=persisted?"Colecao criada.":"Colecao criada, mas nao foi possivel salvar.";
+        return;
+    }
+    if(keyboardMode_==2) {
+        if(collectionIndex_<0 || !collections_.Rename(
+            static_cast<size_t>(collectionIndex_),searchDraft_)) {
+            notice_="Nome invalido ou ja utilizado por outra colecao.";
+            return;
+        }
+        const bool persisted=collections_.Save();
+        searchActive_=false;
+        collectionPicker_=false;
+        keyboardMode_=0;
+        subtab_=5;
+        row_=0;
+        Rebuild();
+        notice_=persisted?"Colecao renomeada.":"Nome alterado apenas nesta sessao.";
+        return;
+    }
     searchTerm_=searchDraft_;
     searchActive_=false;
     row_=0;
