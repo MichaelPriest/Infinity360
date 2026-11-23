@@ -40,3 +40,17 @@ A versão nativa possui tela inicial em 720p, navegação por controle, consulta
 - Capas e metadados locais, FTP, SMB, atualização via HTTP e downloads em segundo plano.
 - Gerenciador de arquivos, capturas, temas, perfis, conquistas e controle parental.
 - Plugins opcionais para emuladores, homebrew, discos, DLC/TU e multidisco.
+
+## Primeira build XEX via GitHub Actions (Alpha XSDK)
+
+O [workflow AuroraX first XEX - XSDK visual alpha](.github/workflows/aurorax-xsdk-alpha.yml)
+foi configurado para compilar um teste gráfico real do AuroraX em XEX2 com
+a toolchain aberta XSDK no GitHub Actions. Um build bem-sucedido publica o
+artifact `AuroraX-Alpha-XSDK-0.1.0` com `default.xex` e um diagnóstico
+sem GPU. Consulte [instruções e segurança](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md).
+
+**Limitações:** esta Alpha é somente para testar inicialização, navegação,
+catálogo M3U e favoritos; não abre jogos nem reproduz IPTV. Não substitui
+a versão integrada em `Platform/Xbox360`, que ainda depende de compilação
+com XDK e testes no hardware para entregar as telas do PDF de referência.
+Um sucesso do workflow comprova a geração de XEX2, não segurança no console.
