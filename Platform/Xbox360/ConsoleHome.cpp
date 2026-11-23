@@ -20,7 +20,7 @@ void clampRow(int& row,size_t count) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
@@ -121,7 +121,7 @@ void ConsoleHome::Reload() {
     Rebuild();
 }
 void ConsoleHome::Enter(Section s) {
-    section_=s; page_=Listing; row_=0; subtab_=0;
+    section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;
     if(s==Iptv) {tv_.Open();return;}
     if (s==Files) {folders_.clear(); folders_.push_back(dir_);}
     Reload();
@@ -148,6 +148,15 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Details) page_=Listing;
         Reload();
         if(notice_.empty()) notice_="Atualizado";
+        return "";
+    }
+    if(section_==System && page_!=Home) {
+        // Real console panels: do not invent temperature/network/FTP readings.
+        if(page_==Listing) {
+            if(key==Left && systemTab_>0) --systemTab_;
+            if(key==Right && systemTab_<3) ++systemTab_;
+            if(key==Accept) page_=Details;
+        }
         return "";
     }
     if(page_==Home) {
@@ -269,9 +278,38 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     c.Text(44,78,labels[section_],43,White,1190);
     if(section_==System) {
-        c.Text(49,184,"Saída de vídeo   1280 x 720",27,White,1100);
-        c.Text(49,248,"Jogos encontrados   "+number(games_.size()),25,Muted,1100);
-        c.Text(49,310,"Catálogo Cloud360   "+number(tv_.Count())+" itens carregados",25,Muted,1100);
+        static const char* const titles[]={
+            "Armazenamento","Rede e FTP","Temperaturas","Downloads"
+        };
+        static const char* const marks[]={"HDD","NET","SMC","DL"};
+        static const char* const summaries[]={
+            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais"
+        };
+        static const char* const details[]={
+            "Capacidade de HDD/USB: provider nativo ainda nao conectado.",
+            "FTP e SMB: acesso remoto ainda nao habilitado nesta Alpha.",
+            "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
+            "Downloads em segundo plano: gerenciador ainda nao integrado."
+        };
+        for(int i=0;i<4;++i) {
+            const int x=42+i*302;
+            panel(c,x,166,290,166,Panel,i==systemTab_);
+            c.Text(x+17,184,marks[i],20,i==systemTab_?Lime:Muted,96);
+            c.Text(x+17,222,titles[i],28,White,264);
+            c.Text(x+17,284,summaries[i],18,Muted,252);
+        }
+        if(page_==Details) {
+            c.Box(42,369,1196,220,Panel,12);
+            c.Text(68,391,titles[systemTab_],34,White,1120);
+            c.Text(69,470,details[systemTab_],23,Muted,1122);
+            c.Text(69,543,"B para voltar aos paineis.",20,Lime,1120);
+        } else {
+            c.Text(47,369,"Resumo AuroraX",29,White,1100);
+            c.Box(42,422,1196,165,Panel,12);
+            c.Text(67,443,"Jogos encontrados    "+number(games_.size()),25,White,1120);
+            c.Text(67,494,"Catalogo IPTV local   "+number(tv_.Count())+" itens",23,Muted,1120);
+            c.Text(67,543,"Interface nativa      1280 x 720",22,Muted,1120);
+        }
         return;
     }
     if(page_==Details && Count()) {
