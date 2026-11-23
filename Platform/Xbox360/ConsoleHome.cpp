@@ -1,5 +1,6 @@
 ﻿#include "ConsoleHome.h"
 #include "SavedFile.h"
+#include "PluginRegistry.h"
 #include <ctime>
 #include <algorithm>
 #include <cstdio>
@@ -78,6 +79,16 @@ void ConsoleHome::Reload() {
             roots.push_back(roots_[i].substr(0,sep+1)+(section_==Apps?"Apps":"Emulators"));
         }
         tools_=GameScanner(roots).Scan();
+        // Extend existing Apps/Emulators with opt-in local XEX plugins.
+        // The renderer and eight main home tiles remain unchanged.
+        const std::vector<PluginDescriptor> plugins=
+            PluginRegistry(PluginRegistry::DefaultRoots(dir_)).Scan();
+        const std::string category=section_==Apps?"app":"emulator";
+        for(size_t i=0;i<plugins.size();++i) if(plugins[i].category==category) {
+            Game app={plugins[i].name,plugins[i].executable,
+                      "Plugin "+plugins[i].version,false};
+            tools_.push_back(app);
+        }
     } else games_=GameScanner(roots_).Scan();
     Rebuild();
 }
