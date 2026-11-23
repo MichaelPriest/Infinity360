@@ -51,13 +51,19 @@ const char* const keyboardKeys[]={
 const int KeyCount=42;
 bool isXexPath(const std::string& path) {
     if(path.size()<4) return false;
-    const std::string tail=path.substr(path.size()-4);
-    return (tail==".xex" || tail==".XEX" || tail==".Xex");
+    std::string tail=path.substr(path.size()-4);
+    for(size_t i=0;i<tail.size();++i)
+        tail[i]=(char)std::tolower((unsigned char)tail[i]);
+    return tail==".xex";
+}
+bool isContentPackage(const Game& item) {
+    return item.device=="Pacote GOD" || item.device=="Pacote XBLA" ||
+           item.device=="Pacote Xbox Original";
 }
 bool libraryTabMatch(const Game& item,int tab) {
     if(tab==0) return true;
-    if(tab==4) return !isXexPath(item.executable);
-    if(!isXexPath(item.executable)) {
+    if(tab==4) return isContentPackage(item);
+    if(isContentPackage(item)) {
         if(tab==2) return item.device=="Pacote XBLA";
         if(tab==3) return item.device=="Pacote Xbox Original";
         if(tab==1) return item.device!="Pacote XBLA" &&
@@ -330,7 +336,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Details) {
         if(key==Accept && section_!=Files && !visible_.empty()) {
             const std::string path=visible_[row_]->executable;
-            if(!isXexPath(path)) {
+            if(!isXexPath(path) || isContentPackage(*visible_[row_])) {
                 notice_="Pacote de conteudo: launch nativo ainda nao integrado.";
                 return "";
             }
@@ -489,7 +495,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             title=files_[row_].name; sub=folders_.back(); hint="Visualização de arquivos";
         } else {
             title=visible_[row_]->name; sub=visible_[row_]->executable;
-            hint=isXexPath(sub)?"Pressione A para iniciar este título.":
+            hint=(isXexPath(sub) && !isContentPackage(*visible_[row_]))?
+                "Pressione A para iniciar este título.":
                 "Pacote identificado. Execucao nativa ainda nao homologada.";
         }
         c.Text(76,219,title,36,White,1110);
