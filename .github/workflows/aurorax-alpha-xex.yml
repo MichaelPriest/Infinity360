@@ -1,0 +1,74 @@
+name: AuroraX Alpha - build and package Xbox 360 XEX
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Platform/Xbox360/**
+      - Source/**
+      - Engine/**
+      - IPTV/Cloud360/core/**
+      - Tests/**
+      - CMakeLists.txt
+      - .github/workflows/aurorax-alpha-xex.yml
+  workflow_dispatch:
+    inputs:
+      build_xex:
+        description: 'Compilar XEX real no runner Windows com XDK licenciado e etiqueta XDK360'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  portable-checks:
+    name: Portable tests (do not produce a XEX)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Alpha packaging on test fixtures
+        run: python3 -m unittest discover -s Tests -p 'test_package_alpha.py' -v
+      - name: Compile portable dashboard and console UI
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+      - name: Run portable regression suite
+        run: ctest --test-dir build --output-on-failure
+      - name: Validate native project assets
+        run: |
+          test -s Platform/Xbox360/Assets/home.tga
+          test -s Platform/Xbox360/AuroraX-Xbox360.vcxproj
+          test -s Platform/Xbox360/XboxMain.cpp
+          test -s Platform/Xbox360/CloudTv.cpp
+
+  build-xex:
+    name: Xbox 360 XDK (requires licensed self-hosted runner)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_xex == true }}
+    needs: portable-checks
+    runs-on: [self-hosted, Windows, XDK360]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build integrated AuroraX with XDK
+        shell: cmd
+        run: |
+          if not defined XEDK exit /b 1
+          pushd Platform\Xbox360
+          call build-xex.bat
+          if errorlevel 1 exit /b 1
+          popd
+      - name: Package genuine XEX and approved AuroraX art
+        shell: cmd
+        run: |
+          py -3 Platform\Xbox360\tools\package_alpha.py --xex dist\Xbox360\default.xex --art dist\Xbox360\home.tga --out dist\Xbox360\AuroraX-Alpha-0.1.0-Xbox360.zip
+      - name: Upload package to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraX-Alpha-0.1.0-Xbox360
+          path: dist/Xbox360/AuroraX-Alpha-0.1.0-Xbox360.zip
+          retention-days: 14
+          if-no-files-found: error
