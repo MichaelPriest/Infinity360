@@ -18,6 +18,15 @@ bool contains(const std::vector<std::string>& list,const std::string& path) {
 void clampRow(int& row,size_t count) {
     row = count ? std::min(row,static_cast<int>(count-1)) : 0;
 }
+struct LibraryOrder {
+    explicit LibraryOrder(int value):value_(value) {}
+    bool operator()(const Game* a,const Game* b) const {
+        if(value_==1) return a->name>b->name;
+        if(value_==2 && a->device!=b->device) return a->device<b->device;
+        return a->name<b->name;
+    }
+    int value_;
+};
 // Read-only classification for extracted XEX files. GOD and XBLA package
 // containers require an Xbox content indexer and are not classified here.
 bool libraryTabMatch(const Game& item,int tab) {
@@ -34,7 +43,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -80,6 +89,7 @@ void ConsoleHome::Rebuild() {
     } else if (section_==Library) {
         for(size_t i=0;i<games_.size();++i)
             if(libraryTabMatch(games_[i],subtab_)) visible_.push_back(&games_[i]);
+        std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
     } else if (section_==Apps || section_==Emulators) {
         // Tabs are filters over the same installed XEX catalogue.
         // 0 Todos; 1 Instalados; 2 Plugins; 3 Homebrew (Apps only).
@@ -187,6 +197,14 @@ std::string ConsoleHome::Press(Key key) {
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
         if(key==Accept) Enter(static_cast<Section>(focus_));
+        return "";
+    }
+    if(page_==Listing && section_==Library && key==Search) {
+        static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
+        gameSort_=(gameSort_+1)%3;
+        row_=0;
+        Rebuild();
+        notice_=std::string("Ordenar: ")+sorts[gameSort_];
         return "";
     }
     if(page_==Listing &&
@@ -360,6 +378,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.Text(x+15,155,tabs[i],21,i==subtab_?Lime:White,tabWidth-25);
         }
         c.Text(49,200,number(Count())+" itens nesta aba",21,Muted,1120);
+        if(section_==Library) {
+            static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
+            c.Text(861,201,std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
+        }
     } else if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
     if(!Count() && notice_.empty())
