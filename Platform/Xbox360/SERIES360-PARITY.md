@@ -85,7 +85,7 @@ operações funcionaram numa unidade real.
 | 36 | Perfis do console, perfil automático/manual, troca no Guide | T | Web demonstrativo | Provedor de perfil XDK/XAM |
 | 37 | Tema/cor, fontes, tamanho de texto, som de navegação | T | Web demonstrativo | Configuração real persistente e renderização |
 | 38 | Fundos animados e proteção de tela | T | Web demonstrativo | Render nativo eficiente e temporizador |
-| 39 | Coleções e categorias personalizadas | T | Web demonstrativo | Persistência nativa e integração à biblioteca |
+| 39 | Coleções e categorias personalizadas | T | **Coleções locais com criação, renomeação, associação e exclusão pelo controle implementadas** | Ainda falta testar no Xbox real e personalizar blocos/categorias avançadas |
 | 40 | Plugins e utilitários encontrados em HDD/USB | T/X | **Base nativa parcial** | Adaptar plugins existentes individualmente |
 | 41 | Recursos de HUD `.xur` e `guia360.xex` | X | Pendente | Estudar ABI XUI compatível; não copiar binários para a AuroraX |
 | 42 | Idiomas adicionais e tradução de interface | T | Pendente | Catálogo multilíngue próprio, fonte com acentos |
@@ -165,3 +165,18 @@ Testes acrescentados: `Tests/ContentCatalogTests.cpp` e cenários de
 `Tests/ConsoleHomeTests.cpp`. **Execução dos testes e hardware ainda não
 homologados.** Acesso a Content é apenas leitura e não altera pacotes,
 assinaturas, licenças ou perfis.
+
+## Colecoes personalizadas (novo modulo nativo)
+
+O menu Biblioteca ganhou a aba **Colecoes** e um gerenciador aberto por
+**RB**. O console permite criar e renomear colecoes pelo teclado da
+AuroraX, incluir/retirar o titulo selecionado, alternar a colecao
+ativa por LB e excluir uma colecao com dupla confirmacao Y.
+O arquivo `aurorax-collections.txt` guarda as associacoes e e salvo
+com `.tmp` e backup, sem modificar o jogo nem o pacote STFS.
+
+Codigo: `Platform/Xbox360/CollectionStore.{h,cpp}` e
+`Platform/Xbox360/ConsoleHome.cpp`. Testes portateis:
+`Tests/CollectionStoreTests.cpp` e `Tests/ConsoleHomeTests.cpp`.
+**Situacao:** integrado ao codigo XDK/CMake, nao homologado em console.
+
