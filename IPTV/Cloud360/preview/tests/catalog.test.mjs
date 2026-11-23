@@ -31,3 +31,19 @@ test("Xtream normaliza com categorias e imagens",()=>{
  assert.equal(list[0].logo,"https://example.org/logo.jpg");
  assert.equal(list[0].url,"https://provider.example.org/live/demo/demo/42.ts");
 });
+
+test("grupos de cinema do Nexus funcionam em URLs sem extensão",()=>{
+ for(const group of ["Animes","Desenhos"]) {
+  assert.equal(inferType({group,url:"https://example.org/catalogo/42"}),"movies");
+ }
+ assert.equal(inferType({group:"Canais de desenhos",url:"https://example.org/42"}),"live");
+});
+
+test("o título conserva vírgulas e apóstrofos após os atributos",()=>{
+ const list = parseM3U(`#EXTM3U\n#EXTINF:-1 tvg-name="TV, A" group-title="Filmes",D'Água, Parte 2\nhttps://example.org/title\n`);
+ assert.equal(list.entries[0].name,"D'Água, Parte 2");
+ assert.equal(list.entries[0].tvgName,"TV, A");
+ const previous = parseM3U("#EXTM3U\n#EXTINF:-1,Parte 2\nhttps://example.org/title");
+ const withComma = parseM3U("#EXTM3U\n#EXTINF:-1,Férias, Parte 2\nhttps://example.org/title");
+ assert.equal(withComma.entries[0].id,previous.entries[0].id);
+});

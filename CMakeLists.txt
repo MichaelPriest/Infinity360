@@ -23,7 +23,8 @@ endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
 add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
-    Platform/Xbox360/HomeCanvas.cpp IPTV/Cloud360/core/cloud360.c)
+    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
+    Platform/Xbox360/CloudTv.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
 add_test(NAME console_home COMMAND console_home_tests ${CMAKE_SOURCE_DIR}/Platform/Xbox360/Assets/home.tga)

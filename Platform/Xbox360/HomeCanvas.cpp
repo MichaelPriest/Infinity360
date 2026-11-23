@@ -27,7 +27,12 @@ unsigned nextGlyph(const std::string& text, size_t& i) {
         cp = (cp<<6) | (b&63);
     }
     i += extra;
-    return cp <= 255 ? cp : '?';
+    switch(cp) {
+        case 0x2018: case 0x2019: return 39;
+        case 0x201c: case 0x201d: return '"';
+        case 0x2013: case 0x2014: return '-';
+        default:return cp<=255 ? cp : '?';
+    }
 }
 }
 HomeCanvas::HomeCanvas() : frame_(Width*Height) {}
@@ -88,6 +93,19 @@ void HomeCanvas::Image(int sx,int sy,int sw,int sh,int x,int y,int w,int h,unsig
             if (alpha) dst[x+i]=blend(tint==0xffffffffu ? color : tint,dst[x+i],alpha);
         }
     }
+}
+bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {
+    if(w<=0 || h<=0 || x<0 || y<0 || x+w>Width || y+h>Height) return false;
+    FILE* f=std::fopen(file.c_str(),"rb");if(!f) return false;
+    std::vector<unsigned char> rgba(128*72*4);
+    const bool good=std::fread(&rgba[0],1,rgba.size(),f)==rgba.size() && std::fgetc(f)==EOF;
+    std::fclose(f);if(!good) return false;
+    for(int j=0;j<h;++j) for(int i=0;i<w;++i) {
+        const unsigned char* p=&rgba[4*((j*72/h)*128+i*128/w)];
+        unsigned& dest=frame_[(y+j)*Width+x+i];
+        if(p[3]) dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+    }
+    return true;
 }
 void HomeCanvas::Text(int x,int y,const std::string& text,int size,unsigned color,int maxWidth) {
     const int right=x+maxWidth;

@@ -32,7 +32,7 @@ As telas web são uma especificação visual interativa. Para executar no hardwa
 
 ## Roadmap do console
 
-A versão nativa possui tela inicial em 720p, navegação por controle, consulta local de jogos e catálogo M3U. O projeto XDK, os arquivos para copiar e os limites da reprodução estão em [Platform/Xbox360/README.md](Platform/Xbox360/README.md).
+A versão nativa possui tela inicial em 720p, navegação por controle, consulta local de jogos, Cinema por categoria, busca por controle e guia de TV XMLTV. A ficha de mídia encaminha WMV local para XMedia2 no projeto XDK. O projeto XDK, os arquivos para copiar e os limites da reprodução estão em [Platform/Xbox360/README.md](Platform/Xbox360/README.md).
 
 - Ampliar as animações e as capas da biblioteca nativa.
 - Provider SMC para temperaturas, ventoinha, CPU/GPU/RAM e armazenamento.

@@ -16,25 +16,29 @@ export function playableUrl(input, base) {
 export function attrsFromExtinf(line) {
   const attributes = Object.create(null);
   const start = line.indexOf(" ");
-  const end = line.lastIndexOf(",");
+  const end = extinfDelimiter(line);
   const region = line.substring(start < 0 ? 0 : start, end < 0 ? line.length : end);
   const regexp = /([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s]+))/g;
   for (const match of region.matchAll(regexp))
     attributes[match[1].toLowerCase()] = match[2] ?? match[3] ?? match[4] ?? "";
   return attributes;
 }
-function displayName(line) {
+function extinfDelimiter(line, last = false) {
   let quote = "", comma = -1;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (quote) { if (c === quote) quote = ""; }
     else if (c === '"' || c === "'") quote = c;
-    else if (c === ",") comma = i;
+    else if (c === ",") { if (!last) return i; comma = i; }
   }
+  return comma;
+}
+function displayName(line, legacy = false) {
+  const comma = extinfDelimiter(line, legacy);
   return comma < 0 ? "Sem nome" : line.slice(comma + 1).trim() || "Sem nome";
 }
-function stableId(channel) {
-  const value = channel.name + "\x1f" + channel.url;
+function stableId(channel, name = channel.name) {
+  const value = name + "\x1f" + channel.url;
   let hash = 2166136261;
   for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
   return (hash >>> 0).toString(16);
@@ -44,7 +48,7 @@ export function inferType(item) {
   if (item.kind === "series") return "series";
   if (item.kind === "live" || /^(canais?|tv)(\b|\s*:)/i.test(group)) return "live";
   if (/s[eé]ries?|temporada|season/.test(group)) return "series";
-  if (item.kind === "movie" || /filmes?|movie|vod|cinema/.test(group) || /\.(mp4|mkv)(?:[?#]|$)/i.test(item.url))
+  if (item.kind === "movie" || /filmes?|movie|vod|cinema|animes?|desenhos?/.test(group) || /\.(mp4|mkv)(?:[?#]|$)/i.test(item.url))
     return "movies";
   return "live";
 }
@@ -61,11 +65,12 @@ export function streamFormat(url) {
 }
 export function parseM3U(text, { baseUrl = "", maxItems = MAX_ITEMS } = {}) {
   const entries = [], seen = new Set();
-  let pending = null, invalid = 0, duplicates = 0;
+  let pending = null, legacyName = "", invalid = 0, duplicates = 0;
   for (const raw of String(text).replace(/^\uFEFF/, "").split(/\r?\n/)) {
     const line = raw.trim();
     if (line.startsWith("#EXTINF:")) {
       const a = attrsFromExtinf(line);
+      legacyName = displayName(line, true); // Existing history and favorites use this spelling.
       pending = {
         name: displayName(line), group: a["group-title"] || "Outros",
         logo: playableUrl(a["tvg-logo"], baseUrl),
@@ -80,7 +85,7 @@ export function parseM3U(text, { baseUrl = "", maxItems = MAX_ITEMS } = {}) {
       else if (seen.has(url)) duplicates++;
       else {
         const item = { ...pending, url };
-        item.id = stableId(item);
+        item.id = stableId(item, legacyName);
         entries.push(item); seen.add(url);
       }
       pending = null;

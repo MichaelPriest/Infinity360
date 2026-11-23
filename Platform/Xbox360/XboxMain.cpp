@@ -1,7 +1,9 @@
-// Xbox 360 XDK presenter. The menu, catalogue and drawing code also run on PC.
+﻿// Xbox 360 XDK presenter. The menu, catalogue and drawing code also run on PC.
 #include <xtl.h>
 #include <d3d9.h>
 #include <d3dx9.h>
+#include <xaudio2.h>
+#include <xmedia2.h>
 #include <cstdio>
 #include <cstring>
 #include "ConsoleHome.h"
@@ -11,6 +13,48 @@ template<class T> void drop(T*& object) { if(object) object->Release(); object=0
 struct Vertex { float x,y,u,v; };
 const Vertex screen[]={{-1,1,0,0},{1,1,1,0},{-1,-1,0,1},{1,-1,1,1}};
 
+WORD buttons();
+class LocalMovie {
+    IXAudio2* audio_;
+    IXAudio2MasteringVoice* master_;
+    IXMedia2XmvPlayer* player_;
+public:
+    LocalMovie() : audio_(0),master_(0),player_(0) {}
+    ~LocalMovie() {
+        if(player_) player_->Stop(XMEDIA_STOP_IMMEDIATE);
+        drop(player_);
+        if(master_) master_->DestroyVoice();
+        drop(audio_);
+    }
+    std::string Play(IDirect3DDevice9* device,const std::string& path) {
+        if(FAILED(XAudio2Create(&audio_,0)) || FAILED(audio_->CreateMasteringVoice(&master_)))
+            return "Não foi possível iniciar a saída de áudio.";
+        XMEDIA_XMV_CREATE_PARAMETERS source;
+        ZeroMemory(&source,sizeof source);
+        source.createType=XMEDIA_CREATE_FROM_FILE;
+        source.createFromFile.szFileName=path.c_str();
+        source.dwAudioStreamId=XMEDIA_STREAM_ID_USE_DEFAULT;
+        source.dwVideoStreamId=XMEDIA_STREAM_ID_USE_DEFAULT;
+        if(FAILED(XMedia2CreateXmvPlayer(device,audio_,&source,&player_)))
+            return "Não foi possível abrir o WMV. Confira o arquivo e o codec.";
+        XMEDIA_VIDEO_SCREEN area;
+        ZeroMemory(&area,sizeof area);
+        for(unsigned i=0;i<4;++i) {
+            const float u=(i&1)?1.0f:0.0f,v=(i&2)?1.0f:0.0f;
+            area.aVertices[i].fX=u*HomeCanvas::Width;area.aVertices[i].fY=v*HomeCanvas::Height;
+            area.aVertices[i].fTu=u;area.aVertices[i].fTv=v;
+        }
+        player_->SetVideoScreen(&area);
+        while(!(buttons()&(XINPUT_GAMEPAD_B|XINPUT_GAMEPAD_BACK))) {
+            const HRESULT result=player_->RenderNextFrame(0,0);
+            if(result==(HRESULT)XMEDIA_W_EOF) return "Reprodução concluída.";
+            if(FAILED(result)) return "A reprodução foi interrompida pelo decodificador.";
+            if(result==S_OK) device->Present(0,0,0,0);
+            else Sleep(4);
+        }
+        return "";
+    }
+};
 class Presenter {
     IDirect3D9* d3d_;
     IDirect3DDevice9* device_;
@@ -57,13 +101,24 @@ public:
                    "{o=float4(p,0,1);uv=t;}","vs_3_0",true) ||
            !Shader("sampler2D frame:register(s0);float4 main(float2 uv:TEXCOORD0):COLOR0"
                    "{return tex2D(frame,uv);}","ps_3_0",false)) return false;
+        SetMenuState();
+        return true;
+    }
+    void SetMenuState() {
+        device_->SetRenderState(D3DRS_VIEWPORTENABLE,TRUE);
+        device_->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);
         device_->SetRenderState(D3DRS_ZENABLE,FALSE);
         device_->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);
         device_->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);
         device_->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
         device_->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);
         device_->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);
-        return true;
+    }
+    std::string Play(const std::string& path) {
+        std::string status;
+        { LocalMovie movie; status=movie.Play(device_,path); }
+        SetMenuState();
+        return status;
     }
     bool Show(const HomeCanvas& canvas) {
         D3DLOCKED_RECT lock;
@@ -101,7 +156,8 @@ int main() {
     if(!video.Open()) return 2;
     ConsoleHome menu("game:\\",GameScanner::DefaultRoots()); menu.Load();
     const WORD keys[]={XINPUT_GAMEPAD_DPAD_LEFT,XINPUT_GAMEPAD_DPAD_RIGHT,XINPUT_GAMEPAD_DPAD_UP,
-        XINPUT_GAMEPAD_DPAD_DOWN,XINPUT_GAMEPAD_A,XINPUT_GAMEPAD_B,XINPUT_GAMEPAD_X,XINPUT_GAMEPAD_Y};
+        XINPUT_GAMEPAD_DPAD_DOWN,XINPUT_GAMEPAD_A,XINPUT_GAMEPAD_B,XINPUT_GAMEPAD_X,XINPUT_GAMEPAD_Y,
+        XINPUT_GAMEPAD_LEFT_SHOULDER,XINPUT_GAMEPAD_RIGHT_SHOULDER,XINPUT_GAMEPAD_START,XINPUT_GAMEPAD_RIGHT_THUMB};
     WORD previous=buttons();
     DWORD heldSince=GetTickCount(),lastRepeat=heldSince;
     int minute=-1;
@@ -116,6 +172,12 @@ int main() {
         for(size_t i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(edge&keys[i]) {
             std::string path=menu.Press(static_cast<ConsoleHome::Key>(i));
             if(!path.empty()) { XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
+            const std::string movie=menu.TakeMovie();
+            if(!movie.empty()) {
+                menu.PlayerMessage(video.Play(movie));
+                previous=buttons();heldSince=lastRepeat=GetTickCount();
+                minute=-1;
+            }
             break;
         }
         SYSTEMTIME time; GetLocalTime(&time);
