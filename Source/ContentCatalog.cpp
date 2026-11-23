@@ -57,35 +57,36 @@ bool gameType(unsigned contentType) {
            contentType==0x2000000u;
 }
 void utf8(std::string& output,unsigned codepoint) {
-    if(codepoint<0x20u || codepoint==0x7fu) return;
+    if(codepoint<0x20u || codepoint==0x7fu || codepoint>0x10ffffu) return;
     if(codepoint<0x80u) output+=(char)codepoint;
     else if(codepoint<0x800u) {
         output+=(char)(0xc0u|(codepoint>>6));
         output+=(char)(0x80u|(codepoint&63u));
-    } else {
+    } else if(codepoint<0x10000u) {
         output+=(char)(0xe0u|(codepoint>>12));
+        output+=(char)(0x80u|((codepoint>>6)&63u));
+        output+=(char)(0x80u|(codepoint&63u));
+    } else {
+        output+=(char)(0xf0u|(codepoint>>18));
+        output+=(char)(0x80u|((codepoint>>12)&63u));
         output+=(char)(0x80u|((codepoint>>6)&63u));
         output+=(char)(0x80u|(codepoint&63u));
     }
 }
 std::string titleString(const unsigned char* text,size_t bytes) {
     std::string value;
-    // Field is often UTF-16BE in real STFS, though early documentation
-    // describes the locale field as UTF-8. Accept both conservatively.
-    const bool wide=bytes>=4 && text[0]==0 && text[1]!=0;
-    if(wide) {
-        for(size_t i=0;i+1<bytes && value.size()<120u;i+=2) {
-            unsigned cp=(unsigned(text[i])<<8)|text[i+1];
-            if(cp==0) break;
-            if(cp>=0xd800u && cp<=0xdfffu) continue;
-            utf8(value,cp);
-        }
-    } else {
-        for(size_t i=0;i<bytes && value.size()<120u;++i) {
-            unsigned char ch=text[i];
-            if(!ch) break;
-            if(ch>=32u && ch!=127u) value+=(char)ch;
-        }
+    // Xbox XContent metadata uses UTF-16BE in 9 locale slots.
+    for(size_t i=0;i+1<bytes && value.size()<120u;i+=2) {
+        unsigned cp=(unsigned(text[i])<<8)|text[i+1];
+        if(cp==0u) break;
+        if(cp>=0xd800u && cp<=0xdbffu) {
+            if(i+3>=bytes) continue;
+            const unsigned next=(unsigned(text[i+2])<<8)|text[i+3];
+            if(next<0xdc00u || next>0xdfffu) continue;
+            cp=0x10000u+((cp-0xd800u)<<10)+(next-0xdc00u);
+            i+=2;
+        } else if(cp>=0xdc00u && cp<=0xdfffu) continue;
+        utf8(value,cp);
     }
     return value;
 }
@@ -124,7 +125,8 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     out.mediaId=be32(bytes+0x354);
     out.contentType=type;
     out.sizeBytes=be64(bytes+0x34c);
-    out.name=titleString(bytes+0x411,0x80);
+    for(size_t locale=0;locale<9 && out.name.empty();++locale)
+        out.name=titleString(bytes+0x411+locale*0x100,0x100);
     if(out.name.empty()) out.name=titleString(bytes+0x1691,0x80);
     if(out.name.empty()) {
         static const char hex[]="0123456789ABCDEF";
