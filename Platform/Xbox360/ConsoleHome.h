@@ -18,7 +18,7 @@ private:
     enum Section { Library, Iptv, Apps, Emulators, Files, System, Recent, Favorites };
     enum Page { Home, Listing, Details };
     std::string dir_, notice_;
-    std::vector<std::string> roots_, baseRoots_, history_, favorites_, folders_;
+    std::vector<std::string> roots_, baseRoots_, history_, favorites_, hidden_, folders_;
     std::vector<Game> games_, tools_;
     std::vector<int> toolKinds_; // 1 = installed, 2 = plugin, 3 = homebrew
     std::vector<const Game*> visible_;
