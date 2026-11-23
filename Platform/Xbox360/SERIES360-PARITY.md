@@ -39,7 +39,7 @@ operações funcionaram numa unidade real.
 | 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
 | 07 | Pesquisa e ordenação da biblioteca | T | **Busca nativa Start + teclado, ordenação RS** implementadas | Filtros avançados e busca por metadados |
-| 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | **Ocultos persistente por LB**; Recentes/Favoritos anteriores mantidos | Nunca jogados e coleções ainda pendentes |
+| 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | **Coleções e Ocultos persistentes; Nunca abertos pela AuroraX com registro de XEX solicitados** | Estatísticas reais de tempo jogado e importação do histórico Series360 ainda pendentes |
 | 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | Pendente | Leitura de metadados do título |
 | 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
 | 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | Parcial | Metadados e operações seguras |
@@ -179,4 +179,17 @@ Codigo: `Platform/Xbox360/CollectionStore.{h,cpp}` e
 `Platform/Xbox360/ConsoleHome.cpp`. Testes portateis:
 `Tests/CollectionStoreTests.cpp` e `Tests/ConsoleHomeTests.cpp`.
 **Situacao:** integrado ao codigo XDK/CMake, nao homologado em console.
+
+## Registro de XEX e filtro Nunca abertos
+
+A Biblioteca agora oferece uma aba **Nunca** que exibe executáveis
+`.xex` ainda não solicitados para lançamento pela AuroraX. As
+solicitações confirmadas pelo botão A são registradas como entradas
+`P\t<caminho>` no perfil local (limite de 4096 entradas), enquanto
+a lista de **Recentes** permanece limitada a 24 caminhos.
+
+O estado é **local à AuroraX**: não representa tempo efetivamente
+jogado nem integra estatísticas de outros dashboards. Os pacotes STFS
+somente leitura não entram nesse filtro até terem lançamento nativo
+homologado.
 
