@@ -34,12 +34,12 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | Nativo parcial | Fixar/desafixar, ordenação, horas jogadas, blocos customizados |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
-| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Abas Xbox 360/XBLA/Original para XEX extraídos**; demais formatos parciais | Classificador por TitleID/content type, indexador GOD e discos |
+| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação read-only STFS/GOD e abas**; lançamento de pacotes pendente | Abrir GOD/XBLA pelo serviço nativo apropriado; discos e Indie exigem integração |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
 | 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
-| 07 | Pesquisa e ordenação da biblioteca | T | **Ordenação nativa por RS implementada**; pesquisa de jogos ainda pendente | Busca nativa pelo controle e outros modos de ordenação |
-| 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | Nativo parcial | Coleções e filtros de biblioteca reais |
+| 07 | Pesquisa e ordenação da biblioteca | T | **Busca nativa Start + teclado, ordenação RS** implementadas | Filtros avançados e busca por metadados |
+| 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | **Ocultos persistente por LB**; Recentes/Favoritos anteriores mantidos | Nunca jogados e coleções ainda pendentes |
 | 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | Pendente | Leitura de metadados do título |
 | 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
 | 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | Parcial | Metadados e operações seguras |
@@ -144,3 +144,24 @@ hardware. Documentação ou prévia web isolada não satisfazem este critério.
 **Não afirmar** que isso indexa `Content`/GOD, XBLA em contêiner
 ou Title Updates: a primeira entrega reconhece `default.xex` em
 pastas extraídas. O indexador de pacotes é uma entrega própria.
+
+## Nova entrega: busca, jogos ocultos e pacotes Content/GOD
+
+- Busca de jogos **Start → teclado de controle → Y para aplicar**, com
+  cancelamento B, espaço e apagar; agora filtra a biblioteca nativa.
+- **LB** oculta/reexibe o título selecionado, gravando linhas `H` no
+  `aurorax-profile.txt`. A aba Ocultos mostra títulos escondidos.
+- `ContentCatalog` lê **somente os metadados** de cabeçalhos STFS
+  `CON `, `LIVE` e `PIRS`: TitleID, MediaID, tipo, tamanho e nome.
+- Busca pacotes em `Content/0000000000000000/<TitleID>/<Tipo>/<arquivo>`
+  nos diretórios permitidos; valida tipo e TitleID contra o caminho.
+- GOD, XBLA e outros formatos de jogo reconhecidos aparecem no catálogo
+  e na aba Pacotes, mas **não são executados** pelo lançador XEX. A
+  abertura segura via integração de conteúdo/XAM segue pendente.
+- As funcionalidades existentes de Cloud360, filtros de aplicativos,
+  emuladores e Homebrew continuam separadas da biblioteca.
+
+Testes acrescentados: `Tests/ContentCatalogTests.cpp` e cenários de
+`Tests/ConsoleHomeTests.cpp`. **Execução dos testes e hardware ainda não
+homologados.** Acesso a Content é apenas leitura e não altera pacotes,
+assinaturas, licenças ou perfis.
