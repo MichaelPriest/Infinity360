@@ -22,6 +22,9 @@ public:
     explicit GameScanner(const std::vector<std::string>& roots = DefaultRoots());
     std::vector<Game> Scan() const;
     static std::vector<std::string> DefaultRoots();
+    // Merge deduplicated scan roots from a local text file; never modifies disks.
+    static std::vector<std::string> LoadRoots(const std::string& configFile,
+                                              const std::vector<std::string>& defaults);
 
 private:
     std::vector<std::string> roots_;
