@@ -167,5 +167,28 @@ int main(int argc,char** argv) {
     pluginMenu.Press(ConsoleHome::Accept);
     assert(pluginMenu.Press(ConsoleHome::Accept)==(emulator/"default.xex").string());
 
+    // New Apps -> Homebrew tab uses real local XEX discovery.
+    const fs::path brew=root/"Homebrew"/"RetroArch 360";
+    fs::create_directories(brew);
+    std::ofstream(brew/"default.xex")<<"homebrew fixture";
+    ConsoleHome tabsMenu(dir,roots); tabsMenu.Load();
+    tabsMenu.Press(ConsoleHome::Down);             // Apps
+    tabsMenu.Press(ConsoleHome::Accept);
+    tabsMenu.Press(ConsoleHome::Right);            // Instalados (empty)
+    assert(tabsMenu.Press(ConsoleHome::Accept).empty());
+    tabsMenu.Press(ConsoleHome::Right);            // Plugins
+    tabsMenu.Press(ConsoleHome::Accept);
+    assert(tabsMenu.Press(ConsoleHome::Accept)==(music/"default.xex").string());
+    tabsMenu.Press(ConsoleHome::Back);             // Return to tabbed listing
+    tabsMenu.Press(ConsoleHome::Right);            // Homebrew
+    tabsMenu.Press(ConsoleHome::Accept);
+    assert(tabsMenu.Press(ConsoleHome::Accept)==(brew/"default.xex").string());
+    tabsMenu.Press(ConsoleHome::Back);
+    tabsMenu.Press(ConsoleHome::Left);             // Plugins remains selectable
+    tabsMenu.Press(ConsoleHome::Accept);
+    assert(tabsMenu.Press(ConsoleHome::Accept)==(music/"default.xex").string());
+    tabsMenu.Press(ConsoleHome::Back);
+    tabsMenu.Draw(canvas,"19:42");                // Render Homebrew/Plugins tab UI
+
     fs::remove_all(root);
 }
