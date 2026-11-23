@@ -1,6 +1,7 @@
 ﻿#include "ConsoleHome.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
+#include "ContentCatalog.h"
 #include <ctime>
 #include <cctype>
 #include <algorithm>
@@ -48,8 +49,21 @@ const char* const keyboardKeys[]={
     "9","ESP","APAGAR","BUSCAR","LIMPAR","CANCELAR","."
 };
 const int KeyCount=42;
+bool isXexPath(const std::string& path) {
+    if(path.size()<4) return false;
+    const std::string tail=path.substr(path.size()-4);
+    return (tail==".xex" || tail==".XEX" || tail==".Xex");
+}
 bool libraryTabMatch(const Game& item,int tab) {
     if(tab==0) return true;
+    if(tab==4) return !isXexPath(item.executable);
+    if(!isXexPath(item.executable)) {
+        if(tab==2) return item.device=="Pacote XBLA";
+        if(tab==3) return item.device=="Pacote Xbox Original";
+        if(tab==1) return item.device!="Pacote XBLA" &&
+                          item.device!="Pacote Xbox Original";
+        return false;
+    }
     std::string name=item.executable;
     for(size_t i=0;i<name.size();++i) {
         if(name[i]=='\\') name[i]='/';
@@ -79,8 +93,21 @@ void ConsoleHome::Load() {
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
         if(line[0]=='H' && !contains(hidden_,file)) hidden_.push_back(file);
     }
-    games_=GameScanner(roots_).Scan();
+    ScanLibrary();
     Rebuild();
+}
+void ConsoleHome::ScanLibrary() {
+    games_=GameScanner(roots_).Scan();
+    const std::vector<XboxContentPackage> packages=
+        ContentCatalog(ContentCatalog::DefaultRoots(dir_)).Scan();
+    for(size_t i=0;i<packages.size();++i) {
+        const XboxContentPackage& pkg=packages[i];
+        std::string kind="Pacote GOD";
+        if(pkg.contentType==0xd0000u) kind="Pacote XBLA";
+        else if(pkg.contentType==0x5000u) kind="Pacote Xbox Original";
+        Game item={pkg.name,pkg.path,kind,false};
+        games_.push_back(item);
+    }
 }
 bool ConsoleHome::SaveProfile() const {
     const std::string path=dir_+"aurorax-profile.txt", tmp=path+".tmp";
@@ -110,7 +137,7 @@ void ConsoleHome::Rebuild() {
     } else if (section_==Library) {
         for(size_t i=0;i<games_.size();++i) {
             const bool hidden=contains(hidden_,games_[i].executable);
-            if((subtab_==4?hidden:(!hidden && libraryTabMatch(games_[i],subtab_))) &&
+            if((subtab_==5?hidden:(!hidden && libraryTabMatch(games_[i],subtab_))) &&
                matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
         }
@@ -169,7 +196,7 @@ void ConsoleHome::Reload() {
                 }
             }
         }
-    } else games_=GameScanner(roots_).Scan();
+    } else ScanLibrary();
     Rebuild();
 }
 void ConsoleHome::Enter(Section s) {
@@ -292,7 +319,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing &&
        (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Emulators?2:section_==Library?4:3;
+        const int last=section_==Emulators?2:section_==Library?5:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
@@ -301,8 +328,14 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(page_==Details) {
-        if(key==Accept && section_!=Files && !visible_.empty())
-            return visible_[row_]->executable;
+        if(key==Accept && section_!=Files && !visible_.empty()) {
+            const std::string path=visible_[row_]->executable;
+            if(!isXexPath(path)) {
+                notice_="Pacote de conteudo: launch nativo ainda nao integrado.";
+                return "";
+            }
+            return path;
+        }
     } else {
         if(key==Up && row_>0) --row_;
         if(key==Down && size_t(row_+1)<Count()) ++row_;
@@ -455,7 +488,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Files) {
             title=files_[row_].name; sub=folders_.back(); hint="Visualização de arquivos";
         } else {
-            title=visible_[row_]->name; sub=visible_[row_]->executable; hint="Pressione A para iniciar este título.";
+            title=visible_[row_]->name; sub=visible_[row_]->executable;
+            hint=isXexPath(sub)?"Pressione A para iniciar este título.":
+                "Pacote identificado. Execucao nativa ainda nao homologada.";
         }
         c.Text(76,219,title,36,White,1110);
         c.Text(77,298,sub,22,Muted,1100);
@@ -465,10 +500,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Ocultos"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Ocultos"};
         const char* const* tabs=section_==Library?gameTabs:appTabs;
-        const int numTabs=section_==Library?5:section_==Emulators?3:4;
-        const int tabWidth=numTabs==5?170:numTabs==3?244:207;
+        const int numTabs=section_==Library?6:section_==Emulators?3:4;
+        const int tabWidth=numTabs==6?145:numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
