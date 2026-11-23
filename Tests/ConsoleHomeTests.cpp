@@ -25,6 +25,11 @@ int main(int argc,char** argv) {
     menu.Press(ConsoleHome::Accept);                 // Library
     menu.Press(ConsoleHome::Favorite);
     assert(menu.Press(ConsoleHome::Accept).empty()); // Details
+    {std::ifstream profile(root/"aurorax-profile.txt");
+     const std::string data((std::istreambuf_iterator<char>(profile)),
+                            std::istreambuf_iterator<char>());
+     assert(data.find("R\\t")==std::string::npos); // Not recently played yet
+    }
     assert(menu.Press(ConsoleHome::Accept)==exe);
     ConsoleHome restored(dir,roots); restored.Load();
     restored.Press(ConsoleHome::Down); restored.Press(ConsoleHome::Down); // Recent
