@@ -24,7 +24,10 @@ private:
     std::vector<const Game*> visible_;
     std::vector<FolderEntry> files_;
     CloudTv tv_;
-    int focus_, row_, subtab_, systemTab_, gameSort_;
+    int focus_, row_, subtab_, systemTab_, gameSort_, searchCursor_;
+    bool searchActive_;
+    std::string searchTerm_, searchDraft_;
+    void ApplySearch();
     Section section_;
     Page page_;
     size_t Count() const;
