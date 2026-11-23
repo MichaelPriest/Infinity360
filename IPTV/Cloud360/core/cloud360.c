@@ -2,8 +2,20 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#define CLOUD_READ_ID "%16I64x %c"
+#define CLOUD_WRITE_ID "%016I64x\n"
+#else
+#define CLOUD_READ_ID "%16llx %c"
+#define CLOUD_WRITE_ID "%016llx\n"
+#endif
+
 static void copy(char *dst, size_t n, const char *src) {
-  if(n) snprintf(dst,n,"%s",src?src:"");
+  if (!n) return;
+  size_t len = src ? strlen(src) : 0;
+  if (len >= n) len = n-1;
+  if (len) memcpy(dst,src,len);
+  dst[len]=0;
 }
 static void trim(char *s) {
   size_t n=strlen(s),i=0;
@@ -99,7 +111,7 @@ const char *cloud_format_label(CloudFormat f) {
 CloudTab cloud_item_type(const CloudItem *item) {
   if(!item) return CLOUD_ALL;
   if(contains(item->group,"CANAIS") || contains(item->group,"TV AO VIVO")) return CLOUD_LIVE;
-  if(contains(item->group,"serie") || contains(item->group,"série") ||
+  if(contains(item->group,"serie") || contains(item->group,"s\xc3\xa9rie") ||
      contains(item->group,"temporada")) return CLOUD_SERIES;
   if(contains(item->group,"filme") || contains(item->group,"movie") ||
      contains(item->group,"vod") || suffix(item->url,".mp4") ||
@@ -139,7 +151,7 @@ int cloud_favorites_load(CloudFavorites *f,const char *path) {
   f->count=0; char line[128];
   while(fgets(line,sizeof line,file) && f->count<CLOUD_MAX) {
     unsigned long long raw; char extra;
-    if(sscanf(line,"%16llx %c",&raw,&extra)==1) f->ids[f->count++]=(uint64_t)raw;
+    if(sscanf(line,CLOUD_READ_ID,&raw,&extra)==1) f->ids[f->count++]=(uint64_t)raw;
   }
   int fail=ferror(file); fclose(file); return fail?-4:0;
 }
@@ -147,7 +159,7 @@ int cloud_favorites_save(const CloudFavorites *f,const char *path) {
   if(!f || !path) return -1;
   FILE *file=fopen(path,"wb"); if(!file) return -3;
   for(size_t i=0;i<f->count;i++)
-    if(fprintf(file,"%016llx\n",(unsigned long long)f->ids[i])<0) { fclose(file);return -4; }
+    if(fprintf(file,CLOUD_WRITE_ID,(unsigned long long)f->ids[i])<0) { fclose(file);return -4; }
   return fclose(file)?-4:0;
 }
 size_t cloud_filter(const CloudCatalog *cat,CloudTab tab,const CloudFavorites *f,

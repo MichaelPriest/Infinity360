@@ -358,8 +358,16 @@ function stepChannel(offset) {
     if(next && next.kind!=="series") { openItem(next); return; }
   }
 }
+const dashboardReturn = document.getElementById('dashboardReturn');
+dashboardReturn.hidden = new URLSearchParams(location.search).get('from') !== 'aurorax';
+function backFromPlayer() {
+  if (elements.seriesDialog.open) elements.seriesDialog.close();
+  else if (state.active) stopPlayer();
+  else if (state.tab !== 'home') setTab('home');
+  else if (!dashboardReturn.hidden) dashboardReturn.click();
+}
 function focusDirectional(key) {
-  const elements = [...document.querySelectorAll("button:not([hidden]),input:not([hidden]),select:not([hidden])")]
+  const elements = [...document.querySelectorAll("a[href]:not([hidden]),button:not([hidden]),input:not([hidden]),select:not([hidden])")]
     .filter(el=>!el.disabled && el.getClientRects().length);
   if(!elements.length) return;
   const active=document.activeElement;
@@ -379,8 +387,7 @@ function focusDirectional(key) {
 }
 function handleKey(event) {
   if(event.key==="Escape") {
-    if(elements.seriesDialog.open)elements.seriesDialog.close();
-    else if(state.active)stopPlayer();
+    backFromPlayer();
     return;
   }
   if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;
@@ -400,7 +407,7 @@ function pollGamepad() {
     if(performance.now()-lastGamepadTime>130) {
       const pressed = n => down[n] && !gamepadPrevious[n];
       if(pressed(0)) document.activeElement?.click?.();
-      if(pressed(1)) state.active ? stopPlayer() : setTab("home");
+      if(pressed(1)) backFromPlayer();
       if(pressed(2) && state.active) elements.fullScreen.click();
       if(pressed(3) && state.active)favorite(state.active);
       if(pressed(4))stepChannel(-1);

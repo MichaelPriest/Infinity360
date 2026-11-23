@@ -1,6 +1,6 @@
 const games = [
   ['Forza Horizon','Corrida · 2012','#ff8533','#441714',true],['Halo 3','Ação · 2007','#426d48','#101d16',true],
-  ['Gears of War 3','Ação · 2011','#c59d57','#2f2116',false],['Red Dead Redemption','Aventura · 2010','#b12621','#35100e',true],
+  ['Gears of War 3','Ação · 2011','#c59d57','#2f2116',true],['Red Dead Redemption','Aventura · 2010','#b12621','#35100e',true],
   ['Skate 3','Esporte · 2010','#e4d3a5','#46748a',false],['Minecraft','Sandbox · 2012','#65a84b','#254a20',false],
   ['Fable II','RPG · 2008','#54798c','#14242d',false],['Alan Wake','Suspense · 2010','#64737c','#171c20',true],
   ['Portal 2','Puzzle · 2011','#dbe0d8','#727e83',false],['Mass Effect 2','RPG · 2010','#387293','#101d2e',false],
@@ -11,8 +11,60 @@ const games = [
   ['Media Center','Aplicativo · Mídia','#42c9c4','#103b3a',false],['File Manager','Aplicativo · Sistema','#d4a944','#49350f',false]
 ].map((g,i)=>({name:g[0],meta:g[1],colors:[g[2],g[3]],favorite:g[4],played:20-i,size:Math.max(.2,4+(i*1.7)),installed:i!==10,platform:i<12?'xbox360':i<14?'arcade':i<16?'kinect':i<18?'homebrew':'apps'}));
 
-const savedFavorites = JSON.parse(localStorage.getItem('aurorax-favorites') || '[]');
-games.forEach(game => { if (savedFavorites.includes(game.name)) game.favorite = true; });
+function savedNames(key, defaults) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    if (Array.isArray(value)) return [...new Set(value.filter(name => games.some(game => game.name === name)))];
+  } catch { /* Legacy or damaged storage: use the demo's initial collection. */ }
+  return defaults;
+}
+const favorites = savedNames('aurorax-favorites', games.filter(g => g.favorite).map(g => g.name));
+games.forEach(game => { game.favorite = favorites.includes(game.name); });
+let recentNames = savedNames('aurorax-recents', games.slice(0, 6).map(g => g.name));
+const artwork = {'Forza Horizon':'racing', 'Halo 3':'scifi', 'Gears of War 3':'action'};
+let detailIndex = -1;
+let detailOrigin = null;
+
+function drawShelf(id, entries, empty) {
+  const shelf = document.getElementById(id);
+  shelf.replaceChildren();
+  if (!entries.length) {
+    const message = document.createElement('p');
+    message.className = 'shelf-empty';
+    message.textContent = empty;
+    shelf.append(message);
+    return;
+  }
+  for (const game of entries.slice(0, 3)) {
+    const button = document.createElement('button');
+    button.className = 'shelf-item';
+    button.dataset.game = games.indexOf(game);
+    const art = document.createElement('span');
+    art.className = 'shelf-cover';
+    art.style.backgroundImage = 'linear-gradient(145deg,' + game.colors.join(',') + ')';
+    const cover = localStorage.getItem('cover-' + game.name);
+    if (cover || artwork[game.name]) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = cover || 'art/' + artwork[game.name] + '.jpg';
+      img.addEventListener('error', () => img.remove(), {once:true});
+      art.append(img);
+    }
+    const title = document.createElement('strong');
+    title.textContent = game.name;
+    button.append(art, title);
+    shelf.append(button);
+  }
+}
+
+function drawHome() {
+  drawShelf('recentShelf', recentNames.map(name => games.find(game => game.name === name)), 'Os jogos abertos aparecem aqui.');
+  drawShelf('favoriteShelf', games.filter(g => g.favorite), 'Use X em um jogo para favoritar.');
+}
+document.querySelector('.home-shelves').addEventListener('click', event => {
+  const card = event.target.closest('[data-game]');
+  if (card) openGame(Number(card.dataset.game));
+});
 let activeFilter = 'all';
 let activePlatform = 'all';
 
@@ -26,7 +78,13 @@ const generic = {
 const views=document.querySelectorAll('.view');
 function show(id){views.forEach(v=>v.classList.remove('active'));const direct=document.querySelector(`#${id}.view`);if(direct)direct.classList.add('active');else{renderModule(id);document.querySelector('#generic').classList.add('active')}window.scrollTo(0,0)}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-document.querySelectorAll('.category-bar [data-platform]').forEach(b=>b.addEventListener('click',()=>{activePlatform=b.dataset.platform;syncPlatformTabs();render()}));
+document.querySelectorAll('[data-library]').forEach(button => button.onclick = () => {
+  activePlatform = 'all';
+  document.querySelector('#search').value = '';
+  show('games');
+  syncPlatformTabs();
+  document.querySelector(`[data-filter="${button.dataset.library}"]`).click();
+});
 
 let currentModule='apps';
 function renderModule(id,tab=0){currentModule=id;const d=generic[id];document.querySelector('#genericKicker').textContent=d.kicker;document.querySelector('#genericTitle').textContent=d.title;document.querySelector('#genericText').textContent=d.text;document.querySelector('#moduleNav').innerHTML=d.tabs.map((x,i)=>`<button class="${i===tab?'selected':''}" data-module-tab="${i}">${x}</button>`).join('');document.querySelectorAll('[data-module-tab]').forEach(b=>b.onclick=()=>renderModule(id,+b.dataset.moduleTab));document.querySelector('#moduleActions').innerHTML=moduleActions(id);document.querySelector('#moduleContent').innerHTML=moduleContent(id,tab);wireModuleActions()}
@@ -45,26 +103,69 @@ function wireModuleActions(){document.querySelectorAll('[data-launch]').forEach(
 function render(filter=activeFilter){
   activeFilter=filter;
   const query=document.querySelector('#search').value.toLowerCase();
-  let list=games.filter(g=>g.name.toLowerCase().includes(query) && (activePlatform==='all'||g.platform===activePlatform) && (filter!=='favorite'||g.favorite) && (filter!=='recent'||g.played>14) && (filter!=='installed'||g.installed));
+  let list=games.filter(g=>g.name.toLowerCase().includes(query) && (activePlatform==='all'||g.platform===activePlatform) && (filter!=='favorite'||g.favorite) && (filter!=='recent'||recentNames.includes(g.name)) && (filter!=='installed'||g.installed));
   const sort=document.querySelector('#sort').value;
-  if(sort==='played')list.sort((a,b)=>b.played-a.played);else if(sort==='size')list.sort((a,b)=>b.size-a.size);else list.sort((a,b)=>a.name.localeCompare(b.name));
+  if(filter==='recent')list.sort((a,b)=>recentNames.indexOf(a.name)-recentNames.indexOf(b.name));else if(sort==='played')list.sort((a,b)=>b.played-a.played);else if(sort==='size')list.sort((a,b)=>b.size-a.size);else list.sort((a,b)=>a.name.localeCompare(b.name));
   document.querySelector('#allCount').textContent=games.length;
   document.querySelector('#favoriteCount').textContent=games.filter(g=>g.favorite).length;
   document.querySelector('#gameGrid').innerHTML=list.map(g=>{const cover=localStorage.getItem(`cover-${g.name}`);return `<button class="game-card focusable" data-game="${games.indexOf(g)}"><div class="cover" style="${cover?`background-image:url('${cover}')`:`background:linear-gradient(145deg,${g.colors[0]},${g.colors[1]})`}"><strong>${cover?'':g.name.toUpperCase()}</strong><i class="cover-edit" data-cover="${games.indexOf(g)}" title="Alterar capa">✎</i></div><strong>${g.favorite?'♥ ':''}${g.name}</strong><small>${g.meta} · ${g.size.toFixed(1)} GB ${g.installed?'':'· não instalado'}</small></button>`}).join('') || '<p class="muted">Nenhum título corresponde ao filtro.</p>';
-  document.querySelectorAll('[data-game]').forEach(c=>c.onclick=()=>openGame(+c.dataset.game));
+  drawHome();
+  document.querySelectorAll('#gameGrid [data-game]').forEach(c=>c.onclick=()=>openGame(+c.dataset.game));
   document.querySelectorAll('[data-cover]').forEach(c=>c.onclick=e=>{e.stopPropagation();openCover(+c.dataset.cover)});
 }
 function syncPlatformTabs(){document.querySelectorAll('.platform-tabs [data-platform]').forEach(b=>b.classList.toggle('selected',b.dataset.platform===activePlatform))}
 document.querySelectorAll('.platform-tabs [data-platform]').forEach(b=>b.onclick=()=>{activePlatform=b.dataset.platform;syncPlatformTabs();render()});
 function persist(){localStorage.setItem('aurorax-favorites',JSON.stringify(games.filter(g=>g.favorite).map(g=>g.name)))}
-function openGame(i){const g=games[i];document.querySelector('#modalTitle').textContent=g.name;document.querySelector('#modalMeta').textContent=`${g.meta} · ${g.size.toFixed(1)} GB · ${g.installed?'Instalado em HDD1':'Disponível para instalar'}`;document.querySelector('#modalCover').style.background=`linear-gradient(145deg,${g.colors[0]},${g.colors[1]})`;document.querySelector('#favorite').textContent=g.favorite?'♥ FAVORITO':'♡ FAVORITO';document.querySelector('#favorite').onclick=()=>{g.favorite=!g.favorite;persist();openGame(i);render()};document.querySelector('#modal').classList.add('open');document.querySelector('#modal').setAttribute('aria-hidden','false')}
-document.querySelector('.modal-close').onclick=()=>document.querySelector('#modal').classList.remove('open');
+function openGame(index) {
+  const game = games[index];
+  const modal = document.querySelector('#modal');
+  if (!modal.classList.contains('open')) {
+    const origin = document.activeElement;
+    detailOrigin = {parent: origin.closest('.shelf, #gameGrid')?.id, index};
+  }
+  detailIndex = index;
+  document.querySelector('#modalTitle').textContent = game.name;
+  document.querySelector('#modalMeta').textContent = `${game.meta} · ${game.size.toFixed(1)} GB · ${game.installed ? 'Instalado em HDD1' : 'Disponível para instalar'}`;
+  document.querySelector('#modalCover').style.background = 'linear-gradient(145deg,' + game.colors.join(',') + ')';
+  document.querySelector('#favorite').textContent = game.favorite ? '♥ FAVORITO' : '♡ FAVORITO';
+  document.querySelector('#playGame').disabled = !game.installed;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  (game.installed ? document.querySelector('#playGame') : document.querySelector('#favorite')).focus();
+}
+function closeDetails() {
+  const modal = document.querySelector('#modal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  const parent = detailOrigin?.parent && document.getElementById(detailOrigin.parent);
+  const focus = parent?.querySelector(`[data-game="${detailIndex}"]`) || parent?.querySelector('button') || document.querySelector('.view.active button');
+  focus?.focus();
+  detailIndex = -1;
+}
+document.querySelector('#favorite').onclick = () => {
+  const game = games[detailIndex];
+  if (!game) return;
+  game.favorite = !game.favorite;
+  persist();
+  render();
+  document.querySelector('#favorite').textContent = game.favorite ? '♥ FAVORITO' : '♡ FAVORITO';
+};
+document.querySelector('#playGame').onclick = () => {
+  const game = games[detailIndex];
+  if (!game?.installed) return;
+  recentNames = [game.name, ...recentNames.filter(name => name !== game.name)];
+  localStorage.setItem('aurorax-recents', JSON.stringify(recentNames));
+  render();
+  closeDetails();
+  toast('Execução simulada · ' + game.name);
+};
+document.querySelector('.modal-close').onclick = closeDetails;
 document.querySelector('#search').oninput=()=>render();document.querySelector('#sort').onchange=()=>render();
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-filter]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');render(b.dataset.filter)});
 function toast(text){const t=document.querySelector('#toast');t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-toast]');if(b)toast(b.dataset.toast)});
 const guide=document.querySelector('#guide');
-function toggleGuide(force){const open=force??!guide.classList.contains('open');guide.classList.toggle('open',open);guide.setAttribute('aria-hidden',String(!open))}
+function toggleGuide(force){const open=force??!guide.classList.contains('open');guide.classList.toggle('open',open);guide.setAttribute('aria-hidden',String(!open));guide.inert=!open;if(open)document.querySelector('#closeGuide').focus()}
 document.querySelector('#closeGuide').onclick=()=>toggleGuide(false);
 document.querySelectorAll('#guide [data-view]').forEach(b=>b.addEventListener('click',()=>toggleGuide(false)));
 document.querySelector('[data-guide="downloads"]').onclick=()=>toast('2 downloads na fila · 38% concluído');
@@ -106,12 +207,5 @@ const climates={'São Paulo':[24,'☀','Ensolarado'],'Rio de Janeiro':[28,'☀',
 function updateWeather(city=settings.weatherLocation||'São Paulo',unit=settings.temperatureUnit||'c'){const data=climates[city]||climates['São Paulo'];const temp=unit==='f'?Math.round(data[0]*9/5+32):data[0];const suffix=unit==='f'?'°F':'°';document.querySelector('#weatherCity').textContent=city;document.querySelector('#weatherTitle').textContent=city;document.querySelector('#weatherTemp').textContent=temp+suffix;document.querySelector('#weatherLarge').textContent=temp+suffix;document.querySelector('#weatherIcon').textContent=data[1];document.querySelector('#weatherCondition').textContent=data[2];document.querySelector('#forecast').innerHTML=['HOJE','AMANHÃ','SÁBADO','DOMINGO','SEGUNDA'].map((day,i)=>`<div><small>${day}</small><b>${i%2?'⛅':data[1]}</b><strong>${temp-i}${suffix}</strong></div>`).join('')}
 updateWeather();
 
-document.addEventListener('keydown',e=>{
-  const key=e.key.toLowerCase();
-  if(key==='g'||e.key==='Tab'){e.preventDefault();toggleGuide();return}
-  if(e.key==='Escape'||key==='b'){document.querySelector('#modal').classList.remove('open');document.querySelector('#settingsPanel').classList.remove('open');if(guide.classList.contains('open'))toggleGuide(false);else show('home')}
-  if(key==='y')toast('Biblioteca atualizada · capas sincronizadas');
-  if(key==='x'){const card=document.activeElement.closest?.('[data-game]');if(card){games[+card.dataset.game].favorite=!games[+card.dataset.game].favorite;persist();render();}}
-  if(e.key==='Enter'&&document.activeElement.matches('button'))document.activeElement.click();
-});
-setInterval(()=>{const now=new Date();document.querySelector('#clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});document.querySelector('#guideTime').textContent=`Sessão ativa · ${now.toLocaleDateString('pt-BR')}`},1000);render();
+function updateClock(){const now=new Date();document.querySelector('#clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});document.querySelector('#guideTime').textContent=`Sessão ativa · ${now.toLocaleDateString('pt-BR')}`}
+updateClock(); setInterval(updateClock,1000); render();

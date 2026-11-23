@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(AuroraX LANGUAGES CXX)
+project(AuroraX LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -21,5 +21,9 @@ if(Python3_Interpreter_FOUND)
     add_test(NAME web_smoke COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/WebSmokeTest.py)
 endif()
 
-# Xbox 360 uses the XDK project in Platform/Xbox360. The native bootstrap is
-# intentionally excluded from desktop builds because it depends on XTL/D3D9.
+# Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
+add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
+    Platform/Xbox360/HomeCanvas.cpp IPTV/Cloud360/core/cloud360.c)
+target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
+target_link_libraries(console_home_tests PRIVATE aurorax_core)
+add_test(NAME console_home COMMAND console_home_tests ${CMAKE_SOURCE_DIR}/Platform/Xbox360/Assets/home.tga)

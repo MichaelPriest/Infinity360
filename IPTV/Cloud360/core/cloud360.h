@@ -2,6 +2,9 @@
 #define CLOUD360_H
 #include <stddef.h>
 #include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #define CLOUD_MAX 1500
 typedef struct {
   char name[128], group[96], url[2048], logo[256], tvg_id[128];
@@ -24,4 +27,7 @@ int cloud_favorites_load(CloudFavorites *f, const char *path);
 int cloud_favorites_save(const CloudFavorites *f, const char *path);
 size_t cloud_filter(const CloudCatalog *cat, CloudTab tab, const CloudFavorites *f,
                     const char *group, const char *query, size_t *indices, size_t cap);
+#ifdef __cplusplus
+}
+#endif
 #endif

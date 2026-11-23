@@ -10,9 +10,16 @@ struct Game {
     bool favorite;
 };
 
+struct FolderEntry {
+    std::string name;
+    bool directory;
+};
+
+bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries);
+
 class GameScanner {
 public:
-    explicit GameScanner(std::vector<std::string> roots = DefaultRoots());
+    explicit GameScanner(const std::vector<std::string>& roots = DefaultRoots());
     std::vector<Game> Scan() const;
     static std::vector<std::string> DefaultRoots();
 

@@ -2,7 +2,7 @@
 
 Protótipo open-source de uma dashboard para Xbox 360 com interface portátil para desenvolvimento no PC. O núcleo já oferece navegação por controle, biblioteca com varredura recursiva de `default.xex`, favoritos, atualização, detalhes, configurações, sistema e gerenciador de arquivos.
 
-> O projeto não inclui exploits, chaves, conteúdo protegido ou meios de contornar segurança. A execução real de XEX, leitura de temperatura e renderização no console devem ser conectadas às APIs do XDK pelo proprietário de um ambiente autorizado.
+> O projeto não inclui exploits, chaves, conteúdo protegido ou meios de contornar segurança. A apresentação Direct3D e o lançamento de títulos usam o projeto XDK. A validação em console e a leitura de temperaturas continuam pendentes.
 
 ## Compilar e executar
 
@@ -16,9 +16,11 @@ Crie jogos de teste como `Games/Nome do jogo/default.xex`. Comandos: `left`, `ri
 
 ## Interface gráfica
 
-Uma demonstração visual completa e responsiva está disponível em `Web/index.html`. Abra o arquivo em um navegador moderno ou execute `python3 -m http.server 8080 -d Web` e acesse `http://localhost:8080`.
+Na raiz do repositório, execute `python -m http.server 8080` e abra `http://localhost:8080/Web/`. No Linux, use `python3` se necessário. O bloco **Cloud360 IPTV** abre o player existente no navegador. O link **← AuroraX** retorna com o foco no mesmo bloco.
 
-A demonstração inclui tela inicial, biblioteca pesquisável, filtros reais (todos, favoritos, recentes e instalados), ordenação, favoritos persistentes, detalhes, tamanhos, aplicativos, emuladores, arquivos, sistema, menu Guide, status de downloads/FTP e preferências persistentes de tema, perfil, som e movimento. Use `G` ou `Tab` para abrir o Guide, `B`/`Esc` para voltar, `X` para favoritar o item focado e `Y` para atualizar.
+A tela inicial reúne Biblioteca, IPTV, quatro atalhos e as fileiras Recentes e Favoritos. O direcional ou as setas movem o foco, A ou Enter seleciona e B ou Esc volta. Os jogos da prévia são demonstrativos. Abrir um deles pelo botão Jogar atualiza o histórico deste navegador. Na versão de console, as fileiras usam os jogos encontrados nos dispositivos.
+
+A demonstração inclui tela inicial, biblioteca pesquisável, filtros reais (todos, favoritos, recentes e instalados), ordenação, favoritos persistentes, detalhes, tamanhos, aplicativos, emuladores, arquivos, sistema, menu Guide, status de downloads/FTP e preferências persistentes de tema, perfil, som e movimento. Use `G` ou o botão Guide para abrir o Guide, `B`/`Esc` para voltar, `X` para favoritar o item focado e `Y` para atualizar.
 
 As categorias Xbox 360, Arcade, Kinect, Homebrew e Aplicativos possuem filtros e exemplos próprios. A Loja AuroraX resgata a ideia de catálogo comunitário presente em dashboards clássicas, mas usa pacotes demonstrativos locais e não distribui jogos nem conteúdo protegido. O módulo de clima permite selecionar cidade e Celsius/Fahrenheit nas configurações. As configurações também incluem layout da biblioteca, FTP automático, atualizações e confirmação de execução.
 
@@ -30,11 +32,11 @@ As telas web são uma especificação visual interativa. Para executar no hardwa
 
 ## Roadmap do console
 
-Uma primeira configuração nativa para gerar `default.xex` com um XDK autorizado está documentada em `Platform/Xbox360/README.md`. O bootstrap valida Direct3D, apresentação a 60 Hz e controle antes da integração de todas as telas.
+A versão nativa possui tela inicial em 720p, navegação por controle, consulta local de jogos e catálogo M3U. O projeto XDK, os arquivos para copiar e os limites da reprodução estão em [Platform/Xbox360/README.md](Platform/Xbox360/README.md).
 
-- Adaptador XInput/XDK e renderizador Direct3D 9 para tiles, capas e animações.
+- Ampliar as animações e as capas da biblioteca nativa.
 - Provider SMC para temperaturas, ventoinha, CPU/GPU/RAM e armazenamento.
-- Launcher de XEX com confirmação, retorno à dashboard e histórico.
+- Validar o lançamento dos títulos e o retorno à dashboard em hardware.
 - Capas e metadados locais, FTP, SMB, atualização via HTTP e downloads em segundo plano.
 - Gerenciador de arquivos, capturas, temas, perfis, conquistas e controle parental.
 - Plugins opcionais para emuladores, homebrew, discos, DLC/TU e multidisco.
