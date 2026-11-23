@@ -2,6 +2,7 @@
 #include "GameScanner.h"
 #include "HomeCanvas.h"
 #include "CloudTv.h"
+#include "CollectionStore.h"
 
 class ConsoleHome {
 public:
@@ -24,9 +25,11 @@ private:
     std::vector<const Game*> visible_;
     std::vector<FolderEntry> files_;
     CloudTv tv_;
+    CollectionStore collections_;
     int focus_, row_, subtab_, systemTab_, gameSort_, searchCursor_;
-    bool searchActive_;
-    std::string searchTerm_, searchDraft_;
+    int collectionIndex_, collectionRow_, keyboardMode_; // 0 search, 1 create, 2 rename
+    bool searchActive_, collectionPicker_, deleteCollectionConfirm_;
+    std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
     Section section_;
     Page page_;
