@@ -2,6 +2,7 @@
 #include "SavedFile.h"
 #include "PluginRegistry.h"
 #include <ctime>
+#include <cctype>
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
@@ -16,6 +17,19 @@ bool contains(const std::vector<std::string>& list,const std::string& path) {
 }
 void clampRow(int& row,size_t count) {
     row = count ? std::min(row,static_cast<int>(count-1)) : 0;
+}
+// Read-only classification for extracted XEX files. GOD and XBLA package
+// containers require an Xbox content indexer and are not classified here.
+bool libraryTabMatch(const Game& item,int tab) {
+    if(tab==0) return true;
+    std::string name=item.executable;
+    for(size_t i=0;i<name.size();++i) {
+        if(name[i]=='\\') name[i]='/';
+        name[i]=(char)std::tolower((unsigned char)name[i]);
+    }
+    const bool arcade=name.find("/xbla/")!=std::string::npos;
+    const bool original=name.find("/xbox original/")!=std::string::npos;
+    return tab==1?(!arcade && !original):tab==2?arcade:original;
 }
 }
 
@@ -64,7 +78,8 @@ void ConsoleHome::Rebuild() {
         const std::vector<std::string>& paths = section_==Recent ? history_ : favorites_;
         for(size_t i=0;i<paths.size();++i) { const Game* g=Installed(paths[i]); if(g) visible_.push_back(g); }
     } else if (section_==Library) {
-        for(size_t i=0;i<games_.size();++i) visible_.push_back(&games_[i]);
+        for(size_t i=0;i<games_.size();++i)
+            if(libraryTabMatch(games_[i],subtab_)) visible_.push_back(&games_[i]);
     } else if (section_==Apps || section_==Emulators) {
         // Tabs are filters over the same installed XEX catalogue.
         // 0 Todos; 1 Instalados; 2 Plugins; 3 Homebrew (Apps only).
@@ -174,9 +189,10 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Accept) Enter(static_cast<Section>(focus_));
         return "";
     }
-    if(page_==Listing && (section_==Apps || section_==Emulators) &&
+    if(page_==Listing &&
+       (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Apps?3:2;
+        const int last=section_==Emulators?2:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
@@ -331,11 +347,13 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(77,384,hint,21,Lime,1110);
         return;
     }
-    const bool tabbed=(section_==Apps || section_==Emulators);
+    const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
-        static const char* const tabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        const int numTabs=section_==Apps?4:3;
-        const int tabWidth=section_==Apps?207:244;
+        static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original"};
+        const char* const* tabs=section_==Library?gameTabs:appTabs;
+        const int numTabs=section_==Emulators?3:4;
+        const int tabWidth=numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
