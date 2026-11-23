@@ -2,8 +2,23 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#define CLOUD_READ_ID "%16I64x %c"
+#define CLOUD_WRITE_ID "%016I64x\n"
+#else
+#define CLOUD_READ_ID "%16llx %c"
+#define CLOUD_WRITE_ID "%016llx\n"
+#endif
+
 static void copy(char *dst, size_t n, const char *src) {
-  if(n) snprintf(dst,n,"%s",src?src:"");
+  if (!dst || !n) return;
+  if (!src) src = "";
+  size_t i = 0;
+  while (i + 1 < n && src[i]) {
+    dst[i] = src[i];
+    i++;
+  }
+  dst[i] = 0;
 }
 static void trim(char *s) {
   size_t n=strlen(s),i=0;
@@ -26,14 +41,25 @@ static void attribute(const char *line,const char *key,char *out,size_t cap) {
     p+=n;
   }
 }
+static uint64_t hash_fields(const char *name,const char *url) {
+  uint64_t h=UINT64_C(14695981039346656037);
+  const char *v[]={name,url};
+  for(size_t i=0;i<2;i++) {
+    const unsigned char *p=(const unsigned char*)v[i];
+    while(*p) { h^=*p++; h*=UINT64_C(1099511628211); }
+    h^=255; h*=UINT64_C(1099511628211);
+  }
+  return h;
+}
 void cloud_init(CloudCatalog *cat,CloudItem *buffer,size_t cap) {
   if(cat) { cat->items=buffer; cat->capacity=cap; cat->count=0; }
 }
-int cloud_load_m3u(CloudCatalog *cat,const char *path) {
-  if(!cat || !cat->items || !cat->capacity || !path) return -1;
+int cloud_visit_m3u(const char *path,CloudItemVisitor visit,void *context) {
+  if(!visit || !path) return -1;
   FILE *f=fopen(path,"rb"); if(!f) return -3;
-  cat->count=0;
-  char line[4096]; CloudItem pending={0}; int meta=0;
+  CloudItem pending={0};
+  char line[4096],legacyName[sizeof pending.name];
+  int meta=0;
   while(fgets(line,sizeof line,f)) {
     trim(line);
     if(!strncmp(line,"#EXTINF:",8)) {
@@ -41,25 +67,42 @@ int cloud_load_m3u(CloudCatalog *cat,const char *path) {
       attribute(line,"group-title",pending.group,sizeof pending.group);
       attribute(line,"tvg-logo",pending.logo,sizeof pending.logo);
       attribute(line,"tvg-id",pending.tvg_id,sizeof pending.tvg_id);
-      const char *p=line,*title=NULL; char quote=0;
+      const char *p=line,*title=NULL,*oldTitle=NULL; char quote=0;
       while(*p) {
         if((*p=='"' || *p=='\'') && (!quote || *p==quote)) quote=quote?0:*p;
-        if(*p==',' && !quote) title=p+1;
+        if(*p==',' && !quote) {if(!title) title=p+1;oldTitle=p+1;}
         p++;
       }
       if(title) copy(pending.name,sizeof pending.name,title);
-      trim(pending.name); meta=1;
+      trim(pending.name);
+      copy(legacyName,sizeof legacyName,oldTitle);trim(legacyName);meta=1;
     } else if(!strncmp(line,"#EXTGRP:",8) && meta) {
       copy(pending.group,sizeof pending.group,line+8);
     } else if(meta && line[0] && line[0]!='#') {
-      if(cat->count>=cat->capacity) { fclose(f); return -2; }
       copy(pending.url,sizeof pending.url,line);
       if(!pending.name[0]) copy(pending.name,sizeof pending.name,"Sem nome");
       if(!pending.group[0]) copy(pending.group,sizeof pending.group,"Outros");
-      cat->items[cat->count++]=pending; meta=0;
+      pending.playlist_id=hash_fields(legacyName[0]?legacyName:"Sem nome",pending.url);
+      int result=visit(&pending,context);
+      if(result) { fclose(f); return result; }
+      meta=0;
     }
   }
   int fail=ferror(f); fclose(f); return fail?-3:0;
+}
+static int store_item(const CloudItem *item,void *context) {
+  CloudCatalog *cat=(CloudCatalog*)context;
+  if(cat->count>=cat->capacity) return -2;
+  cat->items[cat->count++]=*item;
+  return 0;
+}
+int cloud_load_m3u(CloudCatalog *cat,const char *path) {
+  if(!cat || !cat->items || !cat->capacity || !path) return -1;
+  CloudCatalog next=*cat;
+  next.count=0;
+  int result=cloud_visit_m3u(path,store_item,&next);
+  if(result!=-3 || next.count) cat->count=next.count;
+  return result;
 }
 static int contains(const char *a,const char *b) {
   if(!b || !*b) return 1;
@@ -96,36 +139,39 @@ const char *cloud_format_label(CloudFormat f) {
     default:return "DESCONHECIDO";
   }
 }
+static int group_prefix(const char *group,const char *word) {
+  while(*word && *group && tolower((unsigned char)*group)==*word) {++group;++word;}
+  return !*word && (!*group || !isalnum((unsigned char)*group));
+}
 CloudTab cloud_item_type(const CloudItem *item) {
   if(!item) return CLOUD_ALL;
-  if(contains(item->group,"CANAIS") || contains(item->group,"TV AO VIVO")) return CLOUD_LIVE;
-  if(contains(item->group,"serie") || contains(item->group,"série") ||
-     contains(item->group,"temporada")) return CLOUD_SERIES;
+  if(group_prefix(item->group,"tv") || group_prefix(item->group,"canal") ||
+     contains(item->group,"CANAIS") || contains(item->group,"TV AO VIVO")) return CLOUD_LIVE;
+  if(contains(item->group,"serie") || contains(item->group,"s\xc3\xa9rie") ||
+     contains(item->group,"s\xc3\x89rie") || contains(item->group,"temporada")) return CLOUD_SERIES;
   if(contains(item->group,"filme") || contains(item->group,"movie") ||
-     contains(item->group,"vod") || suffix(item->url,".mp4") ||
-     suffix(item->url,".mkv")) return CLOUD_MOVIES;
+     contains(item->group,"vod") || contains(item->group,"cinema") ||
+     contains(item->group,"anime") || contains(item->group,"desenho") || suffix(item->url,".mp4") ||
+     suffix(item->url,".mkv") || suffix(item->url,".wmv")) return CLOUD_MOVIES;
   return CLOUD_LIVE;
 }
-static uint64_t item_id(const CloudItem *item) {
+uint64_t cloud_item_id(const CloudItem *item) {
   if(!item) return 0;
-  uint64_t h=UINT64_C(14695981039346656037);
-  const char *v[]={item->name,item->url};
-  for(size_t i=0;i<2;i++) {
-    const unsigned char *p=(const unsigned char*)v[i];
-    while(*p) { h^=*p++; h*=UINT64_C(1099511628211); }
-    h^=255; h*=UINT64_C(1099511628211);
-  }
-  return h;
+  return item->playlist_id ? item->playlist_id : hash_fields(item->name,item->url);
 }
 int cloud_favorite_has(const CloudFavorites *f,const CloudItem *item) {
-  if(!f || !item) return 0;
-  uint64_t id=item_id(item);
+  return item && cloud_favorite_has_id(f,cloud_item_id(item));
+}
+int cloud_favorite_has_id(const CloudFavorites *f,uint64_t id) {
+  if(!f) return 0;
   for(size_t i=0;i<f->count;i++) if(f->ids[i]==id) return 1;
   return 0;
 }
 int cloud_favorite_toggle(CloudFavorites *f,const CloudItem *item) {
-  if(!f || !item) return -1;
-  uint64_t id=item_id(item);
+  return item ? cloud_favorite_toggle_id(f,cloud_item_id(item)) : -1;
+}
+int cloud_favorite_toggle_id(CloudFavorites *f,uint64_t id) {
+  if(!f) return -1;
   for(size_t i=0;i<f->count;i++) if(f->ids[i]==id) {
     for(size_t j=i+1;j<f->count;j++) f->ids[j-1]=f->ids[j];
     f->count--; return 0;
@@ -139,7 +185,7 @@ int cloud_favorites_load(CloudFavorites *f,const char *path) {
   f->count=0; char line[128];
   while(fgets(line,sizeof line,file) && f->count<CLOUD_MAX) {
     unsigned long long raw; char extra;
-    if(sscanf(line,"%16llx %c",&raw,&extra)==1) f->ids[f->count++]=(uint64_t)raw;
+    if(sscanf(line,CLOUD_READ_ID,&raw,&extra)==1) f->ids[f->count++]=(uint64_t)raw;
   }
   int fail=ferror(file); fclose(file); return fail?-4:0;
 }
@@ -147,7 +193,7 @@ int cloud_favorites_save(const CloudFavorites *f,const char *path) {
   if(!f || !path) return -1;
   FILE *file=fopen(path,"wb"); if(!file) return -3;
   for(size_t i=0;i<f->count;i++)
-    if(fprintf(file,"%016llx\n",(unsigned long long)f->ids[i])<0) { fclose(file);return -4; }
+    if(fprintf(file,CLOUD_WRITE_ID,(unsigned long long)f->ids[i])<0) { fclose(file);return -4; }
   return fclose(file)?-4:0;
 }
 size_t cloud_filter(const CloudCatalog *cat,CloudTab tab,const CloudFavorites *f,

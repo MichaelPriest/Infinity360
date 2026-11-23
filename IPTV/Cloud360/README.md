@@ -1,10 +1,10 @@
-# Cloud360 IPTV — Xbox 360 (alpha 0.5.1)
+# Cloud360 IPTV para Xbox 360
 
 > **ATENÇÃO — NÃO EXECUTE O XEX v0.5.1 NO XBOX 360.** Um teste real apresentou interface desconfigurada e alterações visuais no menu do Aurora/Xbox após sair. A causa exata ainda está sob investigação. Reinicie o console caso o menu permaneça com artefatos; não use a build antiga.
 >
-> **Nova versão de diagnóstico v0.5.2 (ainda não validada no hardware):** use somente após ler as precauções e testar primeiro o executável sem GPU: https://github.com/MichaelPriest/AuroraX/blob/feature/cloud360-xex-ci/IPTV/Cloud360/docs/GPU-RESTORE-v052.md . A build fica na branch feature/cloud360-xex-ci.
+> O diagnóstico XSDK v0.5.2 gera dois executáveis para investigar o retorno ao Aurora. A validação em hardware está pendente. Comece pelo teste de inicialização sem GPU. [Procedimento de diagnóstico](docs/GPU-RESTORE-v052.md).
 
-Módulo IPTV separado, salvo no repositório AuroraX. A dashboard, launcher e builds já existentes não foram substituídos.
+O player integrado à dashboard usa o projeto XDK em `Platform/Xbox360`. [Compilação e formatos de mídia](../../Platform/Xbox360/README.md).
 
 ## Funcionalidades executáveis no navegador
 
@@ -33,10 +33,9 @@ A reprodução depende de URLs válidas, de CORS quando exigido, dos codecs pres
 
 ## Estado da versão nativa Xbox 360
 
-O protótipo XSDK em native/ possui:
-- Leitura de playlist local, seleção de canais, abas, favoritos e UI de texto em 720p.
-- Adaptador experimental de exibição de logos locais: arquivos RGBA 128x72, shaders e textura XSDK.
-- Nenhuma reprodução A/V nativa ainda. Não foi gerado ou testado um default.xex funcional no Xbox 360.
+A dashboard AuroraX em `Platform/Xbox360` possui player de WMV local e de transmissões MPEG-PS. Para HLS, MPEG-TS e MP4, o conversor `tools/stream_relay.py` envia vídeo e áudio ao console pela rede local. O decodificador e o conversor têm testes de reprodução no PC. [Configuração e formatos da dashboard](../../Platform/Xbox360/README.md#reprodução-no-projeto-xdk).
+
+O projeto XSDK em `native/` empacota o `cloud360_probe.xex` e uma interface de diagnóstico com catálogo M3U local. O teste verifica o retorno ao Aurora e registra as etapas em log. [Diagnóstico v0.5.2](native/README.md).
 
 ### Preparar logos para o Xbox 360
 
@@ -60,11 +59,7 @@ arquivos de imagem. O console ainda não baixa imagens diretamente.
 
 ### Compilar com XSDK
 
-Leia native/README.md e as instruções atuais do projeto xenosworks/xsdk.
-Para que o player nativo funcione, ainda precisamos implementar camada HTTP/HTTPS, recepção
-do stream, demux HLS/MPEG-TS, decodificação de áudio/vídeo, sincronização A/V, saída e
-gerenciamento de memória no console. Esta entrega não deve ser confundida com um player
-nativo funcional.
+Com o XSDK e sua toolchain configurados, rode `bash tools/build_xex.sh` a partir desta pasta. O workflow **Cloud360 Xbox 360 SAFE graphics diagnostic** também gera o pacote v0.5.2 no GitHub Actions. [Detalhes do diagnóstico](native/README.md).
 
 ## Segurança
 
@@ -73,21 +68,6 @@ dados privados. As exclusões estão em .gitignore. Use somente provedores que a
 aplicativos externos e disponibilizam legalmente seus streams.
 
 
-## Desenvolvimento atual: decoder FFmpeg v0.5.1
+## Decodificação experimental com FFmpeg
 
-O software FFmpeg foi integrado como decoder opcional à compilação XSDK.
-Os arquivos core/ffmpeg_decoder.c e core/offline_decode.c fazem decodificação
-real de elementary streams. Na opção CLOUD360_WITH_FFMPEG=ON, a aba
-CONFIG, botão A, decodifica game:\sample.h264 e relata os quadros produzidos.
-
-**Os testes de decode no computador passaram para H.264, MPEG-2,
-AAC, MP3 e AC-3. Ainda não houve compilação/execução desse decoder no Xbox 360.**
-A conversão de quadros para GPU, envio de PCM ao áudio e ingestão
-HTTP/HLS/MPEG-TS ainda não estão implementados.
-
-Instruções: docs/DECODER-NATIVE.md. Para gerar um smoke XEX sem FFmpeg
-na toolchain XSDK: bash tools/build_xex.sh.
-
-O workflow manual Cloud360 Xbox 360 — manual XEX smoke build pode gerar
-o primeiro pacote de diagnóstico no GitHub Actions, após execução manual;
-não pressupõe sucesso até ser finalizado. Esse workflow não inclui codecs.
+Os módulos em `core/ffmpeg_decoder.c` e `core/offline_decode.c` têm testes no computador com H.264, MPEG-2, AAC, MP3 e AC-3. A verificação no Xbox 360 está pendente. O diagnóstico gráfico v0.5.2 usa `CLOUD360_WITH_FFMPEG=OFF`. [Experimento de decodificação](docs/DECODER-NATIVE.md).

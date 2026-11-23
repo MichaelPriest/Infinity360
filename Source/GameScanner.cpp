@@ -1,6 +1,7 @@
 #include "GameScanner.h"
 
 #include <algorithm>
+#include <cctype>
 #ifdef _XBOX
 #include <xtl.h>
 #else
@@ -8,14 +9,46 @@
 namespace fs = std::filesystem;
 #endif
 
-GameScanner::GameScanner(std::vector<std::string> roots) : roots_(std::move(roots)) {}
+namespace {
+bool entryLess(const FolderEntry& a, const FolderEntry& b) {
+    if (a.directory != b.directory) return a.directory;
+    return a.name < b.name;
+}
+bool gameLess(const Game& a, const Game& b) { return a.name < b.name; }
+}
+
+bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries) {
+    entries.clear();
+#ifdef _XBOX
+    WIN32_FIND_DATAA info;
+    const std::string pattern = path + (!path.empty() && path[path.size()-1]=='\\' ? "*" : "\\*");
+    HANDLE handle = FindFirstFileA(pattern.c_str(), &info);
+    if (handle == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_FILE_NOT_FOUND;
+    do {
+        FolderEntry entry = {info.cFileName, (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0};
+        if (entry.name != "." && entry.name != "..") entries.push_back(entry);
+    } while (FindNextFileA(handle, &info));
+    FindClose(handle);
+#else
+    std::error_code ec;
+    for (fs::directory_iterator it(path, ec), end; !ec && it!=end; it.increment(ec)) {
+        FolderEntry entry = {it->path().filename().string(), it->is_directory(ec)};
+        if (!ec) entries.push_back(entry);
+    }
+    if (ec) return false;
+#endif
+    std::sort(entries.begin(), entries.end(), entryLess);
+    return true;
+}
+GameScanner::GameScanner(const std::vector<std::string>& roots) : roots_(roots) {}
 
 std::vector<std::string> GameScanner::DefaultRoots() {
 #ifdef _XBOX
-    return {"HDD1:\\Games", "USB0:\\Games", "USB1:\\Games"};
+    const char* paths[] = {"game:\\Games", "HDD1:\\Games", "USB0:\\Games", "USB1:\\Games"};
 #else
-    return {"Games", "USB/Games"};
+    const char* paths[] = {"Games", "USB/Games"};
 #endif
+    return std::vector<std::string>(paths,paths+sizeof(paths)/sizeof(paths[0]));
 }
 
 std::vector<Game> GameScanner::Scan() const {
@@ -27,23 +60,18 @@ std::vector<Game> GameScanner::Scan() const {
     while (!pending.empty()) {
         const std::string directory = pending.back();
         pending.pop_back();
-        WIN32_FIND_DATAA data;
-        const std::string pattern = directory + "\\*";
-        HANDLE find = FindFirstFileA(pattern.c_str(), &data);
-        if (find == INVALID_HANDLE_VALUE) continue;
-        do {
-            const std::string name = data.cFileName;
-            if (name == "." || name == "..") continue;
-            const std::string path = directory + "\\" + name;
-            if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-                pending.push_back(path);
-            } else if (name == "default.xex") {
-                const std::string::size_type slash = directory.find_last_of("\\/");
-                const std::string title = slash == std::string::npos ? directory : directory.substr(slash + 1);
-                games.push_back({title, path, directory.substr(0, directory.find_first_of("\\/")), false});
+        std::vector<FolderEntry> entries;
+        ReadFolder(directory, entries);
+        for (size_t i=0; i<entries.size(); ++i) {
+            const FolderEntry& entry=entries[i];
+            const std::string path=directory+"\\"+entry.name;
+            if (entry.directory) pending.push_back(path);
+            else if (_stricmp(entry.name.c_str(), "default.xex") == 0) {
+                const size_t sep=directory.find_last_of("\\/");
+                Game game={directory.substr(sep+1),path,directory.substr(0,directory.find_first_of("\\/")),false};
+                games.push_back(game);
             }
-        } while (FindNextFileA(find, &data));
-        FindClose(find);
+        }
     }
 #else
     for (const std::string& root : roots_) {
@@ -63,6 +91,6 @@ std::vector<Game> GameScanner::Scan() const {
         }
     }
 #endif
-    std::sort(games.begin(), games.end(), [](const Game& a, const Game& b) { return a.name < b.name; });
+    std::sort(games.begin(), games.end(), gameLess);
     return games;
 }

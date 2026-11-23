@@ -5,16 +5,27 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from package_xex import package
 class Packaging(unittest.TestCase):
     def test_bad_binary(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp); xex=root/"bad.xex"; xex.write_bytes(b"NOEX"*32)
-            playlist=root/"demo.m3u";playlist.write_text("#EXTM3U\n")
-            with self.assertRaises(ValueError):package(xex,root/"out.zip",playlist)
-    def test_files(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp);xex=root/"fixture.xex";xex.write_bytes(b"XEX2"+bytes(100))
-            playlist=root/"demo.m3u";playlist.write_text("#EXTM3U\n")
-            sample=root/"sample.h264";sample.write_bytes(b"\0\0\0\1\x67")
-            out=package(xex,root/"out.zip",playlist,sample)
-            with ZipFile(out) as z:self.assertEqual(set(z.namelist()),
-                {"default.xex","playlist.m3u","sample.h264","LEIA-ME-TESTE.txt"})
+        with tempfile.TemporaryDirectory() as dirname:
+            root=Path(dirname)
+            bad=root/"bad.xex";bad.write_bytes(b"NOPE"*2000)
+            demo=root/"demo.m3u";demo.write_text("#EXTM3U\n")
+            with self.assertRaises(ValueError):package(bad,root/"out.zip",demo)
+    def test_two_executables(self):
+        with tempfile.TemporaryDirectory() as dirname:
+            root=Path(dirname)
+            app=root/"app.xex";app.write_bytes(b"XEX2"+bytes(9000))
+            probe=root/"probe.xex";probe.write_bytes(b"XEX2"+bytes(9000))
+            demo=root/"demo.m3u";demo.write_text("#EXTM3U\n")
+            out=package(app,root/"out.zip",demo,probe_xex=probe)
+            with ZipFile(out) as z:
+                self.assertIsNone(z.testzip())
+                self.assertEqual(set(z.namelist()),
+                    {"default.xex","cloud360_probe.xex","playlist.m3u","LEIA-ME-TESTE.txt"})
+    def test_reject_missing_probe(self):
+        with tempfile.TemporaryDirectory() as dirname:
+            root=Path(dirname)
+            app=root/"app.xex";app.write_bytes(b"XEX2"+bytes(9000))
+            demo=root/"demo.m3u";demo.write_text("#EXTM3U\n")
+            with self.assertRaises(ValueError):
+                package(app,root/"out.zip",demo,probe_xex=root/"not.xex")
 if __name__=="__main__":unittest.main()

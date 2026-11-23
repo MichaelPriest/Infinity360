@@ -1,0 +1,38 @@
+#pragma once
+#include "GameScanner.h"
+#include "HomeCanvas.h"
+#include "CloudTv.h"
+
+class ConsoleHome {
+public:
+    enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
+               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch };
+    ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots);
+    void Load();
+    std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
+    void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
+    std::string TakeMovie() { return tv_.TakeMovie(); }
+    void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
+    void LaunchFailed();
+private:
+    enum Section { Library, Iptv, Apps, Emulators, Files, System, Recent, Favorites };
+    enum Page { Home, Listing, Details };
+    std::string dir_, notice_;
+    std::vector<std::string> roots_, history_, favorites_, folders_;
+    std::vector<Game> games_, tools_;
+    std::vector<const Game*> visible_;
+    std::vector<FolderEntry> files_;
+    CloudTv tv_;
+    int focus_, row_;
+    Section section_;
+    Page page_;
+    size_t Count() const;
+    void Enter(Section section);
+    void Rebuild();
+    void Reload();
+    bool SaveProfile() const;
+    bool Starred(const Game& game) const;
+    const Game* Installed(const std::string& path) const;
+    void DrawHome(HomeCanvas& c) const;
+    void DrawSection(HomeCanvas& c) const;
+};

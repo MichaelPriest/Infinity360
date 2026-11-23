@@ -1,25 +1,57 @@
-# Primeira build Xbox 360
+# AuroraX para Xbox 360
 
-Este diretório contém um bootstrap nativo mínimo para validar vídeo e controle antes de portar toda a interface. Ele desenha cinco tiles em 720p, move o foco com o direcional e encerra com `BACK`.
+A tela nativa em 1280 × 720 apresenta a Biblioteca e o Cloud360 IPTV, com atalhos para Aplicativos, Emuladores, Arquivos e Sistema. Recentes e Favoritos são preenchidos pelos títulos encontrados no dispositivo. O controle usa o direcional ou o analógico esquerdo, A para selecionar, B para voltar, X para favoritar, Y para recarregar e Back para sair.
 
-## Requisitos
+## Compilação e instalação
 
-- Windows e um Xbox 360 XDK obtido e utilizado de forma autorizada.
-- Um Developer Command Prompt no qual a variável `XEDK` esteja configurada.
-- Um console de desenvolvimento autorizado ou um console no qual você esteja legalmente autorizado a executar seu próprio homebrew.
+1. Em um Developer Command Prompt com o Xbox 360 XDK configurado, execute `build-xex.bat` nesta pasta.
+2. Copie **default.xex** e **home.tga** de `dist\Xbox360\` para a mesma pasta do console, por exemplo `HDD1:\Homebrew\AuroraX-Test\`. Abra o executável pela dashboard atual.
+3. Copie suas listas M3U para a pasta da dashboard ou para a subpasta `Listas`. Em **Cloud360 IPTV → Fontes**, pressione **A** para ativar uma lista. A escolha fica em `cloud360-source.txt`. No primeiro acesso, a dashboard dá preferência a `playlist.m3u`.
 
-O repositório não fornece XDK, bibliotecas proprietárias, chaves, exploits ou assinatura de executáveis.
+## TV e Cinema
 
-## Compilar
+- Esquerda e direita alternam entre Todos, TV ao vivo, Filmes, Séries, Animes, Desenhos, Favoritos e Fontes. Use cima e baixo para selecionar um título ou LB e RB para percorrer páginas.
+- Pressione o analógico direito (RS) para abrir a busca. Use A para digitar, X para apagar, Y para aplicar e B para cancelar. A busca ignora acentos portugueses.
+- **Start** abre o guia de TV. Esquerda e direita deslocam a grade em 30 minutos. O XMLTV pode ficar ao lado da lista, com o mesmo nome-base, como `Listas/Cinema.xml`, ou em `guide.xml` na pasta da dashboard. Os programas são associados por `tvg-id` e, se necessário, pelo nome do canal. A tela mostra o programa atual e o próximo quando o guia contém esses horários.
+- Séries, Animes e Desenhos com nomes como `Trilhas S01E02`, `Trilhas T01E02` ou `Trilhas 1x02` ganham um seletor de temporada e episódios. Títulos avulsos abrem a ficha de mídia.
+- Para exibir capas locais, use o preparador existente em `IPTV/Cloud360/tools/prepare_logos.py` e grave os arquivos RGBA na pasta `<nome-da-lista>.logos` ao lado do M3U. Por exemplo, `Listas/Cinema.logos/0.rgba` corresponde à primeira entrada de `Listas/Cinema.m3u`. A lista padrão também aceita `logos` na pasta da dashboard.
 
-Abra o Developer Command Prompt, navegue até este diretório e execute:
+O catálogo compacto admite até 65.536 entradas e até 20 MiB de texto. O leitor por callback evita reservar um bloco de 2 KiB para cada endereço. O guia guarda até 65.536 programas. A interface sinaliza quando um desses limites é atingido.
 
-```bat
-build-xex.bat
-```
+## Reprodução no projeto XDK
 
-O script chama MSBuild 4.0 e o resultado esperado é `dist\Xbox360\default.xex`. Se a versão do seu XDK não aceitar o `.vcxproj`, crie um projeto vazio **Xbox 360 Application** na IDE fornecida pelo ambiente, adicione `XboxMain.cpp`, defina `_XBOX`, use `default` como nome de saída e vincule as bibliotecas de D3D e XInput fornecidas pelo XDK.
+Selecione a mídia e pressione **A** para reproduzir. **B** ou **Back** interrompe a reprodução e volta à ficha, inclusive durante a conexão.
 
-## Teste seguro
+| Fonte na lista | Caminho de reprodução |
+| --- | --- |
+| WMV local | XMedia2 e XAudio2. Caminhos relativos à lista ou em `game:`, `HDD1:`, `USB0:` e `USB1:`. |
+| HTTP(S) com vídeo MPEG-1 em MPEG-PS e áudio MP2 opcional | XHTTP recebe a transmissão progressivamente. O console decodifica o vídeo e o áudio, apresenta a imagem em Direct3D e envia o som ao XAudio2. URLs sem extensão também passam pela verificação do conteúdo. |
+| HLS, MPEG-TS ou MP4 com URL de mídia | O conversor abaixo usa FFmpeg no PC e envia MPEG-PS pela rede local. |
+| Referência `brazucaplay:` do Nexus | Precisa da URL de mídia fornecida pelo serviço. Uma página HTML também precisa ser substituída por um endereço de vídeo. |
 
-Copie `default.xex` para uma pasta isolada como `HDD1:\Homebrew\AuroraX-Test\` e inicie manualmente com uma dashboard que já funcione. Não configure esta primeira build como dashboard padrão. Ela não escreve na NAND, não altera `launch.ini`, não controla a ventoinha e não inicia outros XEX.
+O decodificador direto aceita quadros com dimensões pares até 1280 × 720. HTTPS direto depende da compatibilidade do servidor com a implementação TLS do XDK. O teste automatizado usa o mesmo decodificador no PC. A apresentação e a reprodução no Xbox físico aguardam validação.
+
+### Usar sua lista HLS, MPEG-TS ou MP4
+
+1. No PC, instale Python 3 e FFmpeg. Na raiz do projeto, execute o comando abaixo com o endereço IPv4 **do PC** na mesma rede do console. Use um nome de saída diferente da lista original.
+
+   ```sh
+   python IPTV/Cloud360/tools/stream_relay.py MinhaLista.m3u --listen 192.168.1.10 --export Cloud360-TV.m3u
+   ```
+
+2. Copie `Cloud360-TV.m3u` para a pasta `Listas` da dashboard e mantenha o comando em execução enquanto assiste. O formato de saída é 640 × 360 a 25 quadros por segundo, com som estéreo quando disponível.
+3. Em **Cloud360 IPTV → Fontes**, ative **Cloud360-TV.m3u**. Abra um canal e pressione **A** na ficha. O acesso HTTP do Xbox ao PC usa a porta 8090 por padrão. A lista exportada contém endereços locais e preserva grupo, título e identificador do guia.
+
+O conversor atende as entradas HTTP(S) da lista de origem e abre até duas transmissões simultâneas. Para HLS, use uma URL final com o mesmo protocolo dos segmentos. Para MP4 com o índice no fim do arquivo, a origem precisa aceitar requisições HTTP por intervalo.
+
+A Biblioteca procura pastas de jogos em `game:\Games`, `HDD1:\Games`, `USB0:\Games` e `USB1:\Games`. Os atalhos Aplicativos e Emuladores procuram `Apps` e `Emulators` nos mesmos locais. A tela de detalhes permite confirmar a abertura do `default.xex` de um título. Arquivos navega pela pasta do aplicativo. O histórico e os favoritos de jogos ficam em `aurorax-profile.txt`. O Cloud360 usa `favorites.txt` para os identificadores dos seus favoritos.
+
+## Verificação
+
+Os testes CMake da raiz exercitam a mesma tela, a persistência e a integração M3U no computador. A apresentação via Direct3D, o áudio e a transição de executáveis exigem validação em console. A tela usa código do AuroraX e arte própria. A organização da Series360 serviu de referência.
+
+A textura `Assets/home.tga` já acompanha o projeto. Para recriá-la depois de editar a arte de `Web/art`, rode `python make_atlas.py CAMINHO/DejaVuSans.ttf` com Pillow instalado. A licença dos glifos está em `Assets/FONT-LICENSE.txt`.
+
+O leitor de XMLTV usa yxml. A distribuição inclui os fontes e a licença MIT em [third_party/yxml](third_party/yxml/). [Origem do código](https://github.com/JulStrat/LibYxml/tree/ec5380b771a2f446e9014cc62aa202e9b248f043).
+
+A decodificação de MPEG-PS usa pl_mpeg, de Dominic Szablewski, sob licença MIT. [Versão incorporada](https://github.com/phoboslab/pl_mpeg/blob/c871f2be022ece7ef4f64230b4fb8e1fb9eb6023/pl_mpeg.h).

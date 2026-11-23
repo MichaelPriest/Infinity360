@@ -1,0 +1,77 @@
+/* TV home. Other pages retain the library and module layouts. */
+body { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+body:has(#home.active) .ambient {
+  background: radial-gradient(ellipse at 92% -14%,color-mix(in srgb,var(--green) 30%,transparent),transparent 42%),
+    linear-gradient(150deg,var(--theme-bg),#021714 65%,var(--theme-bg));
+}
+body:has(#home.active) .ambient::after { display:none; }
+.shell { width:min(100%,1672px); padding:clamp(15px,1.4vw,24px) 3.3vw 76px; }
+header { margin-bottom:clamp(12px,1.35vw,24px); }
+header .brand { gap:12px; }
+header .brand strong { font-size:clamp(22px,2.7vw,44px); letter-spacing:.025em; }
+header .brand .orb {
+  border:0; box-shadow:none; background: url(art/mark.jpg) center/cover;
+  width:clamp(36px,4vw,68px); height:auto; aspect-ratio:1; border-radius:50%; font-size:0;
+}
+#clock { color:white; font-size:clamp(17px,2vw,32px); font-variant-numeric:tabular-nums; }
+.status { gap:clamp(12px,2vw,30px); }
+#avatarButton { border:2px solid var(--green); background:#0a2018; color:#fff; border-radius:50%; }
+#home h1 { margin:0 0 clamp(10px,1.2vw,20px); font-size:clamp(28px,3.15vw,54px); line-height:1.08; letter-spacing:-.04em; }
+.home-primary,.home-tools,.shelf { display:grid; gap:clamp(8px,.9vw,15px); }
+.home-primary { grid-template-columns:1.31fr 1fr; }
+.home-tile,.home-tools button,.shelf-item { border:1px solid #91ccae30; border-radius:10px; overflow:hidden; cursor:pointer; text-align:left; font:inherit; color:#f5faf7; }
+.home-tile { display:flex; align-items:flex-end; position:relative; isolation:isolate; min-width:0; height:clamp(166px,16.25vw,272px); padding:clamp(20px,2.25vw,38px); text-decoration:none; }
+.home-tile::after { position:absolute; content:""; z-index:-1; inset:3% 2% 3% auto; width:46%; background-position:right center; background-size:contain; background-repeat:no-repeat; mask-image:linear-gradient(to right,transparent,#000 14%,#000 96%,transparent); }
+.library-tile { background:linear-gradient(115deg,#041810,#002517 60%,#03210e); }
+.library-tile::after { background-image:url(art/library.jpg); }
+.tv-tile { background:linear-gradient(115deg,#00332a,#005044 68%,#00392f); }
+.tv-tile::after { background-image:url(art/television.jpg); width:40%; }
+.library-tile::before,.glyph {
+  --position:0%; display:inline-block; width:1.65em; height:1.65em; flex:none; background:currentColor;
+  mask:url(art/controls.png) var(--position) center/400% 100% no-repeat;
+}
+.library-tile::before { --position:33.333%; position:absolute; content:""; top:11%; left:4.3%; color:var(--green); width:9%; max-width:54px; height:20%; }
+.pad-glyph { --position:33.333%; }.folder-glyph { --position:66.667%; }.system-glyph { --position:100%; }
+.tile-caption { display:grid; gap:.22em; text-shadow:0 2px 5px #00180e; }
+.tile-caption strong { font-size:clamp(24px,3.3vw,57px); line-height:1.07; letter-spacing:-.045em; }
+.tv-tile strong { font-size:clamp(23px,2.75vw,49px); }
+.tile-caption small { color:#d6e4db; font-size:clamp(15px,1.85vw,30px); }
+.home-tools { grid-template-columns:repeat(4,minmax(0,1fr)); margin:clamp(12px,1.45vw,24px) 0; }
+.home-tools button { display:flex; align-items:center; gap:.75em; padding:0 10%; height:clamp(54px,5.75vw,96px); background:linear-gradient(112deg,#132522,#20312f); font-size:clamp(17px,1.9vw,31px); font-weight:600; }
+.home-shelves { display:grid; grid-template-columns:3fr 1.95fr; gap:2vw; }
+.home-shelves>section { min-width:0; }
+.home-shelves>section+section { border-left:1px solid #a6c8b952; padding-left:2vw; }
+.home-shelves h2 { margin:0 0 .4em; font-size:clamp(22px,2.25vw,37px); line-height:1.15; }
+.home-shelves h2 button { border:0; color:inherit; font:inherit; padding:0; background:none; text-align:left; cursor:pointer; }
+.shelf { grid-template-columns:repeat(3,minmax(0,1fr)); color:var(--muted); }
+.shelf-item { display:grid; padding:0; background:#132723; min-width:0; }
+.shelf-cover { display:block; height:clamp(65px,7vw,117px); overflow:hidden; }
+.shelf-cover img { display:block; width:100%; height:100%; object-fit:cover; }
+.home-shelves>section+section .shelf-item strong { font-size:clamp(12px,1.14vw,19px); }
+.shelf-item strong { padding:.43em .6em; font-size:clamp(15px,1.36vw,23px); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+#home :is(button,a):focus, #home :is(button,a):hover { outline:3px solid var(--green); outline-offset:1px; }
+footer { z-index:2; justify-content:flex-start; gap:clamp(10px,2.6vw,44px); padding:0 3.5vw; height:clamp(45px,4.6vw,74px); background:#051613f5; color:#f5f8f6; letter-spacing:0; font-size:clamp(13px,1.45vw,24px); font-weight:600; }
+footer kbd { display:inline-grid; place-items:center; padding:0; width:1.6em; height:1.6em; border:0; border-radius:50%; color:#fff; background:#469e0d; }
+footer span:nth-child(2) kbd { background:#c83a23; } footer span:nth-child(3) kbd { background:#1679bd; } footer span:nth-child(4) kbd { background:#b68612; }
+#guideButton { margin-left:auto; padding:6px; font:inherit; border:0; background:transparent; color:var(--muted); cursor:pointer; }
+#guide button:focus-visible,.view button:focus-visible,.modal button:focus-visible { outline:3px solid var(--green); outline-offset:1px; }
+@media(max-width:750px) {
+  .shell { padding:16px 4vw 70px; } header { margin-bottom:18px; }
+  .home-tile { padding:14px; min-height:132px; height:23vw; }
+  .tile-caption small { font-size:13px; }
+  .home-tools button { padding:0 6%; justify-content:center; gap:.3em; font-size:15px; }
+  .home-shelves { grid-template-columns:1fr; gap:18px; }
+  .home-shelves>section+section { border:0; padding:0; }
+  .shelf-cover { height:clamp(58px,13vw,95px); }
+}
+@media(max-width:490px) {
+  .home-primary { grid-template-columns:1fr; }
+  .home-tile { height:116px; min-height:0; }
+  .library-tile::before { top:8%; height:24%; }
+  .home-tools { grid-template-columns:1fr 1fr; }
+  .home-tools button { justify-content:flex-start; padding-left:12%; }
+  .shelf-item strong { font-size:12px; }
+  footer { gap:12px; } footer span:nth-child(n+3) { display:none; }
+}
+
+.shelf-empty { grid-column:1/-1; margin:0; padding:20px; border-radius:9px; background:#132723; align-content:center; min-height:90px; }
