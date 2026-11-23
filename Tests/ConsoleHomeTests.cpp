@@ -262,5 +262,45 @@ int main(int argc,char** argv) {
     orderedMenu.Press(ConsoleHome::Search); // RS -> device ordering
     orderedMenu.Draw(canvas,"19:45");
 
+    // Library search: Start opens on-screen keyboard, A types, Y applies.
+    ConsoleHome searchMenu(dir,roots); searchMenu.Load();
+    searchMenu.Press(ConsoleHome::Accept); // Library / Todos
+    searchMenu.Press(ConsoleHome::Guide);  // Start: keyboard
+    for(int i=0;i<6;++i) searchMenu.Press(ConsoleHome::Right);
+    searchMenu.Press(ConsoleHome::Accept); // letter G
+    searchMenu.Press(ConsoleHome::Refresh); // Y: apply
+    searchMenu.Draw(canvas,"19:46");
+    searchMenu.Press(ConsoleHome::Accept);
+    assert(searchMenu.Press(ConsoleHome::Accept)==
+           (arcade/"default.xex").string());
+    searchMenu.Press(ConsoleHome::Back);
+    searchMenu.Press(ConsoleHome::Guide);
+    searchMenu.Press(ConsoleHome::Favorite); // X: remove G
+    searchMenu.Press(ConsoleHome::Refresh);  // clear applied search
+    searchMenu.Press(ConsoleHome::Accept);
+    assert(searchMenu.Press(ConsoleHome::Accept)==
+           (original/"default.xex").string());
+
+    // Persisted hidden games never show in default tabs; Ocultos allows unhide.
+    ConsoleHome hideMenu(dir,roots); hideMenu.Load();
+    hideMenu.Press(ConsoleHome::Accept);
+    hideMenu.Press(ConsoleHome::PageUp); // LB: hide first game (Fable)
+    hideMenu.Press(ConsoleHome::Accept);
+    assert(hideMenu.Press(ConsoleHome::Accept)==
+           (extraDir/"default.xex").string());
+    hideMenu.Press(ConsoleHome::Back);
+    for(int i=0;i<4;++i) hideMenu.Press(ConsoleHome::Right);
+    hideMenu.Press(ConsoleHome::Accept);
+    assert(hideMenu.Press(ConsoleHome::Accept)==
+           (original/"default.xex").string());
+    hideMenu.Press(ConsoleHome::Back);
+    hideMenu.Press(ConsoleHome::PageUp); // LB: show Fable again
+    hideMenu.Draw(canvas,"19:46");
+    ConsoleHome showAgain(dir,roots); showAgain.Load();
+    showAgain.Press(ConsoleHome::Accept);
+    showAgain.Press(ConsoleHome::Accept);
+    assert(showAgain.Press(ConsoleHome::Accept)==
+           (original/"default.xex").string());
+
     fs::remove_all(root);
 }
