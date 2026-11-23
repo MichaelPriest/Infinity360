@@ -29,6 +29,25 @@ struct LibraryOrder {
 };
 // Read-only classification for extracted XEX files. GOD and XBLA package
 // containers require an Xbox content indexer and are not classified here.
+bool matchesLibraryQuery(const Game& item,const std::string& query) {
+    if(query.empty()) return true;
+    std::string text=item.name;
+    for(size_t i=0;i<text.size();++i)
+        text[i]=(char)std::tolower((unsigned char)text[i]);
+    std::string needle=query;
+    for(size_t i=0;i<needle.size();++i)
+        needle[i]=(char)std::tolower((unsigned char)needle[i]);
+    return text.find(needle)!=std::string::npos;
+}
+const char* const keyboardKeys[]={
+    "A","B","C","D","E","F","G",
+    "H","I","J","K","L","M","N",
+    "O","P","Q","R","S","T","U",
+    "V","W","X","Y","Z","0","1",
+    "2","3","4","5","6","7","8",
+    "9","ESP","APAGAR","BUSCAR","LIMPAR","CANCELAR","."
+};
+const int KeyCount=42;
 bool libraryTabMatch(const Game& item,int tab) {
     if(tab==0) return true;
     std::string name=item.executable;
@@ -43,7 +62,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 }
 
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
-    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),section_(Library),page_(Home) {}
+    : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),searchActive_(false),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -88,7 +107,9 @@ void ConsoleHome::Rebuild() {
         for(size_t i=0;i<paths.size();++i) { const Game* g=Installed(paths[i]); if(g) visible_.push_back(g); }
     } else if (section_==Library) {
         for(size_t i=0;i<games_.size();++i)
-            if(libraryTabMatch(games_[i],subtab_)) visible_.push_back(&games_[i]);
+            if(libraryTabMatch(games_[i],subtab_) &&
+               matchesLibraryQuery(games_[i],searchTerm_))
+                visible_.push_back(&games_[i]);
         std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
     } else if (section_==Apps || section_==Emulators) {
         // Tabs are filters over the same installed XEX catalogue.
@@ -153,9 +174,45 @@ void ConsoleHome::Enter(Section s) {
     if (s==Files) {folders_.clear(); folders_.push_back(dir_);}
     Reload();
 }
+void ConsoleHome::ApplySearch() {
+    searchTerm_=searchDraft_;
+    searchActive_=false;
+    row_=0;
+    Rebuild();
+    notice_=searchTerm_.empty()?"Busca removida":"Busca: "+searchTerm_+
+            " ("+number(Count())+" jogos)";
+}
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; }
 
 std::string ConsoleHome::Press(Key key) {
+    if(section_==Library && page_==Listing && searchActive_) {
+        if(key==Back) {
+            searchDraft_=searchTerm_;
+            searchActive_=false;
+            return "";
+        }
+        if(key==Left && searchCursor_%7>0) --searchCursor_;
+        if(key==Right && searchCursor_%7<6) ++searchCursor_;
+        if(key==Up && searchCursor_>=7) searchCursor_-=7;
+        if(key==Down && searchCursor_+7<KeyCount) searchCursor_+=7;
+        if(key==Favorite && !searchDraft_.empty()) searchDraft_.erase(searchDraft_.size()-1);
+        if(key==Refresh) ApplySearch();
+        if(key==Accept) {
+            if(searchCursor_<36) {
+                if(searchDraft_.size()<36) searchDraft_+=keyboardKeys[searchCursor_];
+            } else if(searchCursor_==36) {
+                if(searchDraft_.size()<36) searchDraft_+=" ";
+            } else if(searchCursor_==37) {
+                if(!searchDraft_.empty()) searchDraft_.erase(searchDraft_.size()-1);
+            } else if(searchCursor_==38) ApplySearch();
+            else if(searchCursor_==39) searchDraft_.clear();
+            else if(searchCursor_==40) {
+                searchDraft_=searchTerm_;
+                searchActive_=false;
+            } else if(searchCursor_==41 && searchDraft_.size()<36) searchDraft_+=".";
+        }
+        return "";
+    }
     if(section_==Iptv && page_!=Home) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
@@ -197,6 +254,13 @@ std::string ConsoleHome::Press(Key key) {
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
         if(key==Accept) Enter(static_cast<Section>(focus_));
+        return "";
+    }
+    if(page_==Listing && section_==Library && key==Guide) {
+        searchDraft_=searchTerm_;
+        searchCursor_=0;
+        searchActive_=true;
+        notice_.clear();
         return "";
     }
     if(page_==Listing && section_==Library && key==Search) {
@@ -317,6 +381,21 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
 
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     c.Text(44,78,labels[section_],43,White,1190);
+    if(section_==Library && page_==Listing && searchActive_) {
+        c.Text(45,139,"Buscar jogos instalados",26,White,1100);
+        c.Box(42,176,1196,49,Panel,9);
+        c.Text(58,181,searchDraft_.empty()?"Digite um nome...":searchDraft_,
+               26,Lime,1156);
+        for(int i=0;i<KeyCount;++i) {
+            const int x=45+(i%7)*171, y=255+(i/7)*59;
+            panel(c,x,y,157,48,Panel,i==searchCursor_);
+            c.Text(x+13,y+8,keyboardKeys[i],i>=36?18:23,
+                   i==searchCursor_?Lime:White,140);
+        }
+        c.Text(48,619,"A Digitar  X Apagar  Y Buscar  B Cancelar",
+               19,Muted,1160);
+        return;
+    }
     if(section_==System) {
         static const char* const titles[]={
             "Armazenamento","Rede e FTP","Temperaturas","Downloads"
@@ -381,6 +460,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
             c.Text(861,201,std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
+            c.Text(46,621,"Start Buscar  |  RS Ordenar  |  Y Atualizar",18,Muted,1125);
         }
     } else if(section_==Files) c.Text(49,157,folders_.back(),21,Muted,1140);
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
