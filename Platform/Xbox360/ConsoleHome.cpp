@@ -28,8 +28,8 @@ struct LibraryOrder {
     }
     int value_;
 };
-// Read-only classification for extracted XEX files. GOD and XBLA package
-// containers require an Xbox content indexer and are not classified here.
+// Classify extracted XEX and read-only STFS/GOD packages in separate tabs.
+// A package is never treated as launchable by XLaunchNewImage.
 bool matchesLibraryQuery(const Game& item,const std::string& query) {
     if(query.empty()) return true;
     std::string text=item.name;
@@ -372,7 +372,6 @@ std::string ConsoleHome::Press(Key key) {
         } else {
             page_=Details;
             // Viewing details alone must not change Recently Played.
-
         }
     }
     return "";
