@@ -52,6 +52,28 @@ do `default.xex`, ainda sem interpretar TitleID de pacotes. O botão
 **RS** alterna a ordenação **Nome A–Z**, **Nome Z–A** e **Dispositivo**;
 a busca textual de jogos permanece no backlog.
 
+### Busca, itens ocultos e pacotes GOD/XBLA
+
+Na **Biblioteca**:
+
+- **Start** abre um teclado virtual para filtrar jogos pelo nome.
+  Direcional escolhe letras; **A** digita; **X** apaga; **Y** aplica
+  a busca; **B** cancela. A busca funciona com as abas existentes.
+- **RS** percorre Nome A–Z, Nome Z–A e Dispositivo.
+- **LB** oculta ou reexibe o jogo selecionado. A aba **Ocultos**
+  recupera os títulos. O estado é salvo no `aurorax-profile.txt`.
+- A aba **Pacotes** mostra conteúdo GOD/XBLA identificado por cabeçalhos
+  `CON `, `LIVE` e `PIRS`. A leitura é **somente leitura** e
+  lista informações de TitleID/MediaID e nome contidas no pacote.
+  Diretórios usados: `HDD1:\Content\0000000000000000`,
+  `USB0:\Content\0000000000000000` e
+  `USB1:\Content\0000000000000000`.
+
+**Segurança:** pacotes GOD/XBLA ainda **não são iniciados** nesta Alpha;
+`XLaunchNewImage` destina-se a executáveis XEX válidos, não a
+contêineres STFS/SVOD. A integração com o lançador de conteúdo do console
+fica pendente de testes no XDK e em hardware.
+
 ## Aplicativos, plugins e Homebrew
 
 A seção **Aplicativos** contém quatro abas navegadas pelo direcional
