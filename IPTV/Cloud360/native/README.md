@@ -1,28 +1,19 @@
-# Cloud360 IPTV para Xbox 360 — versão de engenharia
+# Diagnóstico gráfico do Cloud360 para Xbox 360
 
-Esta pasta contém código experimental compatível com as interfaces do XSDK.
-Não há um default.xex compilado nem um player de vídeo nativo nesta entrega.
+Esta pasta contém o diagnóstico XSDK v0.5.2 para investigar a saída do aplicativo e o retorno ao Aurora. O código da dashboard integrada e do player fica em outro projeto. [AuroraX para Xbox 360](../../../Platform/Xbox360/README.md).
 
-## Arquitetura
-- main.c: leitura M3U local e navegação por controle/teclas.
-- logo.c/logo.vert/logo.frag: textura e shaders XSDK para mostrar o logo offline selecionado.
-- Core portable em ../core: M3U, filtros e favoritos.
+## Compilar
 
-Os logos dependem de conversão local com tools/prepare_logos.py e são armazenados
-em game:/logos/<indice>.rgba, 128x72, RGBA. Não há requisições online no console.
+O workflow **Cloud360 Xbox 360 SAFE graphics diagnostic** compila os dois executáveis e verifica o formato XEX2 e o conteúdo do ZIP. Para compilar localmente com o XSDK configurado, rode `bash tools/build_xex.sh` na pasta `IPTV/Cloud360`. O pacote gerado é `Cloud360-Xbox360-SAFE-v0.5.2.zip`.
 
-## Build de referência XSDK
+| Arquivo | Função |
+| --- | --- |
+| `cloud360_probe.xex` | Testa a inicialização e a saída sem assumir a GPU. |
+| `default.xex` | Abre a interface de texto, lê a lista M3U local e registra as etapas de apresentação e saída. |
+| `playlist.m3u` e `LEIA-ME-TESTE.txt` | Lista de demonstração e procedimento para o console. |
 
-Instale e siga a documentação de xenosworks/xsdk e sua toolchain; depois:
+## Teste no Xbox
 
-    cmake -S native -B native/build -G Ninja -DCMAKE_TOOLCHAIN_FILE=$HOME/xsdk/cmake/xsdk.cmake
-    cmake --build native/build
+A versão 0.5.1 apresentou corrupção visual ao retornar ao Aurora. A validação da v0.5.2 em hardware está pendente. Execute primeiro `cloud360_probe.xex` em uma pasta de testes e confira a imagem e o controle ao voltar ao Aurora. Se o retorno estiver normal, prossiga com a interface de diagnóstico conforme o roteiro. [Procedimento completo e registros esperados](../docs/GPU-RESTORE-v052.md).
 
-O alvo xsdk_add_xex deve gerar um executável XEX na configuração apropriada.
-O caminho e a compatibilidade exatos precisam ser validados na toolchain e no hardware.
-Se obtiver o XEX, teste primeiro como homebrew isolado pelo Aurora/Freestyle.
-Não configure como dashboard padrão e não modifique NAND nem launch.ini.
-
-## Pendências
-O botão A apresenta apenas informações do item. Player A/V real, rede HTTP/TLS,
-Xtream, EPG e logos online no Xbox 360 ainda precisam ser implementados e testados.
+O diagnóstico compila com `CLOUD360_WITH_FFMPEG=OFF` e `CLOUD360_WITH_LOGOS=OFF`. A reprodução de mídia da dashboard tem seu próprio roteiro de compilação e teste. [Player da dashboard](../../../Platform/Xbox360/README.md#reprodução-no-projeto-xdk).

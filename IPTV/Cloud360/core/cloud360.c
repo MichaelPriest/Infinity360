@@ -11,11 +11,14 @@
 #endif
 
 static void copy(char *dst, size_t n, const char *src) {
-  if (!n) return;
-  size_t len = src ? strlen(src) : 0;
-  if (len >= n) len = n-1;
-  if (len) memcpy(dst,src,len);
-  dst[len]=0;
+  if (!dst || !n) return;
+  if (!src) src = "";
+  size_t i = 0;
+  while (i + 1 < n && src[i]) {
+    dst[i] = src[i];
+    i++;
+  }
+  dst[i] = 0;
 }
 static void trim(char *s) {
   size_t n=strlen(s),i=0;
