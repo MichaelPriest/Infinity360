@@ -1,0 +1,143 @@
+# Matriz de paridade Series360 0.12.69 → AuroraX
+
+**Decisão:** a AuroraX deve oferecer as funcionalidades identificadas no
+Series360 **sem copiar sua interface**, preservando o layout do
+`AuroraX_Telas.pdf` e mantendo o Cloud360 IPTV como recurso adicional.
+
+**Fonte inspecionada:** arquivo original fornecido pelo usuário
+`Series360.zip` (69 entradas): `default.xex`, `guia360.xex`,
+14 recursos `.xur`, arquivos `.bin`, `LEIA-ME.txt` e as traduções
+`idiomas/en.txt` e `idiomas/es.txt` (915 entradas por idioma).
+O pacote traz **executáveis compilados e recursos**, não os fontes C++
+completos do Series360. Não transferir/executar seus componentes fechados
+como se fossem uma SDK. Recriar recursos por implementação própria ou
+adaptar somente componentes cuja licença e ABI permitirem.
+
+## Leitura dos estados
+
+- **Nativo parcial:** há código C++/XDK, porém falta ao menos alguma
+  funcionalidade exigida pela referência ou validação no Xbox físico.
+- **Web demonstrativo:** existe na prévia, mas usa dados/providers simulados.
+- **Novo nesta etapa:** código nativo acrescentado neste ciclo, não homologado.
+- **Pendente:** não há implementação nativa demonstrada.
+- **Base pronta:** existe no código nativo, sem equivaler a homologação física.
+
+**Evidência:** **M** = manual `Series360/LEIA-ME.txt`;
+**T** = textos/chaves da localização `Series360/idiomas/en.txt`;
+**X** = nomes de arquivos/cenas `.xur`. Itens baseados somente em **T**
+ou **X** são **indícios de funcionalidade**, não prova de que todas as
+operações funcionaram numa unidade real.
+
+## 1. Dashboard, biblioteca e jogos
+
+| # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
+|---|---|---|---|---|
+| 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | Nativo parcial | Fixar/desafixar, ordenação, horas jogadas, blocos customizados |
+| 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
+| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | Nativo parcial | Classificador por TitleID/content type, indexador GOD e discos |
+| 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
+| 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
+| 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
+| 07 | Pesquisa e ordenação da biblioteca | T | Web demonstrativo / IPTV nativo com busca | Busca/ordenação nativa de jogos |
+| 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | Nativo parcial | Coleções e filtros de biblioteca reais |
+| 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | Pendente | Leitura de metadados do título |
+| 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
+| 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | Parcial | Metadados e operações seguras |
+| 12 | Capas: download automático e manual, edição, formato quadrado/retrato | M/T | Web demonstrativo, atlas nativo fixo | Cache real e editor por jogo |
+| 13 | Fundos e arte, alteração local, XboxUnity e retorno ao original | M/T | Web demonstrativo | Loader/cache de imagens nativo |
+| 14 | Faixas laterais de jogos, estilos por tipo e por título | T | Pendente | Skin própria equivalente |
+| 15 | Inserção/remoção de disco, jogo em disco, bandeja | T | Pendente | XDK/XAM e testes por unidade |
+| 16 | App Homebrew, XEX e ELF com confirmação | T | **Novo nesta etapa (XEX)** | ELF exige runtime separado, não lançar como XEX |
+
+## 2. Conteúdo, TU, DLC, saves e trainers
+
+| # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
+|---|---|---|---|---|
+| 17 | Descobrir e gerenciar TUs locais | M/T | Pendente | Indexação TitleID/MediaID, ativação única e cópia de rollback |
+| 18 | Buscar e baixar TUs pelo XboxUnity, inclusive em fila | T | Pendente | API, downloads autenticados, retomar, hash, ativação validada |
+| 19 | Descobrir, instalar, ativar/desativar DLC local | T | Pendente | Verificação de pacote/TitleID, confirmação, nunca distribuir DLC |
+| 20 | Exibir e gerenciar saves por perfil | T | Pendente | Isolamento por perfil, backups, confirmação de exclusão |
+| 21 | Conquistas por título, secretas e recentes | T | Pendente | Provedor nativo XDK/XAM, somente leitura |
+| 22 | Trainers locais/servidor e compatibilidade de versão TU | T | Pendente | Segurança, proveniência, seleção explícita, suporte limitado a homebrew legal |
+| 23 | Instalação manual de pacotes locais pelo gerenciador | T | Pendente | Validar formatos de conteúdo e licença antes da cópia |
+
+## 3. Sistema, arquivos e rede
+
+| # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
+|---|---|---|---|---|
+| 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | Nativo parcial | Dispositivos completos e montagem segura |
+| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | Web demonstrativo | Operações nativas, progresso e confirmação destrutiva |
+| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | Pendente | Autenticação própria, sem credenciais padrão do Series360 |
+| 27 | Status de rede/IP e serviço FTP | T | Web demonstrativo / cartões nativos sem provider | Leitura XNet e diagnóstico |
+| 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
+| 29 | Energia: reiniciar, desligar, após downloads, temporizador | T | Pendente | APIs com confirmação e sem ações automáticas perigosas |
+| 30 | Hora pela internet | T | Pendente | Sincronização opcional com tratamento de rede |
+| 31 | Captura de tela dentro de jogos e gerenciamento das capturas | T | Pendente | Investigar restrições do ambiente e armazenamento |
+| 32 | Resoluções 720p/1080p e ajuste overscan | M/T | 720p fixo | Detecção e seleção seguras, diferentes modos de saída |
+| 33 | Guia do Xbox com Home/Downloads, System Link, arquivos e jogadores | T/X | Pendente | Recurso XUI/XUR isolado, compatibilidade e teste em hardware |
+| 34 | System Link pela internet com conta XboxUnity e portas UDP | T/X | Pendente | Protocolo seguro e infraestrutura autorizada |
+| 35 | Notificações, erros e log operacional | T/M | Nativo parcial | Centro de notificações e logs persistentes |
+
+## 4. Aparência, perfis e extensibilidade
+
+| # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
+|---|---|---|---|---|
+| 36 | Perfis do console, perfil automático/manual, troca no Guide | T | Web demonstrativo | Provedor de perfil XDK/XAM |
+| 37 | Tema/cor, fontes, tamanho de texto, som de navegação | T | Web demonstrativo | Configuração real persistente e renderização |
+| 38 | Fundos animados e proteção de tela | T | Web demonstrativo | Render nativo eficiente e temporizador |
+| 39 | Coleções e categorias personalizadas | T | Web demonstrativo | Persistência nativa e integração à biblioteca |
+| 40 | Plugins e utilitários encontrados em HDD/USB | T/X | **Base nativa parcial** | Adaptar plugins existentes individualmente |
+| 41 | Recursos de HUD `.xur` e `guia360.xex` | X | Pendente | Estudar ABI XUI compatível; não copiar binários para a AuroraX |
+| 42 | Idiomas adicionais e tradução de interface | T | Pendente | Catálogo multilíngue próprio, fonte com acentos |
+| 43 | Autoatualização do painel, backup e rollback | M/T | Pendente | Manifestos assinados, hashes, staging e recuperação |
+| 44 | Busca de novas TUs, capas e jogos ao iniciar | M/T | Nativo parcial | Agendador seguro, consentimento e rede |
+| 45 | Downloads em segundo plano, fila, pausar/cancelar/retomar | T | Web demonstrativo / cartões nativos sem provider | Worker no console com progresso persistente |
+| 46 | DashLaunch: escolher dashboard inicial e recuperação ao Aurora | M/T | **Não implementado propositalmente** | Só avaliar após XEX e GPU aprovados; opt-in e rollback obrigatório |
+
+## 5. Funcionalidade adicional exclusiva da AuroraX
+
+O **Cloud360 IPTV** não é um requisito extraído do Series360. Deve ser
+**preservado** na nova dashboard com M3U/XMLTV, catálogo de
+TV/Filmes/Séries/Animes/Desenhos, favoritos, player e navegação pelo
+controle. A fidelidade visual seguirá as páginas 3–28 de
+`AuroraX_Telas.pdf`.
+
+## Entrega incremental obrigatória
+
+**Fase A — estabilidade e descoberta:** compilação XEX real, inicialização
+em pasta de teste, retorno seguro da GPU, indexação de jogos, caminhos
+personalizados, Homebrew, favoritos e categorias sem regredir o IPTV.
+
+**Fase B — interface, biblioteca e perfis:** busca, filtros, coleções,
+capas, metadata, conquistas, temas, background, fontes e perfis.
+
+**Fase C — utilitários:** arquivos reais com confirmação, FTP seguro,
+rede, sensores, armazenamento, logs, notificação, capturas e gestão
+controlada de energia.
+
+**Fase D — serviços e integração:** XboxUnity, TUs, DLC, saves, downloads,
+System Link, Guide/XUI opcional, importação Aurora, atualização segura e
+rollback do aplicativo.
+
+**Fase E — homologação no Xbox 360:** compatibilidade da interface,
+hardware e codecs, performance, persistência, queda de rede e retorno à
+dashboard anterior. Só então considerar integração opcional do DashLaunch.
+
+Critério para marcar **concluído**: código integrado + testes portáteis
+ou nativos relevantes + comprovação em console real quando depender de
+hardware. Documentação ou prévia web isolada não satisfazem este critério.
+
+## Alterações concretas já realizadas após a auditoria
+
+- `GameScanner::DefaultRoots()` cobre também pastas extraídas de
+  `XBOX 360`, `XBLA` e `Xbox Original` nos HDD/USBs.
+- `GameScanner::LoadRoots()` aceita `game:\aurorax-scanpaths.txt`
+  para caminhos adicionais, ignora duplicatas e rejeita segmentos de
+  traversal; limita o tamanho e quantidade de entradas.
+- `ConsoleHome` relê o arquivo ao abrir e atualizar a biblioteca.
+- Testes adicionados em `Tests/ScanPathsTests.cpp` e
+  `Tests/ConsoleHomeTests.cpp`.
+
+**Não afirmar** que isso indexa `Content`/GOD, XBLA em contêiner
+ou Title Updates: a primeira entrega reconhece `default.xex` em
+pastas extraídas. O indexador de pacotes é uma entrega própria.
