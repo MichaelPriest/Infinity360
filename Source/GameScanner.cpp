@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <set>
 #ifdef _XBOX
 #include <xtl.h>
 #else
@@ -15,6 +17,52 @@ bool entryLess(const FolderEntry& a, const FolderEntry& b) {
     return a.name < b.name;
 }
 bool gameLess(const Game& a, const Game& b) { return a.name < b.name; }
+
+std::string compactRoot(std::string input) {
+    const size_t first=input.find_first_not_of(" \t\r");
+    if(first==std::string::npos) return "";
+    const size_t last=input.find_last_not_of(" \t\r");
+    input=input.substr(first,last-first+1);
+    while(input.size()>2 && (input[input.size()-1]=='/' || input[input.size()-1]=='\\'))
+        input.erase(input.size()-1);
+    return input;
+}
+std::string canonicalKey(std::string root) {
+#ifdef _XBOX
+    for(size_t i=0;i<root.size();++i) {
+        if(root[i]=='/') root[i]='\\';
+        root[i]=(char)std::tolower((unsigned char)root[i]);
+    }
+#endif
+    return root;
+}
+bool allowedRoot(const std::string& name) {
+    if(name.size()<3 || name.size()>220) return false;
+    for(size_t i=0;i<name.size();++i) {
+        const unsigned char ch=(unsigned char)name[i];
+        if(ch<32 || ch==127 || ch=='*' || ch=='?' || ch=='"' || ch=='|'
+           || ch=='<' || ch=='>') return false;
+    }
+    size_t segment=0;
+    for(size_t i=0;i<=name.size();++i) if(i==name.size() ||
+        name[i]=='/' || name[i]=='\\') {
+        const std::string part=name.substr(segment,i-segment);
+        if(part=="." || part=="..") return false;
+        segment=i+1;
+    }
+#ifdef _XBOX
+    const std::string lower=canonicalKey(name);
+    const char* const prefixes[]={"game:\\","hdd1:\\","usb0:\\",
+                                   "usb1:\\","mu0:\\","mu1:\\"};
+    bool safe=false;
+    for(size_t i=0;i<sizeof(prefixes)/sizeof(prefixes[0]);++i)
+        if(lower.find(prefixes[i])==0 &&
+            lower.size()>std::char_traits<char>::length(prefixes[i]))
+            safe=true;
+    if(!safe) return false;
+#endif
+    return true;
+}
 }
 
 bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries) {
@@ -44,11 +92,46 @@ GameScanner::GameScanner(const std::vector<std::string>& roots) : roots_(roots) 
 
 std::vector<std::string> GameScanner::DefaultRoots() {
 #ifdef _XBOX
-    const char* paths[] = {"game:\\Games", "HDD1:\\Games", "USB0:\\Games", "USB1:\\Games"};
+    // Series360-compatible extracted XEX roots. GOD/Content packages need a
+    // separate Xbox content indexer; they are not directly launchable XEX.
+    const char* paths[] = {
+        "game:\\Games",
+        "HDD1:\\Games", "HDD1:\\XBOX 360", "HDD1:\\XBLA",
+        "HDD1:\\Xbox Original",
+        "USB0:\\Games", "USB0:\\XBOX 360", "USB0:\\XBLA",
+        "USB0:\\Xbox Original",
+        "USB1:\\Games", "USB1:\\XBOX 360", "USB1:\\XBLA",
+        "USB1:\\Xbox Original"
+    };
 #else
     const char* paths[] = {"Games", "USB/Games"};
 #endif
     return std::vector<std::string>(paths,paths+sizeof(paths)/sizeof(paths[0]));
+}
+
+std::vector<std::string> GameScanner::LoadRoots(
+    const std::string& configFile,const std::vector<std::string>& defaults) {
+    enum { MaxRoots=32, MaxConfigBytes=8192 };
+    std::vector<std::string> roots;
+    std::set<std::string> seen;
+    for(size_t i=0;i<defaults.size() && roots.size()<MaxRoots;++i) {
+        const std::string candidate=compactRoot(defaults[i]);
+        if(allowedRoot(candidate) && seen.insert(canonicalKey(candidate)).second)
+            roots.push_back(candidate);
+    }
+    std::ifstream file(configFile.c_str(),std::ios::binary);
+    if(!file) return roots;
+    std::string line;
+    size_t bytes=0;
+    while(roots.size()<MaxRoots && std::getline(file,line)) {
+        bytes+=line.size()+1;
+        if(bytes>MaxConfigBytes || line.size()>255) break;
+        const std::string candidate=compactRoot(line);
+        if(candidate.empty() || candidate[0]=='#' || !allowedRoot(candidate)) continue;
+        if(seen.insert(canonicalKey(candidate)).second)
+            roots.push_back(candidate);
+    }
+    return roots;
 }
 
 std::vector<Game> GameScanner::Scan() const {
