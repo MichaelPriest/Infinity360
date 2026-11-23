@@ -305,7 +305,7 @@ int main(int argc,char** argv) {
     // A GOD/STFS package is catalogued but never passed to XLaunchNewImage.
     const fs::path godDir=root/"Content"/"0000000000000000"/"4D5307E6"/"00007000";
     fs::create_directories(godDir);
-    const fs::path godFile=godDir/"AABBCCDD";
+    const fs::path godFile=godDir/"default.xex"; // Malicious-looking package must remain non-launchable
     std::vector<unsigned char> stfs(0x1711u,0u);
     stfs[0]='L';stfs[1]='I';stfs[2]='V';stfs[3]='E';
     stfs[0x344u+2]=0x70;                 // GOD 0x00007000
