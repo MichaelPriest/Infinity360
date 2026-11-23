@@ -273,8 +273,9 @@ void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Co
 std::string ConsoleHome::Press(Key key) {
     if(section_==Library && page_==Listing && searchActive_) {
         if(key==Back) {
-            searchDraft_=searchTerm_;
+            if(keyboardMode_==0) searchDraft_=searchTerm_;
             searchActive_=false;
+            keyboardMode_=0;
             return "";
         }
         if(key==Left && searchCursor_%7>0) --searchCursor_;
@@ -293,10 +294,87 @@ std::string ConsoleHome::Press(Key key) {
             } else if(searchCursor_==38) ApplySearch();
             else if(searchCursor_==39) searchDraft_.clear();
             else if(searchCursor_==40) {
-                searchDraft_=searchTerm_;
+                if(keyboardMode_==0) searchDraft_=searchTerm_;
                 searchActive_=false;
+                keyboardMode_=0;
             } else if(searchCursor_==41 && searchDraft_.size()<36) searchDraft_+=".";
         }
+        return "";
+    }
+    if(section_==Library && page_==Listing && collectionPicker_) {
+        const size_t count=collections_.Items().size();
+        if(key==Back) {
+            collectionPicker_=false;
+            deleteCollectionConfirm_=false;
+            notice_.clear();
+            return "";
+        }
+        if(key==Up && collectionRow_>0) --collectionRow_;
+        if(key==Down && static_cast<size_t>(collectionRow_)<count)
+            ++collectionRow_; // last row: create new
+        if(key==Favorite && static_cast<size_t>(collectionRow_)<count) {
+            collectionIndex_=collectionRow_;
+            searchDraft_=collections_.Items()[collectionRow_].name;
+            searchActive_=true;
+            keyboardMode_=2;
+            searchCursor_=0;
+            deleteCollectionConfirm_=false;
+            notice_.clear();
+            return "";
+        }
+        if(key==Refresh && static_cast<size_t>(collectionRow_)<count) {
+            if(!deleteCollectionConfirm_) {
+                deleteCollectionConfirm_=true;
+                notice_="Pressione Y novamente para excluir a colecao (nao os jogos).";
+            } else {
+                collections_.Remove(static_cast<size_t>(collectionRow_));
+                const bool saved=collections_.Save();
+                const size_t remaining=collections_.Items().size();
+                if(collectionRow_>static_cast<int>(remaining))
+                    collectionRow_=static_cast<int>(remaining);
+                collectionIndex_=remaining?
+                    std::min(collectionIndex_,static_cast<int>(remaining-1)):0;
+                collectionPicker_=false;
+                deleteCollectionConfirm_=false;
+                subtab_=5;
+                row_=0;
+                Rebuild();
+                notice_=saved?"Colecao excluida (jogos preservados).":
+                    "Colecao retirada desta sessao; falha ao salvar.";
+            }
+            return "";
+        }
+        if(key==Accept) {
+            if(static_cast<size_t>(collectionRow_)==count) {
+                keyboardMode_=1;
+                searchDraft_.clear();
+                searchCursor_=0;
+                searchActive_=true;
+                deleteCollectionConfirm_=false;
+                notice_.clear();
+                return "";
+            }
+            if(static_cast<size_t>(collectionRow_)<count) {
+                collectionIndex_=collectionRow_;
+                bool saved=true,modified=false;
+                if(!pickerGame_.empty()) {
+                    modified=collections_.Toggle(
+                        static_cast<size_t>(collectionIndex_),pickerGame_);
+                    if(modified) saved=collections_.Save();
+                }
+                collectionPicker_=false;
+                deleteCollectionConfirm_=false;
+                subtab_=5;
+                row_=0;
+                Rebuild();
+                notice_=!modified && !pickerGame_.empty()?
+                    "Limite de itens atingido nesta colecao.":
+                    !saved?"Colecao atualizada apenas nesta sessao.":
+                    "Colecao selecionada / jogo atualizado.";
+                return "";
+            }
+        }
+        if(key!=Refresh) deleteCollectionConfirm_=false;
         return "";
     }
     if(section_==Iptv && page_!=Home) {
@@ -342,6 +420,28 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Accept) Enter(static_cast<Section>(focus_));
         return "";
     }
+    if(page_==Listing && section_==Library && key==PageDown) {
+        collectionPicker_=true;
+        deleteCollectionConfirm_=false;
+        pickerGame_=Count()?visible_[row_]->executable:"";
+        collectionRow_=collectionIndex_;
+        if(static_cast<size_t>(collectionRow_)>collections_.Items().size())
+            collectionRow_=0;
+        notice_.clear();
+        return "";
+    }
+    if(page_==Listing && section_==Library && subtab_==5 && key==PageUp) {
+        if(!collections_.Items().empty()) {
+            collectionIndex_=(collectionIndex_+1)%
+                             static_cast<int>(collections_.Items().size());
+            row_=0;
+            Rebuild();
+        }
+        notice_=collections_.Items().empty()?
+            "Nenhuma colecao. RB abre o gerenciador.":
+            "Colecao: "+collections_.Items()[collectionIndex_].name;
+        return "";
+    }
     if(page_==Listing && section_==Library && key==PageUp && Count()) {
         const std::string path=visible_[row_]->executable;
         std::vector<std::string>::iterator i=
@@ -359,6 +459,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing && section_==Library && key==Guide) {
         searchDraft_=searchTerm_;
         searchCursor_=0;
+        keyboardMode_=0;
         searchActive_=true;
         notice_.clear();
         return "";
@@ -374,7 +475,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing &&
        (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Emulators?2:section_==Library?5:3;
+        const int last=section_==Emulators?2:section_==Library?6:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
