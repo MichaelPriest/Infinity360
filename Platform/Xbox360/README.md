@@ -20,17 +20,29 @@ O catálogo compacto admite até 65.536 entradas e até 20 MiB de texto. O leito
 
 ## Reprodução no projeto XDK
 
-A ficha habilita **Reproduzir WMV** para arquivos locais em caminhos relativos à lista ou nos dispositivos `game:`, `HDD1:`, `USB0:` e `USB1:`. O projeto usa XMedia2 para o vídeo e XAudio2 para o áudio. **B** interrompe e retorna à ficha. A extensão seleciona o player e o codec precisa ser aceito pelo XMedia2. A compilação do XEX e a reprodução em hardware aguardam validação com o XDK.
+Selecione a mídia e pressione **A** para reproduzir. **B** ou **Back** interrompe a reprodução e volta à ficha, inclusive durante a conexão.
 
-Para testar com um WMV local compatível, salve este conteúdo em `playlist.m3u` e coloque o vídeo em `Videos` junto à lista.
+| Fonte na lista | Caminho de reprodução |
+| --- | --- |
+| WMV local | XMedia2 e XAudio2. Caminhos relativos à lista ou em `game:`, `HDD1:`, `USB0:` e `USB1:`. |
+| HTTP(S) com vídeo MPEG-1 em MPEG-PS e áudio MP2 opcional | XHTTP recebe a transmissão progressivamente. O console decodifica o vídeo e o áudio, apresenta a imagem em Direct3D e envia o som ao XAudio2. URLs sem extensão também passam pela verificação do conteúdo. |
+| HLS, MPEG-TS ou MP4 com URL de mídia | O conversor abaixo usa FFmpeg no PC e envia MPEG-PS pela rede local. |
+| Referência `brazucaplay:` do Nexus | Precisa da URL de mídia fornecida pelo serviço. Uma página HTML também precisa ser substituída por um endereço de vídeo. |
 
-```m3u
-#EXTM3U
-#EXTINF:-1 group-title="Filmes",Meu vídeo de teste
-Videos/teste.wmv
-```
+O decodificador direto aceita quadros com dimensões pares até 1280 × 720. HTTPS direto depende da compatibilidade do servidor com a implementação TLS do XDK. O teste automatizado usa o mesmo decodificador no PC. A apresentação e a reprodução no Xbox físico aguardam validação.
 
-HLS, MPEG-TS, links HTTP e referências específicas do Nexus entram no catálogo. A reprodução de canais de rede no console continua em desenvolvimento. No navegador, o Cloud360 usa o player web e as fontes compatíveis com o navegador.
+### Usar sua lista HLS, MPEG-TS ou MP4
+
+1. No PC, instale Python 3 e FFmpeg. Na raiz do projeto, execute o comando abaixo com o endereço IPv4 **do PC** na mesma rede do console. Use um nome de saída diferente da lista original.
+
+   ```sh
+   python IPTV/Cloud360/tools/stream_relay.py MinhaLista.m3u --listen 192.168.1.10 --export Cloud360-TV.m3u
+   ```
+
+2. Copie `Cloud360-TV.m3u` para a pasta `Listas` da dashboard e mantenha o comando em execução enquanto assiste. O formato de saída é 640 × 360 a 25 quadros por segundo, com som estéreo quando disponível.
+3. Em **Cloud360 IPTV → Fontes**, ative **Cloud360-TV.m3u**. Abra um canal e pressione **A** na ficha. O acesso HTTP do Xbox ao PC usa a porta 8090 por padrão. A lista exportada contém endereços locais e preserva grupo, título e identificador do guia.
+
+O conversor atende as entradas HTTP(S) da lista de origem e abre até duas transmissões simultâneas. Para HLS, use uma URL final com o mesmo protocolo dos segmentos. Para MP4 com o índice no fim do arquivo, a origem precisa aceitar requisições HTTP por intervalo.
 
 A Biblioteca procura pastas de jogos em `game:\Games`, `HDD1:\Games`, `USB0:\Games` e `USB1:\Games`. Os atalhos Aplicativos e Emuladores procuram `Apps` e `Emulators` nos mesmos locais. A tela de detalhes permite confirmar a abertura do `default.xex` de um título. Arquivos navega pela pasta do aplicativo. O histórico e os favoritos de jogos ficam em `aurorax-profile.txt`. O Cloud360 usa `favorites.txt` para os identificadores dos seus favoritos.
 
@@ -41,3 +53,5 @@ Os testes CMake da raiz exercitam a mesma tela, a persistência e a integração
 A textura `Assets/home.tga` já acompanha o projeto. Para recriá-la depois de editar a arte de `Web/art`, rode `python make_atlas.py CAMINHO/DejaVuSans.ttf` com Pillow instalado. A licença dos glifos está em `Assets/FONT-LICENSE.txt`.
 
 O leitor de XMLTV usa yxml. A distribuição inclui os fontes e a licença MIT em [third_party/yxml](third_party/yxml/). [Origem do código](https://github.com/JulStrat/LibYxml/tree/ec5380b771a2f446e9014cc62aa202e9b248f043).
+
+A decodificação de MPEG-PS usa pl_mpeg, de Dominic Szablewski, sob licença MIT. [Versão incorporada](https://github.com/phoboslab/pl_mpeg/blob/c871f2be022ece7ef4f64230b4fb8e1fb9eb6023/pl_mpeg.h).

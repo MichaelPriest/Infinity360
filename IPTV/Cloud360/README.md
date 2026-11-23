@@ -33,6 +33,8 @@ A reprodução depende de URLs válidas, de CORS quando exigido, dos codecs pres
 
 ## Estado da versão nativa Xbox 360
 
+A dashboard AuroraX em `Platform/Xbox360` possui player de WMV local e de transmissões MPEG-PS. Para HLS, MPEG-TS e MP4, o conversor `tools/stream_relay.py` envia vídeo e áudio ao console pela rede local. O decodificador e o conversor têm testes de reprodução no PC. [Configuração e formatos da dashboard](../../Platform/Xbox360/README.md#reprodução-no-projeto-xdk).
+
 O protótipo XSDK em native/ possui:
 - Leitura de playlist local, seleção de canais, abas, favoritos e UI de texto em 720p.
 - Adaptador experimental de exibição de logos locais: arquivos RGBA 128x72, shaders e textura XSDK.

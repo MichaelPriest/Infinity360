@@ -1,6 +1,7 @@
 ﻿#include "CloudTv.h"
 #include "GameScanner.h"
 #include "SavedFile.h"
+#include "MediaUrl.h"
 #include <algorithm>
 #include <ctime>
 #include <set>
@@ -46,6 +47,17 @@ void moveRow(size_t& row,size_t size,MenuKey key) {
     const size_t step=(key==MenuPageUp || key==MenuPageDown)?PageSize:1;
     if(key==MenuUp || key==MenuPageUp) row=row>=step?row-step:0;
     if(key==MenuDown || key==MenuPageDown) row=std::min(row+step,size-1);
+}
+std::string movieTarget(const std::string& playlist,const std::string& uri) {
+    MediaUrl url;
+    if(url.Parse(uri)) return url.NeedsConverter() ? "" : uri;
+    return tvLocalMovie(playlist,uri);
+}
+std::string playbackHint(const std::string& uri) {
+    MediaUrl url;
+    if(url.Parse(uri) && url.NeedsConverter()) return "Use a lista do conversor Cloud360 para este formato.";
+    if(tvLower(uri.substr(0,12))=="brazucaplay:") return "Esta referência do Nexus precisa de uma URL de mídia.";
+    return "Fonte incompatível com o player do console.";
 }
 std::string protocol(const TvItem& item,const std::string& source) {
     if(!tvLocalMovie(source,item.uri).empty()) return "Arquivo WMV no dispositivo";
@@ -186,8 +198,8 @@ bool CloudTv::Press(MenuKey key) {
     if(view_==Details) {
         if(key==MenuFavorite) Toggle(detail_);
         if(key==MenuAccept) {
-            pending_=tvLocalMovie(dir_+source_,catalog_.Items()[detail_].uri);
-            if(pending_.empty()) notice_="Este item ainda não tem reprodução no console.";
+            pending_=movieTarget(dir_+source_,catalog_.Items()[detail_].uri);
+            if(pending_.empty()) notice_=playbackHint(catalog_.Items()[detail_].uri);
         }
         return true;
     }
@@ -342,9 +354,9 @@ void CloudTv::DrawDetails(HomeCanvas& c,int64_t now) const {
         c.Text(550,353,on?"Agora   "+on->title:"Agora   Sem programação",19,Ink,651);
         if(next)c.Text(550,398,"A seguir   "+localTime(next->start)+"   "+next->title,18,Soft,650);
     }
-    if(!tvLocalMovie(dir_+source_,item.uri).empty()) {
-        c.Box(550,470,212,52,Lime,6);c.Text(570,480,"Reproduzir WMV",21,0xff0c190fu,181);
-    } else c.Text(550,467,"Reprodução indisponível para esta fonte no console.",18,Soft,650);
+    if(!movieTarget(dir_+source_,item.uri).empty()) {
+        c.Box(550,470,212,52,Lime,6);c.Text(570,480,"Reproduzir",21,0xff0c190fu,181);
+    } else c.Text(550,467,playbackHint(item.uri),18,Soft,650);
 }
 void CloudTv::DrawEpisodes(HomeCanvas& c) const {
     c.Text(45,78,"Temporadas e episódios",39,Ink,1160);
@@ -369,7 +381,7 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now) const {
         c.Box(44,626,1191,35,0xff132e23u,6);c.Text(57,629,notice_,18,Lime,1160);
     }
     c.Box(0,663,1280,57,0xff061915u);
-    const bool playable=view_==Details && !tvLocalMovie(dir_+source_,catalog_.Items()[detail_].uri).empty();
+    const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri).empty();
     c.Text(44,675,view_==Details?(playable?"A  Reproduzir":""):"A  Selecionar",19,Lime,190);
     c.Text(240,675,"B  Voltar",19,Ink,130);
     if(tab_!=TvSources)c.Text(390,675,"X  Favorito",19,Ink,150);

@@ -1,4 +1,5 @@
 #include "ConsoleHome.h"
+#include "MediaUrl.h"
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -76,6 +77,15 @@ int main(int argc,char** argv) {
     assert(tvLocalMovie("game:\\list.m3u","https://example.invalid/clip.wmv").empty());
     assert(tvLocalMovie("game:\\list.m3u","arquivo.xex").empty());
 
+    MediaUrl url;
+    assert(url.Parse("HTTPS://example.invalid:8443/channel?sig=a%2Bb#position"));
+    assert(url.secure && url.host=="example.invalid" && url.port==8443 && url.target=="/channel?sig=a%2Bb");
+    assert(!url.NeedsConverter());
+    assert(url.Parse("http://192.168.1.3:8090/live.mpg") && !url.NeedsConverter());
+    assert(url.Parse("https://example.invalid/live.M3U8?token=x") && url.NeedsConverter());
+    assert(!url.Parse("brazucaplay:opaque") && !url.Parse("http://host:99999/file"));
+    assert(!url.Parse("http://host/path\r\nheader") && !url.Parse("http://user:pass@host/"));
+
     const std::string xmlPath=(root/"guide.xml").string();
     std::ofstream(xmlPath)<<"<tv><channel id='tv.a'><display-name>Rota</display-name></channel><programme channel='tv.a' start='20261123200000 -0300' stop='20261123203000 -0300'>"
         "<title>Depois</title></programme><programme channel='tv.a' start='20261123193000 -0300'>"
@@ -103,7 +113,7 @@ int main(int argc,char** argv) {
     tv.Press(MenuRefresh);tv.Press(MenuFavorite);
     CloudFavorites f2={};assert(cloud_favorites_load(&f2,(dir+"favorites.txt").c_str())==0);
     assert(cloud_favorite_has_id(&f2,catalogue.Items()[1650].id));
-    tv.Press(MenuAccept);tv.Press(MenuAccept);assert(tv.TakeMovie().empty());tv.Press(MenuBack);
+    tv.Press(MenuAccept);tv.Press(MenuAccept);assert(tv.TakeMovie()=="https://example.invalid/catalog/a");tv.Press(MenuBack);
     tv.Press(MenuGuide);tv.Press(MenuRight);tv.Draw(canvas,clock);tv.Press(MenuBack);
     assert(!tv.Press(MenuBack));
 
@@ -118,5 +128,16 @@ int main(int argc,char** argv) {
     ConsoleHome mediaMenu(dir,roots);mediaMenu.Load();mediaMenu.Press(ConsoleHome::Right);
     mediaMenu.Press(ConsoleHome::Accept);mediaMenu.Press(ConsoleHome::Accept);
     assert(mediaMenu.Press(ConsoleHome::Accept).empty());assert(mediaMenu.TakeMovie()==dir+"clip.wmv");
+    std::ofstream(root/"playlist.m3u")<<"#EXTM3U\n#EXTINF:-1,Canal na rede\nhttp://192.168.1.10:8090/channel/id.mpg\n"
+        "#EXTINF:-1,HLS original\nhttps://example.invalid/live.m3u8\n#EXTINF:-1,Nexus\nbrazucaplay:sample\n";
+    ConsoleHome streamMenu(dir,roots);streamMenu.Load();streamMenu.Press(ConsoleHome::Right);
+    streamMenu.Press(ConsoleHome::Accept);streamMenu.Press(ConsoleHome::Accept);
+    assert(streamMenu.Press(ConsoleHome::Accept).empty());
+    assert(streamMenu.TakeMovie()=="http://192.168.1.10:8090/channel/id.mpg" && streamMenu.TakeMovie().empty());
+    for(int i=0;i<2;++i) {
+        streamMenu.Press(ConsoleHome::Back);streamMenu.Press(ConsoleHome::Down);
+        streamMenu.Press(ConsoleHome::Accept);assert(streamMenu.Press(ConsoleHome::Accept).empty());
+        assert(streamMenu.TakeMovie().empty());
+    }
     fs::remove_all(root);
 }

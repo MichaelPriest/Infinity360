@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include "ConsoleHome.h"
+#include "XboxHttpStream.h"
 
 namespace {
 template<class T> void drop(T*& object) { if(object) object->Release(); object=0; }
@@ -14,6 +15,7 @@ struct Vertex { float x,y,u,v; };
 const Vertex screen[]={{-1,1,0,0},{1,1,1,0},{-1,-1,0,1},{1,-1,1,1}};
 
 WORD buttons();
+bool stopMovie() { return (buttons() & (XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_BACK)) != 0; }
 class LocalMovie {
     IXAudio2* audio_;
     IXAudio2MasteringVoice* master_;
@@ -114,11 +116,12 @@ public:
         device_->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);
         device_->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);
     }
-    std::string Play(const std::string& path) {
-        std::string status;
-        { LocalMovie movie; status=movie.Play(device_,path); }
-        SetMenuState();
-        return status;
+    std::string Play(const std::string& path);
+    void DrawTexture(IDirect3DTexture9* texture, const Vertex* vertices) {
+        device_->SetTexture(0,texture); device_->SetVertexDeclaration(decl_);
+        device_->SetVertexShader(vertex_); device_->SetPixelShader(pixel_);
+        device_->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP,2,vertices,sizeof(Vertex));
+        device_->Present(0,0,0,0);
     }
     bool Show(const HomeCanvas& canvas) {
         D3DLOCKED_RECT lock;
@@ -128,13 +131,124 @@ public:
             std::memcpy(static_cast<char*>(lock.pBits)+y*lock.Pitch,canvas.Pixels()+y*HomeCanvas::Width,
                         HomeCanvas::Width*sizeof(unsigned));
         texture_->UnlockRect(0);
-        device_->SetTexture(0,texture_); device_->SetVertexDeclaration(decl_);
-        device_->SetVertexShader(vertex_); device_->SetPixelShader(pixel_);
-        device_->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP,2,screen,sizeof(Vertex));
-        device_->Present(0,0,0,0);
+        DrawTexture(texture_,screen);
         return true;
     }
 };
+
+class NetworkMovie : public MpegOutput {
+    enum { Slots=12, Block=PLM_AUDIO_SAMPLES_PER_FRAME*2 };
+    IDirect3DDevice9* device_;
+    Presenter& display_;
+    IDirect3DTexture9* picture_;
+    IXAudio2* audio_;
+    IXAudio2MasteringVoice* master_;
+    IXAudio2SourceVoice* voice_;
+    std::vector<short> pcm_;
+    unsigned slot_,width_,height_;
+    double aspect_;
+    bool WaitForAudio(unsigned limit) {
+        const DWORD start=GetTickCount();
+        while(voice_) {
+            XAUDIO2_VOICE_STATE state;
+            voice_->GetState(&state);
+            if(state.BuffersQueued<=limit) break;
+            if(stopMovie() || GetTickCount()-start>2000) return false;
+            Sleep(2);
+        }
+        return true;
+    }
+public:
+    NetworkMovie(IDirect3DDevice9* device,Presenter& display) : device_(device),display_(display),
+        picture_(0),audio_(0),master_(0),voice_(0),pcm_(Slots*Block),slot_(0),width_(0),height_(0),aspect_(1) {}
+    ~NetworkMovie() {
+        if(voice_) { voice_->Stop();voice_->DestroyVoice(); }
+        if(master_) master_->DestroyVoice();
+        drop(audio_);
+        device_->SetTexture(0,0);
+        drop(picture_);
+    }
+    bool Video(plm_frame_t& frame) {
+        if(!picture_) {
+            width_=frame.width;height_=frame.height;
+            if(FAILED(device_->CreateTexture(width_,height_,1,0,D3DFMT_LIN_X8R8G8B8,
+                                             D3DPOOL_DEFAULT,&picture_,0))) return false;
+        }
+        if(frame.width!=width_ || frame.height!=height_) return false;
+        device_->SetTexture(0,0);
+        D3DLOCKED_RECT lock;
+        if(FAILED(picture_->LockRect(0,&lock,0,0))) return false;
+        // Xenon stores packed ARGB words in big-endian byte order.
+        plm_frame_to_argb(&frame,static_cast<unsigned char*>(lock.pBits),lock.Pitch);
+        picture_->UnlockRect(0);
+        const double ratio=width_*aspect_*HomeCanvas::Height/(height_*HomeCanvas::Width);
+        Vertex quad[4];
+        for(unsigned i=0;i<4;++i) {
+            quad[i]=screen[i];
+            if(ratio<1) quad[i].x*=static_cast<float>(ratio);
+            else quad[i].y/=static_cast<float>(ratio);
+        }
+        device_->Clear(0,0,D3DCLEAR_TARGET,0xff000000u,1,0);
+        display_.DrawTexture(picture_,quad);
+        return true;
+    }
+    bool Audio(const plm_samples_t& samples) {
+        if(!voice_ || samples.count!=PLM_AUDIO_SAMPLES_PER_FRAME || !WaitForAudio(Slots-1)) return false;
+        short* dst=&pcm_[slot_*Block];
+        mpegStereoPcm16(samples,dst);
+        XAUDIO2_BUFFER buffer;
+        ZeroMemory(&buffer,sizeof buffer);
+        buffer.pAudioData=reinterpret_cast<const BYTE*>(dst);buffer.AudioBytes=Block*sizeof(short);
+        if(FAILED(voice_->SubmitSourceBuffer(&buffer))) return false;
+        slot_=(slot_+1)%Slots;
+        return true;
+    }
+    std::string Play(const MediaUrl& url) {
+        XboxHttpStream stream(stopMovie);
+        if(!stream.Open(url)) return stream.Cancelled() ? "" : stream.Error();
+        MpegPlayback movie(stream,*this);
+        if(!movie.Open()) {
+            if(stream.Cancelled()) return "";
+            return stream.Error().empty() ? movie.Error() : stream.Error();
+        }
+        aspect_=movie.PixelAspect();if(!(aspect_>0)) aspect_=1;
+        if(movie.SampleRate()>0) {
+            WAVEFORMATEX format;
+            ZeroMemory(&format,sizeof format);
+            format.wFormatTag=WAVE_FORMAT_PCM;format.nChannels=2;format.nSamplesPerSec=movie.SampleRate();
+            format.wBitsPerSample=16;format.nBlockAlign=4;format.nAvgBytesPerSec=format.nSamplesPerSec*4;
+            if(FAILED(XAudio2Create(&audio_,0)) || FAILED(audio_->CreateMasteringVoice(&master_)) ||
+               FAILED(audio_->CreateSourceVoice(&voice_,&format)) || FAILED(voice_->Start()))
+                return "Não foi possível iniciar a saída de áudio.";
+        }
+        device_->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);
+        device_->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);
+        DWORD last=GetTickCount();
+        while(!stopMovie()) {
+            const DWORD now=GetTickCount(),delta=now-last;
+            if(delta) {
+                last=now;
+                if(!movie.Advance((delta>80 ? 80 : delta)*0.001)) {
+                    if(stream.Cancelled() || stopMovie()) return "";
+                    if(!stream.Error().empty()) return stream.Error();
+                    if(!movie.Error().empty()) return movie.Error();
+                    if(!WaitForAudio(0)) return stopMovie() ? "" : "A saída de áudio parou de responder.";
+                    return "Transmissão encerrada.";
+                }
+            }
+            Sleep(2);
+        }
+        return "";
+    }
+};
+std::string Presenter::Play(const std::string& path) {
+    std::string status;
+    MediaUrl url;
+    if(url.Parse(path)) { NetworkMovie movie(device_,*this);status=movie.Play(url); }
+    else { LocalMovie movie;status=movie.Play(device_,path); }
+    SetMenuState();
+    return status;
+}
 
 WORD buttons() {
     XINPUT_STATE s;
@@ -174,6 +288,8 @@ int main() {
             if(!path.empty()) { XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
             const std::string movie=menu.TakeMovie();
             if(!movie.empty()) {
+                menu.PlayerMessage("Abrindo vídeo...  B para voltar.");
+                menu.Draw(canvas,"");video.Show(canvas);
                 menu.PlayerMessage(video.Play(movie));
                 previous=buttons();heldSince=lastRepeat=GetTickCount();
                 minute=-1;
