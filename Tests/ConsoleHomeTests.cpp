@@ -209,5 +209,22 @@ int main(int argc,char** argv) {
     sysMenu.Press(ConsoleHome::Back);  // System listing
     sysMenu.Press(ConsoleHome::Back);  // Home
 
+    // Series360 parity: scan additional paths configured without rewriting
+    // or deleting the console's existing game/library data.
+    const fs::path extraDir=root/"XBOX 360"/"Forza Horizon";
+    fs::create_directories(extraDir);
+    std::ofstream(extraDir/"default.xex")<<"extra test";
+    const fs::path scanConfig=root/"aurorax-scanpaths.txt";
+    std::ofstream(scanConfig)<<extraDir.parent_path().string()<<"\n";
+    ConsoleHome extraMenu(dir,roots); extraMenu.Load();
+    extraMenu.Press(ConsoleHome::Accept); // Library, now includes configured path
+    extraMenu.Press(ConsoleHome::Accept); // First game alphabetically
+    assert(extraMenu.Press(ConsoleHome::Accept)==(extraDir/"default.xex").string());
+    extraMenu.Press(ConsoleHome::Back);   // Listing
+    fs::remove(scanConfig);
+    extraMenu.Press(ConsoleHome::Refresh); // Re-read configured roots
+    extraMenu.Press(ConsoleHome::Accept);
+    assert(extraMenu.Press(ConsoleHome::Accept)==exe);
+
     fs::remove_all(root);
 }
