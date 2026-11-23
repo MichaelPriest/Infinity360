@@ -302,5 +302,25 @@ int main(int argc,char** argv) {
     assert(showAgain.Press(ConsoleHome::Accept)==
            (original/"default.xex").string());
 
+    // A GOD/STFS package is catalogued but never passed to XLaunchNewImage.
+    const fs::path godDir=root/"Content"/"0000000000000000"/"4D5307E6"/"00007000";
+    fs::create_directories(godDir);
+    const fs::path godFile=godDir/"AABBCCDD";
+    std::vector<unsigned char> stfs(0x1711u,0u);
+    stfs[0]='L';stfs[1]='I';stfs[2]='V';stfs[3]='E';
+    stfs[0x344u+2]=0x70;                 // GOD 0x00007000
+    stfs[0x360u]=0x4d;stfs[0x361u]=0x53;
+    stfs[0x362u]=0x07;stfs[0x363u]=0xe6;
+    const char* godName="AAAA GOD";
+    for(int i=0;godName[i];++i) stfs[0x411u+(size_t)i]=(unsigned char)godName[i];
+    {std::ofstream pkg(godFile,std::ios::binary);
+     pkg.write(reinterpret_cast<const char*>(&stfs[0]),stfs.size());}
+    ConsoleHome godMenu(dir,roots); godMenu.Load();
+    godMenu.Press(ConsoleHome::Accept);   // Library
+    for(int i=0;i<4;++i) godMenu.Press(ConsoleHome::Right); // Packages
+    godMenu.Press(ConsoleHome::Accept);   // Details
+    assert(godMenu.Press(ConsoleHome::Accept).empty()); // Safe: no XEX launch
+    godMenu.Draw(canvas,"19:48");
+
     fs::remove_all(root);
 }
