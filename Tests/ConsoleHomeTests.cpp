@@ -318,7 +318,8 @@ int main(int argc,char** argv) {
     stfs[0x360u]=0x4d;stfs[0x361u]=0x53;
     stfs[0x362u]=0x07;stfs[0x363u]=0xe6;
     const char* godName="AAAA GOD";
-    for(int i=0;godName[i];++i) stfs[0x411u+(size_t)i]=(unsigned char)godName[i];
+    for(int i=0;godName[i];++i)
+        stfs[0x411u+2u*(size_t)i+1u]=(unsigned char)godName[i];
     {std::ofstream pkg(godFile,std::ios::binary);
      pkg.write(reinterpret_cast<const char*>(&stfs[0]),stfs.size());}
     ConsoleHome godMenu(dir,roots); godMenu.Load();
