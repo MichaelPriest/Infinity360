@@ -57,8 +57,7 @@ bool isXexPath(const std::string& path) {
     return tail==".xex";
 }
 bool isContentPackage(const Game& item) {
-    return item.device=="Pacote GOD" || item.device=="Pacote XBLA" ||
-           item.device=="Pacote Xbox Original";
+    return item.device.compare(0,7,"Pacote ")==0;
 }
 bool libraryTabMatch(const Game& item,int tab) {
     if(tab==0) return true;
@@ -108,9 +107,11 @@ void ConsoleHome::ScanLibrary() {
         ContentCatalog(ContentCatalog::DefaultRoots(dir_)).Scan();
     for(size_t i=0;i<packages.size();++i) {
         const XboxContentPackage& pkg=packages[i];
-        std::string kind="Pacote GOD";
-        if(pkg.contentType==0xd0000u) kind="Pacote XBLA";
+        std::string kind="Pacote Xbox 360";
+        if(pkg.contentType==0x7000u) kind="Pacote GOD";
+        else if(pkg.contentType==0xd0000u) kind="Pacote XBLA";
         else if(pkg.contentType==0x5000u) kind="Pacote Xbox Original";
+        else if(pkg.contentType==0x2000000u) kind="Pacote Indie";
         Game item={pkg.name,pkg.path,kind,false};
         games_.push_back(item);
     }
