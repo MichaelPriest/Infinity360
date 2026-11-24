@@ -10,7 +10,7 @@ import tempfile
 def reject(action):
     try:
         action()
-    except ftplib.error_perm:
+    except (ftplib.error_perm, ftplib.error_temp):
         return
     raise AssertionError('Expected FTP permission rejection')
 
@@ -62,6 +62,23 @@ with tempfile.TemporaryDirectory() as directory:
             reject(lambda: ftp.retrbinary('RETR link.txt', lambda _: None))
             reject(lambda: ftp.retrbinary('RETR AXCOPY-0001.part', lambda _: None))
             reject(lambda: ftp.sendcmd('STOR forbidden.bin'))
+            ftp.voidcmd('ALLO ' + str(len(payload)))
+            ftp.storbinary('STOR uploaded.bin', io.BytesIO(payload))
+            assert (personal / 'uploaded.bin').read_bytes() == payload
+            # A second upload must not replace the first file.
+            ftp.voidcmd('ALLO 3')
+            reject(lambda: ftp.storbinary('STOR uploaded.bin', io.BytesIO(b'bad')))
+            assert (personal / 'uploaded.bin').read_bytes() == payload
+            ftp.voidcmd('ALLO 9')
+            reject(lambda: ftp.storbinary('STOR incomplete.bin', io.BytesIO(b'abc')))
+            assert not (personal / 'incomplete.bin').exists()
+            ftp.voidcmd('ALLO 2')
+            reject(lambda: ftp.storbinary('STOR excess.bin', io.BytesIO(b'abc')))
+            assert not (personal / 'excess.bin').exists()
+            ftp.voidcmd('ALLO 3')
+            reject(lambda: ftp.storbinary('STOR ../private.txt', io.BytesIO(b'bad')))
+            reject(lambda: ftp.sendcmd('ALLO 33554433'))
+            assert not list(personal.glob('AXCOPY-FTP-*.part'))
             reject(lambda: ftp.sendcmd('PORT 127,0,0,1,1,1'))
             ftp.cwd('Documents')
             assert ftp.pwd() == '/Documents'
