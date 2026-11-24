@@ -53,10 +53,10 @@ operações funcionaram numa unidade real.
 
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
-| 17 | Descobrir e gerenciar TUs locais | M/T | Pendente | Indexação TitleID/MediaID, ativação única e cópia de rollback |
+| 17 | Descobrir e gerenciar TUs locais | M/T | **Inventário por Title ID e comparação Media ID em Content** | Cache legado, ativação, backup/rollback e validação de versão |
 | 18 | Buscar e baixar TUs pelo XboxUnity, inclusive em fila | T | Pendente | API, downloads autenticados, retomar, hash, ativação validada |
-| 19 | Descobrir, instalar, ativar/desativar DLC local | T | Pendente | Verificação de pacote/TitleID, confirmação, nunca distribuir DLC |
-| 20 | Exibir e gerenciar saves por perfil | T | Pendente | Isolamento por perfil, backups, confirmação de exclusão |
+| 19 | Descobrir, instalar, ativar/desativar DLC local | T | **Inventário de DLC por Title ID** | Instalação/remoção autorizada, validação e ativação |
+| 20 | Exibir e gerenciar saves por perfil | T | **Inventário local de saves por Title ID em diretórios de perfil** | Perfil Xbox ativo, backup, restauração e confirmação de exclusão |
 | 21 | Conquistas por título, secretas e recentes | T | Pendente | Provedor nativo XDK/XAM, somente leitura |
 | 22 | Trainers locais/servidor e compatibilidade de versão TU | T | Pendente | Segurança, proveniência, seleção explícita, suporte limitado a homebrew legal |
 | 23 | Instalação manual de pacotes locais pelo gerenciador | T | Pendente | Validar formatos de conteúdo e licença antes da cópia |
@@ -207,3 +207,19 @@ Fontes tecnicas de referencia (layout STFS):
 
 O modulo continua **somente leitura**, nao verifica licencas ou
 assinaturas criptograficas e nao habilita launch nativo de GOD/XBLA.
+
+## Conteudo instalado por titulo
+
+- `ContentCatalog::ReadExecutionInfo` le a estrutura de 24 bytes do
+  cabecalho opcional XEX2 `0x00040006`, com limites de offsets.
+- `ScanExtras(titleId)` separa TU (`000B0000`), DLC (`00000002`) e
+  saves (`00000001`), verificando o Title ID e o tipo do pacote.
+- A ficha de jogo abre a tela nativa com RB; as tres abas mostram
+  o inventario e o Media ID dos TUs em relacao ao jogo.
+- Nao modifica conteudo instalado, licencas, assinaturas ou estado
+  dos TUs. Cache legado, perfil ativo e operacoes de escrita seguem pendentes.
+- Testes de cabecalho, limites, filtragem e navegacao foram adicionados;
+  execucao e homologacao no hardware ainda nao confirmadas.
+
+Referencias tecnicas: https://free60.org/System-Software/Formats/XEX/
+e https://free60.org/System-Software/Formats/STFS/.
