@@ -215,26 +215,30 @@ homologação XDK continuam pendentes.
 **Atenção:** leitura SMC, servidor FTP, SMB e downloads pela internet ainda dependem
 de implementação. Os cartões não apresentam dados inventados.
 
-### FTP — base de autenticação (sem servidor ativo)
+### FTP — autenticação e teste de interoperabilidade
 
-O módulo `FtpSession` implementa a sessão de comandos, independente
-do transporte. Exige usuário explícito (não anônimo) e senha de 12 a
-64 caracteres, fornecidos pelo futuro serviço; não existe senha padrão.
-Após três tentativas de senha inválidas, encerra a sessão. Antes de
-autenticar, não permite navegar. PWD, CWD, CDUP, SYST, TYPE I, NOOP
-e QUIT são tratados; a raiz virtual é uma pasta pessoal existente
-validada por FileWorkspace. Caminhos de outros dispositivos, escape
-acima da raiz, nomes inválidos e links simbólicos no PC são rejeitados.
+O núcleo FtpSession valida credenciais explícitas, encerra após três
+falhas na sessão e confina a navegação e leitura à pasta pessoal.
+A API DataDirectory/DataFile valida cada caminho solicitado; arquivos
+temporários AXCOPY, links simbólicos no PC e escapes são rejeitados.
 
-PORT/EPRT, operações de escrita e canais de dados estão desabilitados.
-O módulo não abre sockets nem aceita conexões externas, não implementa
-LIST/RETR/STOR e não oferece FTP funcional para FileZilla nesta etapa.
-A próxima integração deve prever modo passivo, restrição à rede local,
-timeout, limite global de tentativas e ativação manual. FTP clássico
-não cifra credenciais nem dados; não expor à internet.
+O executável de testes FtpLoopbackProbe é **exclusivo do Linux**:
+escuta somente em 127.0.0.1, usa portas efêmeras, um único cliente,
+timeouts de socket e limite de comandos. A senha é recebida pela entrada
+padrão. Implementa PASV, EPSV, NLST, LIST (formatação de teste), SIZE e
+RETR binário. Não aceita upload, escrita, exclusão ou modo ativo.
+LIST exibe data ilustrativa, não metadados reais de modificação.
 
-O teste isolado C++17 foi executado no Linux com avisos tratados como
-erros. A integração XDK ainda não foi compilada ou homologada.
+O teste FtpLoopbackTest.py utiliza Python ftplib e verifica transferência
+binária de 1 MiB pelos dois modos passivos, listagem, autenticação e
+rejeição de acesso fora da raiz. A compilação C++17 com avisos como erros,
+o teste de sessão e a integração TCP passaram no Linux; hashes Git
+dos arquivos testados foram conferidos com a main.
+
+O transporte não está ligado ao XEX nem exposto à LAN. Não existe
+servidor ativo no Xbox 360 nesta etapa. XNet, controle de conexões,
+configuração pela interface, upload e testes FileZilla/hardware seguem
+pendentes. FTP clássico não cifra credenciais nem dados.
 
 ## Compilação e instalação
 
