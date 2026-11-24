@@ -119,6 +119,7 @@ int main(int argc,char** argv) {
     listener.reset();
     if(control.fd<0 || !reply(control.fd,ftp.Greeting()))return 3;
     std::string command;
+    bool binary=false;
     for(unsigned count=0;count<256 && !ftp.Closed() && line(control.fd,command);++count) {
         const size_t split=command.find(' ');
         std::string verb=command.substr(0,split);
@@ -128,8 +129,15 @@ int main(int argc,char** argv) {
         for(unsigned char ch:command)if(ch<32 || ch>126)printable=false;
         if(!printable){if(!reply(control.fd,"500 Invalid command"))break;continue;}
         if(!ftp.Authenticated() || verb=="USER" || verb=="PASS" || verb=="QUIT") {
-            passive.reset();
+            passive.reset();binary=false;
             if(!reply(control.fd,ftp.Command(command)))break;
+            continue;
+        }
+        if(verb=="TYPE") {
+            if(arg=="A" || arg=="I") {
+                binary=arg=="I";
+                if(!reply(control.fd,"200 Type set"))break;
+            } else if(!reply(control.fd,"504 Unsupported type"))break;
             continue;
         }
         if(verb=="PASV" || verb=="EPSV") {
@@ -151,7 +159,7 @@ int main(int argc,char** argv) {
             // This probe lists the current directory only, with no LIST options.
             std::string path;
             const bool get=verb=="RETR";
-            const bool valid=get?ftp.DataFile(arg,path):arg.empty()&&ftp.DataDirectory("",path);
+            const bool valid=get?(binary&&ftp.DataFile(arg,path)):arg.empty()&&ftp.DataDirectory("",path);
             if(!valid || passive.fd<0) {
                 passive.reset();
                 if(!reply(control.fd,valid?"425 Use passive mode first":"550 Path unavailable"))break;
