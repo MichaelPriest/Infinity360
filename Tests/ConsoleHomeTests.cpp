@@ -627,5 +627,22 @@ int main(int argc,char** argv) {
     assert(fs::file_size(artFolder/"cover-alt.rgba")==160u*240u*4u);
     assert(fs::file_size(artFolder/"background-alt.rgba")==640u*360u*4u);
 
+    // Imported titles can rename only an existing, locally verified title.
+    {std::ofstream names(artRoot/"aurorax-aurora-names.tsv");
+     names<<"4D5307E6\tImported Halo\n";
+     names<<"DEADBEEF\tNot installed\n";
+     names<<"00000000\tInvalid ID\n";}
+    ConsoleHome imported(artRoot.string()+"/",noRoots);imported.Load();
+    imported.Press(ConsoleHome::Accept);
+    imported.Press(ConsoleHome::Guide); // search by imported name
+    // I: second row, second column
+    imported.Press(ConsoleHome::Down);imported.Press(ConsoleHome::Right);
+    imported.Press(ConsoleHome::Accept);imported.Press(ConsoleHome::Refresh);
+    imported.Press(ConsoleHome::Accept);
+    imported.Press(ConsoleHome::Guide); // art editor works only from actual details
+    imported.Draw(canvas,"20:08");
+    assert(canvas.Pixels()[250*1280+155]==0xffc80a00u);
+    imported.Press(ConsoleHome::Back);
+    assert(imported.Press(ConsoleHome::Accept).empty()); // GOD remains blocked
     fs::remove_all(root);
 }

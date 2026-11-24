@@ -36,7 +36,7 @@ operações funcionaram numa unidade real.
 | 02 | Blocos editáveis e segunda fileira reordenável | T | **Editor nativo dos quatro atalhos, salvar/cancelar/restaurar** | Blocos customizados, tamanhos e temas; homologação XDK |
 | 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
-| 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
+| 05 | Base Aurora em leitura e importação de jogos | M/T | **Exportador PC SQLite somente leitura; caminhos e nomes integrados ao scanner nativo** | Base real do usuário, importação nativa sem PC e homologação |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
 | 07 | Pesquisa e ordenação da biblioteca | T | **Busca nativa Start + teclado, ordenação RS** implementadas | Filtros avançados e busca por metadados |
 | 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | **Coleções e Ocultos persistentes; Nunca abertos pela AuroraX com registro de XEX solicitados** | Estatísticas reais de tempo jogado e importação do histórico Series360 ainda pendentes |
@@ -294,3 +294,8 @@ Capas `Art/<TITLEID>/cover.rgba` (160x240) e fundos `background.rgba` (640x360) 
 ## Editor nativo de arte por jogo
 
 Start nos detalhes abre a prévia de capa e fundo. Cima/Baixo escolhe o campo; A ou Esquerda/Direita alterna Principal, Alternativa e Visual padrão. X restaura Principal no rascunho; Y grava; B cancela; RB relê arquivos. Arquivos alternativos: `cover-alt.rgba` e `background-alt.rgba` nas mesmas dimensões e pasta Title ID. Preferências individuais persistidas em registros `A\t<TITLEID>\t<dois dígitos>` (até 512 títulos); arquivos nunca são apagados pelo editor. A opção Visual padrão desativa a arte local; arquivos ausentes mantêm o fallback. Teste de prévia, cancelamento, seleção independente, reinício e restauração sem exclusão acrescentado. CI anterior 45504587110 aprovada; nova execução e homologação XDK pendentes.
+
+
+## Migração Aurora: primeira etapa
+
+`Platform/Xbox360/tools/import_aurora.py` lê cópias de `Data/Databases/content.db` e `settings.db` em modo SQLite read-only. Usa `ContentItems.TitleId/TitleName` e `ScanPaths.Path/DeviceId`, com mapeamento explícito de dispositivos (`--mount ID=HDD1`). Prévia padrão; `--apply` cria arquivos separados `aurorax-aurora-names.tsv` e `aurorax-aurora-paths.txt` no destino. Não substitui o perfil nem a configuração original de scan. A UI aplica nomes somente a títulos já descobertos e identificados pelo cabeçalho local, sem criar atalhos executáveis a partir do banco. O scanner continua sujeito ao limite total de 32 raízes; rotas existentes têm prioridade. Referência de esquema: https://github.com/XboxUnity/AuroraScripts/blob/master/UtilityScripts/DBCleaner/Main.lua . Capas nativas .asset precisam de decodificação específica (https://github.com/jrobiche/xbox360-aurora-developer-documentation/blob/main/docs/aurora-0.7b.2r1655-assets/README.md); favoritos, histórico e arte original ainda não são migrados. Testes sintéticos adicionados, base Aurora real não disponível nesta etapa.

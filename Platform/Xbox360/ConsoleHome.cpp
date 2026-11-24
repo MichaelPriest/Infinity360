@@ -13,6 +13,34 @@ namespace {
 const size_t HistoryLimit=24;
 const size_t PinLimit=32;
 const size_t ArtChoiceLimit=512;
+// Import only names keyed by a locally verified Title ID. The exporter never
+// supplies a launch target or bypasses the local scanner.
+std::map<unsigned,std::string> importedNames(const std::string& file) {
+    std::map<unsigned,std::string> names;
+    std::ifstream in(file.c_str(),std::ios::binary);
+    if(!in)return names;
+    const size_t limit=1024*1024;
+    std::vector<char> data(limit+1);
+    in.read(&data[0],static_cast<std::streamsize>(data.size()));
+    if(in.bad() || in.gcount()>static_cast<std::streamsize>(limit))return names;
+    std::istringstream lines(std::string(&data[0],static_cast<size_t>(in.gcount())));
+    std::string line;
+    while(names.size()<4096 && std::getline(lines,line)) {
+        if(!line.empty() && line[line.size()-1]=='\r')line.erase(line.size()-1);
+        if(line.size()<10 || line.size()>249 || line[8]!='\t')continue;
+        unsigned id=0;bool valid=true;
+        for(size_t i=0;i<8;++i) {
+            const char ch=line[i];
+            if(ch>='0' && ch<='9')id=(id<<4)|(ch-'0');
+            else if(ch>='A' && ch<='F')id=(id<<4)|(ch-'A'+10);
+            else {valid=false;break;}
+        }
+        for(size_t i=9;i<line.size();++i)
+            if(static_cast<unsigned char>(line[i])<32 || line[i]==127)valid=false;
+        if(valid && id && !names.count(id))names[id]=line.substr(9);
+    }
+    return names;
+}
 bool validArtChoice(const std::string& value) {
     return value.size()==2 && value[0]>='0' && value[0]<='2' &&
                               value[1]>='0' && value[1]<='2';
@@ -117,6 +145,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
     if(!collections_.Load())notice_="Colecoes invalidas: edicao bloqueada para preservar o arquivo.";
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
@@ -167,6 +196,14 @@ void ConsoleHome::ScanLibrary() {
         else if(pkg.contentType==0x80000u) kind="Pacote Demo";
         Game item={pkg.name,pkg.path,kind,false};
         games_.push_back(item);
+    }
+    const std::map<unsigned,std::string> names=importedNames(dir_+"aurorax-aurora-names.tsv");
+    if(!names.empty()) {
+        for(size_t i=0;i<games_.size();++i) {
+            const XboxTitleMetadata info=ContentCatalog::DescribeTitle(games_[i].executable,isContentPackage(games_[i]));
+            const std::map<unsigned,std::string>::const_iterator it=names.find(info.titleId);
+            if(info.known && it!=names.end())games_[i].name=it->second;
+        }
     }
 }
 bool ConsoleHome::SaveProfile() const {
@@ -239,6 +276,7 @@ void ConsoleHome::Reload() {
     notice_.clear();
     artFolders_.clear();artDirty_=true;
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
     if (section_==Files && page_!=Home) {
         if (!fileWorkspace_.CanBrowse(folders_.back()) || !ReadFolder(folders_.back(),files_)) {
             files_.clear();notice_="Dispositivo ou pasta indisponivel.";
