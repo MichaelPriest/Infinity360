@@ -86,7 +86,8 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
-      section_(Library),page_(Home) {}
+      contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
+      contentInfo_(),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -274,9 +275,65 @@ void ConsoleHome::ApplySearch() {
     notice_=searchTerm_.empty()?"Busca removida":"Busca: "+searchTerm_+
             " ("+number(Count())+" jogos)";
 }
+void ConsoleHome::OpenContent() {
+    contentActive_=true;
+    contentKnown_=false;
+    contentInfo_=XboxExecutionInfo();
+    contentItems_.clear();
+    contentTab_=0;
+    contentRow_=0;
+    notice_.clear();
+    if(!Count() || section_==Files || section_==System)return;
+    const Game& game=*visible_[row_];
+    if(isContentPackage(game)) {
+        XboxContentPackage package;
+        if(ContentCatalog::ReadHeader(game.executable,package)) {
+            contentInfo_.titleId=package.titleId;
+            contentInfo_.mediaId=package.mediaId;
+            contentInfo_.version=package.version;
+            contentKnown_=true;
+        }
+    } else contentKnown_=ContentCatalog::ReadExecutionInfo(game.executable,contentInfo_);
+    if(contentKnown_)
+        contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
+}
+size_t ConsoleHome::ContentCount() const {
+    const unsigned types[]={0x000b0000u,2u,1u};
+    size_t count=0;
+    for(size_t i=0;i<contentItems_.size();++i)
+        if(contentItems_[i].contentType==types[contentTab_])++count;
+    return count;
+}
+const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
+    const unsigned types[]={0x000b0000u,2u,1u};
+    for(size_t i=0;i<contentItems_.size();++i) {
+        if(contentItems_[i].contentType!=types[contentTab_])continue;
+        if(index==0)return &contentItems_[i];
+        --index;
+    }
+    return 0;
+}
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; }
 
 std::string ConsoleHome::Press(Key key) {
+    if(contentActive_) {
+        if(key==Back) {contentActive_=false;notice_.clear();return "";}
+        if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
+        if(key==Left && contentTab_>0) {--contentTab_;contentRow_=0;}
+        if(key==Right && contentTab_<2) {++contentTab_;contentRow_=0;}
+        if(key==Up && contentRow_>0)--contentRow_;
+        if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
+        if(key==Accept) {
+            const XboxContentPackage* item=ContentAt(contentRow_);
+            if(item)notice_=item->path;
+        }
+        return "";
+    }
+    if(page_==Details && (section_==Library || section_==Recent || section_==Favorites)
+       && key==PageDown && Count()) {
+        OpenContent();
+        return "";
+    }
     if(section_==Library && page_==Listing && searchActive_) {
         if(key==Back) {
             if(keyboardMode_==0) searchDraft_=searchTerm_;
@@ -392,6 +449,7 @@ std::string ConsoleHome::Press(Key key) {
         if (page_==Details) {
             page_=Listing;
             if(section_==Recent) { Rebuild(); row_=0; }
+            else if(section_==Library && subtab_==6)Rebuild();
         }
         else if (page_==Listing && section_==Files && folders_.size()>1) {
             folders_.pop_back(); row_=0; Reload();
@@ -596,7 +654,53 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     }
 }
 
+namespace {
+std::string hexId(unsigned value) {
+    char text[9];
+    std::sprintf(text,"%08X",value);
+    return text;
+}
+}
+void ConsoleHome::DrawContent(HomeCanvas& c) const {
+    c.Text(44,78,"Conteudo instalado",40,White,1170);
+    if(!contentKnown_) {
+        c.Text(48,150,"Title ID indisponivel para este executavel.",26,White,1170);
+        c.Text(48,198,"Nao e possivel associar TU, DLC ou saves com seguranca.",21,Muted,1170);
+        c.Text(48,260,"B Voltar | Y Atualizar",22,Lime,1170);
+        return;
+    }
+    c.Text(45,135,"Title ID: "+hexId(contentInfo_.titleId)+"    Media ID: "+
+           hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
+           21,Muted,1180);
+    const char* const tabs[]={"Title Updates","DLC","Saves"};
+    for(int i=0;i<3;++i) {
+        const int x=45+i*310;
+        panel(c,x,183,295,47,Panel,i==contentTab_);
+        c.Text(x+16,191,tabs[i],23,i==contentTab_?Lime:White,265);
+    }
+    c.Text(48,241,number(ContentCount())+" pacotes encontrados - somente leitura",20,Muted,1175);
+    if(ContentCount()==0)c.Text(48,305,"Nenhum pacote encontrado neste local.",24,White,1170);
+    const int first=(contentRow_/5)*5;
+    for(int i=first;i<first+5;++i) {
+        const XboxContentPackage* item=ContentAt(i);
+        if(!item)break;
+        const int y=280+(i-first)*62;
+        panel(c,45,y,1189,55,Panel,i==contentRow_);
+        c.Text(62,y+6,item->name,23,White,700);
+        std::string status;
+        if(contentTab_==0) {
+            status=(!contentInfo_.mediaId || !item->mediaId)?"Media ID desconhecido":
+                item->mediaId==contentInfo_.mediaId?"Media ID igual":"Media ID diferente";
+            c.Text(62,y+31,"Versao: "+hexId(item->version),17,Muted,690);
+        } else if(contentTab_==1)status="Marketplace / DLC";
+        else status="Save localizado";
+        c.Text(780,y+14,status,20,Muted,430);
+    }
+    c.Text(48,601,"A Caminho | Y Atualizar | B Voltar | Nenhuma ativacao automatica",18,Lime,1175);
+}
+
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
+    if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
     if(section_==Library && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
@@ -690,6 +794,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(76,219,title,36,White,1110);
         c.Text(77,298,sub,22,Muted,1100);
         c.Text(77,384,hint,21,Lime,1110);
+        if(section_==Library || section_==Recent || section_==Favorites)
+            c.Text(77,430,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
         return;
     }
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
