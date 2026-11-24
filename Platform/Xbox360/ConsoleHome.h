@@ -54,6 +54,8 @@ private:
     bool contentActive_, contentKnown_;
     int contentTab_, contentRow_;
     XboxExecutionInfo contentInfo_;
+    XboxTitleMetadata detailMetadata_;
+    void RefreshTitleMetadata();
     std::vector<XboxContentPackage> contentItems_;
     void OpenContent();
     size_t ContentCount() const;
