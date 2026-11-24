@@ -494,5 +494,58 @@ int main(int argc,char** argv) {
         assert(data.find("K\t"+pinGame.string())==std::string::npos);
     }
 
+    // Home layout: cancel, save, restart, route to moved tile, restore defaults.
+    const fs::path layoutRoot=root/"LayoutFixture";
+    fs::create_directories(layoutRoot);
+    const std::string layoutDir=layoutRoot.string()+"/";
+    const std::vector<std::string> noRoots;
+    const fs::path profile=layoutRoot/"aurorax-profile.txt";
+    ConsoleHome layout(layoutDir,noRoots);layout.Load();
+    layout.Press(ConsoleHome::Guide); // Start editor
+    layout.Press(ConsoleHome::Right);
+    layout.Press(ConsoleHome::Right); // Files slot
+    layout.Press(ConsoleHome::PageUp);
+    layout.Press(ConsoleHome::PageUp); // Files, Apps, Emulators, System
+    layout.Draw(canvas,"20:01");
+    layout.Press(ConsoleHome::Back); // cancel draft
+    assert(!fs::exists(profile));
+    layout.Press(ConsoleHome::Guide);
+    layout.Press(ConsoleHome::Right);
+    layout.Press(ConsoleHome::Right);
+    layout.Press(ConsoleHome::PageUp);
+    layout.Press(ConsoleHome::PageUp);
+    layout.Press(ConsoleHome::Refresh); // commit
+    {
+        std::ifstream in(profile);
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("O\t2013")!=std::string::npos);
+    }
+    ConsoleHome restored(layoutDir,noRoots);restored.Load();
+    restored.Press(ConsoleHome::Down); // first middle slot is now Files
+    restored.Press(ConsoleHome::Accept);
+    restored.Press(ConsoleHome::Guide); // Files creates personal workspace
+    restored.Press(ConsoleHome::Refresh);
+    assert(fs::is_directory(layoutRoot/"UserFiles"));
+    restored.Press(ConsoleHome::Back);
+    restored.Press(ConsoleHome::Guide);
+    restored.Press(ConsoleHome::Favorite); // default draft
+    restored.Press(ConsoleHome::Refresh);
+    {
+        std::ifstream in(profile);
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("O\t0123")!=std::string::npos);
+    }
+    // Malformed permutations must never index an invalid section.
+    std::ofstream(profile)<<"O\t2229\n";
+    ConsoleHome invalidLayout(layoutDir,noRoots);invalidLayout.Load();
+    invalidLayout.Draw(canvas,"20:02");
+    invalidLayout.Press(ConsoleHome::Guide);
+    invalidLayout.Press(ConsoleHome::Refresh);
+    {
+        std::ifstream in(profile);
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("O\t0123")!=std::string::npos);
+    }
+
     fs::remove_all(root);
 }

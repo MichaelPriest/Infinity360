@@ -47,6 +47,10 @@ private:
     void StartFileEdit(bool rename);
     void ConfirmFileEdit();
     int focus_, row_, subtab_, systemTab_, gameSort_, searchCursor_;
+    std::string homeOrder_, homeDraft_;
+    int homeEditSlot_;
+    bool homeEditing_;
+    void DrawHomeEditor(HomeCanvas& c) const;
     int collectionIndex_, collectionRow_, keyboardMode_; // 0 search, 1 create, 2 rename
     bool searchActive_, collectionPicker_, deleteCollectionConfirm_;
     std::string searchTerm_, searchDraft_, pickerGame_;

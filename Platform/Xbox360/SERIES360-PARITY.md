@@ -33,7 +33,7 @@ operações funcionaram numa unidade real.
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
 | 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | **Fixados persistentes independentes de favoritos, atalhos priorizados no início** | Reordenar manualmente, horas jogadas, blocos customizados |
-| 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
+| 02 | Blocos editáveis e segunda fileira reordenável | T | **Editor nativo dos quatro atalhos, salvar/cancelar/restaurar** | Blocos customizados, tamanhos e temas; homologação XDK |
 | 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
 | 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
@@ -279,3 +279,8 @@ DescribeTitle reúne cabeçalhos XEX e STFS/SVOD para os detalhes da Biblioteca,
 ## Jogos fixados na tela inicial
 
 LB nos detalhes de um jogo fixa/desafixa o título (até 32 caminhos, persistidos como `K` no perfil). A aba Fixados e os atalhos da tela inicial priorizam esses títulos; favoritos continuam independentes. Ocultos ficam fora de Recentes e dos atalhos, sem perder associações. O histórico legado R também é considerado pelo filtro Nunca. Teste de navegação/persistência acrescentado; execução desta revisão e homologação XDK pendentes.
+
+
+## Personalizacao da segunda fileira
+
+Start na tela inicial abre o editor nativo. Direcional seleciona o atalho, LB/RB troca a posicao, X restaura a ordem padrao no rascunho, Y salva e B cancela sem gravar. O perfil usa uma permutacao validada `O\t0123`; perfis antigos ou invalidos usam a ordem padrao. A navegacao por A acompanha o atalho renderizado. Biblioteca e Cloud360 IPTV continuam fixos no topo. Testes de cancelamento, persistencia, abertura real de Arquivos apos mover, restauracao e perfil invalido adicionados. A CI anterior (45431936267) aprovou os testes portateis, incluindo streaming; esta nova revisao ainda depende da CI e XDK.

@@ -12,6 +12,13 @@
 namespace {
 const size_t HistoryLimit=24;
 const size_t PinLimit=32;
+const char DefaultHomeOrder[]="0123";
+bool validHomeOrder(const std::string& order) {
+    if(order.size()!=4) return false;
+    for(char ch='0';ch<='3';++ch)
+        if(std::count(order.begin(),order.end(),ch)!=1) return false;
+    return true;
+}
 const char* const labels[]={"Biblioteca","Cloud360 IPTV","Aplicativos","Emuladores","Arquivos","Sistema","Recentes","Fixados e favoritos"};
 std::string number(size_t value) { std::ostringstream out; out<<value; return out.str(); }
 bool contains(const std::vector<std::string>& list,const std::string& path) {
@@ -86,6 +93,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),fileRoot_(0),pasteConfirm_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
+      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
@@ -98,11 +106,13 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
         if (line.size()<3 || line.size()>2048 || line[1]!='\t') continue;
         const std::string file=line.substr(2);
+        if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
         if(line[0]=='R' && history_.size()<HistoryLimit && !contains(history_,file)) history_.push_back(file);
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
         if(line[0]=='K' && pinned_.size()<PinLimit && !contains(pinned_,file)) pinned_.push_back(file);
@@ -136,6 +146,7 @@ void ConsoleHome::ScanLibrary() {
 bool ConsoleHome::SaveProfile() const {
     const std::string path=dir_+"aurorax-profile.txt", tmp=path+".tmp";
     std::ofstream out(tmp.c_str(),std::ios::trunc);
+    out<<"O\t"<<homeOrder_<<"\n";
     for (size_t i=0;i<history_.size();++i) out<<"R\t"<<history_[i]<<"\n";
     for (size_t i=0;i<favorites_.size();++i) out<<"F\t"<<favorites_[i]<<"\n";
     for (size_t i=0;i<pinned_.size();++i) out<<"K\t"<<pinned_[i]<<"\n";
@@ -397,6 +408,28 @@ const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; }
 
 std::string ConsoleHome::Press(Key key) {
+    // Edit a draft only; preserve the saved layout until Y succeeds.
+    if(page_==Home && homeEditing_) {
+        if(key==Back) {homeEditing_=false;notice_="Personalizacao cancelada.";return "";}
+        if(key==Left && homeEditSlot_>0) --homeEditSlot_;
+        if(key==Right && homeEditSlot_<3) ++homeEditSlot_;
+        if(key==PageUp && homeEditSlot_>0) {
+            std::swap(homeDraft_[homeEditSlot_],homeDraft_[homeEditSlot_-1]);
+            --homeEditSlot_;
+        }
+        if(key==PageDown && homeEditSlot_<3) {
+            std::swap(homeDraft_[homeEditSlot_],homeDraft_[homeEditSlot_+1]);
+            ++homeEditSlot_;
+        }
+        if(key==Favorite) {homeDraft_=DefaultHomeOrder;homeEditSlot_=0;}
+        if(key==Refresh) {
+            const std::string previous=homeOrder_;
+            homeOrder_=homeDraft_;
+            if(SaveProfile()) {homeEditing_=false;notice_="Atalhos personalizados e salvos.";}
+            else {homeOrder_=previous;notice_="Falha ao salvar. Y tenta novamente; B cancela.";}
+        }
+        return "";
+    }
     if(contentActive_) {
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
@@ -608,7 +641,17 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
-        if(key==Accept) Enter(static_cast<Section>(focus_));
+        if(key==Guide) {
+            homeDraft_=homeOrder_;
+            homeEditSlot_=(focus_>=Apps && focus_<=System)?focus_-Apps:0;
+            homeEditing_=true;notice_.clear();
+            return "";
+        }
+        if(key==Accept) {
+            const int destination=(focus_>=Apps && focus_<=System)?
+                Apps+homeOrder_[focus_-Apps]-'0':focus_;
+            Enter(static_cast<Section>(destination));
+        }
         return "";
     }
     if(page_==Listing && section_==Library && key==PageDown) {
@@ -757,8 +800,24 @@ void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned 
 }
 }
 
+void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
+    c.Text(44,82,"Personalizar inicio",40,White,1190);
+    c.Text(46,150,"Organize os quatro atalhos da segunda fileira.",24,Muted,1180);
+    c.Text(46,196,"Biblioteca e Cloud360 IPTV permanecem no topo.",21,Muted,1180);
+    for(int i=0;i<4;++i) {
+        const int x=42+i*302, item=homeDraft_[i]-'0';
+        panel(c,x,282,289,168,Panel,i==homeEditSlot_);
+        c.Image(600+item*52,0,52,52,x+112,303,60,60);
+        c.Text(x+16,374,labels[Apps+item],26,i==homeEditSlot_?Lime:White,258);
+        c.Text(x+16,414,"Posicao "+number(i+1),18,Muted,252);
+    }
+    c.Text(46,500,"Direcional: selecionar | LB/RB: mover o atalho",23,White,1180);
+    c.Text(46,550,"X Restaurar padrao | Y Salvar | B Cancelar",23,Lime,1180);
+}
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
+    if(homeEditing_) {DrawHomeEditor(c);return;}
     c.Text(44,76,"Início",42,White,330);
+    c.Text(808,86,"Start Personalizar atalhos",20,Muted,425);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
@@ -771,8 +830,9 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     for(int i=0;i<4;++i) {
         int x=42+i*302;
         panel(c,x,357,289,75,Panel,focus_==Apps+i);
-        c.Image(600+i*52,0,52,52,x+24,376,39,38);
-        c.Text(x+80,375,labels[Apps+i],23,White,205);
+        const int item=homeOrder_[i]-'0';
+        c.Image(600+item*52,0,52,52,x+24,376,39,38);
+        c.Text(x+80,375,labels[Apps+item],23,White,205);
     }
     c.Box(767,456,1,174,0xff355148u);
     for(int side=0;side<2;++side) {
@@ -1106,7 +1166,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Box(0,663,1280,57,0xff061915u);
     buttonHint(c,45,"A","Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
-    buttonHint(c,429,"X",section_==System && page_==Details && systemTab_==3?"Cancelar":
+    buttonHint(c,429,"X",page_==Home && homeEditing_?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
-    buttonHint(c,632,"Y","Atualizar",0xffb3820du);
+    buttonHint(c,632,"Y",page_==Home && homeEditing_?"Salvar":"Atualizar",0xffb3820du);
 }
