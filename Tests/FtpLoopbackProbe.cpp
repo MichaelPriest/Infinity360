@@ -7,6 +7,9 @@
 #include <fstream>
 #include <iostream>
 #include <cctype>
+#include <fcntl.h>
+#include <cerrno>
+#include <sys/stat.h>
 
 namespace fs=std::filesystem;
 namespace {
@@ -92,6 +95,63 @@ bool listFiles(FtpSession& ftp,int fd,const std::string& path,bool namesOnly) {
     }
     return !ec;
 }
+// STOR is experimental: require ALLO exact size, cap at 32 MiB.
+const unsigned long long MaxUpload=32ull*1024*1024;
+bool parseSize(const std::string& text,unsigned long long& size) {
+    size=0;
+    if(text.empty() || text.size()>8)return false;
+    for(char ch:text) {
+        if(ch<'0' || ch>'9')return false;
+        size=size*10+static_cast<unsigned>(ch-'0');
+        if(size>MaxUpload)return false;
+    }
+    return true;
+}
+bool uploadTarget(FtpSession& ftp,const std::string& arg,std::string& parent,std::string& name) {
+    if(arg.empty() || arg.size()>200)return false;
+    const size_t slash=arg.find_last_of('/');
+    name=slash==std::string::npos?arg:arg.substr(slash+1);
+    return FileWorkspace::ValidName(name) &&
+        ftp.DataDirectory(slash==std::string::npos?".":slash==0?"/":arg.substr(0,slash),parent);
+}
+bool receiveFile(int fd,const std::string& parent,const std::string& name,unsigned long long expected) {
+    Socket dir(open(parent.c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW));
+    if(dir.fd<0)return false;
+    struct stat info={};
+    if(fstatat(dir.fd,name.c_str(),&info,AT_SYMLINK_NOFOLLOW)==0 || errno!=ENOENT)return false;
+    Socket output;
+    std::string temp;
+    for(unsigned i=0;i<32;++i) {
+        const std::string candidate="AXCOPY-FTP-"+std::to_string(i)+".part";
+        output.reset(openat(dir.fd,candidate.c_str(),O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW,0600));
+        if(output.fd>=0){temp=candidate;break;}
+    }
+    if(output.fd<0)return false;
+    bool ok=true;
+    unsigned long long received=0;
+    char buffer[65536];
+    while(ok) {
+        const ssize_t n=recv(fd,buffer,sizeof(buffer),0);
+        if(n==0)break;
+        if(n<0 && errno==EINTR)continue;
+        if(n<0 || static_cast<unsigned long long>(n)>expected-received){ok=false;break;}
+        size_t done=0;
+        while(done<static_cast<size_t>(n)) {
+            const ssize_t w=write(output.fd,buffer+done,static_cast<size_t>(n)-done);
+            if(w<0 && errno==EINTR)continue;
+            if(w<=0){ok=false;break;}
+            done+=static_cast<size_t>(w);
+        }
+        received+=done;
+    }
+    ok=ok && received==expected && fsync(output.fd)==0;
+    if(close(output.fd)!=0)ok=false;
+    output.fd=-1;
+    // Publish only a complete upload; linkat never replaces an existing name.
+    if(ok)ok=linkat(dir.fd,temp.c_str(),dir.fd,name.c_str(),0)==0;
+    unlinkat(dir.fd,temp.c_str(),0);
+    return ok;
+}
 bool retrieve(int fd,const std::string& path) {
     std::ifstream in(path,std::ios::binary);
     if(!in)return false;
@@ -119,7 +179,8 @@ int main(int argc,char** argv) {
     listener.reset();
     if(control.fd<0 || !reply(control.fd,ftp.Greeting()))return 3;
     std::string command;
-    bool binary=false;
+    bool binary=false, allocated=false;
+    unsigned long long uploadSize=0;
     for(unsigned count=0;count<256 && !ftp.Closed() && line(control.fd,command);++count) {
         const size_t split=command.find(' ');
         std::string verb=command.substr(0,split);
@@ -129,7 +190,7 @@ int main(int argc,char** argv) {
         for(unsigned char ch:command)if(ch<32 || ch>126)printable=false;
         if(!printable){if(!reply(control.fd,"500 Invalid command"))break;continue;}
         if(!ftp.Authenticated() || verb=="USER" || verb=="PASS" || verb=="QUIT") {
-            passive.reset();binary=false;
+            passive.reset();binary=false;allocated=false;
             if(!reply(control.fd,ftp.Command(command)))break;
             continue;
         }
@@ -146,6 +207,27 @@ int main(int argc,char** argv) {
                 verb=="EPSV"?"229 Entering Extended Passive Mode (|||"+std::to_string(p)+"|)":
                 "227 Entering Passive Mode (127,0,0,1,"+std::to_string(p/256)+","+std::to_string(p%256)+")";
             if(!reply(control.fd,response))break;
+            continue;
+        }
+        if(verb=="ALLO") {
+            allocated=parseSize(arg,uploadSize);
+            if(!reply(control.fd,allocated?"200 Exact size reserved":"552 Invalid size or limit exceeded"))break;
+            continue;
+        }
+        if(verb=="STOR") {
+            std::string parent,name;
+            const bool valid=allocated && binary && uploadTarget(ftp,arg,parent,name);
+            allocated=false;
+            if(!valid || passive.fd<0) {
+                passive.reset();
+                if(!reply(control.fd,valid?"425 Use passive mode first":"550 Binary upload requires ALLO and valid path"))break;
+                continue;
+            }
+            if(!reply(control.fd,"150 Opening data connection"))break;
+            Socket data(acceptLocal(passive));passive.reset();
+            const bool ok=data.fd>=0 && receiveFile(data.fd,parent,name,uploadSize);
+            data.reset();
+            if(!reply(control.fd,ok?"226 Transfer complete":"426 Upload rejected or incomplete"))break;
             continue;
         }
         if(verb=="SIZE") {
