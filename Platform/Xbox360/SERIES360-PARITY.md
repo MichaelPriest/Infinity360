@@ -34,7 +34,7 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | Nativo parcial | Fixar/desafixar, ordenação, horas jogadas, blocos customizados |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
-| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação read-only STFS/GOD e abas**; lançamento de pacotes pendente | Abrir GOD/XBLA pelo serviço nativo apropriado; discos e Indie exigem integração |
+| 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
 | 05 | Base Aurora em leitura e importação de jogos | M/T | Pendente | Leitor compatível com banco Aurora, sem alterar fonte |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
@@ -262,3 +262,10 @@ No probe Linux, ALLO declara o tamanho exato (máximo 32 MiB) antes de STOR bin�
 ## Compilação portátil integrada confirmada
 
 A execução [45298625676](https://github.com/MichaelPriest/AuroraX/actions/runs/45298625676) no commit `f56eeb1` compilou o projeto CMake em Linux e aprovou os 12 testes CTest registrados, mais 3 testes do empacotador. O teste condicional stream_playback não apareceu; CI foi reforçada para exigir FFmpeg, OpenSSL e registro do teste, com relatório JUnit. A etapa XDK estava skipped (push). Novo workflow e build-xex.bat ainda exigem validação das respectivas execuções. Não houve geração de XEX nesta rodada.
+
+
+## Diagnóstico de pacotes GOD/XBLA
+
+Leitura de volume STFS/SVOD e quantidade de fragmentos, com validação de presença e nomenclatura da pasta .data no layout multifragmento comum. A estrutura presente não comprova integridade criptográfica, licença ou capacidade de execução. O botão A nos detalhes informa o diagnóstico, nunca entrega um contêiner a XLaunchNewImage. Testes sintéticos adicionados. Provedor XAM/XDK e teste de console pendentes.
+
+CI anterior às alterações de catálogo: [45299655858](https://github.com/MichaelPriest/AuroraX/actions/runs/45299655858), d5c701e, 13/13 CTest e 3 testes de empacotamento aprovados, incluindo as correções de coleções.
