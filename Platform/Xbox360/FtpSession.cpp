@@ -79,6 +79,29 @@ bool FtpSession::ResolveDirectory(const std::string& argument,std::string& relat
     }
     return relative.size()<=200 && workspace_.CanWrite(Physical(relative));
 }
+bool FtpSession::DataDirectory(const std::string& arg,std::string& path) const {
+    path.clear();
+    if(!authenticated_ || closed_ || !workspace_.CanWrite(root_))return false;
+    std::string relative;
+    if(!ResolveDirectory(arg.empty()?".":arg,relative))return false;
+    path=Physical(relative);
+    return true;
+}
+bool FtpSession::DataFile(const std::string& arg,std::string& path) const {
+    path.clear();
+    if(arg.empty() || arg.size()>200 || !printable(arg) ||
+       arg.find('\\')!=std::string::npos || arg.find(':')!=std::string::npos)return false;
+    const size_t slash=arg.find_last_of('/');
+    const std::string name=slash==std::string::npos?arg:arg.substr(slash+1);
+    if(!FileWorkspace::ValidName(name))return false;
+    std::string parent;
+    if(!DataDirectory(slash==std::string::npos?".":slash==0?"/":arg.substr(0,slash),parent))
+        return false;
+    const std::string candidate=FileWorkspace::Join(parent,name);
+    if(!workspace_.CanReadPersonalFile(candidate))return false;
+    path=candidate;
+    return true;
+}
 std::string FtpSession::Command(const std::string& line) {
     if(closed_)return "421 Service unavailable";
     if(line.empty() || line.size()>512 || !printable(line))return "500 Invalid command";
