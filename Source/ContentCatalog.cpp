@@ -56,6 +56,15 @@ bool gameType(unsigned contentType) {
            contentType==0x80000u || contentType==0xd0000u ||
            contentType==0x2000000u;
 }
+bool extraType(unsigned type) {
+    return type==0x00000001u || type==0x00000002u || type==0x000b0000u;
+}
+bool profileName(const std::string& name) {
+    if(name.size()!=16 || name=="0000000000000000") return false;
+    for(size_t i=0;i<name.size();++i)
+        if(!std::isxdigit((unsigned char)name[i])) return false;
+    return true;
+}
 void utf8(std::string& output,unsigned codepoint) {
     if(codepoint<0x20u || codepoint==0x7fu || codepoint>0x10ffffu) return;
     if(codepoint<0x80u) output+=(char)codepoint;
@@ -117,12 +126,13 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
        std::memcmp(bytes,"PIRS",4)!=0) return false;
     const unsigned titleId=be32(bytes+0x360);
     const unsigned type=be32(bytes+0x344);
-    if(!titleId || !gameType(type)) return false;
+    if(!titleId || (!gameType(type) && !extraType(type))) return false;
     const unsigned descriptor=be32(bytes+0x3a9);
     if(descriptor>1u) return false;
     out=XboxContentPackage();
     out.titleId=titleId;
     out.mediaId=be32(bytes+0x354);
+    out.version=be32(bytes+0x358);
     out.contentType=type;
     out.sizeBytes=be64(bytes+0x34c);
     for(size_t locale=0;locale<9 && out.name.empty();++locale)
@@ -130,7 +140,7 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     if(out.name.empty()) out.name=titleString(bytes+0x1691,0x80);
     if(out.name.empty()) {
         static const char hex[]="0123456789ABCDEF";
-        out.name="Jogo ";
+        out.name=extraType(type)?"Conteudo ":"Jogo ";
         for(int i=7;i>=0;--i) out.name+=hex[(titleId>>(i*4))&15];
     }
     out.path=path;
@@ -169,4 +179,88 @@ std::vector<XboxContentPackage> ContentCatalog::Scan() const {
         }
     }
     return packages;
+}
+
+bool ContentCatalog::ReadExecutionInfo(const std::string& path,XboxExecutionInfo& out) {
+    std::ifstream file(path.c_str(),std::ios::binary);
+    if(!file) return false;
+    unsigned char header[24];
+    if(!file.read(reinterpret_cast<char*>(header),sizeof(header)) ||
+       std::memcmp(header,"XEX2",4)!=0) return false;
+    const unsigned entries=be32(header+0x14);
+    const unsigned imageOffset=be32(header+8);
+    if(entries>4096 || imageOffset<24u+entries*8u) return false;
+    for(unsigned i=0;i<entries;++i) {
+        unsigned char entry[8];
+        if(!file.read(reinterpret_cast<char*>(entry),sizeof(entry))) return false;
+        if(be32(entry)!=0x00040006u) continue;
+        const unsigned at=be32(entry+4);
+        if(at<24u+entries*8u || at>imageOffset-24u || at>16u*1024u*1024u)
+            return false;
+        unsigned char exec[24];
+        file.seekg(at,std::ios::beg);
+        if(!file.read(reinterpret_cast<char*>(exec),sizeof(exec))) return false;
+        XboxExecutionInfo info={};
+        info.mediaId=be32(exec);
+        info.version=be32(exec+4);
+        info.baseVersion=be32(exec+8);
+        info.titleId=be32(exec+12);
+        info.discNumber=exec[18];info.discCount=exec[19];
+        if(!info.titleId) return false;
+        out=info;
+        return true;
+    }
+    return false;
+}
+
+std::vector<XboxContentPackage> ContentCatalog::ScanExtras(unsigned titleId) const {
+    std::vector<XboxContentPackage> result;
+    if(!titleId) return result;
+    std::set<std::string> seen;
+    for(size_t r=0;r<roots_.size() && result.size()<MaxPackages;++r) {
+        // Default roots point to the shared 16-zero profile directory.
+        // Only traverse its sibling profile directories for saved games.
+        std::vector<std::string> owners;
+        owners.push_back(roots_[r]);
+        const size_t slash=roots_[r].find_last_of("\\/");
+        if(slash!=std::string::npos &&
+           roots_[r].substr(slash+1)=="0000000000000000") {
+            const std::string content=roots_[r].substr(0,slash);
+            std::vector<FolderEntry> profiles;
+            if(ReadFolder(content,profiles)) {
+                for(size_t p=0;p<profiles.size() && owners.size()<65;++p)
+                    if(profiles[p].directory && profileName(profiles[p].name))
+                        owners.push_back(join(content,profiles[p].name));
+            }
+        }
+        for(size_t o=0;o<owners.size() && result.size()<MaxPackages;++o) {
+            // Find case-insensitive TitleID folder on portable filesystems.
+            std::vector<FolderEntry> titles;
+            if(!ReadFolder(owners[o],titles))continue;
+            for(size_t t=0;t<titles.size() && t<MaxTitles && result.size()<MaxPackages;++t) {
+                if(!titles[t].directory || !hex8(titles[t].name) ||
+                   hexValue(titles[t].name)!=titleId)continue;
+                const std::string titleDir=join(owners[o],titles[t].name);
+                std::vector<FolderEntry> types;
+                if(!ReadFolder(titleDir,types))continue;
+                for(size_t k=0;k<types.size() && k<32 && result.size()<MaxPackages;++k) {
+                    if(!types[k].directory || !hex8(types[k].name))continue;
+                    const unsigned type=hexValue(types[k].name);
+                    if(!extraType(type) || (o>0 && type!=1u))continue;
+                    const std::string folder=join(titleDir,types[k].name);
+                    std::vector<FolderEntry> files;
+                    if(!ReadFolder(folder,files))continue;
+                    for(size_t i=0;i<files.size() && i<MaxFilesPerTitle &&
+                        result.size()<MaxPackages;++i) {
+                        if(files[i].directory || !safeFile(files[i].name))continue;
+                        XboxContentPackage item;
+                        if(ReadHeader(join(folder,files[i].name),item) &&
+                           item.titleId==titleId && item.contentType==type &&
+                           seen.insert(item.path).second)result.push_back(item);
+                    }
+                }
+            }
+        }
+    }
+    return result;
 }
