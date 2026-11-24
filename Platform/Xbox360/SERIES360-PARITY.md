@@ -257,3 +257,8 @@ Teste Linux somente loopback (127.0.0.1), com um cliente e leitura restrita. `Te
 ## FTP: upload experimental com tamanho declarado
 
 No probe Linux, ALLO declara o tamanho exato (máximo 32 MiB) antes de STOR binário passivo. Temporários exclusivos e publicação sem sobrescrita por linkat. Testes C++17/ftplib aprovados: upload de 1 MiB, colisão de nomes, envio menor/maior que declarado, traversal e limpeza de temporários. Hashes dos dois arquivos modificados correspondem aos compilados/testados. Ainda não existe serviço FTP ativo no Xbox; a API nativa de escrita e o transporte XNet exigem implementação e homologação.
+
+
+## Compilação portátil integrada confirmada
+
+A execução [45298625676](https://github.com/MichaelPriest/AuroraX/actions/runs/45298625676) no commit `f56eeb1` compilou o projeto CMake em Linux e aprovou os 12 testes CTest registrados, mais 3 testes do empacotador. O teste condicional stream_playback não apareceu; CI foi reforçada para exigir FFmpeg, OpenSSL e registro do teste, com relatório JUnit. A etapa XDK estava skipped (push). Novo workflow e build-xex.bat ainda exigem validação das respectivas execuções. Não houve geração de XEX nesta rodada.
