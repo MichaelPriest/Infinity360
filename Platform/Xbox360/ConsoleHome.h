@@ -52,6 +52,11 @@ private:
     int homeEditSlot_;
     bool homeEditing_;
     void DrawHomeEditor(HomeCanvas& c) const;
+    bool importPreview_;
+    std::vector<std::string> importFavorites_, importHistory_;
+    void PreviewAuroraProfile();
+    void ApplyAuroraProfile();
+    void DrawAuroraProfile(HomeCanvas& c) const;
     int collectionIndex_, collectionRow_, keyboardMode_; // 0 search, 1 create, 2 rename
     bool searchActive_, collectionPicker_, deleteCollectionConfirm_;
     std::string searchTerm_, searchDraft_, pickerGame_;

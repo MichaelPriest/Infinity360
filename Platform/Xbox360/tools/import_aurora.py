@@ -41,6 +41,36 @@ def mount_path(device, path):
     result = device + ":\\" + "\\".join(parts)
     return result if len(result.encode("utf-8")) <= 220 else None
 
+def export_profile(aurora, favorite_column, recent_column):
+    """Only use columns explicitly confirmed by the operator. No schema guesses."""
+    with open_readonly(aurora / "Data/Databases/content.db") as db:
+        columns = [row[1] for row in db.execute("PRAGMA table_info(ContentItems)")]
+        selected = [c for c in (favorite_column, recent_column) if c]
+        for col in selected:
+            if col not in columns:
+                raise ValueError(f"Unknown ContentItems column: {col}; available: {columns}")
+        if not selected:
+            return columns, [], []
+        # Identifier quoting after exact schema membership validation.
+        def quoted(col):
+            return '"' + col.replace('"', '""') + '"'
+        fav_expr = quoted(favorite_column) if favorite_column else "NULL"
+        recent_expr = quoted(recent_column) if recent_column else "NULL"
+        favorites, recent = set(), {}
+        for tid, fav, last in db.execute(
+            f"SELECT TitleId,{fav_expr},{recent_expr} FROM ContentItems ORDER BY Id LIMIT 20000"
+        ):
+            tid = title_id(tid)
+            if not tid:
+                continue
+            # Caller confirms an integer Boolean and a positive integer
+            # monotonic timestamp; unknown or unsupported values are ignored.
+            if type(fav) is int and fav == 1:
+                favorites.add(tid)
+            if type(last) is int and last > 0:
+                recent[tid] = max(last, recent.get(tid, 0))
+        return columns, sorted(favorites)[:4096], sorted(recent, key=lambda tid: (-recent[tid], tid))[:4096]
+
 def export(aurora, mounts):
     dbdir = aurora / "Data" / "Databases"
     names, paths, skipped = {}, {}, set()
@@ -76,6 +106,8 @@ def main():
     p.add_argument("aurora", type=Path, help="Local copy of original Aurora directory")
     p.add_argument("aurorax", type=Path, help="Separate AuroraX directory")
     p.add_argument("--mount", action="append", default=[], metavar="DEVICE_ID=HDD1")
+    p.add_argument("--favorite-column", help="Confirmed ContentItems integer boolean column (1=favorite)")
+    p.add_argument("--recent-column", help="Confirmed ContentItems integer timestamp column (positive, higher=newer)")
     p.add_argument("--apply", action="store_true")
     p.add_argument("--replace", action="store_true", help="Replace previous exports only")
     args = p.parse_args()
@@ -90,7 +122,10 @@ def main():
         mounts[key] = val
     try:
         names, roots, skipped = export(args.aurora, mounts)
+        columns, favorites, recent = export_profile(args.aurora, args.favorite_column, args.recent_column)
         print(json.dumps({"titles": len(names), "roots": roots,
+                          "content_columns": columns, "favorites": len(favorites),
+                          "history": len(recent),
                           "unmapped_device_ids": skipped, "apply": args.apply},
                          ensure_ascii=False, indent=2))
         if args.apply:
@@ -99,6 +134,11 @@ def main():
                 "aurorax-aurora-names.tsv": "".join(f"{k}\t{v}\n" for k, v in sorted(names.items())),
                 "aurorax-aurora-paths.txt": "".join(f"{r}\n" for r in roots),
             }
+            if args.favorite_column or args.recent_column:
+                outputs["aurorax-aurora-profile.tsv"] = (
+                    "".join(f"F\t{tid:08X}\n" for tid in favorites)
+                    + "".join(f"R\t{tid:08X}\n" for tid in recent)
+                )
             if not args.replace and any((args.aurorax / f).exists() for f in outputs):
                 p.error("Export already exists; use --replace explicitly")
             for file, data in outputs.items():

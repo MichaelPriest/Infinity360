@@ -644,5 +644,39 @@ int main(int argc,char** argv) {
     assert(canvas.Pixels()[250*1280+155]==0xffc80a00u);
     imported.Press(ConsoleHome::Back);
     assert(imported.Press(ConsoleHome::Accept).empty()); // GOD remains blocked
+    // Explicit profile merge: cancellation, verified titles, no fabricated path.
+    const fs::path migrateRoot=root/"MigrateProfileFixture";
+    const fs::path migratePkg=migrateRoot/"Content"/"0000000000000000"/"4D5307E6"/"00007000"/"game";
+    fs::create_directories(migratePkg.parent_path());
+    {std::ofstream out(migratePkg,std::ios::binary);
+     out.write(reinterpret_cast<const char*>(&stfs[0]),stfs.size());}
+    {std::ofstream out(migrateRoot/"aurorax-aurora-profile.tsv");
+     out<<"F\t4D5307E6\nF\tDEADBEEF\nR\t4D5307E6\n";}
+    const fs::path migrateProfile=migrateRoot/"aurorax-profile.txt";
+    ConsoleHome migrate(migrateRoot.string()+"/",noRoots);migrate.Load();
+    migrate.Press(ConsoleHome::Favorite); // preview
+    migrate.Draw(canvas,"20:09");
+    migrate.Press(ConsoleHome::Back);
+    assert(!fs::exists(migrateProfile));
+    migrate.Press(ConsoleHome::Favorite);
+    migrate.Press(ConsoleHome::Accept);
+    {
+        std::ifstream in(migrateProfile);
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("F\t"+migratePkg.string())!=std::string::npos);
+        assert(data.find("DEADBEEF")==std::string::npos);
+        assert(data.find("R\t")==std::string::npos); // nonlaunchable package
+    }
+    ConsoleHome migrateAgain(migrateRoot.string()+"/",noRoots);migrateAgain.Load();
+    migrateAgain.Press(ConsoleHome::Favorite);
+    migrateAgain.Press(ConsoleHome::Accept);
+    {
+        std::ifstream in(migrateProfile);
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        const std::string entry="F\t"+migratePkg.string();
+        assert(data.find(entry)!=std::string::npos);
+        assert(data.find(entry,data.find(entry)+1)==std::string::npos);
+    }
+
     fs::remove_all(root);
 }

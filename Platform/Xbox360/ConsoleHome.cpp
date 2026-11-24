@@ -137,7 +137,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),fileRoot_(0),pasteConfirm_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
-      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),
+      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
@@ -152,7 +152,7 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;
-    artChoices_.clear();artEditing_=false;
+    artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -499,7 +499,67 @@ const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
 }
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; }
 
+void ConsoleHome::PreviewAuroraProfile() {
+    importFavorites_.clear();importHistory_.clear();
+    std::ifstream in((dir_+"aurorax-aurora-profile.tsv").c_str(),std::ios::binary);
+    if(!in) {notice_="Exportacao de perfil Aurora nao encontrada.";return;}
+    const size_t maxBytes=128*1024;
+    std::vector<char> data(maxBytes+1);
+    in.read(&data[0],static_cast<std::streamsize>(data.size()));
+    if(in.bad() || in.gcount()>static_cast<std::streamsize>(maxBytes)) {
+        notice_="Exportacao de perfil invalida ou grande demais.";return;
+    }
+    // Only unique locally identified titles. Ambiguous multi-disc or duplicate
+    // installations require a later path-aware import rather than guessing.
+    std::map<std::string,std::string> local;
+    for(size_t i=0;i<games_.size();++i) {
+        const Game& game=games_[i];
+        const std::string folder=ArtFolder(game);
+        if(folder.empty())continue;
+        const std::string id=folder.substr(folder.size()-9,8);
+        if(local.count(id)) {
+            if(local[id]!=game.executable)local[id].clear();
+        } else local[id]=game.executable;
+    }
+    std::istringstream lines(std::string(&data[0],static_cast<size_t>(in.gcount())));
+    std::string line;
+    while(std::getline(lines,line)) {
+        if(!line.empty() && line[line.size()-1]=='\r')line.erase(line.size()-1);
+        if(line.size()!=10 || line[1]!='\t' || !validArtId(line.substr(2)))continue;
+        const std::map<std::string,std::string>::const_iterator it=local.find(line.substr(2));
+        if(it==local.end() || it->second.empty())continue;
+        if(line[0]=='F' && !contains(favorites_,it->second) &&
+           !contains(importFavorites_,it->second) && importFavorites_.size()<4096)
+            importFavorites_.push_back(it->second);
+        // Only executable games may be imported into the local play ledger.
+        const Game* game=Installed(it->second);
+        if(line[0]=='R' && game && isXexPath(game->executable) && !isContentPackage(*game) &&
+           !contains(importHistory_,it->second) && importHistory_.size()<4096)
+            importHistory_.push_back(it->second);
+    }
+    importPreview_=true;notice_.clear();
+}
+void ConsoleHome::ApplyAuroraProfile() {
+    const std::vector<std::string> oldFavorites=favorites_, oldHistory=history_, oldLaunched=launched_;
+    for(size_t i=0;i<importFavorites_.size();++i)
+        if(!contains(favorites_,importFavorites_[i]))favorites_.push_back(importFavorites_[i]);
+    for(size_t i=0;i<importHistory_.size();++i) {
+        const std::string& path=importHistory_[i];
+        if(history_.size()<HistoryLimit && !contains(history_,path))history_.push_back(path);
+        if(launched_.size()<4096 && !contains(launched_,path))launched_.push_back(path);
+    }
+    if(!SaveProfile()) {
+        favorites_=oldFavorites;history_=oldHistory;launched_=oldLaunched;
+        notice_="Falha ao salvar. A tenta novamente; B cancela.";return;
+    }
+    importPreview_=false;notice_="Perfil Aurora mesclado; preferencias locais preservadas.";
+}
 std::string ConsoleHome::Press(Key key) {
+    if(page_==Home && importPreview_) {
+        if(key==Back) {importPreview_=false;notice_="Importacao cancelada.";}
+        if(key==Accept)ApplyAuroraProfile();
+        return "";
+    }
     // Edit a draft only; preserve the saved layout until Y succeeds.
     if(page_==Home && homeEditing_) {
         if(key==Back) {homeEditing_=false;notice_="Personalizacao cancelada.";return "";}
@@ -770,6 +830,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
+        if(key==Favorite) {PreviewAuroraProfile();return "";}
         if(key==Guide) {
             homeDraft_=homeOrder_;
             homeEditSlot_=(focus_>=Apps && focus_<=System)?focus_-Apps:0;
@@ -943,10 +1004,21 @@ void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     c.Text(46,500,"Direcional: selecionar | LB/RB: mover o atalho",23,White,1180);
     c.Text(46,550,"X Restaurar padrao | Y Salvar | B Cancelar",23,Lime,1180);
 }
+void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
+    c.Text(44,78,"Importar perfil Aurora",40,White,1180);
+    c.Text(48,152,"Previa da mesclagem com jogos encontrados neste console",23,Muted,1180);
+    c.Box(44,215,1190,272,Panel,12);
+    c.Text(70,244,"Novos favoritos: "+number(importFavorites_.size()),30,Lime,1130);
+    c.Text(70,308,"Registros de historico encontrados: "+number(importHistory_.size()),26,White,1130);
+    c.Text(70,370,"Recentes locais tem prioridade. Jogos ambiguos ou ausentes sao ignorados.",21,Muted,1130);
+    c.Text(70,417,"Nenhum jogo ou banco Aurora sera alterado.",22,Muted,1130);
+    c.Text(48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
+}
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
+    if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
     c.Text(44,76,"Início",42,White,330);
-    c.Text(808,86,"Start Personalizar atalhos",20,Muted,425);
+    c.Text(586,86,"X Importar perfil | Start Personalizar",20,Muted,650);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
@@ -1331,9 +1403,9 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         c.Text(51,630,notice_,18,Lime,1170);
     }
     c.Box(0,663,1280,57,0xff061915u);
-    buttonHint(c,45,"A","Selecionar",0xff428914u);
+    buttonHint(c,45,"A",importPreview_?"Importar":"Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
-    buttonHint(c,429,"X",(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
+    buttonHint(c,429,"X",page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
     buttonHint(c,632,"Y",(artEditing_ || (page_==Home && homeEditing_))?"Salvar":"Atualizar",0xffb3820du);
 }
