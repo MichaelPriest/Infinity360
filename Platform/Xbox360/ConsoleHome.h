@@ -3,6 +3,7 @@
 #include "HomeCanvas.h"
 #include "CloudTv.h"
 #include "CollectionStore.h"
+#include "ContentCatalog.h"
 
 class ConsoleHome {
 public:
@@ -31,6 +32,14 @@ private:
     bool searchActive_, collectionPicker_, deleteCollectionConfirm_;
     std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
+    bool contentActive_, contentKnown_;
+    int contentTab_, contentRow_;
+    XboxExecutionInfo contentInfo_;
+    std::vector<XboxContentPackage> contentItems_;
+    void OpenContent();
+    size_t ContentCount() const;
+    const XboxContentPackage* ContentAt(size_t index) const;
+    void DrawContent(HomeCanvas& c) const;
     Section section_;
     Page page_;
     size_t Count() const;
