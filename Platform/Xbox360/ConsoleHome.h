@@ -4,6 +4,7 @@
 #include "CloudTv.h"
 #include "CollectionStore.h"
 #include "ContentCatalog.h"
+#include "FileWorkspace.h"
 
 class ConsoleHome {
 public:
@@ -27,6 +28,12 @@ private:
     std::vector<FolderEntry> files_;
     CloudTv tv_;
     CollectionStore collections_;
+    FileWorkspace fileWorkspace_;
+    size_t fileRoot_;
+    bool pasteConfirm_;
+    std::string copyDir_, copyName_, renameName_;
+    void StartFileEdit(bool rename);
+    void ConfirmFileEdit();
     int focus_, row_, subtab_, systemTab_, gameSort_, searchCursor_;
     int collectionIndex_, collectionRow_, keyboardMode_; // 0 search, 1 create, 2 rename
     bool searchActive_, collectionPicker_, deleteCollectionConfirm_;
