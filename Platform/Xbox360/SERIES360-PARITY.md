@@ -67,7 +67,7 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
 | 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar por blocos com progresso e cancelamento** | Mover, excluir, multisseleção, cópia de pastas e homologação |
-| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | Pendente | Autenticação própria, sem credenciais padrão do Series360 |
+| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Núcleo de autenticação e comandos com raiz pessoal; teste portátil aprovado** | Transporte TCP, PASV/LIST/RETR/STOR, configuração e homologação XDK |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
 | 29 | Energia: reiniciar, desligar, após downloads, temporizador | T | Pendente | APIs com confirmação e sem ações automáticas perigosas |
@@ -242,3 +242,8 @@ Sistema > Armazenamento agora consulta a capacidade e o espaço livre dos caminh
 ## Transferências locais incrementais
 
 A interface de Arquivos usa FileTransfer, com blocos de 64 KiB, progresso em Sistema > Downloads e cancelamento por X. A escrita é exclusiva em temporário no destino; a publicação não sobrescreve arquivo existente. O teste portátil do módulo foi compilado e executado em Linux com -std=c++17 -Wall -Wextra -Wpedantic -Werror: cópia superior a 8 MiB, cancelamento, colisão no destino, arquivo vazio, temporários preexistentes e destruição do objeto com transferência ativa. Hashes Git dos três arquivos locais coincidem com os da main. A cópia por blocos não é um worker assíncrono; o tempo de I/O, a finalização no FATX e a compilação XDK seguem pendentes de homologação. Não há fila múltipla, retomada ou download de internet.
+
+
+## Núcleo de sessão FTP
+
+FtpSession.cpp implementa autenticação explícita, limite de três falhas por sessão, navegação confinada a pasta pessoal e rejeição de comandos inválidos, ativos ou de escrita. Teste isolado em Linux com C++17 e -Wall -Wextra -Wpedantic -Werror aprovado; ainda sem transporte de rede, canal de dados, configuração pela UI ou serviço ativo. Não representa servidor FTP funcional.
