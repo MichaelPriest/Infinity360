@@ -231,6 +231,9 @@ void ConsoleHome::Reload() {
 void ConsoleHome::RefreshStorage() {
     storageVolumes_=StorageInfo::ReadAll(fileWorkspace_.Roots());
 }
+void ConsoleHome::RefreshNetwork() {
+    network_=NetworkInfo::Read();
+}
 void ConsoleHome::Enter(Section s) {
     section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
@@ -524,6 +527,7 @@ std::string ConsoleHome::Press(Key key) {
     if(key==Refresh) {
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
+            else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
@@ -539,6 +543,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Right && systemTab_<3) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
+                else if(systemTab_==1)RefreshNetwork();
                 page_=Details;
             }
         }
@@ -790,6 +795,23 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     }
     c.Text(45,610,"Y Atualizar | B Voltar | Caminhos podem compartilhar o mesmo disco.",18,Muted,1180);
 }
+void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
+    c.Text(45,349,"Diagnostico de rede local",27,White,1170);
+    c.Box(42,391,589,190,Panel,10);
+    c.Text(58,404,"Conexao e endereco IPv4",25,White,550);
+    c.Text(58,447,NetworkInfo::StateLabel(network_.state),20,Muted,550);
+    c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string("Nao identificado"):network_.ipv4),
+           23,network_.ipv4.empty()?Muted:Lime,550);
+    c.Text(58,534,network_.ethernetKnown?
+           (network_.ethernetActive?"Ethernet: link ativo":"Ethernet: sem link"):
+           "Ethernet: leitura indisponivel",19,Muted,550);
+    c.Box(644,391,594,190,Panel,10);
+    c.Text(660,404,"Servicos de rede",25,White,558);
+    c.Text(660,447,"FTP: nao implementado",21,Muted,558);
+    c.Text(660,486,"SMB / System Link: pendentes",20,Muted,558);
+    c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
+    c.Text(45,607,"Y Atualizar | B Voltar | IP local nao comprova acesso a Internet.",18,Muted,1180);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
@@ -860,6 +882,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.Text(x+17,284,summaries[i],18,Muted,252);
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
+        if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);
