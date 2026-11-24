@@ -191,8 +191,17 @@ Dispositivos ausentes ou com leitura inválida são marcados como indisponíveis
 O provedor usa `GetDiskFreeSpaceExA` no XDK e `std::filesystem::space` no PC.
 O teste C++17 isolado passou; a chamada XDK ainda requer compilação e teste físico.
 
-**Atenção:** leitura SMC, FTP/SMB e downloads ainda dependem de providers
-reais. Os cartões não apresentam dados inventados.
+**Rede e FTP:** o cartão consulta o IPv4 local e o link Ethernet usando
+XNet no Xbox 360, com espera limitada a 500 ms para endereço pendente.
+O botão Y repete a consulta. No Linux, o provider portátil consulta as
+interfaces locais ativas sem simular o estado Ethernet do Xbox.
+Um IP local não confirma acesso à internet, Xbox Live ou System Link.
+O diagnóstico não abre portas e não desativa a segurança de XNet.
+O teste isolado C++17 foi executado com sucesso no Linux. A compilação e
+homologação XDK continuam pendentes.
+
+**Atenção:** leitura SMC, servidor FTP, SMB e downloads ainda dependem
+de implementação. Os cartões não apresentam dados inventados.
 
 ## Compilação e instalação
 
