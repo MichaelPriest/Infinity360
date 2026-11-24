@@ -25,6 +25,8 @@ public:
     static bool ValidName(const std::string& name);
 private:
     bool Unique(const std::string& name,size_t skip) const;
+    size_t SerializedBytes() const;
+    bool writable_;
     std::string file_;
     std::vector<GameCollection> collections_;
 };
