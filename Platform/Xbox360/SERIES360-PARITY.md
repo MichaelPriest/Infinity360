@@ -65,8 +65,8 @@ operações funcionaram numa unidade real.
 
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
-| 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | Nativo parcial | Dispositivos completos e montagem segura |
-| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | Web demonstrativo | Operações nativas, progresso e confirmação destrutiva |
+| 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
+| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar arquivo até 8 MiB com confirmação** | Mover, excluir, multisseleção, cópia de pastas, progresso e cancelamento |
 | 26 | FTP servidor com senha configurável e inicialização opcional | M/T | Pendente | Autenticação própria, sem credenciais padrão do Series360 |
 | 27 | Status de rede/IP e serviço FTP | T | Web demonstrativo / cartões nativos sem provider | Leitura XNet e diagnóstico |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
@@ -223,3 +223,8 @@ assinaturas criptograficas e nao habilita launch nativo de GOD/XBLA.
 
 Referencias tecnicas: https://free60.org/System-Software/Formats/XEX/
 e https://free60.org/System-Software/Formats/STFS/.
+
+
+## Gerenciador de arquivos pessoal
+
+Implementação nativa em `FileWorkspace.cpp` e `ConsoleHome.cpp`: alternância HDD/USB, criação de pasta, renomeação e cópia limitada sem sobrescrita. Escrita confinada a `UserFiles`/`AuroraXFiles`; demais caminhos somente leitura. Testes de nomes, traversal, symlinks no PC, cópia e preservação da origem em `Tests/FileWorkspaceTests.cpp`. Ainda não homologado no console.
