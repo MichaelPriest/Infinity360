@@ -75,5 +75,52 @@ int main() {
     std::ofstream(invalid,std::ios::binary)<<"This is not an STFS file";
     assert(!ContentCatalog::ReadHeader(invalid.string(),result));
     assert(!ContentCatalog::ReadHeader((root/"missing").string(),result));
+    // Read only the XEX2 execution header (no encrypted image is opened).
+    const fs::path xex=root/"test.xex";
+    std::vector<unsigned char> executable(128,0);
+    executable[0]='X';executable[1]='E';executable[2]='X';executable[3]='2';
+    put32(executable,8,128);put32(executable,0x14,1);
+    put32(executable,24,0x00040006u);put32(executable,28,64);
+    put32(executable,64,0x12345678u);
+    put32(executable,68,0x20010002u);put32(executable,72,0x20000000u);
+    put32(executable,76,0x4d5307e6u);
+    executable[82]=1;executable[83]=2;
+    {std::ofstream file(xex,std::ios::binary);
+     file.write(reinterpret_cast<const char*>(executable.data()),executable.size());}
+    XboxExecutionInfo info;
+    assert(ContentCatalog::ReadExecutionInfo(xex.string(),info));
+    assert(info.titleId==0x4d5307e6u && info.mediaId==0x12345678u);
+    assert(info.version==0x20010002u && info.discNumber==1 && info.discCount==2);
+    put32(executable,28,0xffffffffu);
+    {std::ofstream file(xex,std::ios::binary);
+     file.write(reinterpret_cast<const char*>(executable.data()),executable.size());}
+    assert(!ContentCatalog::ReadExecutionInfo(xex.string(),info));
+    assert(!ContentCatalog::ReadExecutionInfo(god.string(),info));
+
+    // Extras must never appear in the main games list.
+    const fs::path tu=makePackage(contentRoot,"4D5307E6","000B0000",
+        "tu00000001",0x4d5307e6u,0xb0000u,"Update 1");
+    const fs::path dlc=makePackage(contentRoot,"4D5307E6","00000002",
+        "DLC0001",0x4d5307e6u,2u,"Expansion");
+    const fs::path userRoot=root/"Content"/"E000000000000001";
+    const fs::path save=makePackage(userRoot,"4D5307E6","00000001",
+        "SAVE1",0x4d5307e6u,1u,"Save 1");
+    makePackage(contentRoot,"4D5307E6","000B0000",
+        "WRONGID",0x58410901u,0xb0000u,"Wrong title");
+    makePackage(userRoot,"4D5307E6","00000002",
+        "IGNORED",0x4d5307e6u,2u,"Not shared");
+    const auto extras=ContentCatalog(roots).ScanExtras(0x4d5307e6u);
+    assert(extras.size()==3);
+    bool haveTu=false,haveDlc=false,haveSave=false;
+    for(const auto& item:extras) {
+        assert(item.titleId==0x4d5307e6u);
+        if(item.path==tu.string() && item.contentType==0xb0000u)haveTu=true;
+        if(item.path==dlc.string() && item.contentType==2u)haveDlc=true;
+        if(item.path==save.string() && item.contentType==1u)haveSave=true;
+    }
+    assert(haveTu && haveDlc && haveSave);
+    assert(ContentCatalog(roots).Scan().size()==2);
+    assert(ContentCatalog(roots).ScanExtras(0).empty());
+
     fs::remove_all(root);
 }
