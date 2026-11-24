@@ -75,6 +75,24 @@ Na **Biblioteca**:
 contêineres STFS/SVOD. A integração com o lançador de conteúdo do console
 fica pendente de testes no XDK e em hardware.
 
+### Diagnóstico de pacotes antes do lançamento
+
+Na aba Pacotes, A abre os detalhes e A novamente verifica o cabeçalho
+e a disponibilidade dos dados. O catálogo distingue STFS (volume 0) e
+SVOD (volume 1) e lê a contagem de fragmentos no cabeçalho. Para o layout
+SVOD multifragmento comum, verifica a pasta irmã `.data`, os nomes
+Data0000 em sequência e os arquivos não vazios. Informa fragmentos
+ausentes, inconsistências ou layout não suportado. STFS recebe apenas
+uma inspeção de cabeçalho; a mensagem "Estrutura presente" não significa
+que o título está íntegro, licenciado ou executável.
+
+Referências técnicas: [tipos de conteúdo Xenia](https://github.com/xenia-project/xenia/blob/master/src/xenia/xbox.h)
+e [leitura STFS/SVOD Xenia](https://github.com/xenia-project/xenia/blob/master/src/xenia/vfs/devices/stfs_container_device.cc).
+Nenhum código de montagem ou bypass de licença foi incorporado.
+A existência de exportações XAM não comprova ABI/assinatura compatível
+com o XDK instalado. O lançamento efetivo continua bloqueado até
+disponibilizar o provedor nativo testado no console.
+
 ### Nunca abertos pela AuroraX
 
 A aba **Nunca** lista executáveis `default.xex` que ainda não tiveram
