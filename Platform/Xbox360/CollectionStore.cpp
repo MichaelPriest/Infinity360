@@ -5,12 +5,14 @@
 #include <cctype>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 
 namespace {
 const size_t MaxCollections=16;
 const size_t MaxGamesInCollection=512;
 const size_t MaxDataBytes=256*1024;
 const size_t InvalidIndex=static_cast<size_t>(-1);
+const char Header[]="# AuroraX collections v1\n";
 
 bool validPath(const std::string& path) {
     if(path.empty() || path.size()>2048) return false;
@@ -27,7 +29,7 @@ std::string folded(std::string value) {
 }
 }
 
-CollectionStore::CollectionStore(const std::string& file):file_(file) {}
+CollectionStore::CollectionStore(const std::string& file):writable_(true),file_(file) {}
 
 bool CollectionStore::ValidName(const std::string& name) {
     if(name.empty() || name.size()>32 ||
@@ -48,8 +50,19 @@ bool CollectionStore::Unique(const std::string& name,size_t skip) const {
     return true;
 }
 
+size_t CollectionStore::SerializedBytes() const {
+    size_t bytes=sizeof(Header)-1;
+    for(size_t i=0;i<collections_.size();++i) {
+        bytes+=3+collections_[i].name.size();
+        const std::vector<std::string>& games=collections_[i].games;
+        for(size_t j=0;j<games.size();++j)bytes+=3+games[j].size();
+    }
+    return bytes;
+}
+
 bool CollectionStore::Create(const std::string& name) {
-    if(collections_.size()>=MaxCollections || !ValidName(name) ||
+    if(!writable_ || collections_.size()>=MaxCollections || !ValidName(name) ||
+       SerializedBytes()+3+name.size()>MaxDataBytes ||
        !Unique(name,InvalidIndex)) return false;
     GameCollection collection;
     collection.name=name;
@@ -58,14 +71,15 @@ bool CollectionStore::Create(const std::string& name) {
 }
 
 bool CollectionStore::Rename(size_t index,const std::string& name) {
-    if(index>=collections_.size() || !ValidName(name) ||
+    if(!writable_ || index>=collections_.size() || !ValidName(name) ||
+       SerializedBytes()-collections_[index].name.size()+name.size()>MaxDataBytes ||
        !Unique(name,index)) return false;
     collections_[index].name=name;
     return true;
 }
 
 bool CollectionStore::Remove(size_t index) {
-    if(index>=collections_.size()) return false;
+    if(!writable_ || index>=collections_.size()) return false;
     collections_.erase(collections_.begin()+index);
     return true;
 }
@@ -77,20 +91,35 @@ bool CollectionStore::Contains(size_t index,const std::string& path) const {
 }
 
 bool CollectionStore::Toggle(size_t index,const std::string& path) {
-    if(index>=collections_.size() || !validPath(path)) return false;
+    if(!writable_ || index>=collections_.size() || !validPath(path)) return false;
     std::vector<std::string>& games=collections_[index].games;
     const std::vector<std::string>::iterator item=
         std::find(games.begin(),games.end(),path);
     if(item!=games.end()) { games.erase(item); return true; }
-    if(games.size()>=MaxGamesInCollection) return false;
+    if(games.size()>=MaxGamesInCollection || SerializedBytes()+3+path.size()>MaxDataBytes) return false;
     games.push_back(path);
     return true;
 }
 
 bool CollectionStore::Load() {
     collections_.clear();
-    std::ifstream input(savedFile(file_).c_str(),std::ios::binary);
-    if(!input) return true;  // First install; empty catalogue.
+    writable_=true;
+    const std::string source=savedFile(file_);
+    std::ifstream file(source.c_str(),std::ios::binary);
+    if(!file) {
+        // Distinguish unreadable files where the existence probe succeeds.
+        writable_=!fileExists(file_) && !fileExists(file_+".bak");
+        return writable_;
+    }
+    // Bound the actual allocation before parsing, including giant lines.
+    std::vector<char> data(MaxDataBytes+1);
+    file.read(&data[0],static_cast<std::streamsize>(data.size()));
+    const std::streamsize read=file.gcount();
+    if(file.bad() || read>static_cast<std::streamsize>(MaxDataBytes)) {
+        writable_=false;
+        return false;
+    }
+    std::istringstream input(std::string(&data[0],static_cast<size_t>(read)));
     std::string line;
     size_t bytes=0;
     size_t current=InvalidIndex;
@@ -112,14 +141,16 @@ bool CollectionStore::Load() {
             if(!Contains(current,path)) collections_[current].games.push_back(path);
         } else valid=false;
     }
-    return valid && !input.bad();
+    writable_=valid && !input.bad() && SerializedBytes()<=MaxDataBytes;
+    return writable_;
 }
 
 bool CollectionStore::Save() const {
+    if(!writable_ || SerializedBytes()>MaxDataBytes)return false;
     const std::string temporary=file_+".tmp";
     std::ofstream out(temporary.c_str(),std::ios::binary|std::ios::trunc);
     if(!out) return false;
-    out<<"# AuroraX collections v1\n";
+    out<<Header;
     for(size_t i=0;i<collections_.size();++i) {
         out<<"C\t"<<collections_[i].name<<"\n";
         const std::vector<std::string>& games=collections_[i].games;
