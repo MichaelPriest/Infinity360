@@ -226,19 +226,23 @@ O executável de testes FtpLoopbackProbe é **exclusivo do Linux**:
 escuta somente em 127.0.0.1, usa portas efêmeras, um único cliente,
 timeouts de socket e limite de comandos. A senha é recebida pela entrada
 padrão. Implementa PASV, EPSV, NLST, LIST (formatação de teste), SIZE e
-RETR binário. Não aceita upload, escrita, exclusão ou modo ativo.
+RETR binário e STOR experimental com ALLO obrigatório. Não aceita exclusão, sobrescrita ou modo ativo.
 LIST exibe data ilustrativa, não metadados reais de modificação.
 
 O teste FtpLoopbackTest.py utiliza Python ftplib e verifica transferência
-binária de 1 MiB pelos dois modos passivos, listagem, autenticação e
+binária de 1 MiB pelos dois modos passivos, upload de 1 MiB, listagem, autenticação e
 rejeição de acesso fora da raiz. A compilação C++17 com avisos como erros,
 o teste de sessão e a integração TCP passaram no Linux; hashes Git
 dos arquivos testados foram conferidos com a main.
 
 O transporte não está ligado ao XEX nem exposto à LAN. Não existe
 servidor ativo no Xbox 360 nesta etapa. XNet, controle de conexões,
-configuração pela interface, upload e testes FileZilla/hardware seguem
+configuração pela interface e testes FileZilla/hardware seguem
 pendentes. FTP clássico não cifra credenciais nem dados.
+
+### FTP — upload experimental no PC
+
+O teste Linux aceita ALLO com tamanho exato de 0 a 32 MiB, seguido de STOR em modo binário passivo. O recebimento usa temporário exclusivo AXCOPY-FTP, verificação do tamanho e publicação por linkat sem sobrescrita. Rejeita tamanho excedente, EOF prematuro, caminho externo e destino existente. Testes ftplib conferem os bytes recebidos e a limpeza dos temporários após falhas. Limite por arquivo, não quota total; serviço apenas loopback, sem exposição LAN. Não é compatibilidade geral com clientes que não enviam ALLO. XNet e homologação continuam pendentes.
 
 ## Compilação e instalação
 
