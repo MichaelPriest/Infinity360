@@ -8,6 +8,7 @@
 #include "StorageInfo.h"
 #include "NetworkInfo.h"
 #include "TrainerCatalog.h"
+#include "StoreCatalog.h"
 #include <map>
 
 class ConsoleHome {
@@ -66,6 +67,12 @@ private:
     int homeEditSlot_;
     bool homeEditing_;
     void DrawHomeEditor(HomeCanvas& c) const;
+    bool storeActive_, storeDetails_, storeConfirm_;
+    int storeTab_, storeRow_;
+    StoreCatalog store_;
+    std::vector<size_t> storeVisible_;
+    void RebuildStore();
+    void DrawStore(HomeCanvas& c) const;
     bool importPreview_;
     std::vector<std::string> importFavorites_, importHistory_;
     void PreviewAuroraProfile();

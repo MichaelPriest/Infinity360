@@ -137,7 +137,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
-      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
+      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
@@ -665,7 +665,48 @@ void ConsoleHome::ApplyAuroraProfile() {
     }
     importPreview_=false;notice_="Perfil Aurora mesclado; preferencias locais preservadas.";
 }
+void ConsoleHome::RebuildStore() {
+    static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc"};
+    storeVisible_.clear();
+    for(size_t i=0;i<store_.Items().size();++i)
+        if(storeTab_==0||store_.Items()[i].category==tabs[storeTab_])storeVisible_.push_back(i);
+    clampRow(storeRow_,storeVisible_.size());
+}
 std::string ConsoleHome::Press(Key key) {
+    if(storeActive_) {
+        if(key==Back) {
+            if(storeConfirm_)storeConfirm_=false;
+            else if(storeDetails_)storeDetails_=false;
+            else storeActive_=false;
+            notice_.clear();return "";
+        }
+        if(key==Refresh) {
+            storeConfirm_=false;storeDetails_=false;storeRow_=0;
+            notice_=store_.Load()?"Catalogo recarregado.":"Catalogo ausente ou invalido.";
+            RebuildStore();return "";
+        }
+        if(!storeDetails_) {
+            if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
+            if(key==Right&&storeTab_<6) {++storeTab_;storeRow_=0;RebuildStore();}
+            if(key==Up&&storeRow_>0)--storeRow_;
+            if(key==Down&&static_cast<size_t>(storeRow_+1)<storeVisible_.size())++storeRow_;
+            if(key==Accept&&!storeVisible_.empty())storeDetails_=true;
+        } else if(!storeVisible_.empty()) {
+            const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
+            if(key==Favorite) {
+                storeConfirm_=false;
+                notice_=store_.Cancel(item)?"Solicitacao removida; arquivos locais preservados.":"Falha ao salvar fila.";
+            }
+            if(key==Accept) {
+                if(!storeConfirm_) {storeConfirm_=true;notice_="A confirma pedido para o PC | B cancela.";}
+                else {
+                    storeConfirm_=false;
+                    notice_=store_.Request(item)?"Pedido salvo. Execute o downloader PC.":"Fila cheia ou falha ao gravar.";
+                }
+            }
+        }
+        return "";
+    }
     if(page_==Home && importPreview_) {
         if(key==Back) {importPreview_=false;notice_="Importacao cancelada.";}
         if(key==Accept)ApplyAuroraProfile();
@@ -1045,6 +1086,11 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
+        if(key==PageDown) {
+            storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
+            notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";
+            RebuildStore();return "";
+        }
         if(key==Favorite) {PreviewAuroraProfile();return "";}
         if(key==Guide) {
             homeDraft_=homeOrder_;
@@ -1233,11 +1279,47 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(70,417,"Nenhum jogo ou banco Aurora sera alterado.",22,Muted,1130);
     c.Text(48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
 }
+void ConsoleHome::DrawStore(HomeCanvas& c) const {
+    c.Text(44,78,"AuroraX Store",40,White,1175);
+    c.Text(48,133,"Catalogos autorizados | Downloads pelo PC nesta versao",21,Muted,1175);
+    const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC"};
+    for(int i=0;i<7;++i) {
+        const int x=45+i*170;
+        panel(c,x,177,160,44,Panel,i==storeTab_);
+        c.Text(x+10,185,tabs[i],20,i==storeTab_?Lime:White,140);
+    }
+    if(storeVisible_.empty()) {
+        c.Text(48,270,"Nenhum item no catalogo desta categoria.",24,White,1175);
+        c.Text(48,320,"Configure aurorax-store.tsv com fontes e licencas autorizadas.",20,Muted,1175);
+    } else if(storeDetails_) {
+        const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
+        c.Text(55,260,item.name,32,White,1150);
+        c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
+        c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
+        c.Text(55,415,store_.Staged(item)?"Arquivo local encontrado (tamanho; SHA pelo PC)":
+            store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
+        c.Text(55,470,item.url,18,Muted,1150);
+        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"A Solicitar download | X Remover pedido | B Voltar",21,Lime,1150);
+        return;
+    } else {
+        const int first=(storeRow_/5)*5;
+        for(int i=first;i<first+5&&static_cast<size_t>(i)<storeVisible_.size();++i) {
+            const StoreItem& item=store_.Items()[storeVisible_[i]];
+            const int y=247+(i-first)*64;
+            panel(c,45,y,1189,56,Panel,i==storeRow_);
+            c.Text(60,y+5,item.name,24,White,755);
+            c.Text(60,y+32,item.version+" | "+StorageInfo::FormatBytes(item.bytes),17,Muted,750);
+            c.Text(835,y+15,store_.Staged(item)?"Arquivo local":store_.Requested(item)?"Na fila PC":"Disponivel",20,Lime,360);
+        }
+    }
+    c.Text(48,590,"A Detalhes | Y Atualizar catalogo | B Voltar",21,Lime,1175);
+}
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
+    if(storeActive_) {DrawStore(c);return;}
     if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
     c.Text(44,76,"Início",42,White,330);
-    c.Text(586,86,"X Importar perfil | Start Personalizar",20,Muted,650);
+    c.Text(459,86,"RB Loja | X Importar | Start Personalizar",20,Muted,775);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);

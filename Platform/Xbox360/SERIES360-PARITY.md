@@ -339,3 +339,8 @@ Direita abre menu contextual do item. Recortar marca arquivo pessoal; LB no dest
 ## Multisselecao e copia de diretorios
 
 Direita > Iniciar multisselecao marca o item e habilita X para marcar/desmarcar até 32 itens da pasta de origem. X fora desse modo copia um arquivo ou diretorio individual. LB+A em UserFiles/AuroraXFiles agenda plano validado, até 256 operações, 12 níveis de profundidade. Não mescla diretórios existentes, rejeita links no PC, nomes inválidos e destino dentro da origem; preserva diretórios vazios. A fila cria pastas e copia arquivos em etapas; falha ou cancelamento interrompe pendentes e preserva o que já foi concluído. Sem rollback de diretórios criados ou arquivos completos; nenhuma origem apagada. A fila segue apenas em sessão e não executa durante outros XEX. Testes sintéticos de árvore, seleção múltipla e proteção adicionados. CI anterior 45511958208 aprovada; CI nova e hardware pendentes.
+
+
+## AuroraX Store (paridade adicional Freestyle Rev800)
+
+RB no início abre loja nativa com filtros Todos/Jogos/XBLA/Homebrew/Apps/Emuladores/DLC, detalhes, tamanho, licença declarada e estado da fila. Catálogo TSV local de fontes autorizadas; A confirma pedido, X remove pedido, Y recarrega. Cliente PC `tools/store_download.py` baixa por HTTPS somente de hosts explicitamente permitidos, limita tamanho e verifica SHA-256 antes da publicação exclusiva em UserFiles/Store. Não instala nem executa automaticamente; não inclui acervo comercial sem autorização. A presença local na UI verifica tamanho, não hash. API X-Store original não confirmada; transporte nativo, busca textual, instalação validada e homologação no console pendentes. CI anterior 45512262743 aprovada.

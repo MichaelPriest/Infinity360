@@ -858,5 +858,21 @@ int main(int argc,char** argv) {
     assert(fs::file_size(batchRoot/"UserFiles"/"Bundle"/"nested.txt")==6);
     assert(fs::file_size(batchRoot/"UserFiles"/"single.txt")==6);
     assert(fs::exists(batchRoot/"Bundle"/"nested.txt"));
+    const fs::path storeRoot=root/"StoreFixture";
+    fs::create_directories(storeRoot);
+    const std::string storeHash(64,'a');
+    {std::ofstream out(storeRoot/"aurorax-store.tsv");
+     out<<"demo\thomebrew\tExample\t1.0\t4\t"<<storeHash<<"\thttps://example.org/demo.zip\tAuthorized fixture\n";}
+    ConsoleHome storeMenu(storeRoot.string()+"/",noRoots);storeMenu.Load();
+    storeMenu.Press(ConsoleHome::PageDown);storeMenu.Draw(canvas,"20:49");
+    storeMenu.Press(ConsoleHome::Accept);storeMenu.Press(ConsoleHome::Accept);
+    storeMenu.Press(ConsoleHome::Back); // cancel
+    assert(!fs::exists(storeRoot/"aurorax-store-requests.tsv"));
+    storeMenu.Press(ConsoleHome::Accept);storeMenu.Press(ConsoleHome::Accept);
+    {std::ifstream in(storeRoot/"aurorax-store-requests.tsv");std::string line;
+     std::getline(in,line);assert(line=="demo\t"+storeHash);}
+    storeMenu.Press(ConsoleHome::Favorite);
+    assert(fs::file_size(storeRoot/"aurorax-store-requests.tsv")==0);
+    storeMenu.Press(ConsoleHome::Back);storeMenu.Press(ConsoleHome::Back);
     fs::remove_all(root);
 }
