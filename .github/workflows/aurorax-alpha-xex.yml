@@ -40,6 +40,11 @@ jobs:
           fi
           ffmpeg -version
           openssl version
+      - name: Test Aurora artwork converter
+        run: |
+          python3 -m venv .art-venv
+          .art-venv/bin/python -m pip install 'Pillow>=10,<13'
+          .art-venv/bin/python Tests/AuroraArtTests.py
       - name: Compile portable dashboard and console UI
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
