@@ -67,7 +67,7 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
 | 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar por blocos com progresso e cancelamento** | Mover, excluir, multisseleção, cópia de pastas e homologação |
-| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Sessão autenticada e transporte TCP de teste Linux, PASV/EPSV/LIST/NLST/SIZE/RETR validados** | Transporte XNet, serviço LAN, configuração, STOR, FileZilla e homologação |
+| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Sessão autenticada e teste TCP Linux: PASV/EPSV/LIST/NLST/SIZE/RETR e STOR com ALLO validados** | Transporte XNet, serviço LAN, configuração, compatibilidade FileZilla e homologação |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
 | 29 | Energia: reiniciar, desligar, após downloads, temporizador | T | Pendente | APIs com confirmação e sem ações automáticas perigosas |
@@ -252,3 +252,8 @@ FtpSession.cpp implementa autenticação explícita, limite de três falhas por 
 ## FTP: interoperabilidade TCP no ambiente portátil
 
 Teste Linux somente loopback (127.0.0.1), com um cliente e leitura restrita. `Tests/FtpLoopbackProbe.cpp` e `Tests/FtpLoopbackTest.py` verificam PASV/EPSV e 1 MiB binário idêntico via Python ftplib, listagem, bloqueio de escrita e traversal. Compilação C++17 com -Werror e testes de sessão e TCP passaram; hashes dos fontes conferidos com main. Não é um serviço XNet nem um servidor FTP utilizável no Xbox ainda. LIST usa data ilustrativa. Upload, ativação e exposição LAN não implementados.
+
+
+## FTP: upload experimental com tamanho declarado
+
+No probe Linux, ALLO declara o tamanho exato (máximo 32 MiB) antes de STOR binário passivo. Temporários exclusivos e publicação sem sobrescrita por linkat. Testes C++17/ftplib aprovados: upload de 1 MiB, colisão de nomes, envio menor/maior que declarado, traversal e limpeza de temporários. Hashes dos dois arquivos modificados correspondem aos compilados/testados. Ainda não existe serviço FTP ativo no Xbox; a API nativa de escrita e o transporte XNet exigem implementação e homologação.
