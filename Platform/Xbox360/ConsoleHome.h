@@ -6,6 +6,7 @@
 #include "ContentCatalog.h"
 #include "FileWorkspace.h"
 #include "StorageInfo.h"
+#include "NetworkInfo.h"
 
 class ConsoleHome {
 public:
@@ -33,6 +34,9 @@ private:
     std::vector<StorageVolume> storageVolumes_;
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
+    NetworkSnapshot network_;
+    void RefreshNetwork();
+    void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
     bool pasteConfirm_;
     std::string copyDir_, copyName_, renameName_;
