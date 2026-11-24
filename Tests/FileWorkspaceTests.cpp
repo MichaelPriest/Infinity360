@@ -44,5 +44,59 @@ int main() {
         assert(!files.Create((fs::path(docs)/"link").string(),"unexpected"));
     }
 #endif
+    // Incremental transfer: larger than the legacy 8 MiB limit.
+    FileTransfer job;
+    assert(job.Start(files,app,"big.bin",docs));
+    assert(job.Status()==FileTransfer::Running && job.Total()==8*1024*1024+1);
+    assert(!fs::exists(fs::path(docs)/"big.bin"));
+    job.Tick();
+    assert(job.Done()==64*1024 && job.Status()==FileTransfer::Running);
+    job.Cancel();
+    assert(job.Status()==FileTransfer::Cancelled);
+    assert(!fs::exists(fs::path(docs)/"big.bin"));
+    assert(fs::exists(root/"big.bin"));
+    for(const auto& entry:fs::directory_iterator(docs))
+        assert(entry.path().filename().string().find("AXCOPY-")!=0);
+
+    // A stale part from another session must never be overwritten or removed.
+    const auto stale=fs::path(docs)/"AXCOPY-0000.part";
+    std::ofstream(stale)<<"preserve";
+    assert(job.Start(files,app,"big.bin",docs));
+    unsigned last=0;
+    int steps=0;
+    while(job.Status()==FileTransfer::Running && steps++<1000) {
+        job.Tick();
+        assert(job.Percent()>=last && job.Percent()<=100);
+        last=job.Percent();
+    }
+    assert(job.Status()==FileTransfer::Completed && job.Percent()==100);
+    assert(fs::file_size(fs::path(docs)/"big.bin")==fs::file_size(root/"big.bin"));
+    assert(fs::file_size(stale)==8);
+    assert(!job.Start(files,app,"big.bin",docs));
+
+    // Destination appears during the copy: never replace it.
+    std::ofstream(root/"collision.txt")<<"source";
+    assert(job.Start(files,app,"collision.txt",docs));
+    std::ofstream(fs::path(docs)/"collision.txt")<<"original destination";
+    while(job.Status()==FileTransfer::Running)job.Tick();
+    assert(job.Status()==FileTransfer::Failed);
+    assert(fs::file_size(fs::path(docs)/"collision.txt")==20);
+    assert(fs::file_size(root/"collision.txt")==6);
+
+    // Empty file and destructor cancellation.
+    std::ofstream(root/"empty.txt").close();
+    assert(job.Start(files,app,"empty.txt",docs));
+    job.Tick();
+    assert(job.Status()==FileTransfer::Completed);
+    assert(fs::file_size(fs::path(docs)/"empty.txt")==0);
+    std::ofstream(root/"abandon.txt")<<"keep";
+    {FileTransfer abandoned;assert(abandoned.Start(files,app,"abandon.txt",docs));}
+    assert(!fs::exists(fs::path(docs)/"abandon.txt"));
+    assert(fs::exists(root/"abandon.txt"));
+    assert(!files.ValidName("AXCOPY-0000.part"));
+    for(const auto& entry:fs::directory_iterator(docs))
+        if(entry.path().filename().string().find("AXCOPY-")==0)
+            assert(entry.path()==stale);
+
     fs::remove_all(root);
 }
