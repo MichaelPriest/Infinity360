@@ -731,5 +731,22 @@ int main(int argc,char** argv) {
     fs::remove(trainerLauncher);
     assert(trainerMenu.Press(ConsoleHome::Accept).empty()); // recheck blocks removed file
 
+    std::ofstream(trainerLauncher,std::ios::binary)<<"XEX2 fixture";
+    {std::ofstream out(trainerManifest);
+     out<<"schema=2\nmode=standalone\nname=TU Trainer\ntitle_id=4D5307E6\n"
+        <<"media_id=12345678\nversion=20010002\nentry=trainer.xex\ntu=20020003\n";}
+    const auto tuTrainers=TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6);
+    assert(tuTrainers.size()==1);
+    assert(tuTrainers[0].CheckUpdates(std::vector<XboxContentPackage>())==TrainerEntry::RequiredMissing);
+    XboxContentPackage candidate={};
+    candidate.titleId=0x4d5307e6;candidate.mediaId=0x12345678;
+    candidate.version=0x20020003;candidate.contentType=0x000b0000;
+    std::vector<XboxContentPackage> candidates(1,candidate);
+    assert(tuTrainers[0].CheckUpdates(candidates)==TrainerEntry::RequiredLocal);
+    candidates.push_back(candidate);
+    assert(tuTrainers[0].CheckUpdates(candidates)==TrainerEntry::RequiredAmbiguous);
+    trainerMenu.Press(ConsoleHome::Refresh);
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty());
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty());
     fs::remove_all(root);
 }

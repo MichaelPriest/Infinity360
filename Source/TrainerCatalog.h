@@ -6,6 +6,11 @@
 struct TrainerEntry {
     std::string name, id, launcher;
     unsigned titleId, mediaId, version;
+    enum TuRequirement { Legacy, NoUpdate, ExactUpdate, UnnumberedUpdate };
+    TuRequirement tuRequirement;
+    unsigned tuVersion;
+    enum TuCheck { LegacyHeaderOnly, ActiveUnknown, RequiredLocal, RequiredMissing, RequiredAmbiguous, UnnumberedLocal };
+    TuCheck CheckUpdates(const std::vector<XboxContentPackage>& packages) const;
     enum Match { Unknown, DifferentMedia, DifferentVersion, HeaderMatches };
     Match Compatibility(const XboxExecutionInfo& game) const;
 };

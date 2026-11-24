@@ -65,10 +65,20 @@ bool readEntry(const std::string& folder,const std::string& id,unsigned title,Tr
         if(eq==std::string::npos||fields.count(line.substr(0,eq)))return false;
         fields[line.substr(0,eq)]=line.substr(eq+1);
     }
-    if(fields.size()!=7||fields["schema"]!="1"||fields["mode"]!="standalone"||
+    const bool schema2=fields["schema"]=="2";
+    if((schema2?fields.size()!=8:fields.size()!=7)||(!schema2&&fields["schema"]!="1")||fields["mode"]!="standalone"||
        !hex32(fields["title_id"],result.titleId)||result.titleId!=title||
        !hex32(fields["media_id"],result.mediaId)||!result.mediaId||
        !hex32(fields["version"],result.version)||!result.version)return false;
+    result.tuRequirement=TrainerEntry::Legacy;result.tuVersion=0;
+    if(schema2) {
+        const std::string requirement=fields["tu"];
+        if(requirement=="none")result.tuRequirement=TrainerEntry::NoUpdate;
+        else if(requirement=="unnumbered")result.tuRequirement=TrainerEntry::UnnumberedUpdate;
+        else if(hex32(requirement,result.tuVersion)&&result.tuVersion)
+            result.tuRequirement=TrainerEntry::ExactUpdate;
+        else return false;
+    }
     result.name=fields["name"];result.id=id;
     const std::string entry=fields["entry"];
     if(result.name.empty()||result.name.size()>80||!safe(entry)||
@@ -87,6 +97,19 @@ TrainerEntry::Match TrainerEntry::Compatibility(const XboxExecutionInfo& game) c
     if(game.mediaId!=mediaId)return DifferentMedia;
     if(game.version!=version)return DifferentVersion;
     return HeaderMatches;
+}
+TrainerEntry::TuCheck TrainerEntry::CheckUpdates(const std::vector<XboxContentPackage>& packages) const {
+    if(tuRequirement==Legacy)return LegacyHeaderOnly;
+    if(tuRequirement==NoUpdate)return ActiveUnknown;
+    size_t matches=0;
+    for(size_t i=0;i<packages.size();++i) {
+        const XboxContentPackage& p=packages[i];
+        if(p.contentType!=0x000b0000u||p.titleId!=titleId||p.mediaId!=mediaId)continue;
+        if(tuRequirement==UnnumberedUpdate || p.version==tuVersion)++matches;
+    }
+    if(!matches)return RequiredMissing;
+    if(matches>1)return RequiredAmbiguous;
+    return tuRequirement==UnnumberedUpdate?UnnumberedLocal:RequiredLocal;
 }
 std::vector<TrainerEntry> TrainerCatalog::Scan(const std::string& app,unsigned titleId) {
     std::vector<TrainerEntry> result;
@@ -109,7 +132,8 @@ bool TrainerCatalog::Recheck(const std::string& app,const TrainerEntry& entry) {
     for(size_t i=0;i<items.size();++i) {
         const TrainerEntry& item=items[i];
         if(item.id==entry.id&&item.launcher==entry.launcher&&item.name==entry.name&&
-           item.mediaId==entry.mediaId&&item.version==entry.version)return true;
+           item.mediaId==entry.mediaId&&item.version==entry.version&&
+           item.tuRequirement==entry.tuRequirement&&item.tuVersion==entry.tuVersion)return true;
     }
     return false;
 }

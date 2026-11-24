@@ -626,6 +626,9 @@ std::string ConsoleHome::Press(Key key) {
                !TrainerCatalog::Recheck(dir_,trainer)) {
                 notice_="Trainer ou jogo mudou; atualize e confira a compatibilidade.";return "";
             }
+            if(trainer.tuRequirement!=TrainerEntry::Legacy) {
+                notice_="TU ativa nao confirmada. Lancamento bloqueado.";return "";
+            }
             return trainer.launcher; // Standalone utility only, no injection or automatic game launch.
         }
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
@@ -638,6 +641,13 @@ std::string ConsoleHome::Press(Key key) {
             if(TransferRunning() || detailMetadata_.package ||
                trainers_[contentRow_].Compatibility(contentInfo_)!=TrainerEntry::HeaderMatches) {
                 notice_="Lancamento bloqueado: formato, transferencia ou versao incompativel.";
+            } else if(trainers_[contentRow_].tuRequirement!=TrainerEntry::Legacy) {
+                const TrainerEntry::TuCheck check=trainers_[contentRow_].CheckUpdates(contentItems_);
+                notice_=check==TrainerEntry::RequiredMissing?"TU exigida nao encontrada no HD/USB.":
+                    check==TrainerEntry::RequiredAmbiguous?"Multiplas TUs candidatas; estado ativo desconhecido.":
+                    check==TrainerEntry::RequiredLocal?"TU exigida localizada; ativacao nao confirmada.":
+                    check==TrainerEntry::UnnumberedLocal?"TU candidata sem numero confirmado; ativacao desconhecida.":
+                    "Trainer sem TU: estado ativo desconhecido.";
             } else {
                 trainerConfirm_=true;
                 notice_="A confirma utilitario local confiavel/offline; B cancela.";
@@ -1120,7 +1130,14 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
         const char* status=match==TrainerEntry::HeaderMatches?"Cabecalho coincide":
             match==TrainerEntry::DifferentMedia?"Media ID diferente":
             match==TrainerEntry::DifferentVersion?"Versao diferente":"Indeterminado";
-        c.Text(810,y+14,status,20,match==TrainerEntry::HeaderMatches?Lime:Muted,398);
+        const TrainerEntry::TuCheck tu=item.CheckUpdates(contentItems_);
+        const char* tuText=tu==TrainerEntry::LegacyHeaderOnly?"TU nao declarada":
+            tu==TrainerEntry::ActiveUnknown?"Sem TU: estado desconhecido":
+            tu==TrainerEntry::RequiredLocal?"TU localizada, ativa?":
+            tu==TrainerEntry::RequiredMissing?"TU exigida ausente":
+            tu==TrainerEntry::RequiredAmbiguous?"TUs ambiguas":"TU sem numero confirmado";
+        c.Text(810,y+3,status,18,match==TrainerEntry::HeaderMatches?Lime:Muted,398);
+        c.Text(810,y+30,tuText,17,Muted,398);
     }
     c.Text(48,555,"Use apenas offline e com arquivos confiaveis. TU ativo e funcionamento nao verificados.",19,Muted,1180);
     c.Text(48,600,trainerConfirm_?"A Confirmar saida para trainer | B Cancelar":
