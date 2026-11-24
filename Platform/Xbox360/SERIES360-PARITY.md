@@ -68,7 +68,7 @@ operações funcionaram numa unidade real.
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
 | 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar arquivo até 8 MiB com confirmação** | Mover, excluir, multisseleção, cópia de pastas, progresso e cancelamento |
 | 26 | FTP servidor com senha configurável e inicialização opcional | M/T | Pendente | Autenticação própria, sem credenciais padrão do Series360 |
-| 27 | Status de rede/IP e serviço FTP | T | Web demonstrativo / cartões nativos sem provider | Leitura XNet e diagnóstico |
+| 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
 | 29 | Energia: reiniciar, desligar, após downloads, temporizador | T | Pendente | APIs com confirmação e sem ações automáticas perigosas |
 | 30 | Hora pela internet | T | Pendente | Sincronização opcional com tratamento de rede |
@@ -232,3 +232,8 @@ Implementação nativa em `FileWorkspace.cpp` e `ConsoleHome.cpp`: alternância 
 ## Armazenamento real por dispositivo
 
 Sistema > Armazenamento agora consulta a capacidade e o espaço livre dos caminhos da aplicação, HDD1, USB0 e USB1. Exibe percentual de ocupação, marca volumes indisponíveis e atualiza com Y. Não soma caminhos que podem apontar para um mesmo volume. `StorageInfo.cpp` usa GetDiskFreeSpaceExA no XDK e filesystem::space no PC. Teste isolado C++17 com -Wall -Wextra -Wpedantic -Werror executado com sucesso, incluindo limites de 64 bits, caminho ausente e leitura de capacidade real do ambiente portátil. Integração XDK e console ainda não homologados. Rede/FTP, sensores SMC e downloads continuam pendentes.
+
+
+## Diagnostico de rede local
+
+`NetworkInfo.cpp` consulta XNetGetTitleXnAddr e XNetGetEthernetLinkStatus no XDK, com espera limitada e cleanup. No Linux usa getifaddrs. Diferencia IP atribuído, pendente, ausente e erro. Não abre portas nem comprova acesso à internet. FTP/SMB/System Link continuam pendentes. Teste C++17 isolado passou no Linux com -Wall -Wextra -Wpedantic -Werror e hashes conferidos com a main. A implementação XDK não foi compilada nem testada no console.
