@@ -431,6 +431,9 @@ int main(int argc,char** argv) {
     assert(!fs::exists(fileRoot/"UserFiles"/"source.txt"));
     fileMenu.Press(ConsoleHome::PageUp);
     fileMenu.Press(ConsoleHome::Accept);   // confirm paste
+    assert(fileMenu.TransferRunning());
+    for(int i=0;i<20 && fileMenu.TransferRunning();++i)fileMenu.Tick();
+    assert(!fileMenu.TransferRunning());
     assert(fs::exists(fileRoot/"UserFiles"/"source.txt"));
     assert(fs::exists(fileRoot/"source.txt"));
     fileMenu.Press(ConsoleHome::Search);   // RS opens rename keyboard
