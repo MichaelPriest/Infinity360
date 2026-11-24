@@ -207,6 +207,13 @@ int main(int argc,char** argv) {
     sysMenu.Draw(canvas,"19:45");
     std::vector<unsigned> storageScreen(canvas.Pixels(),
         canvas.Pixels()+HomeCanvas::Width*HomeCanvas::Height);
+    // Storage details: actual portable filesystem snapshot, refresh and return.
+    sysMenu.Press(ConsoleHome::Accept);
+    sysMenu.Draw(canvas,"19:45");
+    assert(!std::equal(storageScreen.begin(),storageScreen.end(),canvas.Pixels()));
+    sysMenu.Press(ConsoleHome::Refresh);
+    sysMenu.Draw(canvas,"19:45");
+    sysMenu.Press(ConsoleHome::Back);
     sysMenu.Press(ConsoleHome::Right);  // Rede e FTP card
     sysMenu.Draw(canvas,"19:45");
     assert(!std::equal(storageScreen.begin(),storageScreen.end(),canvas.Pixels()));
