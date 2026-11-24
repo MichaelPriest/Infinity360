@@ -2,6 +2,13 @@
 #include <cctype>
 #include <cstdio>
 #include <fstream>
+#include <cerrno>
+#if defined(_WIN32) && !defined(_XBOX)
+#include <windows.h>
+#elif !defined(_XBOX)
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 #ifdef _XBOX
 #include <xtl.h>
 #else
@@ -92,6 +99,9 @@ bool FileWorkspace::ValidName(const std::string& name) {
     if(name.empty() || name.size()>42 || name=="." || name==".." ||
        name[0]==' ' || name[name.size()-1]==' ' || name[name.size()-1]=='.')
         return false;
+    std::string upper=name;
+    for(size_t i=0;i<upper.size();++i)upper[i]=(char)std::toupper((unsigned char)upper[i]);
+    if(upper.compare(0,7,"AXCOPY-")==0)return false;
     for(size_t i=0;i<name.size();++i) {
         const unsigned char ch=(unsigned char)name[i];
         if(!(std::isalnum(ch) || ch==' ' || ch=='.' || ch=='-' || ch=='_'))
@@ -151,22 +161,149 @@ bool FileWorkspace::Rename(const std::string& parent,const std::string& oldName,
     return !ec;
 #endif
 }
-bool FileWorkspace::Copy(const std::string& sourceDir,const std::string& name,
-                         const std::string& destDir) const {
+bool FileWorkspace::PrepareCopy(const std::string& sourceDir,const std::string& name,
+                                 const std::string& destDir,std::string& from,
+                                 std::string& to) const {
     if(!CanBrowse(sourceDir) || !CanWrite(destDir) || !ValidName(name))return false;
-    const std::string from=Join(sourceDir,name),to=Join(destDir,name);
+    from=Join(sourceDir,name);to=Join(destDir,name);
     if(!Allowed(from,roots_) || !Allowed(to,workspaces_) || !exists(from) ||
        directory(from) || exists(to))return false;
-    // Alpha: bounded synchronous copies only, never overwrite.
+#ifndef _XBOX
+    std::error_code ec;
+    if(!fs::is_regular_file(from,ec) || ec)return false;
+#endif
+    return true;
+}
+bool FileWorkspace::Copy(const std::string& sourceDir,const std::string& name,
+                         const std::string& destDir) const {
+    // Legacy bounded synchronous API for callers that do not drive Tick.
+    std::string from,to;
+    if(!PrepareCopy(sourceDir,name,destDir,from,to))return false;
     std::ifstream input(from.c_str(),std::ios::binary|std::ios::ate);
     if(!input)return false;
     const std::streamoff size=input.tellg();
     input.close();
     if(size<0 || size>8*1024*1024)return false;
-#ifdef _XBOX
-    return CopyFileA(from.c_str(),to.c_str(),TRUE)!=0;
+    FileTransfer job;
+    if(!job.Start(*this,sourceDir,name,destDir))return false;
+    while(job.Status()==FileTransfer::Running)job.Tick();
+    return job.Status()==FileTransfer::Completed;
+}
+FileTransfer::FileTransfer():state_(Idle),done_(0),total_(0)
+#if defined(_XBOX) || defined(_WIN32)
+    ,output_(INVALID_HANDLE_VALUE)
 #else
-    std::error_code ec;
-    return fs::copy_file(from,to,fs::copy_options::none,ec) && !ec;
+    ,output_(-1)
 #endif
+{}
+FileTransfer::~FileTransfer() {Cleanup();}
+void FileTransfer::Cleanup() {
+    if(input_.is_open())input_.close();
+#if defined(_XBOX) || defined(_WIN32)
+    if(output_!=INVALID_HANDLE_VALUE) {CloseHandle(output_);output_=INVALID_HANDLE_VALUE;}
+#else
+    if(output_!=-1) {close(output_);output_=-1;}
+#endif
+    if(!temporary_.empty()) {
+#if defined(_XBOX) || defined(_WIN32)
+        DeleteFileA(temporary_.c_str());
+#else
+        unlink(temporary_.c_str());
+#endif
+        temporary_.clear();
+    }
+}
+void FileTransfer::Fail(const char* reason) {Cleanup();error_=reason;state_=Failed;}
+bool FileTransfer::Start(const FileWorkspace& workspace,const std::string& sourceDir,
+                         const std::string& name,const std::string& destDir) {
+    if(state_==Running)return false;
+    Cleanup();
+    state_=Idle;done_=total_=0;name_=name;error_.clear();
+    std::string from;
+    if(!workspace.PrepareCopy(sourceDir,name,destDir,from,target_)) {
+        Fail("Origem ou destino invalido; nao sobrescreve arquivos.");return false;
+    }
+    input_.clear();input_.open(from.c_str(),std::ios::binary|std::ios::ate);
+    if(!input_) {Fail("Nao foi possivel abrir a origem.");return false;}
+    const std::streamoff size=input_.tellg();
+    if(size<0) {Fail("Tamanho nao disponivel.");return false;}
+    total_=static_cast<unsigned long long>(size);
+    input_.seekg(0,std::ios::beg);
+    if(!input_) {Fail("Falha ao posicionar a origem.");return false;}
+    for(int i=0;i<32;++i) {
+        char temp[32];
+        std::sprintf(temp,"AXCOPY-%04d.part",i);
+        const std::string candidate=FileWorkspace::Join(destDir,temp);
+#if defined(_XBOX) || defined(_WIN32)
+        output_=CreateFileA(candidate.c_str(),GENERIC_WRITE,0,0,CREATE_NEW,
+                           FILE_ATTRIBUTE_NORMAL,0);
+        if(output_==INVALID_HANDLE_VALUE)continue;
+#else
+        output_=open(candidate.c_str(),O_WRONLY|O_CREAT|O_EXCL,0600);
+        if(output_==-1)continue;
+#endif
+        temporary_=candidate;state_=Running;return true;
+    }
+    Fail("Nao foi possivel reservar arquivo temporario.");return false;
+}
+unsigned FileTransfer::Percent() const {
+    if(state_==Completed)return 100;
+    if(!total_)return 0;
+    const double value=100.0*static_cast<double>(done_)/static_cast<double>(total_);
+    return value>=99.0?99:static_cast<unsigned>(value);
+}
+void FileTransfer::Cancel() {
+    if(state_==Running) {Cleanup();state_=Cancelled;}
+}
+void FileTransfer::Tick() {
+    if(state_!=Running)return;
+    if(done_<total_) {
+        char buffer[64*1024];
+        const unsigned long long remaining=total_-done_;
+        const size_t want=remaining<sizeof(buffer)?static_cast<size_t>(remaining):sizeof(buffer);
+        input_.read(buffer,static_cast<std::streamsize>(want));
+        if(input_.gcount()!=static_cast<std::streamsize>(want)) {
+            Fail("Origem removida ou alterada durante a copia.");return;
+        }
+#if defined(_XBOX) || defined(_WIN32)
+        DWORD wrote=0;
+        if(!WriteFile(output_,buffer,static_cast<DWORD>(want),&wrote,0) || wrote!=want) {
+            Fail("Falha de escrita ou espaco insuficiente.");return;
+        }
+#else
+        size_t written=0;
+        while(written<want) {
+            const ssize_t n=write(output_,buffer+written,want-written);
+            if(n<0 && errno==EINTR)continue;
+            if(n<=0) {Fail("Falha de escrita ou espaco insuficiente.");return;}
+            written+=static_cast<size_t>(n);
+        }
+#endif
+        done_+=want;
+        return;
+    }
+    if(input_.peek()!=std::char_traits<char>::eof() || input_.bad()) {
+        Fail("Origem mudou durante a copia.");return;
+    }
+    input_.close();
+#if defined(_XBOX) || defined(_WIN32)
+    const bool flushed=FlushFileBuffers(output_)!=0;
+    const bool closed=CloseHandle(output_)!=0;
+    output_=INVALID_HANDLE_VALUE;
+    if(!flushed || !closed) {Fail("Falha ao finalizar a escrita.");return;}
+    if(!MoveFileA(temporary_.c_str(),target_.c_str())) {
+        Fail("Destino ocupado ou falha ao concluir.");return;
+    }
+#else
+    const bool flushed=fsync(output_)==0;
+    const bool closed=close(output_)==0;
+    output_=-1;
+    if(!flushed || !closed) {Fail("Falha ao finalizar a escrita.");return;}
+    // Atomic no-replace publication on filesystems with hard-link support.
+    if(link(temporary_.c_str(),target_.c_str())!=0) {
+        Fail("Destino ocupado ou sistema sem suporte a publicacao segura.");return;
+    }
+    unlink(temporary_.c_str());
+#endif
+    temporary_.clear();state_=Completed;
 }
