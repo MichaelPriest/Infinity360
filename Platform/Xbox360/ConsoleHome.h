@@ -20,7 +20,7 @@ public:
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
     bool Tick();
-    bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running; }
+    bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
 private:
@@ -36,6 +36,11 @@ private:
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
     FileTransfer transfer_;
+    struct CopyTask { std::string source, name, destination; };
+    std::vector<CopyTask> copyQueue_;
+    bool copyPaused_;
+    bool EnqueueCopy();
+    void MovePin(int direction);
     void DrawTransfers(HomeCanvas& c) const;
     std::vector<StorageVolume> storageVolumes_;
     void RefreshStorage();

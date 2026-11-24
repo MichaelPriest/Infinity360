@@ -748,5 +748,55 @@ int main(int argc,char** argv) {
     trainerMenu.Press(ConsoleHome::Refresh);
     assert(trainerMenu.Press(ConsoleHome::Accept).empty());
     assert(trainerMenu.Press(ConsoleHome::Accept).empty());
+    // Persistent manual pin ordering; both rows and home use pinned_ order.
+    const fs::path orderedRoot=root/"OrderedPinFixture";
+    fs::create_directories(orderedRoot/"Games"/"A");
+    fs::create_directories(orderedRoot/"Games"/"B");
+    const fs::path orderedA=orderedRoot/"Games"/"A"/"default.xex";
+    const fs::path orderedB=orderedRoot/"Games"/"B"/"default.xex";
+    std::ofstream(orderedA)<<"a";std::ofstream(orderedB)<<"b";
+    {std::ofstream out(orderedRoot/"aurorax-profile.txt");
+     out<<"K\t"<<orderedA.string()<<"\nK\t"<<orderedB.string()<<"\n";}
+    const std::vector<std::string> orderedRoots(1,(orderedRoot/"Games").string());
+    ConsoleHome ordered(orderedRoot.string()+"/",orderedRoots);ordered.Load();
+    ordered.Press(ConsoleHome::Accept);
+    for(int i=0;i<8;++i)ordered.Press(ConsoleHome::Right);
+    ordered.Press(ConsoleHome::Search); // move A down
+    ConsoleHome orderedReload(orderedRoot.string()+"/",orderedRoots);orderedReload.Load();
+    orderedReload.Press(ConsoleHome::Accept);
+    for(int i=0;i<8;++i)orderedReload.Press(ConsoleHome::Right);
+    orderedReload.Press(ConsoleHome::Accept);
+    assert(orderedReload.Press(ConsoleHome::Accept)==orderedB.string());
+
+    // Queue two copies, pause, resume and complete from the system panel.
+    const fs::path queueRoot=root/"QueueFixture";
+    fs::create_directories(queueRoot/"UserFiles");
+    {std::ofstream out(queueRoot/"a.bin",std::ios::binary);out.seekp(200000);out.put('a');}
+    {std::ofstream out(queueRoot/"b.bin",std::ios::binary);out.seekp(200000);out.put('b');}
+    ConsoleHome queueMenu(queueRoot.string()+"/",noRoots);queueMenu.Load();
+    queueMenu.Press(ConsoleHome::Right);queueMenu.Press(ConsoleHome::Down);
+    queueMenu.Press(ConsoleHome::Accept); // Files; directories sort first
+    queueMenu.Press(ConsoleHome::Down);queueMenu.Press(ConsoleHome::Favorite); // a.bin
+    queueMenu.Press(ConsoleHome::Up);queueMenu.Press(ConsoleHome::Accept); // UserFiles
+    queueMenu.Press(ConsoleHome::PageUp);queueMenu.Press(ConsoleHome::Accept);
+    assert(queueMenu.TransferRunning());
+    queueMenu.Press(ConsoleHome::Back);
+    queueMenu.Press(ConsoleHome::Down);queueMenu.Press(ConsoleHome::Down);
+    queueMenu.Press(ConsoleHome::Favorite); // b.bin
+    queueMenu.Press(ConsoleHome::Up);queueMenu.Press(ConsoleHome::Up);
+    queueMenu.Press(ConsoleHome::Accept);
+    queueMenu.Press(ConsoleHome::PageUp);queueMenu.Press(ConsoleHome::Accept);
+    queueMenu.Press(ConsoleHome::Back);queueMenu.Press(ConsoleHome::Back); // Home
+    queueMenu.Press(ConsoleHome::Right);queueMenu.Press(ConsoleHome::Accept); // System
+    for(int i=0;i<3;++i)queueMenu.Press(ConsoleHome::Right);
+    queueMenu.Press(ConsoleHome::Accept); // Downloads
+    queueMenu.Press(ConsoleHome::Accept); // pause
+    for(int i=0;i<20;++i)assert(!queueMenu.Tick());
+    assert(!fs::exists(queueRoot/"UserFiles"/"a.bin"));
+    queueMenu.Press(ConsoleHome::Accept); // resume
+    for(int i=0;i<50 && queueMenu.TransferRunning();++i)queueMenu.Tick();
+    assert(!queueMenu.TransferRunning());
+    assert(fs::file_size(queueRoot/"UserFiles"/"a.bin")==200001);
+    assert(fs::file_size(queueRoot/"UserFiles"/"b.bin")==200001);
     fs::remove_all(root);
 }

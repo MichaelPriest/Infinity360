@@ -135,7 +135,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),fileRoot_(0),pasteConfirm_(false),
+      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -263,7 +263,14 @@ void ConsoleHome::Rebuild() {
             if(allowed && matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
         }
-        std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
+        if(subtab_==8) {
+            // Pins are rendered in the same persisted order as the home cards.
+            const std::vector<const Game*> filtered=visible_;
+            visible_.clear();
+            for(size_t p=0;p<pinned_.size();++p)
+                for(size_t i=0;i<filtered.size();++i)
+                    if(filtered[i]->executable==pinned_[p]) {visible_.push_back(filtered[i]);break;}
+        } else std::stable_sort(visible_.begin(),visible_.end(),LibraryOrder(gameSort_));
     } else if (section_==Apps || section_==Emulators) {
         // Tabs are filters over the same installed XEX catalogue.
         // 0 Todos; 1 Instalados; 2 Plugins; 3 Homebrew (Apps only).
@@ -325,11 +332,53 @@ void ConsoleHome::Reload() {
     } else ScanLibrary();
     Rebuild();
 }
+bool ConsoleHome::EnqueueCopy() {
+    CopyTask task={copyDir_,copyName_,folders_.back()};
+    std::string from,to;
+    if(!fileWorkspace_.PrepareCopy(task.source,task.name,task.destination,from,to)) {
+        notice_="Origem/destino invalido ou arquivo existente.";return false;
+    }
+    if(transfer_.Status()==FileTransfer::Running || !copyQueue_.empty()) {
+        if(copyQueue_.size()>=16) {notice_="Fila cheia (16 tarefas aguardando).";return false;}
+        for(size_t i=0;i<copyQueue_.size();++i)
+            if(copyQueue_[i].destination==task.destination && copyQueue_[i].name==task.name) {
+                notice_="Destino ja registrado na fila.";return false;
+            }
+        copyQueue_.push_back(task);
+        notice_="Copia adicionada a fila.";return true;
+    }
+    copyPaused_=false;
+    if(!transfer_.Start(fileWorkspace_,task.source,task.name,task.destination)) {
+        notice_=transfer_.Error();return false;
+    }
+    notice_="Copia iniciada. Veja Sistema > Downloads.";return true;
+}
+void ConsoleHome::MovePin(int direction) {
+    const int neighbor=row_+direction;
+    if(neighbor<0 || static_cast<size_t>(neighbor)>=visible_.size())return;
+    const std::string a=visible_[row_]->executable,b=visible_[neighbor]->executable;
+    const std::vector<std::string> old=pinned_;
+    std::vector<std::string>::iterator first=std::find(pinned_.begin(),pinned_.end(),a);
+    std::vector<std::string>::iterator second=std::find(pinned_.begin(),pinned_.end(),b);
+    if(first==pinned_.end()||second==pinned_.end())return;
+    std::iter_swap(first,second);
+    if(!SaveProfile()) {
+        pinned_=old;notice_="Falha ao salvar a ordem; alteracao cancelada.";return;
+    }
+    row_=neighbor;Rebuild();notice_="Ordem dos jogos fixados salva.";
+}
 bool ConsoleHome::Tick() {
-    if(!TransferRunning())return false;
+    if(!TransferRunning() || copyPaused_)return false;
+    if(transfer_.Status()!=FileTransfer::Running) {
+        const CopyTask task=copyQueue_.front();copyQueue_.erase(copyQueue_.begin());
+        if(transfer_.Start(fileWorkspace_,task.source,task.name,task.destination))
+            notice_="Proxima copia iniciada.";
+        else notice_=transfer_.Error();
+        return true;
+    }
     const unsigned previous=transfer_.Percent();
     transfer_.Tick();
-    if(!TransferRunning()) {
+    if(transfer_.Status()!=FileTransfer::Running) {
         if(section_==Files && page_==Listing && !searchActive_)Reload();
         notice_=transfer_.Status()==FileTransfer::Completed?"Arquivo copiado.":
             "Copia interrompida: "+transfer_.Error();
@@ -783,10 +832,7 @@ std::string ConsoleHome::Press(Key key) {
         if(pasteConfirm_) {
             pasteConfirm_=false;
             if(key==Accept) {
-                if(TransferRunning())notice_="Ja existe uma transferencia ativa.";
-                else if(transfer_.Start(fileWorkspace_,copyDir_,copyName_,folders_.back()))
-                    notice_="Copia iniciada. Veja Sistema > Downloads.";
-                else notice_=transfer_.Error();
+                EnqueueCopy();
             } else notice_="Copia cancelada.";
             return "";
         }
@@ -808,7 +854,6 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(key==PageUp) {
-            if(TransferRunning()) {notice_="Ja existe uma transferencia ativa.";return "";}
             if(copyName_.empty() || !fileWorkspace_.CanWrite(folders_.back()))
                 notice_="Marque um arquivo com X; abra UserFiles/AuroraXFiles para colar.";
             else {pasteConfirm_=true;notice_="A confirma a copia sem sobrescrever; B cancela.";}
@@ -846,7 +891,13 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details && systemTab_==3 && key==Favorite && TransferRunning()) {
-            transfer_.Cancel();notice_="Transferencia cancelada; origem preservada.";return "";
+            transfer_.Cancel();copyQueue_.clear();copyPaused_=false;
+            notice_="Fila cancelada; origens preservadas.";return "";
+        }
+        if(page_==Details && systemTab_==3 && key==Accept && TransferRunning()) {
+            copyPaused_=!copyPaused_;
+            notice_=copyPaused_?"Fila pausada. A para continuar.":"Fila retomada.";
+            return "";
         }
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
@@ -878,6 +929,10 @@ std::string ConsoleHome::Press(Key key) {
                 Apps+homeOrder_[focus_-Apps]-'0':focus_;
             Enter(static_cast<Section>(destination));
         }
+        return "";
+    }
+    if(page_==Listing && section_==Library && subtab_==8 && (key==PageDown || key==Search)) {
+        if(Count())MovePin(key==PageDown?-1:1);
         return "";
     }
     if(page_==Listing && section_==Library && key==PageDown) {
@@ -1231,7 +1286,7 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
     } else {
         const char* const states[]={"Inativo","Copiando","Concluido","Cancelado","Falhou"};
         c.Text(60,406,transfer_.Name(),24,White,1145);
-        c.Text(60,450,states[state]+std::string(" | ")+
+        c.Text(60,450,(copyPaused_?"Pausado":states[state])+std::string(" | ")+
                StorageInfo::FormatBytes(transfer_.Done())+" / "+
                StorageInfo::FormatBytes(transfer_.Total()),20,Muted,1145);
         c.Box(60,493,1155,16,0xff28413a,5);
@@ -1240,8 +1295,11 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
         c.Text(60,526,number(percent)+"%"+(transfer_.Error().empty()?
                std::string(""):" | "+transfer_.Error()),20,White,1145);
     }
-    c.Text(45,609,TransferRunning()?"X Cancelar copia | B Voltar (copia continua)":
-           "B Voltar | Downloads de internet ainda pendentes",18,Muted,1180);
+    c.Text(60,562,"Na fila: "+number(copyQueue_.size())+
+           (copyQueue_.empty()?"":" | Proximo: "+copyQueue_.front().name),18,Muted,1145);
+    c.Text(45,609,TransferRunning()?
+           (copyPaused_?"A Retomar | X Cancelar fila | B Voltar":"A Pausar | X Cancelar fila | B Voltar"):
+           "B Voltar | Downloads de internet no PC",18,Muted,1180);
 }
 void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
     c.Text(44,78,"Personalizar arte",40,White,1190);
@@ -1408,7 +1466,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(49,200,number(Count())+" itens nesta aba",21,Muted,1120);
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
-            c.Text(861,201,std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
+            c.Text(861,201,subtab_==8?"Ordem manual":std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
             if(subtab_==5 && !collections_.Items().empty()) {
                 const size_t current=static_cast<size_t>(collectionIndex_);
                 if(current<collections_.Items().size())
@@ -1416,6 +1474,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             }
             c.Text(45,621,subtab_==5?
                    "Start Buscar | LB Proxima colecao | RB Gerenciar | RS Ordenar":
+                   subtab_==8?"Start Buscar | LB Ocultar | RB Subir fixado | RS Descer fixado":
                    "Start Buscar | LB Ocultar | RB Colecoes | RS Ordenar",
                    18,Muted,1170);
         }
@@ -1463,14 +1522,15 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
-        c.Text(720,71,"Copia "+number(transfer_.Percent())+"% | Sistema > Downloads",16,Lime,510);
+        c.Text(690,71,(copyPaused_?std::string("Fila pausada"):std::string("Copia ")+number(transfer_.Percent())+"%")+
+               " | "+number(copyQueue_.size())+" aguardando",16,Lime,540);
     }
     if(!notice_.empty()) {
         c.Box(40,628,1200,35,0xff102923u,6);
         c.Text(51,630,notice_,18,Lime,1170);
     }
     c.Box(0,663,1280,57,0xff061915u);
-    buttonHint(c,45,"A",importPreview_?"Importar":"Selecionar",0xff428914u);
+    buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
     buttonHint(c,429,"X",page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);

@@ -32,7 +32,7 @@ operações funcionaram numa unidade real.
 
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
-| 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | **Fixados persistentes independentes de favoritos, atalhos priorizados no início** | Reordenar manualmente, horas jogadas, blocos customizados |
+| 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | **Fixados persistentes independentes de favoritos, atalhos priorizados no início** | Horas jogadas, blocos customizados; ordem manual implementada |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | **Editor nativo dos quatro atalhos, salvar/cancelar/restaurar** | Blocos customizados, tamanhos e temas; homologação XDK |
 | 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
@@ -54,7 +54,7 @@ operações funcionaram numa unidade real.
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
 | 17 | Descobrir e gerenciar TUs locais | M/T | **Inventário por Title ID e comparação Media ID em Content** | Cache legado, ativação, backup/rollback e validação de versão |
-| 18 | Buscar e baixar TUs pelo XboxUnity, inclusive em fila | T | Pendente | API, downloads autenticados, retomar, hash, ativação validada |
+| 18 | Buscar e baixar TUs pelo XboxUnity, inclusive em fila | T | **Cliente PC XboxUnity com staging e validação MD5/Title ID/Media ID** | Transporte e fila HTTP nativos, conexão real, ativação validada |
 | 19 | Descobrir, instalar, ativar/desativar DLC local | T | **Inventário de DLC por Title ID** | Instalação/remoção autorizada, validação e ativação |
 | 20 | Exibir e gerenciar saves por perfil | T | **Inventário local de saves por Title ID em diretórios de perfil** | Perfil Xbox ativo, backup, restauração e confirmação de exclusão |
 | 21 | Conquistas por título, secretas e recentes | T | Pendente | Provedor nativo XDK/XAM, somente leitura |
@@ -91,7 +91,7 @@ operações funcionaram numa unidade real.
 | 42 | Idiomas adicionais e tradução de interface | T | Pendente | Catálogo multilíngue próprio, fonte com acentos |
 | 43 | Autoatualização do painel, backup e rollback | M/T | Pendente | Manifestos assinados, hashes, staging e recuperação |
 | 44 | Busca de novas TUs, capas e jogos ao iniciar | M/T | Nativo parcial | Agendador seguro, consentimento e rede |
-| 45 | Downloads em segundo plano, fila, pausar/cancelar/retomar | T | **Transferência local por blocos no loop da dashboard e cancelamento** | HTTP/FTP, fila, pausa/retomada, persistência e teste XDK |
+| 45 | Downloads em segundo plano, fila, pausar/cancelar/retomar | T | **Fila local de 16 tarefas, pausa/retomada em sessão, cancelamento e cópia por blocos** | HTTP/FTP, persistência entre reinícios e teste XDK |
 | 46 | DashLaunch: escolher dashboard inicial e recuperação ao Aurora | M/T | **Não implementado propositalmente** | Só avaliar após XEX e GPU aprovados; opt-in e rollback obrigatório |
 
 ## 5. Funcionalidade adicional exclusiva da AuroraX
@@ -319,3 +319,8 @@ RB nos detalhes > quarta aba Trainers. A lista registra utilitários independent
 ## Servidores e verificacoes Series360
 
 Series360 0.12.69: traducoes confirmam XboxUnity para capas/TU, Xbox Live Marketplace para metadados e servidor proprio de trainers. O endereco publico do projeto e https://x360.pistatrack.com/dashboard ; nenhuma rota API de trainers foi confirmada. Nao presumir que o site publica a API ou autoriza acesso de terceiros. `tools/xboxunity_download.py` implementa cliente PC HTTPS para listar capas e TUs, importar capa RGBA e baixar TU para Downloads/TitleUpdates com MD5 integral e validacao de cabecalho STFS Title ID/Media ID/tipo. Sem ativacao ou instalacao automatica. Endpoints baseados no script publico XboxUnity/AuroraScripts UtilityScripts/TUDownloader e API Covers. CI com respostas sinteticas; conexao real nao homologada. Marketplace e servidor de trainers ainda pendentes. Schema 2 de trainer aceita `tu=none`, `tu=unnumbered` ou versao hexadecimal de oito digitos; inventario local distingue ausencia/candidata/ambiguidade, bloqueando execucao enquanto TU ativa nao for verificavel. Schema 1 permanece utilitario independente legado. Runtime in-game, deteccao de trainer residente e TU ativa pendentes.
+
+
+## Fila local e ordem de fixados
+
+Arquivos: marque com X, abra destino pessoal e LB/A confirma. Uma cópia ativa mais até 16 em espera; cada entrada é revalidada ao iniciar, não sobrescreve, falha não interrompe a fila restante. Sistema > Downloads: A pausa/retoma na mesma sessão, X cancela toda a fila e limpa o temporário ativo. Enquanto há tarefa pendente, launch de XEX e playback externo ficam bloqueados. A fila não é persistida em reinícios e não representa download HTTP. Biblioteca > Fixados: RB sobe e RS desce o jogo selecionado, ordem persistida e usada nos cartões iniciais; falha de gravação reverte. Busca e ocultação preservadas. Testes de navegação, persistência e fila adicionados. CI 45510838929 anterior aprovada.
