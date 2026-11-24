@@ -228,6 +228,26 @@ void ConsoleHome::Reload() {
     } else ScanLibrary();
     Rebuild();
 }
+bool ConsoleHome::Tick() {
+    if(!TransferRunning())return false;
+    const unsigned previous=transfer_.Percent();
+    transfer_.Tick();
+    if(!TransferRunning()) {
+        if(section_==Files && page_==Listing && !searchActive_)Reload();
+        notice_=transfer_.Status()==FileTransfer::Completed?"Arquivo copiado.":
+            "Copia interrompida: "+transfer_.Error();
+        return true;
+    }
+    return previous!=transfer_.Percent();
+}
+std::string ConsoleHome::TakeMovie() {
+    const std::string movie=tv_.TakeMovie();
+    if(!movie.empty() && TransferRunning()) {
+        tv_.PlayerMessage("Copia em andamento. Aguarde ou cancele em Sistema > Downloads.");
+        return "";
+    }
+    return movie;
+}
 void ConsoleHome::RefreshStorage() {
     storageVolumes_=StorageInfo::ReadAll(fileWorkspace_.Roots());
 }
@@ -482,9 +502,10 @@ std::string ConsoleHome::Press(Key key) {
         if(pasteConfirm_) {
             pasteConfirm_=false;
             if(key==Accept) {
-                const bool copied=fileWorkspace_.Copy(copyDir_,copyName_,folders_.back());
-                Reload();
-                notice_=copied?"Arquivo copiado.":"Copia recusada: destino, acesso, nome ou limite de 8 MiB.";
+                if(TransferRunning())notice_="Ja existe uma transferencia ativa.";
+                else if(transfer_.Start(fileWorkspace_,copyDir_,copyName_,folders_.back()))
+                    notice_="Copia iniciada. Veja Sistema > Downloads.";
+                else notice_=transfer_.Error();
             } else notice_="Copia cancelada.";
             return "";
         }
@@ -493,7 +514,11 @@ std::string ConsoleHome::Press(Key key) {
             folders_.clear();folders_.push_back(fileWorkspace_.Roots()[fileRoot_]);
             row_=0;Reload();return "";
         }
-        if(key==Guide || key==Search) {StartFileEdit(key==Search);return "";}
+        if(key==Guide || key==Search) {
+            if(TransferRunning())notice_="Conclua ou cancele a transferencia antes de editar arquivos.";
+            else StartFileEdit(key==Search);
+            return "";
+        }
         if(key==Favorite) {
             if(Count() && !files_[row_].directory) {
                 copyDir_=folders_.back();copyName_=files_[row_].name;
@@ -502,6 +527,7 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(key==PageUp) {
+            if(TransferRunning()) {notice_="Ja existe uma transferencia ativa.";return "";}
             if(copyName_.empty() || !fileWorkspace_.CanWrite(folders_.back()))
                 notice_="Marque um arquivo com X; abra UserFiles/AuroraXFiles para colar.";
             else {pasteConfirm_=true;notice_="A confirma a copia sem sobrescrever; B cancela.";}
@@ -528,6 +554,7 @@ std::string ConsoleHome::Press(Key key) {
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
+            else if(systemTab_==3)notice_="Transferencias locais atualizadas automaticamente.";
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
@@ -537,6 +564,9 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details && systemTab_==3 && key==Favorite && TransferRunning()) {
+            transfer_.Cancel();notice_="Transferencia cancelada; origem preservada.";return "";
+        }
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
@@ -626,6 +656,10 @@ std::string ConsoleHome::Press(Key key) {
             const std::string path=visible_[row_]->executable;
             if(!isXexPath(path) || isContentPackage(*visible_[row_])) {
                 notice_="Pacote de conteudo: launch nativo ainda nao integrado.";
+                return "";
+            }
+            if(TransferRunning()) {
+                notice_="Conclua ou cancele a copia antes de iniciar outro executavel.";
                 return "";
             }
             if(section_==Library || section_==Favorites || section_==Recent) {
@@ -812,6 +846,28 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
     c.Text(45,607,"Y Atualizar | B Voltar | IP local nao comprova acesso a Internet.",18,Muted,1180);
 }
+void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
+    c.Text(45,349,"Transferencias locais",27,White,1170);
+    c.Box(42,391,1196,202,Panel,10);
+    const FileTransfer::State state=transfer_.Status();
+    if(state==FileTransfer::Idle) {
+        c.Text(60,422,"Nenhuma transferencia nesta sessao.",24,White,1150);
+        c.Text(60,476,"Arquivos: X Copiar, LB Colar e A Confirmar.",20,Muted,1150);
+    } else {
+        const char* const states[]={"Inativo","Copiando","Concluido","Cancelado","Falhou"};
+        c.Text(60,406,transfer_.Name(),24,White,1145);
+        c.Text(60,450,states[state]+std::string(" | ")+
+               StorageInfo::FormatBytes(transfer_.Done())+" / "+
+               StorageInfo::FormatBytes(transfer_.Total()),20,Muted,1145);
+        c.Box(60,493,1155,16,0xff28413a,5);
+        const unsigned percent=transfer_.Percent();
+        if(percent)c.Box(60,493,static_cast<int>(1155*percent/100),16,Lime,5);
+        c.Text(60,526,number(percent)+"%"+(transfer_.Error().empty()?
+               std::string(""):" | "+transfer_.Error()),20,White,1145);
+    }
+    c.Text(45,609,TransferRunning()?"X Cancelar copia | B Voltar (copia continua)":
+           "B Voltar | Downloads de internet ainda pendentes",18,Muted,1180);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
@@ -872,7 +928,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Capacidade e espaco livre dos dispositivos.",
             "FTP e SMB: acesso remoto ainda nao habilitado nesta Alpha.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
-            "Downloads em segundo plano: gerenciador ainda nao integrado."
+            "Transferencias locais; downloads de internet pendentes."
         };
         for(int i=0;i<4;++i) {
             const int x=42+i*302;
@@ -883,6 +939,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
+        if(page_==Details && systemTab_==3) {DrawTransfers(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);
@@ -978,6 +1035,9 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
+    if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
+        c.Text(720,71,"Copia "+number(transfer_.Percent())+"% | Sistema > Downloads",16,Lime,510);
+    }
     if(!notice_.empty()) {
         c.Box(40,628,1200,35,0xff102923u,6);
         c.Text(51,630,notice_,18,Lime,1170);
@@ -985,6 +1045,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Box(0,663,1280,57,0xff061915u);
     buttonHint(c,45,"A","Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
-    buttonHint(c,429,"X",section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
+    buttonHint(c,429,"X",section_==System && page_==Details && systemTab_==3?"Cancelar":
+        section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
     buttonHint(c,632,"Y","Atualizar",0xffb3820du);
 }
