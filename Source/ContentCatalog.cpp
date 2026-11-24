@@ -3,6 +3,7 @@
 
 #include <cctype>
 #include <cstring>
+#include <cstdio>
 #include <fstream>
 #include <set>
 #include <vector>
@@ -134,6 +135,8 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     out.mediaId=be32(bytes+0x354);
     out.version=be32(bytes+0x358);
     out.contentType=type;
+    out.volumeType=descriptor;
+    out.dataFileCount=be32(bytes+0x39d);
     out.sizeBytes=be64(bytes+0x34c);
     for(size_t locale=0;locale<9 && out.name.empty();++locale)
         out.name=titleString(bytes+0x411+locale*0x100,0x100);
@@ -145,6 +148,67 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     }
     out.path=path;
     return true;
+}
+
+const char* ContentCatalog::PackageStatus(XboxPackageCheck::Status status) {
+    switch(status) {
+    case XboxPackageCheck::NotGame:return "Conteudo nao executavel";
+    case XboxPackageCheck::UnsupportedLayout:return "Formato nao suportado";
+    case XboxPackageCheck::MissingFragments:return "Fragmentos de dados ausentes";
+    case XboxPackageCheck::InconsistentFragments:return "Fragmentos invalidos ou incompletos";
+    case XboxPackageCheck::StructurePresent:return "Estrutura presente; launch pendente";
+    default:return "Cabecalho invalido ou indisponivel";
+    }
+}
+
+XboxPackageCheck ContentCatalog::CheckPackage(const std::string& path) {
+    XboxPackageCheck check;
+    XboxContentPackage package;
+    if(!ReadHeader(path,package))return check;
+    if(!gameType(package.contentType)) {
+        check.status=XboxPackageCheck::NotGame;return check;
+    }
+    if(package.volumeType==0) {
+        // Header-only inspection is not signature, license, or hash validation.
+        check.status=package.dataFileCount==0?
+            XboxPackageCheck::StructurePresent:XboxPackageCheck::UnsupportedLayout;
+        return check;
+    }
+    // Common multi-file SVOD: a sibling .data directory with Data0000...
+    // Do not guess other layouts or pass the package to XLaunchNewImage.
+    check.expectedFragments=package.dataFileCount;
+    if(package.dataFileCount<=1 || package.dataFileCount>1024) {
+        check.status=XboxPackageCheck::UnsupportedLayout;return check;
+    }
+    const std::string folder=path+".data";
+    std::vector<FolderEntry> entries;
+    if(!ReadFolder(folder,entries)) {
+        check.status=XboxPackageCheck::MissingFragments;return check;
+    }
+    std::set<unsigned> found;
+    bool invalid=false;
+    for(size_t i=0;i<entries.size();++i) {
+        const std::string& name=entries[i].name;
+        if(entries[i].directory || name.size()!=8 || name.compare(0,4,"Data")!=0) {
+            invalid=true;continue;
+        }
+        unsigned index=0;
+        bool digits=true;
+        for(size_t j=4;j<8;++j) {
+            if(name[j]<'0' || name[j]>'9') {digits=false;break;}
+            index=index*10+unsigned(name[j]-'0');
+        }
+        if(!digits || index>=package.dataFileCount || !found.insert(index).second) {
+            invalid=true;continue;
+        }
+        std::ifstream fragment(join(folder,name).c_str(),std::ios::binary|std::ios::ate);
+        if(!fragment || fragment.tellg()<=0)invalid=true;
+        else ++check.presentFragments;
+    }
+    check.status=invalid?XboxPackageCheck::InconsistentFragments:
+        check.presentFragments==check.expectedFragments?XboxPackageCheck::StructurePresent:
+        XboxPackageCheck::MissingFragments;
+    return check;
 }
 
 std::vector<XboxContentPackage> ContentCatalog::Scan() const {
