@@ -183,10 +183,16 @@ O painel **Sistema** agora exibe quatro cartões navegáveis:
 com detalhes pelo botão A e retorno pelo B. O resumo informa a
 quantidade de jogos encontrados e itens do catálogo IPTV.
 
-**Atenção:** capacidade disponível, leitura SMC, FTP/SMB e downloads
-ainda dependem de providers reais. Os cartões informam explicitamente
-quando a função ainda não está conectada; não apresentam temperaturas,
-capacidade ou estado de rede inventados.
+**Armazenamento:** abra o cartão com A para consultar a pasta AuroraX,
+HDD1, USB0 e USB1. A tela mostra capacidade, espaço livre e barra de
+ocupação em unidades binárias (MiB/GiB). Y solicita nova leitura e B
+retorna. Caminhos podem compartilhar o mesmo volume; não são somados.
+Dispositivos ausentes ou com leitura inválida são marcados como indisponíveis.
+O provedor usa `GetDiskFreeSpaceExA` no XDK e `std::filesystem::space` no PC.
+O teste C++17 isolado passou; a chamada XDK ainda requer compilação e teste físico.
+
+**Atenção:** leitura SMC, FTP/SMB e downloads ainda dependem de providers
+reais. Os cartões não apresentam dados inventados.
 
 ## Compilação e instalação
 
