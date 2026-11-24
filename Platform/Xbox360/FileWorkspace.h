@@ -51,6 +51,10 @@ private:
     unsigned long long done_,total_;
     std::string name_,target_,temporary_,error_;
     std::ifstream input_;
-    // An opaque OS handle owned by this job. Invalid value is -1.
+    // The output is created exclusively; never truncate a pre-existing file.
+#if defined(_XBOX) || defined(_WIN32)
     void* output_;
+#else
+    int output_;
+#endif
 };
