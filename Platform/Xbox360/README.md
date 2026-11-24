@@ -168,8 +168,20 @@ a listagem anterior.
 - RS renomeia um item dentro da pasta pessoal, com confirmação Y.
 - X marca um arquivo para copiar; navegue até a pasta pessoal de destino,
   pressione LB e confirme com A. B cancela.
-- A cópia inicial é síncrona, limitada a 8 MiB por arquivo e sem
-  sobrescrever o destino. A origem permanece intacta.
+- A cópia na dashboard processa 64 KiB por iteração do loop principal, sem
+  o antigo limite de 8 MiB. Em Sistema > Downloads, acompanhe bytes e
+  percentual; X cancela e B volta mantendo a cópia ativa. Apenas uma
+  transferência por vez. A origem permanece intacta e o destino final
+  não é sobrescrito.
+- Um arquivo temporário AXCOPY-xxxx.part é reservado exclusivamente,
+  removido ao cancelar/falhar quando o dispositivo está acessível e
+  publicado ao finalizar a cópia. Arquivos temporários de sessões
+  anteriores nunca são sobrescritos. Remoção física do dispositivo ou
+  desligamento abrupto pode deixar um temporário; não há retomada.
+- Abertura de jogos e reprodução IPTV ficam temporariamente bloqueadas
+  enquanto uma cópia está ativa. Cada operação de I/O ainda é síncrona;
+  a duração de um bloco e os limites FATX dependem do hardware.
+  A API síncrona legada FileWorkspace::Copy mantém o limite de 8 MiB.
 
 Esta versão não exclui arquivos, não move entre discos, não copia
 diretórios inteiros e não escreve em pastas de sistema ou de jogos
@@ -200,7 +212,7 @@ O diagnóstico não abre portas e não desativa a segurança de XNet.
 O teste isolado C++17 foi executado com sucesso no Linux. A compilação e
 homologação XDK continuam pendentes.
 
-**Atenção:** leitura SMC, servidor FTP, SMB e downloads ainda dependem
+**Atenção:** leitura SMC, servidor FTP, SMB e downloads pela internet ainda dependem
 de implementação. Os cartões não apresentam dados inventados.
 
 ## Compilação e instalação
