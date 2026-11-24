@@ -23,7 +23,7 @@ endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
 add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
-    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
+    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
     Platform/Xbox360/CloudTv.cpp Platform/Xbox360/MediaUrl.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
@@ -66,3 +66,7 @@ add_test(NAME file_workspace COMMAND file_workspace_tests)
 add_executable(storage_info_tests Tests/StorageInfoTests.cpp Platform/Xbox360/StorageInfo.cpp)
 target_include_directories(storage_info_tests PRIVATE Platform/Xbox360)
 add_test(NAME storage_info COMMAND storage_info_tests)
+
+add_executable(network_info_tests Tests/NetworkInfoTests.cpp Platform/Xbox360/NetworkInfo.cpp)
+target_include_directories(network_info_tests PRIVATE Platform/Xbox360)
+add_test(NAME network_info COMMAND network_info_tests)
