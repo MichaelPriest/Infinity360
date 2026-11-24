@@ -798,5 +798,25 @@ int main(int argc,char** argv) {
     assert(!queueMenu.TransferRunning());
     assert(fs::file_size(queueRoot/"UserFiles"/"a.bin")==200001);
     assert(fs::file_size(queueRoot/"UserFiles"/"b.bin")==200001);
+    // Scan paths selected in the native explorer, persisted separately.
+    const fs::path scanUiRoot=root/"ScanUiFixture";
+    fs::create_directories(scanUiRoot/"CustomGames"/"Example");
+    const fs::path scanUiExe=scanUiRoot/"CustomGames"/"Example"/"default.xex";
+    std::ofstream(scanUiExe)<<"fixture";
+    const fs::path scanUiConfig=scanUiRoot/"aurorax-scanpaths-ui.txt";
+    ConsoleHome scanUi(scanUiRoot.string()+"/",noRoots);scanUi.Load();
+    scanUi.Press(ConsoleHome::Right);scanUi.Press(ConsoleHome::Down);
+    scanUi.Press(ConsoleHome::Accept); // Files
+    scanUi.Press(ConsoleHome::Accept); // CustomGames
+    scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Back); // cancel
+    assert(!fs::exists(scanUiConfig));
+    scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept);
+    assert(fs::exists(scanUiConfig));
+    ConsoleHome scanUiReload(scanUiRoot.string()+"/",noRoots);scanUiReload.Load();
+    scanUiReload.Press(ConsoleHome::Accept);scanUiReload.Press(ConsoleHome::Accept);
+    assert(scanUiReload.Press(ConsoleHome::Accept)==scanUiExe.string());
+    scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept); // remove
+    assert(fs::file_size(scanUiConfig)==0);
+    assert(fs::exists(scanUiExe));
     fs::remove_all(root);
 }

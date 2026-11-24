@@ -89,6 +89,13 @@ bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries) {
     return true;
 }
 GameScanner::GameScanner(const std::vector<std::string>& roots) : roots_(roots) {}
+std::string GameScanner::ValidRoot(const std::string& path) {
+    const std::string candidate=compactRoot(path);
+    return allowedRoot(candidate)?candidate:"";
+}
+bool GameScanner::SameRoot(const std::string& a,const std::string& b) {
+    return canonicalKey(compactRoot(a))==canonicalKey(compactRoot(b));
+}
 
 std::vector<std::string> GameScanner::DefaultRoots() {
 #ifdef _XBOX
@@ -135,45 +142,67 @@ std::vector<std::string> GameScanner::LoadRoots(
 }
 
 std::vector<Game> GameScanner::Scan() const {
+    // Bound work even when removable media contains deeply nested folders.
+    // A per-root visited set allows an explicitly configured nested root to
+    // receive its own depth budget; executable keys deduplicate across roots.
+    struct Pending { std::string path; unsigned depth; };
+    const unsigned MaxDepth=16;
+    const size_t MaxDirectories=32768, MaxGames=16384;
     std::vector<Game> games;
-#ifdef _XBOX
-    // The Xbox 360 XDK predates std::filesystem. Use the Win32-compatible
-    // directory API exposed by XTL and keep the public scanner API portable.
-    std::vector<std::string> pending = roots_;
-    while (!pending.empty()) {
-        const std::string directory = pending.back();
-        pending.pop_back();
-        std::vector<FolderEntry> entries;
-        ReadFolder(directory, entries);
-        for (size_t i=0; i<entries.size(); ++i) {
-            const FolderEntry& entry=entries[i];
-            const std::string path=directory+"\\"+entry.name;
-            if (entry.directory) pending.push_back(path);
-            else if (_stricmp(entry.name.c_str(), "default.xex") == 0) {
-                const size_t sep=directory.find_last_of("\\/");
-                Game game={directory.substr(sep+1),path,directory.substr(0,directory.find_first_of("\\/")),false};
+    std::set<std::string> seenGames;
+    size_t scanned=0;
+    for(size_t r=0;r<roots_.size() && scanned<MaxDirectories && games.size()<MaxGames;++r) {
+        const std::string root=ValidRoot(roots_[r]);
+        if(root.empty())continue;
+        std::vector<Pending> pending;
+        Pending first={root,0};pending.push_back(first);
+        std::set<std::string> visited;
+        while(!pending.empty() && scanned<MaxDirectories && games.size()<MaxGames) {
+            const Pending current=pending.back();pending.pop_back();
+#ifndef _XBOX
+            std::error_code ec;
+            const fs::file_status status=fs::symlink_status(current.path,ec);
+            if(ec || !fs::is_directory(status))continue;
+#endif
+            if(!visited.insert(canonicalKey(current.path)).second)continue;
+            ++scanned;
+            std::vector<FolderEntry> entries;
+            if(!ReadFolder(current.path,entries))continue;
+            for(size_t i=0;i<entries.size() && games.size()<MaxGames;++i) {
+                const FolderEntry& entry=entries[i];
+                const char separator=current.path.find('\\')!=std::string::npos?'\\':'/';
+                const std::string path=current.path+separator+entry.name;
+                if(path.size()>240)continue;
+#ifndef _XBOX
+                std::error_code ec;
+                const fs::file_status status=fs::symlink_status(path,ec);
+                if(ec || fs::is_symlink(status))continue;
+#endif
+                if(entry.directory) {
+                    if(current.depth<MaxDepth && pending.size()+scanned<MaxDirectories) {
+                        Pending child={path,current.depth+1};pending.push_back(child);
+                    }
+                    continue;
+                }
+                std::string filename=entry.name;
+                for(size_t j=0;j<filename.size();++j)
+                    filename[j]=(char)std::tolower((unsigned char)filename[j]);
+                if(filename!="default.xex")continue;
+#ifndef _XBOX
+                if(!fs::is_regular_file(status))continue;
+                const fs::path absolute=fs::weakly_canonical(path,ec);
+                if(ec || !seenGames.insert(absolute.string()).second)continue;
+                const std::string device=root;
+#else
+                if(!seenGames.insert(canonicalKey(path)).second)continue;
+                const std::string device=current.path.substr(0,current.path.find_first_of("\\/"));
+#endif
+                const size_t sep=current.path.find_last_of("\\/");
+                Game game={current.path.substr(sep==std::string::npos?0:sep+1),path,device,false};
                 games.push_back(game);
             }
         }
     }
-#else
-    for (const std::string& root : roots_) {
-        std::error_code error;
-        if (!fs::exists(root, error)) continue;
-        fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, error);
-        const fs::recursive_directory_iterator end;
-        while (it != end) {
-            if (error) { error.clear(); it.increment(error); continue; }
-            const fs::directory_entry entry = *it;
-            if (entry.is_regular_file(error) && entry.path().filename() == "default.xex") {
-                const fs::path folder = entry.path().parent_path();
-                games.push_back({folder.filename().string(), entry.path().string(), root, false});
-                it.disable_recursion_pending();
-            }
-            it.increment(error);
-        }
-    }
-#endif
     std::sort(games.begin(), games.end(), gameLess);
     return games;
 }

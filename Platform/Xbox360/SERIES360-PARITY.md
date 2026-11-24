@@ -35,7 +35,7 @@ operações funcionaram numa unidade real.
 | 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | **Fixados persistentes independentes de favoritos, atalhos priorizados no início** | Horas jogadas, blocos customizados; ordem manual implementada |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | **Editor nativo dos quatro atalhos, salvar/cancelar/restaurar** | Blocos customizados, tamanhos e temas; homologação XDK |
 | 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
-| 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
+| 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Editor via explorer, limites de varredura e deduplicação de XEX** | Homologação em HDD/USB reais |
 | 05 | Base Aurora em leitura e importação de jogos | M/T | **Exportador PC SQLite somente leitura; caminhos e nomes integrados ao scanner nativo** | Base real do usuário, importação nativa sem PC e homologação |
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | **Exportação opt-in de perfil e conversor PC RXEA/BC3 linear com prévia** | Validar base e assets reais, variantes tiled e importar TUs |
 | 07 | Pesquisa e ordenação da biblioteca | T | **Busca nativa Start + teclado, ordenação RS** implementadas | Filtros avançados e busca por metadados |
@@ -324,3 +324,8 @@ Series360 0.12.69: traducoes confirmam XboxUnity para capas/TU, Xbox Live Market
 ## Fila local e ordem de fixados
 
 Arquivos: marque com X, abra destino pessoal e LB/A confirma. Uma cópia ativa mais até 16 em espera; cada entrada é revalidada ao iniciar, não sobrescreve, falha não interrompe a fila restante. Sistema > Downloads: A pausa/retoma na mesma sessão, X cancela toda a fila e limpa o temporário ativo. Enquanto há tarefa pendente, launch de XEX e playback externo ficam bloqueados. A fila não é persistida em reinícios e não representa download HTTP. Biblioteca > Fixados: RB sobe e RS desce o jogo selecionado, ordem persistida e usada nos cartões iniciais; falha de gravação reverte. Busca e ocultação preservadas. Testes de navegação, persistência e fila adicionados. CI 45510838929 anterior aprovada.
+
+
+## Editor de caminhos de varredura
+
+Arquivos: abra uma pasta abaixo da raiz e pressione Esquerda, A confirma inclusão/remoção em `aurorax-scanpaths-ui.txt`, B cancela. Mantém intactos caminhos padrão, configuração manual e importação Aurora. Máximo de 32 raízes combinadas; alterações entram ao abrir Biblioteca. Varredura portátil/XDK limitada a profundidade 16 por raiz, 32768 diretórios e 16384 jogos; deduplicação por caminho do executável e rejeição de symlinks no PC. Testes de cancelamento, persistência, lançamento pelo catálogo e caminhos sobrepostos, profundidade e links adicionados.

@@ -49,7 +49,9 @@ private:
     void RefreshNetwork();
     void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
-    bool pasteConfirm_;
+    bool pasteConfirm_, scanPathConfirm_;
+    void ToggleScanPath();
+    void LoadScanPaths();
     std::string copyDir_, copyName_, renameName_;
     void StartFileEdit(bool rename);
     void ConfirmFileEdit();

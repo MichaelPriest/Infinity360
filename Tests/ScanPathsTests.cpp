@@ -54,5 +54,19 @@ int main() {
     const std::vector<std::string> limited=
         GameScanner::LoadRoots(config.string(),defaults);
     assert(limited.size()==1);
+    std::vector<std::string> overlapping=roots;
+    overlapping.push_back(standard.string());
+    assert(GameScanner(overlapping).Scan().size()==2);
+    assert(GameScanner::ValidRoot("../bad").empty());
+    fs::path deep=custom.parent_path();
+    for(int i=0;i<17;++i)deep/="d";
+    fs::create_directories(deep);
+    std::ofstream(deep/"default.xex")<<"too deep";
+    assert(GameScanner(roots).Scan().size()==2);
+#ifndef _WIN32
+    std::error_code linkError;
+    fs::create_directory_symlink(custom.parent_path(),standard/"cycle",linkError);
+    if(!linkError)assert(GameScanner(roots).Scan().size()==2);
+#endif
     fs::remove_all(root);
 }

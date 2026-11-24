@@ -135,7 +135,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),
+      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -144,8 +144,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),trainerConfirm_(false),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
-    roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
-    roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
+    LoadScanPaths();
     if(!collections_.Load())notice_="Colecoes invalidas: edicao bloqueada para preservar o arquivo.";
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
@@ -279,11 +278,46 @@ void ConsoleHome::Rebuild() {
     }
     clampRow(row_,Count());
 }
+void ConsoleHome::LoadScanPaths() {
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
+    roots_=GameScanner::LoadRoots(savedFile(dir_+"aurorax-scanpaths-ui.txt"),roots_);
+    roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
+}
+void ConsoleHome::ToggleScanPath() {
+    if(folders_.size()<2 || !fileWorkspace_.CanBrowse(folders_.back())) {
+        notice_="Abra uma pasta abaixo da raiz do dispositivo.";return;
+    }
+    const std::string path=GameScanner::ValidRoot(folders_.back());
+    if(path.empty()) {notice_="Caminho invalido para varredura.";return;}
+    const std::string config=dir_+"aurorax-scanpaths-ui.txt";
+    std::vector<std::string> custom=GameScanner::LoadRoots(savedFile(config),std::vector<std::string>());
+    size_t index=0;
+    while(index<custom.size() && !GameScanner::SameRoot(custom[index],path))++index;
+    const bool remove=index<custom.size();
+    if(remove)custom.erase(custom.begin()+index);
+    else {
+        for(size_t i=0;i<roots_.size();++i)
+            if(GameScanner::SameRoot(roots_[i],path)) {
+                notice_="Pasta ja cadastrada em outro arquivo de configuracao.";return;
+            }
+        if(roots_.size()>=32 || custom.size()>=32) {
+            notice_="Limite total de 32 pastas atingido.";return;
+        }
+        custom.push_back(path);
+    }
+    std::ofstream out((config+".tmp").c_str(),std::ios::trunc);
+    for(size_t i=0;i<custom.size();++i)out<<custom[i]<<"\n";
+    out.close();
+    if(!out || !replaceSavedFile(config)) {
+        notice_="Falha ao gravar caminhos.";return;
+    }
+    LoadScanPaths();
+    notice_=remove?"Pasta removida da busca personalizada.":"Pasta adicionada. Biblioteca atualiza ao abrir.";
+}
 void ConsoleHome::Reload() {
     notice_.clear();
     artFolders_.clear();artDirty_=true;
-    roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
-    roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
+    LoadScanPaths();
     if (section_==Files && page_!=Home) {
         if (!fileWorkspace_.CanBrowse(folders_.back()) || !ReadFolder(folders_.back(),files_)) {
             files_.clear();notice_="Dispositivo ou pasta indisponivel.";
@@ -405,7 +439,7 @@ void ConsoleHome::Enter(Section s) {
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
     if(s==System) RefreshStorage();
-    if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
+    if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;scanPathConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
     Reload();
 }
 void ConsoleHome::StartFileEdit(bool rename) {
@@ -829,11 +863,22 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==Files && page_==Listing) {
+        if(scanPathConfirm_) {
+            scanPathConfirm_=false;
+            if(key==Accept)ToggleScanPath();
+            else notice_="Alteracao de caminho cancelada.";
+            return "";
+        }
         if(pasteConfirm_) {
             pasteConfirm_=false;
             if(key==Accept) {
                 EnqueueCopy();
             } else notice_="Copia cancelada.";
+            return "";
+        }
+        if(key==Left) {
+            if(folders_.size()<2 || TransferRunning())notice_="Abra uma pasta; conclua transferencias antes de editar caminhos.";
+            else {scanPathConfirm_=true;notice_="A alterna pasta atual na busca personalizada; B cancela.";}
             return "";
         }
         if(key==PageDown) {
@@ -1483,6 +1528,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(49,176,fileWorkspace_.CanWrite(folders_.back())?
             "Espaco pessoal | escrita habilitada":"Navegacao somente leitura | Start cria espaco pessoal no dispositivo",
             18,Muted,1140);
+        c.Text(49,594,"Esquerda: incluir/remover pasta atual da busca de jogos",18,Muted,1180);
         c.Text(49,615,"RB Dispositivo | Start Nova pasta | RS Renomear | X Copiar | LB Colar",18,Lime,1180);
     }
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
