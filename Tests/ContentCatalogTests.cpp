@@ -52,6 +52,10 @@ int main() {
     assert(result.name=="Halo GOD" && result.titleId==0x4d5307e6u);
     assert(result.contentType==0x7000u && result.sizeBytes==4096u);
     assert(result.mediaId==0x12345678u);
+    const XboxTitleMetadata godMeta=ContentCatalog::DescribeTitle(god.string(),true);
+    assert(godMeta.known && godMeta.package && godMeta.titleId==0x4d5307e6u);
+    assert(godMeta.contentType==0x7000u && godMeta.declaredBytes==4096u);
+    assert(!ContentCatalog::DescribeTitle(god.string(),false).known);
     // Second language slot and accented UTF-16BE names.
     {
         std::fstream file(xbla,std::ios::binary|std::ios::in|std::ios::out);
@@ -115,6 +119,12 @@ int main() {
     assert(ContentCatalog::ReadExecutionInfo(xex.string(),info));
     assert(info.titleId==0x4d5307e6u && info.mediaId==0x12345678u);
     assert(info.version==0x20010002u && info.discNumber==1 && info.discCount==2);
+    const XboxTitleMetadata xexMeta=ContentCatalog::DescribeTitle(xex.string(),false);
+    assert(xexMeta.known && !xexMeta.package && xexMeta.titleId==info.titleId);
+    assert(xexMeta.mediaId==info.mediaId && xexMeta.version==info.version);
+    assert(xexMeta.baseVersion==0x20000000u && xexMeta.discNumber==1 && xexMeta.discCount==2);
+    assert(!ContentCatalog::DescribeTitle(xex.string(),true).known);
+    assert(!ContentCatalog::DescribeTitle(invalid.string(),false).known);
     put32(executable,28,0xffffffffu);
     {std::ofstream file(xex,std::ios::binary);
      file.write(reinterpret_cast<const char*>(executable.data()),executable.size());}
