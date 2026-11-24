@@ -97,7 +97,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
-      contentInfo_(),section_(Library),page_(Home) {}
+      contentInfo_(),artDirty_(true),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -127,6 +127,7 @@ void ConsoleHome::Load() {
     Rebuild();
 }
 void ConsoleHome::ScanLibrary() {
+    artFolders_.clear();artDirty_=true;
     games_=GameScanner(roots_).Scan();
     const std::vector<XboxContentPackage> packages=
         ContentCatalog(ContentCatalog::DefaultRoots(dir_)).Scan();
@@ -208,6 +209,7 @@ void ConsoleHome::Rebuild() {
 }
 void ConsoleHome::Reload() {
     notice_.clear();
+    artFolders_.clear();artDirty_=true;
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
     if (section_==Files && page_!=Home) {
         if (!fileWorkspace_.CanBrowse(folders_.back()) || !ReadFolder(folders_.back(),files_)) {
@@ -361,6 +363,22 @@ void ConsoleHome::ApplySearch() {
     Rebuild();
     notice_=searchTerm_.empty()?"Busca removida":"Busca: "+searchTerm_+
             " ("+number(Count())+" jogos)";
+}
+std::string ConsoleHome::ArtFolder(const Game& game) const {
+    const std::map<std::string,std::string>::const_iterator found=artFolders_.find(game.executable);
+    if(found!=artFolders_.end())return found->second;
+    const XboxTitleMetadata info=ContentCatalog::DescribeTitle(game.executable,isContentPackage(game));
+    std::string folder;
+    if(info.known && info.titleId) {
+        char id[9];std::sprintf(id,"%08X",info.titleId);
+        folder=dir_+"Art/"+id+"/";
+        // FATX/XDK paths use backslashes.
+        if(dir_.find('\\')!=std::string::npos)
+            std::replace(folder.begin(),folder.end(),'/','\\');
+    }
+    if(artFolders_.size()>=128)artFolders_.clear();
+    artFolders_[game.executable]=folder;
+    return folder;
 }
 void ConsoleHome::RefreshTitleMetadata() {
     detailMetadata_=XboxTitleMetadata();
@@ -846,14 +864,17 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
             const Game* g=Installed(paths[i]); if(!g || contains(hidden_,paths[i])) continue;
             int left=x+shown*(cardWidth+9);
             c.Box(left,504,cardWidth,126,Panel,8);
-            int sx=600,sy=66;
-            if(g->name=="Halo 3") sx=742;
-            else if(g->name=="Gears of War 3") sy=132;
-            if(g->name=="Forza Horizon" || g->name=="Halo 3" || g->name=="Gears of War 3")
-                c.Image(sx,sy,140,64,left+1,505,cardWidth-2,84);
-            else {
-                c.Box(left+1,505,cardWidth-2,84,0xff194739u,6);
-                c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
+            const std::string folder=ArtFolder(*g);
+            c.Box(left+1,505,cardWidth-2,84,0xff194739u,6);
+            const bool backdrop=!folder.empty() && c.LocalArt(folder+"background.rgba",false,left+1,505,cardWidth-2,84);
+            const bool cover=!folder.empty() && c.LocalArt(folder+"cover.rgba",true,left+(cardWidth-56)/2,505,56,84);
+            if(!backdrop && !cover) {
+                int sx=600,sy=66;
+                if(g->name=="Halo 3") sx=742;
+                else if(g->name=="Gears of War 3") sy=132;
+                if(g->name=="Forza Horizon" || g->name=="Halo 3" || g->name=="Gears of War 3")
+                    c.Image(sx,sy,140,64,left+1,505,cardWidth-2,84);
+                else c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
             }
             c.Text(left+8,594,g->name,16,White,cardWidth-16);
             if(side && contains(pinned_,paths[i])) c.Text(left+8,508,"FIXADO",14,Lime,cardWidth-16);
@@ -1069,24 +1090,29 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                 "Pressione A para iniciar este título.":
                 "Pacote identificado. Execucao nativa ainda nao homologada.";
         }
-        c.Text(76,219,title,36,White,1110);
-        c.Text(77,283,sub,20,Muted,1100);
+        const std::string folder=section_==Files?"":ArtFolder(*visible_[row_]);
+        const bool backdrop=!folder.empty() && c.LocalArt(folder+"background.rgba",false,842,202,360,202);
+        const bool cover=!folder.empty() && c.LocalArt(folder+"cover.rgba",true,1090,406,100,150);
+        const int textWidth=(backdrop || cover)?740:1100;
+        c.Text(76,219,title,36,White,textWidth);
+        c.Text(77,283,sub,20,Muted,textWidth);
         if(section_!=Files) {
             const XboxTitleMetadata& m=detailMetadata_;
             if(m.known) {
                 c.Text(77,329,"Title ID: "+hexId(m.titleId)+"    Media ID: "+
-                       (m.mediaId?hexId(m.mediaId):std::string("Indisponivel")),23,White,1100);
+                       (m.mediaId?hexId(m.mediaId):std::string("Indisponivel")),23,White,textWidth);
                 c.Text(77,368,"Versao (hex): "+hexId(m.version)+
-                       (m.package?"    Tipo: "+hexId(m.contentType):"    Base: "+hexId(m.baseVersion)),21,Muted,1100);
+                       (m.package?"    Tipo: "+hexId(m.contentType):"    Base: "+hexId(m.baseVersion)),21,Muted,textWidth);
                 const std::string extra=m.package?
                     std::string(m.volumeType==0?"STFS":"SVOD")+" | Tamanho declarado: "+
                        StorageInfo::FormatBytes(m.declaredBytes):
                     m.discCount?"Disco "+number(m.discNumber)+" de "+number(m.discCount):
                        "Disco: informacao indisponivel";
-                c.Text(77,407,extra,21,Muted,1100);
+                c.Text(77,407,extra,21,Muted,textWidth);
             } else c.Text(77,351,"Metadados indisponiveis para este item.",22,Muted,1100);
         }
-        c.Text(77,469,hint,21,Lime,1110);
+        c.Text(77,469,hint,21,Lime,textWidth);
+        if(!folder.empty())c.Text(47,593,"Arte local: "+folder+" | Y Atualizar",18,Muted,1170);
         if(section_==Library || section_==Recent || section_==Favorites) {
             c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
             c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);
@@ -1140,11 +1166,17 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Files) {
             name=files_[i].name; detail=files_[i].directory?"Pasta":"Arquivo";
         } else {name=visible_[i]->name; detail=std::string(contains(pinned_,visible_[i]->executable)?"FIXADO  ":"")+(Starred(*visible_[i])?"*  ":"")+visible_[i]->device;}
-        c.Text(62,y+6,name,23,White,810);
+        int nameX=62;
+        if(section_!=Files) {
+            const std::string folder=ArtFolder(*visible_[i]);
+            if(!folder.empty() && c.LocalArt(folder+"cover.rgba",true,55,y+2,30,45))nameX=99;
+        }
+        c.Text(nameX,y+6,name,23,White,872-nameX);
         c.Text(886,y+9,detail,19,Muted,336);
     }
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
+    if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
     c.Background();
     c.Image(814,0,64,64,44,17,46,46); c.Text(103,16,"AURORA",32,White,145);
     c.Text(240,16,"X",32,Lime,44);

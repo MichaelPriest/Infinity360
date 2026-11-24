@@ -7,6 +7,7 @@
 #include "FileWorkspace.h"
 #include "StorageInfo.h"
 #include "NetworkInfo.h"
+#include <map>
 
 class ConsoleHome {
 public:
@@ -60,6 +61,9 @@ private:
     XboxExecutionInfo contentInfo_;
     XboxTitleMetadata detailMetadata_;
     void RefreshTitleMetadata();
+    mutable std::map<std::string,std::string> artFolders_;
+    mutable bool artDirty_;
+    std::string ArtFolder(const Game& game) const;
     std::vector<XboxContentPackage> contentItems_;
     void OpenContent();
     size_t ContentCount() const;

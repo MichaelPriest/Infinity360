@@ -520,16 +520,16 @@ int main(int argc,char** argv) {
         const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
         assert(data.find("O\t2013")!=std::string::npos);
     }
-    ConsoleHome restored(layoutDir,noRoots);restored.Load();
-    restored.Press(ConsoleHome::Down); // first middle slot is now Files
-    restored.Press(ConsoleHome::Accept);
-    restored.Press(ConsoleHome::Guide); // Files creates personal workspace
-    restored.Press(ConsoleHome::Refresh);
+    ConsoleHome restoredLayout(layoutDir,noRoots);restoredLayout.Load();
+    restoredLayout.Press(ConsoleHome::Down); // first middle slot is now Files
+    restoredLayout.Press(ConsoleHome::Accept);
+    restoredLayout.Press(ConsoleHome::Guide); // Files creates personal workspace
+    restoredLayout.Press(ConsoleHome::Refresh);
     assert(fs::is_directory(layoutRoot/"UserFiles"));
-    restored.Press(ConsoleHome::Back);
-    restored.Press(ConsoleHome::Guide);
-    restored.Press(ConsoleHome::Favorite); // default draft
-    restored.Press(ConsoleHome::Refresh);
+    restoredLayout.Press(ConsoleHome::Back);
+    restoredLayout.Press(ConsoleHome::Guide);
+    restoredLayout.Press(ConsoleHome::Favorite); // default draft
+    restoredLayout.Press(ConsoleHome::Refresh);
     {
         std::ifstream in(profile);
         const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
@@ -546,6 +546,49 @@ int main(int argc,char** argv) {
         const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
         assert(data.find("O\t0123")!=std::string::npos);
     }
+
+    // TitleID-based local artwork for packages, bounded raw RGBA and refresh.
+    const fs::path artRoot=root/"ArtFixture";
+    const fs::path artPkg=artRoot/"Content"/"0000000000000000"/"4D5307E6"/"00007000"/"game";
+    const fs::path artFolder=artRoot/"Art"/"4D5307E6";
+    fs::create_directories(artPkg.parent_path());
+    fs::create_directories(artFolder);
+    {std::ofstream out(artPkg,std::ios::binary);
+     out.write(reinterpret_cast<const char*>(&stfs[0]),stfs.size());}
+    const auto writeArt=[](const fs::path& file,size_t pixels,unsigned char red,unsigned char green) {
+        std::vector<unsigned char> rgba(pixels*4);
+        for(size_t i=0;i<pixels;++i) {rgba[i*4]=red;rgba[i*4+1]=green;rgba[i*4+3]=255;}
+        std::ofstream out(file,std::ios::binary);
+        out.write(reinterpret_cast<const char*>(rgba.data()),rgba.size());
+    };
+    writeArt(artFolder/"cover.rgba",160*240,200,10);
+    writeArt(artFolder/"background.rgba",640*360,10,200);
+    ConsoleHome artwork(artRoot.string()+"/",noRoots);artwork.Load();
+    artwork.Press(ConsoleHome::Accept);
+    artwork.Draw(canvas,"20:05");
+    assert(canvas.Pixels()[250*1280+60]==0xffc80a00u);
+    artwork.Press(ConsoleHome::Favorite);
+    artwork.Press(ConsoleHome::Accept);
+    artwork.Draw(canvas,"20:05");
+    assert(canvas.Pixels()[220*1280+850]==0xff0ac800u);
+    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    // Truncation is rejected after explicit reload; cached bytes remain stable until then.
+    std::ofstream(artFolder/"cover.rgba",std::ios::binary|std::ios::trunc)<<"bad";
+    artwork.Draw(canvas,"20:05");
+    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    artwork.Press(ConsoleHome::Refresh); // Back to listing, invalidate cache
+    artwork.Draw(canvas,"20:05");
+    assert(canvas.Pixels()[250*1280+60]!=0xffc80a00u);
+    writeArt(artFolder/"cover.rgba",160*240,200,10);
+    artwork.Press(ConsoleHome::Refresh);
+    artwork.Press(ConsoleHome::Back); // home, favorite card
+    artwork.Draw(canvas,"20:05");
+    assert(canvas.Pixels()[520*1280+860]==0xffc80a00u);
+    // Direct renderer rejects trailing bytes and invalid destinations.
+    canvas.ClearLocalArt();
+    {std::ofstream out(artFolder/"cover.rgba",std::ios::binary|std::ios::app);out.put('x');}
+    assert(!canvas.LocalArt((artFolder/"cover.rgba").string(),true,0,0,30,45));
+    assert(!canvas.LocalArt((artFolder/"background.rgba").string(),false,1200,0,100,100));
 
     fs::remove_all(root);
 }

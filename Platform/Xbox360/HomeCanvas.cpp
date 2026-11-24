@@ -107,6 +107,38 @@ bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {
     }
     return true;
 }
+bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h) {
+    if(file.empty() || w<=0 || h<=0 || x<0 || y<0 || x>=Width || y>=Height ||
+       w>Width-x || h>Height-y) return false;
+    const int sw=cover?160:640, sh=cover?240:360;
+    size_t slot=0;
+    for(;slot<localArt_.size();++slot)
+        if(localArt_[slot].file==file && localArt_[slot].cover==cover) break;
+    if(slot==localArt_.size()) {
+        // FIFO cap: a full home screen requires at most 12 entries.
+        // Missing and malformed files are cached too, avoiding per-frame disk I/O.
+        if(localArt_.size()>=16) {localArt_.erase(localArt_.begin());--slot;}
+        localArt_.push_back(ArtEntry());
+        ArtEntry& entry=localArt_.back();
+        entry.file=file;entry.cover=cover;
+        FILE* f=std::fopen(file.c_str(),"rb");
+        if(f) {
+            entry.rgba.resize(static_cast<size_t>(sw)*sh*4);
+            const bool ok=std::fread(&entry.rgba[0],1,entry.rgba.size(),f)==entry.rgba.size()
+                && std::fgetc(f)==EOF && !std::ferror(f);
+            std::fclose(f);
+            if(!ok) std::vector<unsigned char>().swap(entry.rgba);
+        }
+    }
+    const std::vector<unsigned char>& data=localArt_[slot].rgba;
+    if(data.empty())return false;
+    for(int j=0;j<h;++j) for(int i=0;i<w;++i) {
+        const unsigned char* p=&data[4*((j*sh/h)*sw+i*sw/w)];
+        unsigned& dest=frame_[(y+j)*Width+x+i];
+        if(p[3])dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+    }
+    return true;
+}
 void HomeCanvas::Text(int x,int y,const std::string& text,int size,unsigned color,int maxWidth) {
     const int right=x+maxWidth;
     for (size_t i=0; i<text.size();) {
