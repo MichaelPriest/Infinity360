@@ -387,5 +387,21 @@ int main(int argc,char** argv) {
         assert(data.find(std::string("P\t")+fresh.string())!=std::string::npos);
     }
 
+    // Per-title content view: controller can browse all three categories,
+    // without launching a TU, deleting saves, or changing installed files.
+    ConsoleHome contentMenu(dir,roots); contentMenu.Load();
+    contentMenu.Press(ConsoleHome::Accept);
+    for(int i=0;i<4;++i) contentMenu.Press(ConsoleHome::Right); // Pacotes
+    contentMenu.Press(ConsoleHome::Accept); // GOD details
+    contentMenu.Press(ConsoleHome::PageDown); // RB: content manager
+    contentMenu.Draw(canvas,"19:52");
+    contentMenu.Press(ConsoleHome::Right); // DLC
+    assert(contentMenu.Press(ConsoleHome::Accept).empty());
+    contentMenu.Press(ConsoleHome::Right); // Saves
+    assert(contentMenu.Press(ConsoleHome::Accept).empty());
+    contentMenu.Press(ConsoleHome::Refresh);
+    contentMenu.Press(ConsoleHome::Back); // Original game details
+    assert(contentMenu.Press(ConsoleHome::Accept).empty()); // GOD launch blocked
+
     fs::remove_all(root);
 }
