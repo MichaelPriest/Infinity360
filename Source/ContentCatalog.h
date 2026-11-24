@@ -16,6 +16,16 @@ struct XboxExecutionInfo {
     unsigned discNumber, discCount;
 };
 
+struct XboxTitleMetadata {
+    bool known, package;
+    unsigned titleId, mediaId, version, baseVersion, discNumber, discCount;
+    unsigned contentType, volumeType;
+    unsigned long long declaredBytes;
+    XboxTitleMetadata():known(false),package(false),titleId(0),mediaId(0),
+        version(0),baseVersion(0),discNumber(0),discCount(0),
+        contentType(0),volumeType(0),declaredBytes(0) {}
+};
+
 struct XboxPackageCheck {
     enum Status { InvalidHeader, NotGame, UnsupportedLayout, MissingFragments,
                   InconsistentFragments, StructurePresent };
@@ -29,6 +39,7 @@ public:
     explicit ContentCatalog(const std::vector<std::string>& roots);
     static std::vector<std::string> DefaultRoots(const std::string& appDirectory);
     static bool ReadHeader(const std::string& path, XboxContentPackage& out);
+    static XboxTitleMetadata DescribeTitle(const std::string& path,bool package);
     static XboxPackageCheck CheckPackage(const std::string& path);
     static const char* PackageStatus(XboxPackageCheck::Status status);
     // Reads the public XEX2 execution header; does not decrypt the image.
