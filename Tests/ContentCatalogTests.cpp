@@ -75,6 +75,30 @@ int main() {
     std::ofstream(invalid,std::ios::binary)<<"This is not an STFS file";
     assert(!ContentCatalog::ReadHeader(invalid.string(),result));
     assert(!ContentCatalog::ReadHeader((root/"missing").string(),result));
+    assert(ContentCatalog::CheckPackage(invalid.string()).status==XboxPackageCheck::InvalidHeader);
+    assert(ContentCatalog::CheckPackage(xbla.string()).status==XboxPackageCheck::StructurePresent);
+    // SVOD header with two data fragments, checked without modifying the package.
+    {
+        std::fstream file(god,std::ios::binary|std::ios::in|std::ios::out);
+        const char two[]={0,0,0,2}, one[]={0,0,0,1};
+        file.seekp(0x39d);file.write(two,4);
+        file.seekp(0x3a9);file.write(one,4);
+    }
+    assert(ContentCatalog::CheckPackage(god.string()).status==XboxPackageCheck::MissingFragments);
+    const fs::path fragments=god.string()+".data";
+    fs::create_directories(fragments);
+    std::ofstream(fragments/"Data0000")<<"first";
+    XboxPackageCheck partial=ContentCatalog::CheckPackage(god.string());
+    assert(partial.status==XboxPackageCheck::MissingFragments && partial.expectedFragments==2 && partial.presentFragments==1);
+    std::ofstream(fragments/"Data0001")<<"second";
+    assert(ContentCatalog::CheckPackage(god.string()).status==XboxPackageCheck::StructurePresent);
+    std::ofstream(fragments/"Data0002")<<"unexpected";
+    assert(ContentCatalog::CheckPackage(god.string()).status==XboxPackageCheck::InconsistentFragments);
+    fs::remove(fragments/"Data0002");
+    std::ofstream(fragments/"Data0001",std::ios::trunc).close();
+    assert(ContentCatalog::CheckPackage(god.string()).status==XboxPackageCheck::InconsistentFragments);
+    std::ofstream(fragments/"Data0001")<<"second";
+
     // Read only the XEX2 execution header (no encrypted image is opened).
     const fs::path xex=root/"test.xex";
     std::vector<unsigned char> executable(128,0);
