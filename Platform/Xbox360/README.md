@@ -155,6 +155,27 @@ do XEX precisa ser validado no Xbox 360 físico.
 Para instalar plugins por manifesto, consulte [PLUGINS.md](PLUGINS.md).
 A interface é própria da AuroraX, não usa XUI como base da dashboard.
 
+## Gerenciador de arquivos local
+
+A seção Arquivos inicia na pasta da dashboard (somente leitura).
+RB alterna entre a pasta da aplicação, HDD1, USB0 e USB1. A abre
+pastas, B retorna e Y atualiza. Dispositivos indisponíveis não exibem
+a listagem anterior.
+
+- Start cria uma pasta pelo teclado. No nível inicial de um dispositivo,
+  o nome é limitado a UserFiles (pasta da aplicação) ou AuroraXFiles
+  (HDD/USB). Entre na pasta pessoal para criar outras pastas.
+- RS renomeia um item dentro da pasta pessoal, com confirmação Y.
+- X marca um arquivo para copiar; navegue até a pasta pessoal de destino,
+  pressione LB e confirme com A. B cancela.
+- A cópia inicial é síncrona, limitada a 8 MiB por arquivo e sem
+  sobrescrever o destino. A origem permanece intacta.
+
+Esta versão não exclui arquivos, não move entre discos, não copia
+diretórios inteiros e não escreve em pastas de sistema ou de jogos
+fora do espaço pessoal. Testes portáteis adicionados; APIs XDK e
+comportamento no console físico ainda precisam de homologação.
+
 ## Sistema (navegação nativa)
 
 O painel **Sistema** agora exibe quatro cartões navegáveis:
