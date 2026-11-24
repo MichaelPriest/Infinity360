@@ -92,7 +92,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
-    collections_.Load();
+    if(!collections_.Load())notice_="Colecoes invalidas: edicao bloqueada para preservar o arquivo.";
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
