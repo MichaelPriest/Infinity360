@@ -112,6 +112,24 @@ de corrupção em um desligamento. Não oferece sincronização de coleção
 com perfis Xbox Live nem importação automática da organização antiga
 do Series360. O fluxo exige validação no console físico.
 
+### Conteúdo instalado por jogo (TU, DLC e saves)
+
+Abra a ficha de um jogo em Biblioteca, Recentes ou Favoritos e pressione **RB**.
+A tela **Conteúdo instalado** identifica Title ID, Media ID e versão do XEX2
+ou do pacote STFS e oferece três abas: Title Updates, DLC e Saves.
+
+- Direcional esquerda/direita alterna abas; cima/baixo seleciona o pacote.
+- **A** exibe o caminho do arquivo; **Y** atualiza; **B** retorna à ficha.
+- TUs e DLC são pesquisados no conteúdo compartilhado e saves nos diretórios
+  de perfil. A associação utiliza Title ID e tipo do pacote, nunca só o nome.
+- Nos TUs, Media ID igual/diferente/desconhecido é informado; igualdade
+  não comprova que a atualização está ativa ou plenamente compatível.
+
+A primeira versão é somente leitura. Não instala, ativa, desativa, move
+ou exclui arquivos, não verifica assinaturas/licenças e não varre ainda
+TUs antigos no Cache nem diretórios `$TitleUpdate`. Saves são inventariados
+por diretório; ainda não existe associação ao perfil Xbox conectado.
+
 ## Aplicativos, plugins e Homebrew
 
 A seção **Aplicativos** contém quatro abas navegadas pelo direcional
