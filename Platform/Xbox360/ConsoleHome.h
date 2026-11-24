@@ -5,6 +5,7 @@
 #include "CollectionStore.h"
 #include "ContentCatalog.h"
 #include "FileWorkspace.h"
+#include "StorageInfo.h"
 
 class ConsoleHome {
 public:
@@ -29,6 +30,9 @@ private:
     CloudTv tv_;
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
+    std::vector<StorageVolume> storageVolumes_;
+    void RefreshStorage();
+    void DrawStorage(HomeCanvas& c) const;
     size_t fileRoot_;
     bool pasteConfirm_;
     std::string copyDir_, copyName_, renameName_;
