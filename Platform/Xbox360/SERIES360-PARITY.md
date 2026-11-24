@@ -67,7 +67,7 @@ operações funcionaram numa unidade real.
 |---|---|---|---|---|
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
 | 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar por blocos com progresso e cancelamento** | Mover, excluir, multisseleção, cópia de pastas e homologação |
-| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Núcleo de autenticação e comandos com raiz pessoal; teste portátil aprovado** | Transporte TCP, PASV/LIST/RETR/STOR, configuração e homologação XDK |
+| 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Sessão autenticada e transporte TCP de teste Linux, PASV/EPSV/LIST/NLST/SIZE/RETR validados** | Transporte XNet, serviço LAN, configuração, STOR, FileZilla e homologação |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
 | 29 | Energia: reiniciar, desligar, após downloads, temporizador | T | Pendente | APIs com confirmação e sem ações automáticas perigosas |
@@ -247,3 +247,8 @@ A interface de Arquivos usa FileTransfer, com blocos de 64 KiB, progresso em Sis
 ## Núcleo de sessão FTP
 
 FtpSession.cpp implementa autenticação explícita, limite de três falhas por sessão, navegação confinada a pasta pessoal e rejeição de comandos inválidos, ativos ou de escrita. Teste isolado em Linux com C++17 e -Wall -Wextra -Wpedantic -Werror aprovado; ainda sem transporte de rede, canal de dados, configuração pela UI ou serviço ativo. Não representa servidor FTP funcional.
+
+
+## FTP: interoperabilidade TCP no ambiente portátil
+
+Teste Linux somente loopback (127.0.0.1), com um cliente e leitura restrita. `Tests/FtpLoopbackProbe.cpp` e `Tests/FtpLoopbackTest.py` verificam PASV/EPSV e 1 MiB binário idêntico via Python ftplib, listagem, bloqueio de escrita e traversal. Compilação C++17 com -Werror e testes de sessão e TCP passaram; hashes dos fontes conferidos com main. Não é um serviço XNet nem um servidor FTP utilizável no Xbox ainda. LIST usa data ilustrativa. Upload, ativação e exposição LAN não implementados.
