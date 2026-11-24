@@ -296,8 +296,9 @@ int main() {
             }
             break;
         }
+        const bool transferChanged=menu.Tick();
         SYSTEMTIME time; GetLocalTime(&time);
-        if(edge || minute!=time.wMinute) {
+        if(edge || transferChanged || minute!=time.wMinute) {
             char clock[12]; std::sprintf(clock,"%02u:%02u",unsigned(time.wHour),unsigned(time.wMinute));
             minute=time.wMinute; menu.Draw(canvas,clock);
             if(!video.Show(canvas)) return 3;
