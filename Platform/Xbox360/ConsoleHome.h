@@ -16,7 +16,9 @@ public:
     void Load();
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
-    std::string TakeMovie() { return tv_.TakeMovie(); }
+    std::string TakeMovie();
+    bool Tick();
+    bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running; }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
 private:
@@ -31,6 +33,8 @@ private:
     CloudTv tv_;
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
+    FileTransfer transfer_;
+    void DrawTransfers(HomeCanvas& c) const;
     std::vector<StorageVolume> storageVolumes_;
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
