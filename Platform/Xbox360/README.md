@@ -93,6 +93,16 @@ A existência de exportações XAM não comprova ABI/assinatura compatível
 com o XDK instalado. O lançamento efetivo continua bloqueado até
 disponibilizar o provedor nativo testado no console.
 
+### Metadados do título
+
+Os detalhes do jogo selecionado mostram Title ID, Media ID, versão
+hexadecimal e, quando disponível, versão base e número de disco para
+XEX. Pacotes exibem tipo de conteúdo, STFS/SVOD e tamanho declarado no
+cabeçalho (não o espaço ocupado no dispositivo). Dados ausentes são
+identificados como indisponíveis. A leitura ocorre ao abrir detalhes,
+e RB consulta novamente para associar TU/DLC/saves. Não há extração,
+download de capas, consulta XboxUnity ou lançamento de pacotes nesta etapa.
+
 ### Nunca abertos pela AuroraX
 
 A aba **Nunca** lista executáveis `default.xex` que ainda não tiveram
