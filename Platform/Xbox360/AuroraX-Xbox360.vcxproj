@@ -29,6 +29,7 @@
     <ClCompile Include="FileWorkspace.cpp" />
     <ClCompile Include="StorageInfo.cpp" />
     <ClCompile Include="NetworkInfo.cpp" />
+    <ClCompile Include="FtpSession.cpp" />
     <ClCompile Include="HomeCanvas.cpp" />
     <ClCompile Include="CloudTv.cpp" />
     <ClCompile Include="TvCatalog.cpp" />
