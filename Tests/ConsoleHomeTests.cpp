@@ -219,6 +219,8 @@ int main(int argc,char** argv) {
     assert(!std::equal(storageScreen.begin(),storageScreen.end(),canvas.Pixels()));
     sysMenu.Press(ConsoleHome::Accept);
     sysMenu.Draw(canvas,"19:45");
+    sysMenu.Press(ConsoleHome::Refresh); // refresh network without leaving details
+    sysMenu.Draw(canvas,"19:45");
     sysMenu.Press(ConsoleHome::Back);  // System listing
     sysMenu.Press(ConsoleHome::Back);  // Home
 
