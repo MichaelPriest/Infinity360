@@ -40,9 +40,9 @@ operações funcionaram numa unidade real.
 | 06 | Ficar independente do Aurora: importar capas, fundos, recentes, TUs | M/T | Pendente | Importação com prévia, cópia auditável e backup |
 | 07 | Pesquisa e ordenação da biblioteca | T | **Busca nativa Start + teclado, ordenação RS** implementadas | Filtros avançados e busca por metadados |
 | 08 | Abas: Todos, Favoritos, Recente, Nunca jogados, Coleções, Ocultos | T | **Coleções e Ocultos persistentes; Nunca abertos pela AuroraX com registro de XEX solicitados** | Estatísticas reais de tempo jogado e importação do histórico Series360 ainda pendentes |
-| 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | Pendente | Leitura de metadados do título |
+| 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | **Title ID, Media ID, versão, disco e tipo de conteúdo nos detalhes** | Metadados externos, jogadores/co-op, filtros e capas |
 | 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
-| 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | Parcial | Metadados e operações seguras |
+| 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | **Detalhes de caminho, versão e tamanho declarado dos pacotes** | Tamanho real de diretórios e operações de gerenciamento |
 | 12 | Capas: download automático e manual, edição, formato quadrado/retrato | M/T | Web demonstrativo, atlas nativo fixo | Cache real e editor por jogo |
 | 13 | Fundos e arte, alteração local, XboxUnity e retorno ao original | M/T | Web demonstrativo | Loader/cache de imagens nativo |
 | 14 | Faixas laterais de jogos, estilos por tipo e por título | T | Pendente | Skin própria equivalente |
@@ -269,3 +269,8 @@ A execução [45298625676](https://github.com/MichaelPriest/AuroraX/actions/runs
 Leitura de volume STFS/SVOD e quantidade de fragmentos, com validação de presença e nomenclatura da pasta .data no layout multifragmento comum. A estrutura presente não comprova integridade criptográfica, licença ou capacidade de execução. O botão A nos detalhes informa o diagnóstico, nunca entrega um contêiner a XLaunchNewImage. Testes sintéticos adicionados. Provedor XAM/XDK e teste de console pendentes.
 
 CI anterior às alterações de catálogo: [45299655858](https://github.com/MichaelPriest/AuroraX/actions/runs/45299655858), d5c701e, 13/13 CTest e 3 testes de empacotamento aprovados, incluindo as correções de coleções.
+
+
+## Metadados de título unificados
+
+DescribeTitle reúne cabeçalhos XEX e STFS/SVOD para os detalhes da Biblioteca, Recentes, Favoritos e aplicativos. Title ID/Media ID, versão hexadecimal, base/discos quando válidos, tipo e tamanho declarado quando pacote. Leitura sob demanda, sem modificação do conteúdo; RB usa a mesma fonte para TU/DLC/saves. Testes adicionados, homologação da nova revisão e XDK pendentes.
