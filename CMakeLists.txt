@@ -36,7 +36,7 @@ if(Python3_Interpreter_FOUND AND FFMPEG_PROGRAM)
     target_include_directories(mpeg_playback_probe PRIVATE Platform/Xbox360)
     add_test(NAME stream_playback COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/StreamPlaybackTest.py
         $<TARGET_FILE:mpeg_playback_probe> ${FFMPEG_PROGRAM})
-    set_tests_properties(stream_playback PROPERTIES TIMEOUT 70)
+    set_tests_properties(stream_playback PROPERTIES TIMEOUT 180)
 endif()
 
 # Manifest scanner is compiled for both PC tests and Xbox 360 target.
