@@ -335,6 +335,13 @@ void ConsoleHome::ApplySearch() {
     notice_=searchTerm_.empty()?"Busca removida":"Busca: "+searchTerm_+
             " ("+number(Count())+" jogos)";
 }
+void ConsoleHome::RefreshTitleMetadata() {
+    detailMetadata_=XboxTitleMetadata();
+    if(!Count() || section_==Files || section_==System)return;
+    const Game& game=*visible_[row_];
+    detailMetadata_=ContentCatalog::DescribeTitle(game.executable,isContentPackage(game));
+}
+
 void ConsoleHome::OpenContent() {
     contentActive_=true;
     contentKnown_=false;
@@ -343,20 +350,18 @@ void ConsoleHome::OpenContent() {
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
-    if(!Count() || section_==Files || section_==System)return;
-    const Game& game=*visible_[row_];
-    if(isContentPackage(game)) {
-        XboxContentPackage package;
-        if(ContentCatalog::ReadHeader(game.executable,package)) {
-            contentInfo_.titleId=package.titleId;
-            contentInfo_.mediaId=package.mediaId;
-            contentInfo_.version=package.version;
-            contentKnown_=true;
-        }
-    } else contentKnown_=ContentCatalog::ReadExecutionInfo(game.executable,contentInfo_);
-    if(contentKnown_)
-        contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
+    RefreshTitleMetadata();
+    if(!detailMetadata_.known)return;
+    contentKnown_=true;
+    contentInfo_.titleId=detailMetadata_.titleId;
+    contentInfo_.mediaId=detailMetadata_.mediaId;
+    contentInfo_.version=detailMetadata_.version;
+    contentInfo_.baseVersion=detailMetadata_.baseVersion;
+    contentInfo_.discNumber=detailMetadata_.discNumber;
+    contentInfo_.discCount=detailMetadata_.discCount;
+    contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
 }
+
 size_t ConsoleHome::ContentCount() const {
     const unsigned types[]={0x000b0000u,2u,1u};
     size_t count=0;
@@ -699,6 +704,7 @@ std::string ConsoleHome::Press(Key key) {
             folders_.push_back(child);row_=0;Reload();
         } else {
             page_=Details;
+            RefreshTitleMetadata();
             // Viewing details alone must not change Recently Played.
         }
     }
@@ -960,7 +966,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         return;
     }
     if(page_==Details && Count()) {
-        c.Box(44,169,1190,329,Panel,12);
+        c.Box(44,169,1190,407,Panel,12);
         std::string title,sub,hint;
         if(section_==Files) {
             title=files_[row_].name; sub=folders_.back(); hint="Visualização de arquivos";
@@ -971,10 +977,25 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                 "Pacote identificado. Execucao nativa ainda nao homologada.";
         }
         c.Text(76,219,title,36,White,1110);
-        c.Text(77,298,sub,22,Muted,1100);
-        c.Text(77,384,hint,21,Lime,1110);
+        c.Text(77,283,sub,20,Muted,1100);
+        if(section_!=Files) {
+            const XboxTitleMetadata& m=detailMetadata_;
+            if(m.known) {
+                c.Text(77,329,"Title ID: "+hexId(m.titleId)+"    Media ID: "+
+                       (m.mediaId?hexId(m.mediaId):std::string("Indisponivel")),23,White,1100);
+                c.Text(77,368,"Versao (hex): "+hexId(m.version)+
+                       (m.package?"    Tipo: "+hexId(m.contentType):"    Base: "+hexId(m.baseVersion)),21,Muted,1100);
+                const std::string extra=m.package?
+                    std::string(m.volumeType==0?"STFS":"SVOD")+" | Tamanho declarado: "+
+                       StorageInfo::FormatBytes(m.declaredBytes):
+                    m.discCount?"Disco "+number(m.discNumber)+" de "+number(m.discCount):
+                       "Disco: informacao indisponivel";
+                c.Text(77,407,extra,21,Muted,1100);
+            } else c.Text(77,351,"Metadados indisponiveis para este item.",22,Muted,1100);
+        }
+        c.Text(77,469,hint,21,Lime,1110);
         if(section_==Library || section_==Recent || section_==Favorites)
-            c.Text(77,430,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
+            c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
         return;
     }
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
