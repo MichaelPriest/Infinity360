@@ -1,6 +1,8 @@
 # AuroraX Alpha 0.1.0 — primeira build integrada para Xbox 360
 
-Status: **pipeline e empacotamento preparados; XEX completo ainda nao compilado/validado no console**.
+Status: **compilacao portatil integrada aprovada; XEX completo ainda nao compilado/validado no console**.
+
+Evidencia: [run 45298625676](https://github.com/MichaelPriest/AuroraX/actions/runs/45298625676), commit `f56eeb1`, 12/12 CTest e 3 testes de empacotamento aprovados. O teste `stream_playback` nao foi registrado nessa execucao (dependencia FFmpeg ausente ou nao detectada); o workflow agora exige sua presenca e retencao dos resultados JUnit. A etapa XDK foi ignorada por se tratar de push, nao de disparo manual.
 
 ## Referencia visual aprovada
 
@@ -64,3 +66,7 @@ e configurado. Sem esse runner, **nao ha arquivo XEX gerado**.
 - Confirmar inicializacao, modo de video, foco, retorno e fechamento de GPU.
 - Reproducao audiovisual testada em Xbox 360 fisico.
 - Paridade com as telas de TV/Cinema mais ricas, ainda em desenvolvimento.
+
+## Protecao contra artefato antigo
+
+`build-xex.bat` parte da propria pasta, verifica a instalacao XEDK, remove somente os dois artefatos de saida anteriores e executa Rebuild. Exige novo default.xex e home.tga antes do empacotamento. Alteracao ainda nao executada em Windows XDK.
