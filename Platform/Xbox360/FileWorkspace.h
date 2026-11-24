@@ -12,6 +12,7 @@ public:
     static std::string Join(const std::string& parent,const std::string& name);
     bool CanBrowse(const std::string& path) const;
     bool CanWrite(const std::string& directory) const;
+    bool CanReadPersonalFile(const std::string& path) const;
     bool Create(const std::string& directory,const std::string& name) const;
     bool Rename(const std::string& directory,const std::string& oldName,
                 const std::string& newName) const;
