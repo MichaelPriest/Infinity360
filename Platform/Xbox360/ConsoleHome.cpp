@@ -841,7 +841,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,"Servicos de rede",25,White,558);
-    c.Text(660,447,"FTP: nucleo pronto; servidor inativo",21,Muted,558);
+    c.Text(660,447,"FTP: teste TCP no PC; inativo no Xbox",21,Muted,558);
     c.Text(660,486,"SMB / System Link: pendentes",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
     c.Text(45,607,"Y Atualizar | B Voltar | IP local nao comprova acesso a Internet.",18,Muted,1180);
