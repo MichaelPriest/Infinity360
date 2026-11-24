@@ -45,8 +45,14 @@ bool clean(const std::string& path) {
     // Reject links, including links in parent components, even if the
     // target is inside the workspace. This also covers nonexistent targets.
     std::error_code ec;
-    const fs::path absolute=fs::absolute(path,ec).lexically_normal();
+    const fs::path absolute=fs::absolute(key(path),ec).lexically_normal();
     if(ec)return false;
+    fs::path component;
+    for(const auto& part:absolute) {
+        component/=part;
+        std::error_code linkError;
+        if(fs::is_symlink(fs::symlink_status(component,linkError)))return false;
+    }
     const fs::path canonical=fs::weakly_canonical(absolute,ec);
     if(ec || canonical!=absolute)return false;
 #endif
