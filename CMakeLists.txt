@@ -74,3 +74,11 @@ add_test(NAME network_info COMMAND network_info_tests)
 add_executable(ftp_session_tests Tests/FtpSessionTests.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FileWorkspace.cpp)
 target_include_directories(ftp_session_tests PRIVATE Platform/Xbox360)
 add_test(NAME ftp_session COMMAND ftp_session_tests)
+
+# Interoperability test only: Linux loopback, no console or LAN listener.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
+    add_executable(ftp_loopback_probe Tests/FtpLoopbackProbe.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FileWorkspace.cpp)
+    target_include_directories(ftp_loopback_probe PRIVATE Platform/Xbox360)
+    add_test(NAME ftp_loopback COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/FtpLoopbackTest.py $<TARGET_FILE:ftp_loopback_probe>)
+    set_tests_properties(ftp_loopback PROPERTIES TIMEOUT 30)
+endif()
