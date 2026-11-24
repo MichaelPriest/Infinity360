@@ -66,7 +66,7 @@ operações funcionaram numa unidade real.
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
-| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar arquivo até 8 MiB com confirmação** | Mover, excluir, multisseleção, cópia de pastas, progresso e cancelamento |
+| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar por blocos com progresso e cancelamento** | Mover, excluir, multisseleção, cópia de pastas e homologação |
 | 26 | FTP servidor com senha configurável e inicialização opcional | M/T | Pendente | Autenticação própria, sem credenciais padrão do Series360 |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
@@ -91,7 +91,7 @@ operações funcionaram numa unidade real.
 | 42 | Idiomas adicionais e tradução de interface | T | Pendente | Catálogo multilíngue próprio, fonte com acentos |
 | 43 | Autoatualização do painel, backup e rollback | M/T | Pendente | Manifestos assinados, hashes, staging e recuperação |
 | 44 | Busca de novas TUs, capas e jogos ao iniciar | M/T | Nativo parcial | Agendador seguro, consentimento e rede |
-| 45 | Downloads em segundo plano, fila, pausar/cancelar/retomar | T | Web demonstrativo / cartões nativos sem provider | Worker no console com progresso persistente |
+| 45 | Downloads em segundo plano, fila, pausar/cancelar/retomar | T | **Transferência local por blocos no loop da dashboard e cancelamento** | HTTP/FTP, fila, pausa/retomada, persistência e teste XDK |
 | 46 | DashLaunch: escolher dashboard inicial e recuperação ao Aurora | M/T | **Não implementado propositalmente** | Só avaliar após XEX e GPU aprovados; opt-in e rollback obrigatório |
 
 ## 5. Funcionalidade adicional exclusiva da AuroraX
@@ -237,3 +237,8 @@ Sistema > Armazenamento agora consulta a capacidade e o espaço livre dos caminh
 ## Diagnostico de rede local
 
 `NetworkInfo.cpp` consulta XNetGetTitleXnAddr e XNetGetEthernetLinkStatus no XDK, com espera limitada e cleanup. No Linux usa getifaddrs. Diferencia IP atribuído, pendente, ausente e erro. Não abre portas nem comprova acesso à internet. FTP/SMB/System Link continuam pendentes. Teste C++17 isolado passou no Linux com -Wall -Wextra -Wpedantic -Werror e hashes conferidos com a main. A implementação XDK não foi compilada nem testada no console.
+
+
+## Transferências locais incrementais
+
+A interface de Arquivos usa FileTransfer, com blocos de 64 KiB, progresso em Sistema > Downloads e cancelamento por X. A escrita é exclusiva em temporário no destino; a publicação não sobrescreve arquivo existente. O teste portátil do módulo foi compilado e executado em Linux com -std=c++17 -Wall -Wextra -Wpedantic -Werror: cópia superior a 8 MiB, cancelamento, colisão no destino, arquivo vazio, temporários preexistentes e destruição do objeto com transferência ativa. Hashes Git dos três arquivos locais coincidem com os da main. A cópia por blocos não é um worker assíncrono; o tempo de I/O, a finalização no FATX e a compilação XDK seguem pendentes de homologação. Não há fila múltipla, retomada ou download de internet.
