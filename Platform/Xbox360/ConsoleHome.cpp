@@ -228,10 +228,14 @@ void ConsoleHome::Reload() {
     } else ScanLibrary();
     Rebuild();
 }
+void ConsoleHome::RefreshStorage() {
+    storageVolumes_=StorageInfo::ReadAll(fileWorkspace_.Roots());
+}
 void ConsoleHome::Enter(Section s) {
     section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
+    if(s==System) RefreshStorage();
     if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
     Reload();
 }
@@ -519,7 +523,8 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(key==Refresh) {
         if(section_==System && page_!=Home) {
-            notice_="Temperatura, rede e downloads precisam de providers nativos.";
+            if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
+            else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
         if(page_==Details) page_=Listing;
@@ -532,7 +537,10 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
             if(key==Right && systemTab_<3) ++systemTab_;
-            if(key==Accept) page_=Details;
+            if(key==Accept) {
+                if(systemTab_==0)RefreshStorage();
+                page_=Details;
+            }
         }
         return "";
     }
@@ -760,6 +768,28 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(48,601,"A Caminho | Y Atualizar | B Voltar | Nenhuma ativacao automatica",18,Lime,1175);
 }
 
+void ConsoleHome::DrawStorage(HomeCanvas& c) const {
+    c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
+    for(size_t i=0;i<storageVolumes_.size() && i<4;++i) {
+        const StorageVolume& v=storageVolumes_[i];
+        const int x=42+(static_cast<int>(i)%2)*602;
+        const int y=391+(static_cast<int>(i)/2)*106;
+        c.Box(x,y,589,97,Panel,10);
+        const std::string label=i==0?"Pasta AuroraX":v.path;
+        c.Text(x+14,y+7,label,22,White,550);
+        if(!v.available) {
+            c.Text(x+14,y+44,"Indisponivel / capacidade nao informada",18,Muted,552);
+            continue;
+        }
+        const unsigned percent=v.UsedPercent();
+        c.Text(x+14,y+34,StorageInfo::FormatBytes(v.freeBytes)+" livres / "+
+               StorageInfo::FormatBytes(v.capacity)+" total",18,Muted,552);
+        c.Box(x+14,y+63,551,10,0xff28413a,5);
+        if(percent)c.Box(x+14,y+63,static_cast<int>(551*percent/100),10,Lime,5);
+        c.Text(x+14,y+76,number(percent)+"% ocupado",15,White,550);
+    }
+    c.Text(45,610,"Y Atualizar | B Voltar | Caminhos podem compartilhar o mesmo disco.",18,Muted,1180);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
@@ -817,7 +847,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais"
         };
         static const char* const details[]={
-            "Capacidade de HDD/USB: provider nativo ainda nao conectado.",
+            "Capacidade e espaco livre dos dispositivos.",
             "FTP e SMB: acesso remoto ainda nao habilitado nesta Alpha.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
             "Downloads em segundo plano: gerenciador ainda nao integrado."
@@ -829,6 +859,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.Text(x+17,222,titles[i],28,White,264);
             c.Text(x+17,284,summaries[i],18,Muted,252);
         }
+        if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);
