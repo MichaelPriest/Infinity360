@@ -64,6 +64,12 @@ private:
     mutable std::map<std::string,std::string> artFolders_;
     mutable bool artDirty_;
     std::string ArtFolder(const Game& game) const;
+    std::map<std::string,std::string> artChoices_;
+    bool artEditing_;
+    int artEditRow_;
+    std::string artEditFolder_, artEditId_, artDraft_;
+    std::string ArtPath(const Game& game,bool cover) const;
+    void DrawArtEditor(HomeCanvas& c) const;
     std::vector<XboxContentPackage> contentItems_;
     void OpenContent();
     size_t ContentCount() const;

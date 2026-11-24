@@ -12,6 +12,22 @@
 namespace {
 const size_t HistoryLimit=24;
 const size_t PinLimit=32;
+const size_t ArtChoiceLimit=512;
+bool validArtChoice(const std::string& value) {
+    return value.size()==2 && value[0]>='0' && value[0]<='2' &&
+                              value[1]>='0' && value[1]<='2';
+}
+bool validArtId(const std::string& id) {
+    if(id.size()!=8 || id=="00000000")return false;
+    for(size_t i=0;i<id.size();++i)
+        if(!((id[i]>='0' && id[i]<='9') || (id[i]>='A' && id[i]<='F')))return false;
+    return true;
+}
+std::string artFile(const std::string& folder,bool cover,char choice) {
+    if(folder.empty() || choice=='2')return "";
+    return folder+(cover?(choice=='1'?"cover-alt.rgba":"cover.rgba"):
+                          (choice=='1'?"background-alt.rgba":"background.rgba"));
+}
 const char DefaultHomeOrder[]="0123";
 bool validHomeOrder(const std::string& order) {
     if(order.size()!=4) return false;
@@ -97,7 +113,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
-      contentInfo_(),artDirty_(true),section_(Library),page_(Home) {}
+      contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -107,12 +123,21 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;
+    artChoices_.clear();artEditing_=false;
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
         if (line.size()<3 || line.size()>2048 || line[1]!='\t') continue;
         const std::string file=line.substr(2);
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
+        if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
+            const std::string id=file.substr(0,8), choice=file.substr(9);
+            if(validArtId(id) && validArtChoice(choice)) {
+                if(choice=="00")artChoices_.erase(id);
+                else if(artChoices_.size()<ArtChoiceLimit || artChoices_.count(id))
+                    artChoices_[id]=choice;
+            }
+        }
         if(line[0]=='R' && history_.size()<HistoryLimit && !contains(history_,file)) history_.push_back(file);
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
         if(line[0]=='K' && pinned_.size()<PinLimit && !contains(pinned_,file)) pinned_.push_back(file);
@@ -148,6 +173,9 @@ bool ConsoleHome::SaveProfile() const {
     const std::string path=dir_+"aurorax-profile.txt", tmp=path+".tmp";
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     out<<"O\t"<<homeOrder_<<"\n";
+    for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
+        it!=artChoices_.end();++it)
+        out<<"A\t"<<it->first<<"\t"<<it->second<<"\n";
     for (size_t i=0;i<history_.size();++i) out<<"R\t"<<history_[i]<<"\n";
     for (size_t i=0;i<favorites_.size();++i) out<<"F\t"<<favorites_[i]<<"\n";
     for (size_t i=0;i<pinned_.size();++i) out<<"K\t"<<pinned_[i]<<"\n";
@@ -380,6 +408,14 @@ std::string ConsoleHome::ArtFolder(const Game& game) const {
     artFolders_[game.executable]=folder;
     return folder;
 }
+std::string ConsoleHome::ArtPath(const Game& game,bool cover) const {
+    const std::string folder=ArtFolder(game);
+    if(folder.empty())return "";
+    const std::string id=folder.substr(folder.size()-9,8);
+    const std::map<std::string,std::string>::const_iterator it=artChoices_.find(id);
+    const char choice=it==artChoices_.end()?'0':it->second[cover?0:1];
+    return artFile(folder,cover,choice);
+}
 void ConsoleHome::RefreshTitleMetadata() {
     detailMetadata_=XboxTitleMetadata();
     if(!Count() || section_==Files || section_==System)return;
@@ -448,6 +484,33 @@ std::string ConsoleHome::Press(Key key) {
         }
         return "";
     }
+    if(artEditing_) {
+        if(key==Back) {artEditing_=false;notice_="Alteracoes de arte canceladas.";return "";}
+        if(key==Up || key==Down)artEditRow_=1-artEditRow_;
+        if(key==Left || key==Right || key==Accept) {
+            const int delta=key==Left?2:1;
+            artDraft_[artEditRow_]=static_cast<char>('0'+(artDraft_[artEditRow_]-'0'+delta)%3);
+        }
+        if(key==Favorite)artDraft_="00";
+        if(key==PageDown) {artDirty_=true;notice_="Arquivos locais recarregados.";}
+        if(key==Refresh) {
+            const std::map<std::string,std::string>::iterator it=artChoices_.find(artEditId_);
+            const bool had=it!=artChoices_.end();
+            const std::string old=had?it->second:"00";
+            if(artDraft_!="00" && !had && artChoices_.size()>=ArtChoiceLimit) {
+                notice_="Limite de 512 personalizacoes.";return "";
+            }
+            if(artDraft_=="00")artChoices_.erase(artEditId_);
+            else artChoices_[artEditId_]=artDraft_;
+            if(SaveProfile()) {artEditing_=false;notice_="Arte personalizada e salva.";}
+            else {
+                if(had)artChoices_[artEditId_]=old;
+                else artChoices_.erase(artEditId_);
+                notice_="Falha ao salvar. Y tenta novamente; B cancela.";
+            }
+        }
+        return "";
+    }
     if(contentActive_) {
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
@@ -459,6 +522,16 @@ std::string ConsoleHome::Press(Key key) {
             const XboxContentPackage* item=ContentAt(contentRow_);
             if(item)notice_=item->path;
         }
+        return "";
+    }
+    if(page_==Details && (section_==Library || section_==Recent || section_==Favorites)
+       && key==Guide && Count()) {
+        artEditFolder_=ArtFolder(*visible_[row_]);
+        if(artEditFolder_.empty()) {notice_="Arte indisponivel: Title ID desconhecido.";return "";}
+        artEditId_=artEditFolder_.substr(artEditFolder_.size()-9,8);
+        const std::map<std::string,std::string>::const_iterator it=artChoices_.find(artEditId_);
+        artDraft_=it==artChoices_.end()?"00":it->second;
+        artEditRow_=0;artEditing_=true;notice_.clear();
         return "";
     }
     if(page_==Details && (section_==Library || section_==Recent || section_==Favorites)
@@ -864,10 +937,10 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
             const Game* g=Installed(paths[i]); if(!g || contains(hidden_,paths[i])) continue;
             int left=x+shown*(cardWidth+9);
             c.Box(left,504,cardWidth,126,Panel,8);
-            const std::string folder=ArtFolder(*g);
+            const std::string backFile=ArtPath(*g,false), coverFile=ArtPath(*g,true);
             c.Box(left+1,505,cardWidth-2,84,0xff194739u,6);
-            const bool backdrop=!folder.empty() && c.LocalArt(folder+"background.rgba",false,left+1,505,cardWidth-2,84);
-            const bool cover=!folder.empty() && c.LocalArt(folder+"cover.rgba",true,left+(cardWidth-56)/2,505,56,84);
+            const bool backdrop=!backFile.empty() && c.LocalArt(backFile,false,left+1,505,cardWidth-2,84);
+            const bool cover=!coverFile.empty() && c.LocalArt(coverFile,true,left+(cardWidth-56)/2,505,56,84);
             if(!backdrop && !cover) {
                 int sx=600,sy=66;
                 if(g->name=="Halo 3") sx=742;
@@ -993,7 +1066,29 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
     c.Text(45,609,TransferRunning()?"X Cancelar copia | B Voltar (copia continua)":
            "B Voltar | Downloads de internet ainda pendentes",18,Muted,1180);
 }
+void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
+    c.Text(44,78,"Personalizar arte",40,White,1190);
+    c.Text(46,137,"Title ID: "+artEditId_,21,Muted,1180);
+    static const char* const modes[]={"Principal","Alternativa","Visual padrao"};
+    for(int i=0;i<2;++i) {
+        const int x=i?430:45, w=i?805:370;
+        panel(c,x,180,w,375,Panel,i==artEditRow_);
+        c.Text(x+16,190,i?"Fundo":"Capa",27,White,w-32);
+        const std::string file=artFile(artEditFolder_,i==0,artDraft_[i]);
+        const bool drawn=!file.empty() && (i?
+            c.LocalArt(file,false,x+190,244,400,225):
+            c.LocalArt(file,true,x+105,244,150,225));
+        if(!drawn)c.Text(x+20,330,artDraft_[i]=='2'?"Visual original":"Arquivo ausente ou invalido",21,Muted,w-40);
+        c.Text(x+16,488,std::string("< ")+modes[artDraft_[i]-'0']+" >",24,Lime,w-32);
+        c.Text(x+16,523,artDraft_[i]=='2'?"Sem arte personalizada":i?
+            (artDraft_[i]=='1'?"background-alt.rgba":"background.rgba"):
+            (artDraft_[i]=='1'?"cover-alt.rgba":"cover.rgba"),17,Muted,w-32);
+    }
+    c.Text(46,570,"Cima/Baixo Selecionar | Esquerda/Direita ou A Alterar | RB Recarregar",19,White,1180);
+    c.Text(46,604,"X Restaurar principal | Y Salvar | B Cancelar",19,Lime,1180);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
+    if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
@@ -1090,9 +1185,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                 "Pressione A para iniciar este título.":
                 "Pacote identificado. Execucao nativa ainda nao homologada.";
         }
-        const std::string folder=section_==Files?"":ArtFolder(*visible_[row_]);
-        const bool backdrop=!folder.empty() && c.LocalArt(folder+"background.rgba",false,842,202,360,202);
-        const bool cover=!folder.empty() && c.LocalArt(folder+"cover.rgba",true,1090,406,100,150);
+        const std::string backFile=section_==Files?"":ArtPath(*visible_[row_],false);
+        const std::string coverFile=section_==Files?"":ArtPath(*visible_[row_],true);
+        const bool backdrop=!backFile.empty() && c.LocalArt(backFile,false,842,202,360,202);
+        const bool cover=!coverFile.empty() && c.LocalArt(coverFile,true,1090,406,100,150);
         const int textWidth=(backdrop || cover)?740:1100;
         c.Text(76,219,title,36,White,textWidth);
         c.Text(77,283,sub,20,Muted,textWidth);
@@ -1112,7 +1208,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             } else c.Text(77,351,"Metadados indisponiveis para este item.",22,Muted,1100);
         }
         c.Text(77,469,hint,21,Lime,textWidth);
-        if(!folder.empty())c.Text(47,593,"Arte local: "+folder+" | Y Atualizar",18,Muted,1170);
+        if(section_==Library || section_==Recent || section_==Favorites)
+            c.Text(47,593,"Start Personalizar capa e fundo | Y Atualizar",18,Muted,1170);
         if(section_==Library || section_==Recent || section_==Favorites) {
             c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
             c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);
@@ -1168,8 +1265,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         } else {name=visible_[i]->name; detail=std::string(contains(pinned_,visible_[i]->executable)?"FIXADO  ":"")+(Starred(*visible_[i])?"*  ":"")+visible_[i]->device;}
         int nameX=62;
         if(section_!=Files) {
-            const std::string folder=ArtFolder(*visible_[i]);
-            if(!folder.empty() && c.LocalArt(folder+"cover.rgba",true,55,y+2,30,45))nameX=99;
+            const std::string coverFile=ArtPath(*visible_[i],true);
+            if(!coverFile.empty() && c.LocalArt(coverFile,true,55,y+2,30,45))nameX=99;
         }
         c.Text(nameX,y+6,name,23,White,872-nameX);
         c.Text(886,y+9,detail,19,Muted,336);
@@ -1198,7 +1295,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Box(0,663,1280,57,0xff061915u);
     buttonHint(c,45,"A","Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
-    buttonHint(c,429,"X",page_==Home && homeEditing_?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
+    buttonHint(c,429,"X",(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
-    buttonHint(c,632,"Y",page_==Home && homeEditing_?"Salvar":"Atualizar",0xffb3820du);
+    buttonHint(c,632,"Y",(artEditing_ || (page_==Home && homeEditing_))?"Salvar":"Atualizar",0xffb3820du);
 }

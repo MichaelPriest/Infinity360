@@ -43,8 +43,8 @@ operações funcionaram numa unidade real.
 | 09 | Categoria, número de jogadores, co-op, multiplayer, System Link | T | **Title ID, Media ID, versão, disco e tipo de conteúdo nos detalhes** | Metadados externos, jogadores/co-op, filtros e capas |
 | 10 | Estatísticas: horas jogadas, datas, G/Gamerscore | T | Pendente | Histórico por perfil, conquistas por title |
 | 11 | Gerenciar jogo: tamanho, pasta, operações com confirmação | T | **Detalhes de caminho, versão e tamanho declarado dos pacotes** | Tamanho real de diretórios e operações de gerenciamento |
-| 12 | Capas: download automático e manual, edição, formato quadrado/retrato | M/T | **Capa local RGBA por Title ID, cache limitado, biblioteca/detalhes/início** | Download, editor nativo, outras proporções e homologação |
-| 13 | Fundos e arte, alteração local, XboxUnity e retorno ao original | M/T | **Fundo local por Title ID, detalhes/início, fallback automático** | XboxUnity, editor e homologação |
+| 12 | Capas: download automático e manual, edição, formato quadrado/retrato | M/T | **Capa local RGBA por Title ID, cache e editor nativo com principal/alternativa/padrão** | Download, outras proporções e homologação |
+| 13 | Fundos e arte, alteração local, XboxUnity e retorno ao original | M/T | **Fundo local por Title ID, editor nativo e fallback automático** | XboxUnity e homologação |
 | 14 | Faixas laterais de jogos, estilos por tipo e por título | T | Pendente | Skin própria equivalente |
 | 15 | Inserção/remoção de disco, jogo em disco, bandeja | T | Pendente | XDK/XAM e testes por unidade |
 | 16 | App Homebrew, XEX e ELF com confirmação | T | **Novo nesta etapa (XEX)** | ELF exige runtime separado, não lançar como XEX |
@@ -289,3 +289,8 @@ Start na tela inicial abre o editor nativo. Direcional seleciona o atalho, LB/RB
 ## Arte local por Title ID
 
 Capas `Art/<TITLEID>/cover.rgba` (160x240) e fundos `background.rgba` (640x360) em RGBA de 8 bits por canal sem cabeçalho, linhas de cima para baixo. Cache FIFO de até 16 entradas, inclusive falhas, invalidado por Y/recarga. Não há acesso de rede ou alteração de XEX/STFS. Títulos sem ID válido usam o visual padrão. Capas aparecem na lista e detalhes; fundos nos detalhes e cartões iniciais. O utilitário `Platform/Xbox360/tools/prepare_game_art.py` converte imagens locais no PC. Remover os arquivos e atualizar restaura o visual padrão. Testes de pixels, tamanho inválido e invalidação acrescentados. A CI 45504232508 falhou por redeclaração de `restored` no teste de layout; renomeado para `restoredLayout`. Nova execução e XDK ainda pendentes.
+
+
+## Editor nativo de arte por jogo
+
+Start nos detalhes abre a prévia de capa e fundo. Cima/Baixo escolhe o campo; A ou Esquerda/Direita alterna Principal, Alternativa e Visual padrão. X restaura Principal no rascunho; Y grava; B cancela; RB relê arquivos. Arquivos alternativos: `cover-alt.rgba` e `background-alt.rgba` nas mesmas dimensões e pasta Title ID. Preferências individuais persistidas em registros `A\t<TITLEID>\t<dois dígitos>` (até 512 títulos); arquivos nunca são apagados pelo editor. A opção Visual padrão desativa a arte local; arquivos ausentes mantêm o fallback. Teste de prévia, cancelamento, seleção independente, reinício e restauração sem exclusão acrescentado. CI anterior 45504587110 aprovada; nova execução e homologação XDK pendentes.

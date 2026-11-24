@@ -590,5 +590,42 @@ int main(int argc,char** argv) {
     assert(!canvas.LocalArt((artFolder/"cover.rgba").string(),true,0,0,30,45));
     assert(!canvas.LocalArt((artFolder/"background.rgba").string(),false,1200,0,100,100));
 
+    // Controller artwork editor: preview, independent variants, cancellation,
+    // persistence across restart, and non-destructive reset.
+    writeArt(artFolder/"cover.rgba",160*240,200,10);
+    writeArt(artFolder/"cover-alt.rgba",160*240,5,180);
+    writeArt(artFolder/"background-alt.rgba",640*360,180,5);
+    ConsoleHome artEdit(artRoot.string()+"/",noRoots);artEdit.Load();
+    artEdit.Press(ConsoleHome::Accept);
+    artEdit.Press(ConsoleHome::Accept);
+    artEdit.Press(ConsoleHome::Guide);
+    artEdit.Press(ConsoleHome::Right); // alternate cover
+    artEdit.Draw(canvas,"20:06");
+    assert(canvas.Pixels()[250*1280+155]==0xff05b400u);
+    artEdit.Press(ConsoleHome::Back); // cancel
+    artEdit.Draw(canvas,"20:06");
+    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    artEdit.Press(ConsoleHome::Guide);
+    artEdit.Press(ConsoleHome::Right); // alternate cover
+    artEdit.Press(ConsoleHome::Down);
+    artEdit.Press(ConsoleHome::Left); // original background
+    artEdit.Press(ConsoleHome::Refresh); // save
+    artEdit.Draw(canvas,"20:06");
+    assert(canvas.Pixels()[420*1280+1100]==0xff05b400u);
+    assert(canvas.Pixels()[220*1280+850]!=0xff0ac800u);
+    ConsoleHome artRestored(artRoot.string()+"/",noRoots);artRestored.Load();
+    artRestored.Press(ConsoleHome::Accept);
+    artRestored.Draw(canvas,"20:07");
+    assert(canvas.Pixels()[250*1280+60]==0xff05b400u);
+    artRestored.Press(ConsoleHome::Accept);
+    artRestored.Press(ConsoleHome::Guide);
+    artRestored.Press(ConsoleHome::Favorite); // reset both to main
+    artRestored.Press(ConsoleHome::Refresh);
+    artRestored.Draw(canvas,"20:07");
+    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    assert(canvas.Pixels()[220*1280+850]==0xff0ac800u);
+    assert(fs::file_size(artFolder/"cover-alt.rgba")==160u*240u*4u);
+    assert(fs::file_size(artFolder/"background-alt.rgba")==640u*360u*4u);
+
     fs::remove_all(root);
 }
