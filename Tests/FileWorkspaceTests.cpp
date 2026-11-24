@@ -113,5 +113,25 @@ int main() {
     assert(files.Remove(moveTo,"renamed.txt"));
     assert(files.Remove(user,"MoveTo"));
     assert(!fs::exists(fs::path(user)/"MoveTo"));
+    // Bounded, read-only plan for nested directories, empty folders and files.
+    fs::create_directories(root/"Tree"/"Nested"/"Empty");
+    std::ofstream(root/"Tree"/"Nested"/"file.txt")<<"content";
+    std::vector<WorkspaceCopyStep> plan;
+    assert(files.PlanCopies(app,std::vector<std::string>(1,"Tree"),docs,plan));
+    assert(plan.size()==4 && plan[0].directory && plan[0].name=="Tree");
+    assert(!fs::exists(fs::path(docs)/"Tree"));
+    assert(files.Create(docs,"Tree"));
+    assert(!files.PlanCopies(app,std::vector<std::string>(1,"Tree"),docs,plan));
+    assert(plan.empty());
+    assert(files.Create(user,"Outer"));
+    const std::string outer=(fs::path(user)/"Outer").string();
+    assert(files.Create(outer,"Inner"));
+    assert(!files.PlanCopies(user,std::vector<std::string>(1,"Outer"),
+                             (fs::path(outer)/"Inner").string(),plan));
+#ifndef _WIN32
+    std::error_code copyLinkError;
+    fs::create_directory_symlink(root,root/"Tree"/"Link",copyLinkError);
+    if(!copyLinkError)assert(!files.PlanCopies(app,std::vector<std::string>(1,"Tree"),user,plan));
+#endif
     fs::remove_all(root);
 }

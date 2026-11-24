@@ -3,6 +3,11 @@
 #include <vector>
 #include <fstream>
 
+struct WorkspaceCopyStep {
+    std::string source, name, destination;
+    bool directory;
+};
+
 // Local explorer: browse permitted mounts; write only to user workspaces.
 class FileWorkspace {
 public:
@@ -25,9 +30,14 @@ public:
     bool PrepareCopy(const std::string& sourceDir,const std::string& name,
                      const std::string& destDir,std::string& from,std::string& to) const;
     std::string WorkspaceFor(const std::string& root) const;
+    // Non-mutating plan: no merge, no links, no destination inside source.
+    bool PlanCopies(const std::string& source,const std::vector<std::string>& names,
+                    const std::string& destination,std::vector<WorkspaceCopyStep>& out) const;
 private:
     std::vector<std::string> roots_, workspaces_;
     bool Allowed(const std::string& path,const std::vector<std::string>& roots) const;
+    bool PlanItem(const std::string& source,const std::string& name,const std::string& destination,
+                  unsigned depth,std::vector<WorkspaceCopyStep>& steps) const;
 };
 
 class FileTransfer {

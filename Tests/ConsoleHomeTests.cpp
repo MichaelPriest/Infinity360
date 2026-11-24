@@ -837,5 +837,26 @@ int main(int argc,char** argv) {
     actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Down);
     actions.Press(ConsoleHome::Accept);actions.Press(ConsoleHome::Accept); // delete
     assert(!fs::exists(actionRoot/"UserFiles"/"Dest"/"test.txt"));
+    // Multi-selection copies a directory tree and a separate file.
+    const fs::path batchRoot=root/"BatchFixture";
+    fs::create_directories(batchRoot/"Bundle"/"Empty");
+    fs::create_directories(batchRoot/"UserFiles");
+    std::ofstream(batchRoot/"Bundle"/"nested.txt")<<"nested";
+    std::ofstream(batchRoot/"single.txt")<<"single";
+    ConsoleHome batch(batchRoot.string()+"/",noRoots);batch.Load();
+    batch.Press(ConsoleHome::Right);batch.Press(ConsoleHome::Down);
+    batch.Press(ConsoleHome::Accept); // Bundle, UserFiles, single.txt
+    batch.Press(ConsoleHome::Right);batch.Press(ConsoleHome::Down);batch.Press(ConsoleHome::Down);
+    batch.Press(ConsoleHome::Accept); // mark Bundle, enable multi-select
+    batch.Press(ConsoleHome::Down);batch.Press(ConsoleHome::Down);
+    batch.Press(ConsoleHome::Favorite); // mark single.txt
+    batch.Press(ConsoleHome::Up);batch.Press(ConsoleHome::Accept); // UserFiles
+    batch.Press(ConsoleHome::PageUp);batch.Press(ConsoleHome::Accept);
+    for(int i=0;i<30 && batch.TransferRunning();++i)batch.Tick();
+    assert(!batch.TransferRunning());
+    assert(fs::is_directory(batchRoot/"UserFiles"/"Bundle"/"Empty"));
+    assert(fs::file_size(batchRoot/"UserFiles"/"Bundle"/"nested.txt")==6);
+    assert(fs::file_size(batchRoot/"UserFiles"/"single.txt")==6);
+    assert(fs::exists(batchRoot/"Bundle"/"nested.txt"));
     fs::remove_all(root);
 }

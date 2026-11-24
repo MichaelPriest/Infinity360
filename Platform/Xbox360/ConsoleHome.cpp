@@ -135,7 +135,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),
+      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -367,25 +367,50 @@ void ConsoleHome::Reload() {
     Rebuild();
 }
 bool ConsoleHome::EnqueueCopy() {
-    CopyTask task={copyDir_,copyName_,folders_.back()};
-    std::string from,to;
-    if(!fileWorkspace_.PrepareCopy(task.source,task.name,task.destination,from,to)) {
-        notice_="Origem/destino invalido ou arquivo existente.";return false;
+    std::vector<std::string> names=copyNames_;
+    if(names.empty()&&!copyName_.empty())names.push_back(copyName_);
+    std::vector<WorkspaceCopyStep> steps;
+    if(!fileWorkspace_.PlanCopies(copyDir_,names,folders_.back(),steps)) {
+        notice_="Copia recusada: destino, conflito, nome ou limite de arvore.";return false;
     }
-    if(transfer_.Status()==FileTransfer::Running || !copyQueue_.empty()) {
-        if(copyQueue_.size()>=16) {notice_="Fila cheia (16 tarefas aguardando).";return false;}
-        for(size_t i=0;i<copyQueue_.size();++i)
-            if(copyQueue_[i].destination==task.destination && copyQueue_[i].name==task.name) {
+    if(copyQueue_.size()+steps.size()>256) {notice_="Fila cheia (256 operacoes).";return false;}
+    for(size_t i=0;i<steps.size();++i) {
+        const std::string target=FileWorkspace::Join(steps[i].destination,steps[i].name);
+        if(!activeCopyTarget_.empty() && GameScanner::SameRoot(activeCopyTarget_,target)) {
+            notice_="Destino ja em transferencia.";return false;
+        }
+        for(size_t j=0;j<copyQueue_.size();++j)
+            if(GameScanner::SameRoot(FileWorkspace::Join(copyQueue_[j].destination,copyQueue_[j].name),target)) {
                 notice_="Destino ja registrado na fila.";return false;
             }
-        copyQueue_.push_back(task);
-        notice_="Copia adicionada a fila.";return true;
     }
-    copyPaused_=false;
+    const bool busy=TransferRunning();
+    copyQueue_.insert(copyQueue_.end(),steps.begin(),steps.end());
+    if(!busy) {
+        copyPaused_=false;
+        if(!StartNextCopy())return false;
+    }
+    notice_="Copia agendada: "+number(steps.size())+" operacoes. Sistema > Downloads.";
+    return true;
+}
+bool ConsoleHome::StartNextCopy() {
+    if(copyQueue_.empty())return false;
+    const WorkspaceCopyStep task=copyQueue_.front();copyQueue_.erase(copyQueue_.begin());
+    activeCopyTarget_.clear();
+    if(task.directory) {
+        // A newly appearing destination never becomes a merge target.
+        if(!fileWorkspace_.CanBrowse(FileWorkspace::Join(task.source,task.name))||
+           !fileWorkspace_.Create(task.destination,task.name)) {
+            copyQueue_.clear();notice_="Pasta recusada; fila interrompida. Copias concluidas preservadas.";
+            return false;
+        }
+        notice_="Pasta criada para copia.";return true;
+    }
     if(!transfer_.Start(fileWorkspace_,task.source,task.name,task.destination)) {
-        notice_=transfer_.Error();return false;
+        copyQueue_.clear();notice_="Fila interrompida: "+transfer_.Error();return false;
     }
-    notice_="Copia iniciada. Veja Sistema > Downloads.";return true;
+    activeCopyTarget_=FileWorkspace::Join(task.destination,task.name);
+    notice_="Proxima copia iniciada.";return true;
 }
 void ConsoleHome::MovePin(int direction) {
     const int neighbor=row_+direction;
@@ -404,15 +429,15 @@ void ConsoleHome::MovePin(int direction) {
 bool ConsoleHome::Tick() {
     if(!TransferRunning() || copyPaused_)return false;
     if(transfer_.Status()!=FileTransfer::Running) {
-        const CopyTask task=copyQueue_.front();copyQueue_.erase(copyQueue_.begin());
-        if(transfer_.Start(fileWorkspace_,task.source,task.name,task.destination))
-            notice_="Proxima copia iniciada.";
-        else notice_=transfer_.Error();
+        StartNextCopy();
+        if(!TransferRunning() && section_==Files && page_==Listing && !searchActive_)Reload();
         return true;
     }
     const unsigned previous=transfer_.Percent();
     transfer_.Tick();
     if(transfer_.Status()!=FileTransfer::Running) {
+        activeCopyTarget_.clear();
+        if(transfer_.Status()!=FileTransfer::Completed)copyQueue_.clear();
         if(section_==Files && page_==Listing && !searchActive_)Reload();
         notice_=transfer_.Status()==FileTransfer::Completed?"Arquivo copiado.":
             "Copia interrompida: "+transfer_.Error();
@@ -875,9 +900,16 @@ std::string ConsoleHome::Press(Key key) {
                 return "";
             }
             if(key==Up && fileActionRow_>0)--fileActionRow_;
-            if(key==Down && fileActionRow_<2)++fileActionRow_;
+            if(key==Down && fileActionRow_<3)++fileActionRow_;
             if(key==Accept) {
-                if(fileActionRow_==2) {fileAction_=false;return "";}
+                if(fileActionRow_==3) {fileAction_=false;return "";}
+                if(fileActionRow_==2) {
+                    multiSelect_=!(multiSelect_ && copyDir_==actionDir_);
+                    copyDir_=actionDir_;copyNames_.clear();copyName_.clear();cutMode_=false;
+                    if(multiSelect_)copyNames_.push_back(actionName_);
+                    fileAction_=false;notice_=multiSelect_?"Multisselecao: X marca/desmarca; LB cola.":"Selecao limpa.";
+                    return "";
+                }
                 if(TransferRunning()||!fileWorkspace_.CanWrite(actionDir_)) {
                     notice_="Operacao limitada ao espaco pessoal, sem transferencias ativas.";return "";
                 }
@@ -885,7 +917,7 @@ std::string ConsoleHome::Press(Key key) {
                     if(!fileWorkspace_.CanReadPersonalFile(FileWorkspace::Join(actionDir_,actionName_))) {
                         notice_="Recortar disponivel somente para arquivos pessoais.";return "";
                     }
-                    copyDir_=actionDir_;copyName_=actionName_;cutMode_=true;
+                    copyDir_=actionDir_;copyName_=actionName_;cutMode_=true;multiSelect_=false;copyNames_.clear();
                     fileAction_=false;notice_="Arquivo recortado. LB cola no destino pessoal.";
                 } else {deleteConfirm_=true;notice_="A confirma exclusao definitiva | B cancela.";}
             }
@@ -933,14 +965,24 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(key==Favorite) {
-            if(Count() && !files_[row_].directory) {
-                copyDir_=folders_.back();copyName_=files_[row_].name;cutMode_=false;
-                notice_="Arquivo marcado para copiar: "+copyName_;
-            } else notice_="Selecione um arquivo (nao uma pasta).";
+            if(Count() && FileWorkspace::ValidName(files_[row_].name)) {
+                const std::string name=files_[row_].name;
+                if(multiSelect_ && copyDir_==folders_.back()) {
+                    std::vector<std::string>::iterator found=std::find(copyNames_.begin(),copyNames_.end(),name);
+                    if(found!=copyNames_.end())copyNames_.erase(found);
+                    else if(copyNames_.size()<32)copyNames_.push_back(name);
+                    else {notice_="Limite de 32 itens selecionados.";return "";}
+                    notice_=number(copyNames_.size())+" itens selecionados.";
+                } else {
+                    copyDir_=folders_.back();copyName_=name;cutMode_=false;
+                    multiSelect_=false;copyNames_.clear();
+                    notice_="Item marcado para copiar: "+copyName_;
+                }
+            } else notice_="Selecione um item com nome valido.";
             return "";
         }
         if(key==PageUp) {
-            if(copyName_.empty() || !fileWorkspace_.CanWrite(folders_.back()))
+            if((copyName_.empty() && copyNames_.empty()) || !fileWorkspace_.CanWrite(folders_.back()))
                 notice_="Marque um arquivo com X; abra UserFiles/AuroraXFiles para colar.";
             else {pasteConfirm_=true;notice_=cutMode_?"A confirma mover sem sobrescrever; B cancela.":"A confirma a copia sem sobrescrever; B cancela.";}
             return "";
@@ -977,7 +1019,7 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details && systemTab_==3 && key==Favorite && TransferRunning()) {
-            transfer_.Cancel();copyQueue_.clear();copyPaused_=false;
+            transfer_.Cancel();copyQueue_.clear();activeCopyTarget_.clear();copyPaused_=false;
             notice_="Fila cancelada; origens preservadas.";return "";
         }
         if(page_==Details && systemTab_==3 && key==Accept && TransferRunning()) {
@@ -1411,11 +1453,12 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
 void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     c.Text(45,145,"Acoes do arquivo",31,White,1180);
     c.Text(48,196,actionName_,24,Lime,1160);
-    static const char* const actions[]={"Recortar arquivo","Excluir item","Voltar"};
-    for(int i=0;i<3;++i) {
-        const int y=258+i*85;
-        panel(c,45,y,1189,69,Panel,i==fileActionRow_);
-        c.Text(63,y+15,actions[i],27,White,1100);
+    const char* const actions[]={"Recortar arquivo","Excluir item",
+        multiSelect_ && copyDir_==actionDir_?"Limpar multisselecao":"Iniciar multisselecao","Voltar"};
+    for(int i=0;i<4;++i) {
+        const int y=240+i*72;
+        panel(c,45,y,1189,60,Panel,i==fileActionRow_);
+        c.Text(63,y+12,actions[i],25,White,1100);
     }
     c.Text(48,550,"Somente espaco pessoal. Exclusao nao recursiva; movimento no mesmo volume.",20,Muted,1175);
     c.Text(48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
@@ -1579,7 +1622,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
     } else if(section_==Files) {
         c.Text(49,146,folders_.back(),21,White,1140);
-        c.Text(49,176,fileWorkspace_.CanWrite(folders_.back())?
+        c.Text(49,176,multiSelect_ && copyDir_==folders_.back()?
+            "Multisselecao: "+number(copyNames_.size())+" itens | X marca/desmarca":
+            fileWorkspace_.CanWrite(folders_.back())?
             "Espaco pessoal | escrita habilitada":"Navegacao somente leitura | Start cria espaco pessoal no dispositivo",
             18,Muted,1140);
         c.Text(49,594,"Esquerda: busca de jogos | Direita: acoes do item",18,Muted,1180);
@@ -1598,6 +1643,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         std::string name,detail;
         if(section_==Files) {
             name=files_[i].name; detail=files_[i].directory?"Pasta":"Arquivo";
+            if(copyDir_==folders_.back() &&
+               (contains(copyNames_,name)||(!copyName_.empty()&&copyName_==name)))
+                detail="MARCADO | "+detail;
         } else {name=visible_[i]->name; detail=std::string(contains(pinned_,visible_[i]->executable)?"FIXADO  ":"")+(Starred(*visible_[i])?"*  ":"")+visible_[i]->device;}
         int nameX=62;
         if(section_!=Files) {

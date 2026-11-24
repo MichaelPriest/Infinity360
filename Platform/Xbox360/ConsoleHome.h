@@ -36,8 +36,9 @@ private:
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
     FileTransfer transfer_;
-    struct CopyTask { std::string source, name, destination; };
-    std::vector<CopyTask> copyQueue_;
+    std::vector<WorkspaceCopyStep> copyQueue_;
+    std::string activeCopyTarget_;
+    bool StartNextCopy();
     bool copyPaused_;
     bool EnqueueCopy();
     void MovePin(int direction);
@@ -51,6 +52,8 @@ private:
     size_t fileRoot_;
     bool pasteConfirm_, scanPathConfirm_, fileAction_, deleteConfirm_, cutMode_;
     int fileActionRow_;
+    bool multiSelect_;
+    std::vector<std::string> copyNames_;
     std::string actionDir_, actionName_;
     void DrawFileActions(HomeCanvas& c) const;
     void ToggleScanPath();

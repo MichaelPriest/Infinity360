@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <fstream>
 #include <cerrno>
+#include <set>
 #if defined(_WIN32) && !defined(_XBOX)
 #include <windows.h>
 #elif !defined(_XBOX)
@@ -219,6 +220,59 @@ bool FileWorkspace::PrepareCopy(const std::string& sourceDir,const std::string& 
     std::error_code ec;
     if(!fs::is_regular_file(from,ec) || ec)return false;
 #endif
+    return true;
+}
+bool FileWorkspace::PlanCopies(const std::string& source,const std::vector<std::string>& names,
+                               const std::string& destination,std::vector<WorkspaceCopyStep>& out) const {
+    out.clear();
+    if(!CanBrowse(source)||!CanWrite(destination)||names.empty()||names.size()>32)return false;
+    std::vector<WorkspaceCopyStep> plan;
+    std::set<std::string> unique;
+    for(size_t i=0;i<names.size();++i) {
+        if(!unique.insert(key(names[i])).second ||
+           !PlanItem(source,names[i],destination,0,plan))return false;
+    }
+    out.swap(plan);return true;
+}
+bool FileWorkspace::PlanItem(const std::string& source,const std::string& name,
+                             const std::string& destination,unsigned depth,
+                             std::vector<WorkspaceCopyStep>& steps) const {
+    if(depth>12||steps.size()>=256||!ValidName(name)||!CanBrowse(source))return false;
+    const std::string from=Join(source,name),to=Join(destination,name);
+    if(!Allowed(from,roots_)||!Allowed(to,workspaces_)||!exists(from)||exists(to))return false;
+    const bool folder=directory(from);
+    if(folder && inside(destination,from))return false;
+#ifndef _XBOX
+    std::error_code ec;
+    const fs::file_status st=fs::symlink_status(from,ec);
+    if(ec||(!fs::is_directory(st)&&!fs::is_regular_file(st)))return false;
+#endif
+    WorkspaceCopyStep step={source,name,destination,folder};steps.push_back(step);
+    if(!folder)return true;
+    std::vector<std::string> children;
+#ifdef _XBOX
+    WIN32_FIND_DATAA info;
+    HANDLE handle=FindFirstFileA(Join(from,"*").c_str(),&info);
+    if(handle==INVALID_HANDLE_VALUE)return GetLastError()==ERROR_FILE_NOT_FOUND;
+    bool ok=true;
+    do {
+        const std::string child=info.cFileName;
+        if(child=="."||child=="..")continue;
+        if(children.size()>=256) {ok=false;break;}
+        children.push_back(child);
+    } while(FindNextFileA(handle,&info));
+    if(ok && GetLastError()!=ERROR_NO_MORE_FILES)ok=false;
+    FindClose(handle);
+    if(!ok)return false;
+#else
+    for(fs::directory_iterator it(from,ec),end;!ec&&it!=end;it.increment(ec)) {
+        if(children.size()>=256)return false;
+        children.push_back(it->path().filename().string());
+    }
+    if(ec)return false;
+#endif
+    for(size_t i=0;i<children.size();++i)
+        if(!PlanItem(from,children[i],to,depth+1,steps))return false;
     return true;
 }
 bool FileWorkspace::Copy(const std::string& sourceDir,const std::string& name,

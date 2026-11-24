@@ -66,7 +66,7 @@ operações funcionaram numa unidade real.
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
 | 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação dashboard, HDD1/USB0/USB1 e MU0/MU1/DVD somente leitura** | Partição de sistema, validação de montagem real |
-| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear, recortar/mover arquivo no mesmo volume e excluir item não recursivo em área pessoal; fila de cópias** | Multisseleção, cópia de pastas, mover entre volumes, homologação |
+| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear, recortar/mover arquivo no mesmo volume e excluir item não recursivo em área pessoal; fila de cópias** | Mover entre volumes, exclusão recursiva com segurança e homologação; multisseleção e cópia de pastas implementadas |
 | 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Sessão autenticada e teste TCP Linux: PASV/EPSV/LIST/NLST/SIZE/RETR e STOR com ALLO validados** | Transporte XNet, serviço LAN, configuração, compatibilidade FileZilla e homologação |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
@@ -334,3 +334,8 @@ Arquivos: abra uma pasta abaixo da raiz e pressione Esquerda, A confirma inclus�
 ## Explorador: ações pessoais e dispositivos de leitura
 
 Direita abre menu contextual do item. Recortar marca arquivo pessoal; LB no destino + A move sem sobrescrever no mesmo volume. Excluir exige segunda confirmação e só remove arquivo pessoal ou diretório vazio. B cancela; operações bloqueadas durante transferências; AXCOPY temporários preservados. MU0/MU1/DVD adicionados somente para navegação, sem workspace gravável. Linux usa link exclusivo + unlink; caso unlink falhe, mantém ambos os nomes para não perder dados. Multisseleção, cópia recursiva e movimento entre volumes não foram implementados. Testes de proteção, conflito, cancelamento e navegação adicionados. CI 45511397605 e 45511503358 aprovadas; revisão atual aguarda CI e hardware.
+
+
+## Multisselecao e copia de diretorios
+
+Direita > Iniciar multisselecao marca o item e habilita X para marcar/desmarcar até 32 itens da pasta de origem. X fora desse modo copia um arquivo ou diretorio individual. LB+A em UserFiles/AuroraXFiles agenda plano validado, até 256 operações, 12 níveis de profundidade. Não mescla diretórios existentes, rejeita links no PC, nomes inválidos e destino dentro da origem; preserva diretórios vazios. A fila cria pastas e copia arquivos em etapas; falha ou cancelamento interrompe pendentes e preserva o que já foi concluído. Sem rollback de diretórios criados ou arquivos completos; nenhuma origem apagada. A fila segue apenas em sessão e não executa durante outros XEX. Testes sintéticos de árvore, seleção múltipla e proteção adicionados. CI anterior 45511958208 aprovada; CI nova e hardware pendentes.
