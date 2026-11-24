@@ -70,3 +70,7 @@ add_test(NAME storage_info COMMAND storage_info_tests)
 add_executable(network_info_tests Tests/NetworkInfoTests.cpp Platform/Xbox360/NetworkInfo.cpp)
 target_include_directories(network_info_tests PRIVATE Platform/Xbox360)
 add_test(NAME network_info COMMAND network_info_tests)
+
+add_executable(ftp_session_tests Tests/FtpSessionTests.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FileWorkspace.cpp)
+target_include_directories(ftp_session_tests PRIVATE Platform/Xbox360)
+add_test(NAME ftp_session COMMAND ftp_session_tests)
