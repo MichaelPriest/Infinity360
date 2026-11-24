@@ -32,12 +32,34 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate Alpha packaging on test fixtures
         run: python3 -m unittest discover -s Tests -p 'test_package_alpha.py' -v
+      - name: Require media regression dependencies
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v openssl >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg openssl
+          fi
+          ffmpeg -version
+          openssl version
       - name: Compile portable dashboard and console UI
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
           cmake --build build --parallel 2
-      - name: Run portable regression suite
-        run: ctest --test-dir build --output-on-failure
+      - name: Run portable regression suite (including streaming)
+        run: |
+          ctest --test-dir build -N | tee build/test-inventory.txt
+          grep -Eq 'Test +#[0-9]+: stream_playback' build/test-inventory.txt
+          ctest --test-dir build --output-on-failure --output-junit test-results.xml
+      - name: Retain test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraX-portable-test-results
+          path: |
+            build/test-results.xml
+            build/test-inventory.txt
+            build/Testing/Temporary/LastTest.log
+          if-no-files-found: warn
+          retention-days: 14
       - name: Validate native project assets
         run: |
           test -s Platform/Xbox360/Assets/home.tga
