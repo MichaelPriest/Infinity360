@@ -228,3 +228,7 @@ e https://free60.org/System-Software/Formats/STFS/.
 ## Gerenciador de arquivos pessoal
 
 Implementação nativa em `FileWorkspace.cpp` e `ConsoleHome.cpp`: alternância HDD/USB, criação de pasta, renomeação e cópia limitada sem sobrescrita. Escrita confinada a `UserFiles`/`AuroraXFiles`; demais caminhos somente leitura. Testes de nomes, traversal, symlinks no PC, cópia e preservação da origem em `Tests/FileWorkspaceTests.cpp`. Ainda não homologado no console.
+
+## Armazenamento real por dispositivo
+
+Sistema > Armazenamento agora consulta a capacidade e o espaço livre dos caminhos da aplicação, HDD1, USB0 e USB1. Exibe percentual de ocupação, marca volumes indisponíveis e atualiza com Y. Não soma caminhos que podem apontar para um mesmo volume. `StorageInfo.cpp` usa GetDiskFreeSpaceExA no XDK e filesystem::space no PC. Teste isolado C++17 com -Wall -Wextra -Wpedantic -Werror executado com sucesso, incluindo limites de 64 bits, caminho ausente e leitura de capacidade real do ambiente portátil. Integração XDK e console ainda não homologados. Rede/FTP, sensores SMC e downloads continuam pendentes.
