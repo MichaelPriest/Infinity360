@@ -122,6 +122,8 @@ void ConsoleHome::ScanLibrary() {
         else if(pkg.contentType==0xd0000u) kind="Pacote XBLA";
         else if(pkg.contentType==0x5000u) kind="Pacote Xbox Original";
         else if(pkg.contentType==0x2000000u) kind="Pacote Indie";
+        else if(pkg.contentType==0x4000u) kind="Pacote Instalado";
+        else if(pkg.contentType==0x80000u) kind="Pacote Demo";
         Game item={pkg.name,pkg.path,kind,false};
         games_.push_back(item);
     }
@@ -655,7 +657,10 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Accept && section_!=Files && !visible_.empty()) {
             const std::string path=visible_[row_]->executable;
             if(!isXexPath(path) || isContentPackage(*visible_[row_])) {
-                notice_="Pacote de conteudo: launch nativo ainda nao integrado.";
+                if(isContentPackage(*visible_[row_])) {
+                    const XboxPackageCheck check=ContentCatalog::CheckPackage(path);
+                    notice_=ContentCatalog::PackageStatus(check.status);
+                } else notice_="Formato de executavel nao suportado.";
                 return "";
             }
             if(TransferRunning()) {
