@@ -10,6 +10,10 @@ public:
                const std::string& username,const std::string& password);
     std::string Greeting() const;
     std::string Command(const std::string& line);
+    // Validated read-only paths for a transport adapter. Never expose these
+    // physical paths to a remote client.
+    bool DataDirectory(const std::string& arg,std::string& path) const;
+    bool DataFile(const std::string& arg,std::string& path) const;
     bool Authenticated() const { return authenticated_; }
     bool Closed() const { return closed_; }
     static bool ValidCredentials(const std::string& user,const std::string& password);
