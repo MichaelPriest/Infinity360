@@ -841,7 +841,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,"Servicos de rede",25,White,558);
-    c.Text(660,447,"FTP: nao implementado",21,Muted,558);
+    c.Text(660,447,"FTP: nucleo pronto; servidor inativo",21,Muted,558);
     c.Text(660,486,"SMB / System Link: pendentes",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
     c.Text(45,607,"Y Atualizar | B Voltar | IP local nao comprova acesso a Internet.",18,Muted,1180);
@@ -926,7 +926,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
-            "FTP e SMB: acesso remoto ainda nao habilitado nesta Alpha.",
+            "FTP: autenticacao local implementada; transporte de rede pendente.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
             "Transferencias locais; downloads de internet pendentes."
         };
