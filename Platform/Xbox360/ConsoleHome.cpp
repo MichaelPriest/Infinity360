@@ -135,7 +135,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),
+      fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -439,7 +439,7 @@ void ConsoleHome::Enter(Section s) {
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
     if(s==System) RefreshStorage();
-    if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;scanPathConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
+    if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;scanPathConfirm_=false;fileAction_=false;deleteConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
     Reload();
 }
 void ConsoleHome::StartFileEdit(bool rename) {
@@ -863,6 +863,34 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==Files && page_==Listing) {
+        if(fileAction_) {
+            if(key==Back) {fileAction_=false;deleteConfirm_=false;notice_.clear();return "";}
+            if(deleteConfirm_) {
+                deleteConfirm_=false;
+                if(key==Accept && !TransferRunning()) {
+                    const bool removed=fileWorkspace_.Remove(actionDir_,actionName_);
+                    fileAction_=false;Reload();
+                    notice_=removed?"Item excluido.":"Exclusao recusada: pasta nao vazia ou acesso invalido.";
+                } else notice_="Exclusao cancelada.";
+                return "";
+            }
+            if(key==Up && fileActionRow_>0)--fileActionRow_;
+            if(key==Down && fileActionRow_<2)++fileActionRow_;
+            if(key==Accept) {
+                if(fileActionRow_==2) {fileAction_=false;return "";}
+                if(TransferRunning()||!fileWorkspace_.CanWrite(actionDir_)) {
+                    notice_="Operacao limitada ao espaco pessoal, sem transferencias ativas.";return "";
+                }
+                if(fileActionRow_==0) {
+                    if(!fileWorkspace_.CanReadPersonalFile(FileWorkspace::Join(actionDir_,actionName_))) {
+                        notice_="Recortar disponivel somente para arquivos pessoais.";return "";
+                    }
+                    copyDir_=actionDir_;copyName_=actionName_;cutMode_=true;
+                    fileAction_=false;notice_="Arquivo recortado. LB cola no destino pessoal.";
+                } else {deleteConfirm_=true;notice_="A confirma exclusao definitiva | B cancela.";}
+            }
+            return "";
+        }
         if(scanPathConfirm_) {
             scanPathConfirm_=false;
             if(key==Accept)ToggleScanPath();
@@ -872,8 +900,21 @@ std::string ConsoleHome::Press(Key key) {
         if(pasteConfirm_) {
             pasteConfirm_=false;
             if(key==Accept) {
-                EnqueueCopy();
+                if(cutMode_) {
+                    if(TransferRunning())notice_="Conclua a fila antes de mover arquivos.";
+                    else if(fileWorkspace_.Move(copyDir_,copyName_,folders_.back())) {
+                        copyName_.clear();copyDir_.clear();cutMode_=false;
+                        Reload();notice_="Arquivo movido sem sobrescrever.";
+                    } else notice_="Movimento recusado; confira destino e origem.";
+                } else EnqueueCopy();
             } else notice_="Copia cancelada.";
+            return "";
+        }
+        if(key==Right) {
+            if(Count()) {
+                actionDir_=folders_.back();actionName_=files_[row_].name;
+                fileActionRow_=0;fileAction_=true;deleteConfirm_=false;notice_.clear();
+            }
             return "";
         }
         if(key==Left) {
@@ -893,7 +934,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(key==Favorite) {
             if(Count() && !files_[row_].directory) {
-                copyDir_=folders_.back();copyName_=files_[row_].name;
+                copyDir_=folders_.back();copyName_=files_[row_].name;cutMode_=false;
                 notice_="Arquivo marcado para copiar: "+copyName_;
             } else notice_="Selecione um arquivo (nao uma pasta).";
             return "";
@@ -901,7 +942,7 @@ std::string ConsoleHome::Press(Key key) {
         if(key==PageUp) {
             if(copyName_.empty() || !fileWorkspace_.CanWrite(folders_.back()))
                 notice_="Marque um arquivo com X; abra UserFiles/AuroraXFiles para colar.";
-            else {pasteConfirm_=true;notice_="A confirma a copia sem sobrescrever; B cancela.";}
+            else {pasteConfirm_=true;notice_=cutMode_?"A confirma mover sem sobrescrever; B cancela.":"A confirma a copia sem sobrescrever; B cancela.";}
             return "";
         }
     }
@@ -1367,10 +1408,23 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
     c.Text(46,570,"Cima/Baixo Selecionar | Esquerda/Direita ou A Alterar | RB Recarregar",19,White,1180);
     c.Text(46,604,"X Restaurar principal | Y Salvar | B Cancelar",19,Lime,1180);
 }
+void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
+    c.Text(45,145,"Acoes do arquivo",31,White,1180);
+    c.Text(48,196,actionName_,24,Lime,1160);
+    static const char* const actions[]={"Recortar arquivo","Excluir item","Voltar"};
+    for(int i=0;i<3;++i) {
+        const int y=258+i*85;
+        panel(c,45,y,1189,69,Panel,i==fileActionRow_);
+        c.Text(63,y+15,actions[i],27,White,1100);
+    }
+    c.Text(48,550,"Somente espaco pessoal. Exclusao nao recursiva; movimento no mesmo volume.",20,Muted,1175);
+    c.Text(48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
+    if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
                keyboardMode_==2?"Renomear colecao":keyboardMode_==3?"Nova pasta":
@@ -1528,7 +1582,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(49,176,fileWorkspace_.CanWrite(folders_.back())?
             "Espaco pessoal | escrita habilitada":"Navegacao somente leitura | Start cria espaco pessoal no dispositivo",
             18,Muted,1140);
-        c.Text(49,594,"Esquerda: incluir/remover pasta atual da busca de jogos",18,Muted,1180);
+        c.Text(49,594,"Esquerda: busca de jogos | Direita: acoes do item",18,Muted,1180);
         c.Text(49,615,"RB Dispositivo | Start Nova pasta | RS Renomear | X Copiar | LB Colar",18,Lime,1180);
     }
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);

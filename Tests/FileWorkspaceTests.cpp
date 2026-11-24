@@ -98,5 +98,20 @@ int main() {
         if(entry.path().filename().string().find("AXCOPY-")==0)
             assert(entry.path()==stale);
 
+    assert(files.Create(user,"MoveTo"));
+    const std::string moveTo=(fs::path(user)/"MoveTo").string();
+    assert(files.Move(docs,"renamed.txt",moveTo));
+    assert(!fs::exists(fs::path(docs)/"renamed.txt"));
+    assert(fs::exists(fs::path(moveTo)/"renamed.txt"));
+    std::ofstream(fs::path(docs)/"renamed.txt")<<"collision";
+    assert(!files.Move(moveTo,"renamed.txt",docs));
+    assert(fs::exists(fs::path(moveTo)/"renamed.txt"));
+    assert(!files.Move(app,"test.txt",moveTo));
+    assert(!files.Remove(app,"test.txt"));
+    assert(!files.Remove(user,"MoveTo")); // nonempty directory
+    assert(!files.Remove(docs,"AXCOPY-0000.part"));
+    assert(files.Remove(moveTo,"renamed.txt"));
+    assert(files.Remove(user,"MoveTo"));
+    assert(!fs::exists(fs::path(user)/"MoveTo"));
     fs::remove_all(root);
 }

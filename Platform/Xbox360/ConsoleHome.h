@@ -49,7 +49,10 @@ private:
     void RefreshNetwork();
     void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
-    bool pasteConfirm_, scanPathConfirm_;
+    bool pasteConfirm_, scanPathConfirm_, fileAction_, deleteConfirm_, cutMode_;
+    int fileActionRow_;
+    std::string actionDir_, actionName_;
+    void DrawFileActions(HomeCanvas& c) const;
     void ToggleScanPath();
     void LoadScanPaths();
     std::string copyDir_, copyName_, renameName_;

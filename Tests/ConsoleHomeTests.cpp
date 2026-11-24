@@ -818,5 +818,24 @@ int main(int argc,char** argv) {
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept); // remove
     assert(fs::file_size(scanUiConfig)==0);
     assert(fs::exists(scanUiExe));
+    // Native explorer context actions: confirmed deletion, cancel and cut/paste.
+    const fs::path actionRoot=root/"FileActionsFixture";
+    fs::create_directories(actionRoot/"UserFiles"/"Dest");
+    std::ofstream(actionRoot/"UserFiles"/"test.txt")<<"personal";
+    ConsoleHome actions(actionRoot.string()+"/",noRoots);actions.Load();
+    actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Down);
+    actions.Press(ConsoleHome::Accept);actions.Press(ConsoleHome::Accept); // Files/UserFiles
+    actions.Press(ConsoleHome::Down); // test.txt
+    actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Down);
+    actions.Press(ConsoleHome::Accept);actions.Press(ConsoleHome::Back); // cancel deletion
+    assert(fs::exists(actionRoot/"UserFiles"/"test.txt"));
+    actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Accept); // cut
+    actions.Press(ConsoleHome::Up);actions.Press(ConsoleHome::Accept); // Dest
+    actions.Press(ConsoleHome::PageUp);actions.Press(ConsoleHome::Accept); // move
+    assert(!fs::exists(actionRoot/"UserFiles"/"test.txt"));
+    assert(fs::exists(actionRoot/"UserFiles"/"Dest"/"test.txt"));
+    actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Down);
+    actions.Press(ConsoleHome::Accept);actions.Press(ConsoleHome::Accept); // delete
+    assert(!fs::exists(actionRoot/"UserFiles"/"Dest"/"test.txt"));
     fs::remove_all(root);
 }

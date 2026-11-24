@@ -65,8 +65,8 @@ operações funcionaram numa unidade real.
 
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
-| 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação da pasta da dashboard, HDD1/USB0/USB1** | MU/DVD, partição de sistema, validação de montagem real |
-| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear em área pessoal, copiar por blocos com progresso e cancelamento** | Mover, excluir, multisseleção, cópia de pastas e homologação |
+| 24 | Explorer de HDD/USB/MU/DVD e partição do sistema somente leitura | T | **Navegação dashboard, HDD1/USB0/USB1 e MU0/MU1/DVD somente leitura** | Partição de sistema, validação de montagem real |
+| 25 | Copiar, recortar, colar, renomear, criar pasta, apagar, multisseleção | T | **Criar/renomear, recortar/mover arquivo no mesmo volume e excluir item não recursivo em área pessoal; fila de cópias** | Multisseleção, cópia de pastas, mover entre volumes, homologação |
 | 26 | FTP servidor com senha configurável e inicialização opcional | M/T | **Sessão autenticada e teste TCP Linux: PASV/EPSV/LIST/NLST/SIZE/RETR e STOR com ALLO validados** | Transporte XNet, serviço LAN, configuração, compatibilidade FileZilla e homologação |
 | 27 | Status de rede/IP e serviço FTP | T | **Diagnóstico IPv4 local e link Ethernet por XNet; provider Linux** | Homologar XDK, servidor FTP, gateway/DNS e teste de internet |
 | 28 | Temperatura CPU/GPU/memória/placa; Celsius e Fahrenheit | T | Web demonstrativo / cartões nativos sem provider | Leitura nativa comprovada, sem simular sensor |
@@ -329,3 +329,8 @@ Arquivos: marque com X, abra destino pessoal e LB/A confirma. Uma cópia ativa m
 ## Editor de caminhos de varredura
 
 Arquivos: abra uma pasta abaixo da raiz e pressione Esquerda, A confirma inclusão/remoção em `aurorax-scanpaths-ui.txt`, B cancela. Mantém intactos caminhos padrão, configuração manual e importação Aurora. Máximo de 32 raízes combinadas; alterações entram ao abrir Biblioteca. Varredura portátil/XDK limitada a profundidade 16 por raiz, 32768 diretórios e 16384 jogos; deduplicação por caminho do executável e rejeição de symlinks no PC. Testes de cancelamento, persistência, lançamento pelo catálogo e caminhos sobrepostos, profundidade e links adicionados.
+
+
+## Explorador: ações pessoais e dispositivos de leitura
+
+Direita abre menu contextual do item. Recortar marca arquivo pessoal; LB no destino + A move sem sobrescrever no mesmo volume. Excluir exige segunda confirmação e só remove arquivo pessoal ou diretório vazio. B cancela; operações bloqueadas durante transferências; AXCOPY temporários preservados. MU0/MU1/DVD adicionados somente para navegação, sem workspace gravável. Linux usa link exclusivo + unlink; caso unlink falhe, mantém ambos os nomes para não perder dados. Multisseleção, cópia recursiva e movimento entre volumes não foram implementados. Testes de proteção, conflito, cancelamento e navegação adicionados. CI 45511397605 e 45511503358 aprovadas; revisão atual aguarda CI e hardware.

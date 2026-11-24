@@ -93,6 +93,10 @@ FileWorkspace::FileWorkspace(const std::string& appDirectory) {
     roots_.push_back("USB1:\\");
     for(size_t i=1;i<roots_.size();++i)
         workspaces_.push_back(Join(roots_[i],"AuroraXFiles"));
+    // Optical disc and memory units are browse-only, not writable workspaces.
+    roots_.push_back("DVD:\\");
+    roots_.push_back("MU0:\\");
+    roots_.push_back("MU1:\\");
 #endif
 }
 bool FileWorkspace::ValidName(const std::string& name) {
@@ -139,7 +143,7 @@ bool FileWorkspace::CanReadPersonalFile(const std::string& path) const {
 }
 std::string FileWorkspace::WorkspaceFor(const std::string& root) const {
     for(size_t i=0;i<roots_.size();++i)
-        if(key(root)==key(roots_[i]))return workspaces_[i];
+        if(key(root)==key(roots_[i]))return i<workspaces_.size()?workspaces_[i]:"";
     return "";
 }
 bool FileWorkspace::Create(const std::string& parent,const std::string& name) const {
@@ -168,6 +172,40 @@ bool FileWorkspace::Rename(const std::string& parent,const std::string& oldName,
     std::error_code ec;
     fs::rename(from,to,ec);
     return !ec;
+#endif
+}
+bool FileWorkspace::Remove(const std::string& parent,const std::string& name) const {
+    if(!CanWrite(parent)||!ValidName(name))return false;
+    const std::string path=Join(parent,name);
+    if(!Allowed(path,workspaces_)||!exists(path))return false;
+    // Nonrecursive only: an empty directory or a regular personal file.
+#ifdef _XBOX
+    return directory(path)?RemoveDirectoryA(path.c_str())!=0:DeleteFileA(path.c_str())!=0;
+#else
+    std::error_code ec;
+    const fs::file_status st=fs::symlink_status(path,ec);
+    if(ec||(!fs::is_directory(st)&&!fs::is_regular_file(st)))return false;
+    return fs::remove(path,ec)&&!ec;
+#endif
+}
+bool FileWorkspace::Move(const std::string& source,const std::string& name,const std::string& dest) const {
+    if(!CanWrite(source)||!CanWrite(dest)||!ValidName(name))return false;
+    const std::string from=Join(source,name),to=Join(dest,name);
+    if(!Allowed(from,workspaces_)||!Allowed(to,workspaces_)||!exists(from)||exists(to)||
+       inside(dest,from)||directory(from))return false;
+#if defined(_XBOX) || defined(_WIN32)
+    // MoveFile does not overwrite; reject moves across mount roots on Xbox.
+#ifdef _XBOX
+    if(key(source).substr(0,key(source).find(':'))!=key(dest).substr(0,key(dest).find(':')))return false;
+#endif
+    return MoveFileA(from.c_str(),to.c_str())!=0;
+#else
+    // A same-filesystem hard link reserves a new name without clobbering it.
+    // If source unlink fails, leave both names rather than risk deleting data.
+    std::error_code ec;
+    if(!fs::is_regular_file(from,ec)||ec)return false;
+    if(link(from.c_str(),to.c_str())!=0)return false;
+    return unlink(from.c_str())==0;
 #endif
 }
 bool FileWorkspace::PrepareCopy(const std::string& sourceDir,const std::string& name,

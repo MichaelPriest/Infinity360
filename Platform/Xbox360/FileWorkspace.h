@@ -16,6 +16,9 @@ public:
     bool Create(const std::string& directory,const std::string& name) const;
     bool Rename(const std::string& directory,const std::string& oldName,
                 const std::string& newName) const;
+    bool Remove(const std::string& directory,const std::string& name) const;
+    // Move without overwriting; same volume only, no copy/delete fallback.
+    bool Move(const std::string& sourceDir,const std::string& name,const std::string& destDir) const;
     bool Copy(const std::string& sourceDir,const std::string& name,
               const std::string& destDir) const;
     // Validate a source file and an unused destination within personal storage.
