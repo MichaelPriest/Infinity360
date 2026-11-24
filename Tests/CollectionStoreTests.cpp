@@ -75,5 +75,43 @@ int main() {
     assert(guarded.Items().size()==1);
     assert(guarded.Items()[0].games.size()==1);
 
+    // Malformed data remains inspectable but cannot be overwritten implicitly.
+    assert(!guarded.Create("Do not overwrite"));
+    assert(!guarded.Toggle(0,game2));
+    assert(!guarded.Save());
+    {
+        std::ifstream in(location,std::ios::binary);
+        std::string first;
+        std::getline(in,first);
+        assert(first=="# AuroraX collections v1");
+    }
+
+    const std::string largePath=(root/"large.txt").string();
+    CollectionStore large(largePath);
+    assert(large.Create("Large"));
+    size_t added=0;
+    for(size_t i=0;i<512;++i) {
+        const std::string path=std::string(2000,'X')+std::to_string(i);
+        if(!large.Toggle(0,path))break;
+        ++added;
+    }
+    assert(added>100 && added<512);
+    assert(large.Save());
+    assert(fs::file_size(largePath)<=256*1024);
+    CollectionStore largeReload(largePath);
+    assert(largeReload.Load());
+    assert(largeReload.Items()[0].games.size()==added);
+    assert(largeReload.Toggle(0,largeReload.Items()[0].games[0]));
+    assert(largeReload.Toggle(0,"another"));
+    assert(largeReload.Save());
+
+    // A single oversized line must fail before allocating arbitrary memory.
+    const std::string corrupt=(root/"oversize.txt").string();
+    {std::ofstream out(corrupt,std::ios::binary);out<<std::string(300*1024,'X');}
+    CollectionStore oversized(corrupt);
+    assert(!oversized.Load());
+    assert(!oversized.Save());
+    assert(fs::file_size(corrupt)==300*1024);
+
     fs::remove_all(root);
 }
