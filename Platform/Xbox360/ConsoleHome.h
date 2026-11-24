@@ -25,7 +25,7 @@ private:
     enum Section { Library, Iptv, Apps, Emulators, Files, System, Recent, Favorites };
     enum Page { Home, Listing, Details };
     std::string dir_, notice_;
-    std::vector<std::string> roots_, baseRoots_, history_, favorites_, hidden_, launched_, folders_;
+    std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
     std::vector<int> toolKinds_; // 1 = installed, 2 = plugin, 3 = homebrew
     std::vector<const Game*> visible_;
@@ -70,6 +70,7 @@ private:
     void ScanLibrary();
     bool SaveProfile() const;
     bool Starred(const Game& game) const;
+    std::vector<std::string> HomeShortcuts() const;
     const Game* Installed(const std::string& path) const;
     void DrawHome(HomeCanvas& c) const;
     void DrawSection(HomeCanvas& c) const;

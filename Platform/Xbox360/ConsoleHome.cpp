@@ -11,7 +11,8 @@
 
 namespace {
 const size_t HistoryLimit=24;
-const char* const labels[]={"Biblioteca","Cloud360 IPTV","Aplicativos","Emuladores","Arquivos","Sistema","Recentes","Favoritos"};
+const size_t PinLimit=32;
+const char* const labels[]={"Biblioteca","Cloud360 IPTV","Aplicativos","Emuladores","Arquivos","Sistema","Recentes","Fixados e favoritos"};
 std::string number(size_t value) { std::ostringstream out; out<<value; return out.str(); }
 bool contains(const std::vector<std::string>& list,const std::string& path) {
     return std::find(list.begin(),list.end(),path)!=list.end();
@@ -96,7 +97,7 @@ void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
-    history_.clear(); favorites_.clear(); hidden_.clear(); launched_.clear();
+    history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -104,10 +105,14 @@ void ConsoleHome::Load() {
         const std::string file=line.substr(2);
         if(line[0]=='R' && history_.size()<HistoryLimit && !contains(history_,file)) history_.push_back(file);
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
+        if(line[0]=='K' && pinned_.size()<PinLimit && !contains(pinned_,file)) pinned_.push_back(file);
         if(line[0]=='H' && !contains(hidden_,file)) hidden_.push_back(file);
         if(line[0]=='P' && launched_.size()<4096 && !contains(launched_,file))
             launched_.push_back(file);
     }
+    // Legacy profiles recorded only R; these were also launch requests.
+    for(size_t i=0;i<history_.size() && launched_.size()<4096;++i)
+        if(!contains(launched_,history_[i])) launched_.push_back(history_[i]);
     ScanLibrary();
     Rebuild();
 }
@@ -133,6 +138,7 @@ bool ConsoleHome::SaveProfile() const {
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     for (size_t i=0;i<history_.size();++i) out<<"R\t"<<history_[i]<<"\n";
     for (size_t i=0;i<favorites_.size();++i) out<<"F\t"<<favorites_[i]<<"\n";
+    for (size_t i=0;i<pinned_.size();++i) out<<"K\t"<<pinned_[i]<<"\n";
     for (size_t i=0;i<hidden_.size();++i) out<<"H\t"<<hidden_[i]<<"\n";
     for (size_t i=0;i<launched_.size();++i) out<<"P\t"<<launched_[i]<<"\n";
     out.close();
@@ -140,6 +146,12 @@ bool ConsoleHome::SaveProfile() const {
     return replaceSavedFile(path);
 }
 bool ConsoleHome::Starred(const Game& item) const { return contains(favorites_,item.executable); }
+std::vector<std::string> ConsoleHome::HomeShortcuts() const {
+    std::vector<std::string> paths=pinned_;
+    for(size_t i=0;i<favorites_.size();++i)
+        if(!contains(paths,favorites_[i])) paths.push_back(favorites_[i]);
+    return paths;
+}
 const Game* ConsoleHome::Installed(const std::string& path) const {
     for(size_t i=0;i<games_.size();++i) if(games_[i].executable==path) return &games_[i];
     return 0;
@@ -152,8 +164,11 @@ size_t ConsoleHome::Count() const {
 void ConsoleHome::Rebuild() {
     visible_.clear();
     if (section_==Recent || section_==Favorites) {
-        const std::vector<std::string>& paths = section_==Recent ? history_ : favorites_;
-        for(size_t i=0;i<paths.size();++i) { const Game* g=Installed(paths[i]); if(g) visible_.push_back(g); }
+        const std::vector<std::string> paths = section_==Recent ? history_ : HomeShortcuts();
+        for(size_t i=0;i<paths.size();++i) {
+            const Game* g=Installed(paths[i]);
+            if(g && !contains(hidden_,paths[i])) visible_.push_back(g);
+        }
     } else if (section_==Library) {
         for(size_t i=0;i<games_.size();++i) {
             const bool hidden=contains(hidden_,games_[i].executable);
@@ -164,7 +179,8 @@ void ConsoleHome::Rebuild() {
             const bool neverOpened=!isContentPackage(games_[i]) &&
                 !contains(launched_,games_[i].executable);
             const bool allowed=subtab_==7?hidden:
-                 (!hidden && (subtab_==6?neverOpened:
+                 (!hidden && (subtab_==8?contains(pinned_,games_[i].executable):
+                               subtab_==6?neverOpened:
                               subtab_==5?inCollection:
                               libraryTabMatch(games_[i],subtab_)));
             if(allowed && matchesLibraryQuery(games_[i],searchTerm_))
@@ -650,7 +666,7 @@ std::string ConsoleHome::Press(Key key) {
     if(page_==Listing &&
        (section_==Apps || section_==Emulators || section_==Library) &&
        (key==Left || key==Right)) {
-        const int last=section_==Emulators?2:section_==Library?7:3;
+        const int last=section_==Emulators?2:section_==Library?8:3;
         if(key==Left && subtab_>0) --subtab_;
         if(key==Right && subtab_<last) ++subtab_;
         row_=0;
@@ -659,6 +675,22 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(page_==Details) {
+        if(key==PageUp && Count() &&
+           (section_==Library || section_==Recent || section_==Favorites)) {
+            const std::string path=visible_[row_]->executable;
+            std::vector<std::string>::iterator found=std::find(pinned_.begin(),pinned_.end(),path);
+            const bool adding=found==pinned_.end();
+            if(adding && contains(hidden_,path)) {notice_="Reexiba o jogo antes de fixar.";return "";}
+            if(adding && pinned_.size()>=PinLimit) {notice_="Limite de 32 jogos fixados.";return "";}
+            if(adding) pinned_.push_back(path); else pinned_.erase(found);
+            notice_=adding?"Jogo fixado no inicio.":"Jogo desafixado.";
+            if(!SaveProfile()) notice_+=" Falha ao salvar; alteracao apenas nesta sessao.";
+            if(section_==Favorites || (section_==Library && subtab_==8)) {
+                page_=Listing;
+                Rebuild();
+            }
+            return "";
+        }
         if(key==Accept && section_!=Files && !visible_.empty()) {
             const std::string path=visible_[row_]->executable;
             if(!isXexPath(path) || isContentPackage(*visible_[row_])) {
@@ -747,11 +779,11 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
         int x=side?789:42, w=side?449:701;
         bool focused=focus_==(side?Favorites:Recent);
         if(focused) c.Box(x,490,w,3,Lime);
-        c.Text(x,448,labels[side?Favorites:Recent],28,focused?Lime:White,w);
-        const std::vector<std::string>& paths=side?favorites_:history_;
+        c.Text(x,448,labels[side?Favorites:Recent],side?24:28,focused?Lime:White,w);
+        const std::vector<std::string> paths=side?HomeShortcuts():history_;
         int shown=0, cardWidth=(w-18)/3;
         for(size_t i=0;i<paths.size() && shown<3;++i) {
-            const Game* g=Installed(paths[i]); if(!g) continue;
+            const Game* g=Installed(paths[i]); if(!g || contains(hidden_,paths[i])) continue;
             int left=x+shown*(cardWidth+9);
             c.Box(left,504,cardWidth,126,Panel,8);
             int sx=600,sy=66;
@@ -764,11 +796,12 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
                 c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
             }
             c.Text(left+8,594,g->name,16,White,cardWidth-16);
+            if(side && contains(pinned_,paths[i])) c.Text(left+8,508,"FIXADO",14,Lime,cardWidth-16);
             ++shown;
         }
         if(!shown) {
             c.Box(x,503,w,124,Panel,9);
-            c.Text(x+15,543,side?"Use X em um jogo para favoritar.":"Os jogos abertos aparecem aqui.",19,Muted,w-26);
+            c.Text(x+15,543,side?"LB nos detalhes fixa um jogo.":"Os jogos abertos aparecem aqui.",19,Muted,w-26);
         }
     }
 }
@@ -994,21 +1027,23 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             } else c.Text(77,351,"Metadados indisponiveis para este item.",22,Muted,1100);
         }
         c.Text(77,469,hint,21,Lime,1110);
-        if(section_==Library || section_==Recent || section_==Favorites)
+        if(section_==Library || section_==Recent || section_==Favorites) {
             c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
+            c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);
+        }
         return;
     }
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
-        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Nunca","Ocultos"};
+        static const char* const gameTabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Nunca","Ocultos","Fixados"};
         const char* const* tabs=section_==Library?gameTabs:appTabs;
-        const int numTabs=section_==Library?8:section_==Emulators?3:4;
-        const int tabWidth=numTabs==8?109:numTabs==3?244:207;
+        const int numTabs=section_==Library?9:section_==Emulators?3:4;
+        const int tabWidth=numTabs==9?124:numTabs==3?244:207;
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
-            c.Text(x+15,155,tabs[i],21,i==subtab_?Lime:White,tabWidth-25);
+            c.Text(x+(numTabs==9?7:15),155,tabs[i],numTabs==9?17:21,i==subtab_?Lime:White,tabWidth-(numTabs==9?14:25));
         }
         c.Text(49,200,number(Count())+" itens nesta aba",21,Muted,1120);
         if(section_==Library) {
@@ -1044,7 +1079,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         std::string name,detail;
         if(section_==Files) {
             name=files_[i].name; detail=files_[i].directory?"Pasta":"Arquivo";
-        } else {name=visible_[i]->name; detail=(Starred(*visible_[i])?"*  ":"")+visible_[i]->device;}
+        } else {name=visible_[i]->name; detail=std::string(contains(pinned_,visible_[i]->executable)?"FIXADO  ":"")+(Starred(*visible_[i])?"*  ":"")+visible_[i]->device;}
         c.Text(62,y+6,name,23,White,810);
         c.Text(886,y+9,detail,19,Muted,336);
     }

@@ -444,5 +444,55 @@ int main(int argc,char** argv) {
     assert(!fs::exists(fileRoot/"UserFiles"/"source.txt"));
     fileMenu.Draw(canvas,"19:55");
 
+    // Pins are independent of stars, survive restart, and obey hidden filtering.
+    const fs::path pinRoot=root/"PinFixture";
+    const fs::path pinGame=pinRoot/"Games"/"Alpha"/"default.xex";
+    fs::create_directories(pinGame.parent_path());
+    std::ofstream(pinGame)<<"pin fixture";
+    const std::string pinDir=pinRoot.string()+"/";
+    const std::vector<std::string> pinRoots(1,(pinRoot/"Games").string());
+    ConsoleHome pinMenu(pinDir,pinRoots); pinMenu.Load();
+    pinMenu.Press(ConsoleHome::Accept); // Library
+    pinMenu.Press(ConsoleHome::Accept); // Details
+    pinMenu.Press(ConsoleHome::PageUp); // LB pins, does not launch
+    {
+        std::ifstream in(pinRoot/"aurorax-profile.txt");
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("K\t"+pinGame.string())!=std::string::npos);
+        assert(data.find("F\t"+pinGame.string())==std::string::npos);
+    }
+    ConsoleHome pinReload(pinDir,pinRoots); pinReload.Load();
+    pinReload.Draw(canvas,"19:56");
+    pinReload.Press(ConsoleHome::Accept);
+    for(int i=0;i<8;++i)pinReload.Press(ConsoleHome::Right); // Fixados
+    pinReload.Press(ConsoleHome::Accept);
+    assert(pinReload.Press(ConsoleHome::Accept)==pinGame.string());
+    pinReload.Press(ConsoleHome::Back);
+    pinReload.Press(ConsoleHome::PageUp); // hide pinned game from listing
+    assert(pinReload.Press(ConsoleHome::Accept).empty());
+    pinReload.Press(ConsoleHome::Back); // home
+    pinReload.Press(ConsoleHome::Down); // apps
+    pinReload.Press(ConsoleHome::Down); // recent
+    pinReload.Press(ConsoleHome::Right); // pinned / favorites
+    pinReload.Press(ConsoleHome::Accept);
+    assert(pinReload.Press(ConsoleHome::Accept).empty());
+    pinReload.Press(ConsoleHome::Back);
+    pinReload.Press(ConsoleHome::Left);
+    pinReload.Press(ConsoleHome::Accept); // recent
+    assert(pinReload.Press(ConsoleHome::Accept).empty());
+    ConsoleHome unpin(pinDir,pinRoots);unpin.Load();
+    unpin.Press(ConsoleHome::Accept);
+    for(int i=0;i<7;++i)unpin.Press(ConsoleHome::Right); // hidden
+    unpin.Press(ConsoleHome::PageUp); // unhide
+    unpin.Press(ConsoleHome::Right); // pins
+    unpin.Press(ConsoleHome::Accept);
+    unpin.Press(ConsoleHome::PageUp); // unpin
+    assert(unpin.Press(ConsoleHome::Accept).empty());
+    {
+        std::ifstream in(pinRoot/"aurorax-profile.txt");
+        const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+        assert(data.find("K\t"+pinGame.string())==std::string::npos);
+    }
+
     fs::remove_all(root);
 }

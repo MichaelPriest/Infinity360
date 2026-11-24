@@ -32,7 +32,7 @@ operações funcionaram numa unidade real.
 
 | # | Recurso da referência | Evidência | AuroraX atualmente | Aceite faltante |
 |---|---|---|---|---|
-| 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | Nativo parcial | Fixar/desafixar, ordenação, horas jogadas, blocos customizados |
+| 01 | Início com Continue jogando, Recentes, Favoritos, jogos fixados e atalhos | T | **Fixados persistentes independentes de favoritos, atalhos priorizados no início** | Reordenar manualmente, horas jogadas, blocos customizados |
 | 02 | Blocos editáveis e segunda fileira reordenável | T | Web demonstrativo | Editor nativo, persistência e controle |
 | 03 | Biblioteca com Xbox 360, Arcade/XBLA, Indie, Xbox Original, apps e disco | M/T | **Indexação STFS/GOD e diagnóstico estrutural de SVOD**; lançamento de pacotes pendente | Provedor nativo de lançamento e licença, discos e Indie, homologação |
 | 04 | Varredura recursiva de múltiplos HDD/USB e pastas personalizadas | M/T | **Novo nesta etapa** | UI para editar caminhos, limitar profundidade e migrar listas existentes |
@@ -274,3 +274,8 @@ CI anterior às alterações de catálogo: [45299655858](https://github.com/Mich
 ## Metadados de título unificados
 
 DescribeTitle reúne cabeçalhos XEX e STFS/SVOD para os detalhes da Biblioteca, Recentes, Favoritos e aplicativos. Title ID/Media ID, versão hexadecimal, base/discos quando válidos, tipo e tamanho declarado quando pacote. Leitura sob demanda, sem modificação do conteúdo; RB usa a mesma fonte para TU/DLC/saves. Testes adicionados, homologação da nova revisão e XDK pendentes.
+
+
+## Jogos fixados na tela inicial
+
+LB nos detalhes de um jogo fixa/desafixa o título (até 32 caminhos, persistidos como `K` no perfil). A aba Fixados e os atalhos da tela inicial priorizam esses títulos; favoritos continuam independentes. Ocultos ficam fora de Recentes e dos atalhos, sem perder associações. O histórico legado R também é considerado pelo filtro Nunca. Teste de navegação/persistência acrescentado; execução desta revisão e homologação XDK pendentes.
