@@ -6,8 +6,13 @@
 // extraction, writing, or launch from STFS/GOD containers.
 struct XboxContentPackage {
     std::string path, name;
-    unsigned titleId, mediaId, contentType;
+    unsigned titleId, mediaId, contentType, version;
     unsigned long long sizeBytes;
+};
+
+struct XboxExecutionInfo {
+    unsigned titleId, mediaId, version, baseVersion;
+    unsigned discNumber, discCount;
 };
 
 class ContentCatalog {
@@ -15,7 +20,12 @@ public:
     explicit ContentCatalog(const std::vector<std::string>& roots);
     static std::vector<std::string> DefaultRoots(const std::string& appDirectory);
     static bool ReadHeader(const std::string& path, XboxContentPackage& out);
+    // Reads the public XEX2 execution header; does not decrypt the image.
+    static bool ReadExecutionInfo(const std::string& path, XboxExecutionInfo& out);
     std::vector<XboxContentPackage> Scan() const;
+    // Extras only, scoped to one title: TU/DLC in common content; saves
+    // in profile directories. No license, activation or file changes.
+    std::vector<XboxContentPackage> ScanExtras(unsigned titleId) const;
 private:
     std::vector<std::string> roots_;
 };
