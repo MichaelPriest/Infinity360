@@ -403,5 +403,34 @@ int main(int argc,char** argv) {
     contentMenu.Press(ConsoleHome::Back); // Original game details
     assert(contentMenu.Press(ConsoleHome::Accept).empty()); // GOD launch blocked
 
+    // Files: isolated workspace navigation, clipboard and explicit confirmation.
+    const fs::path fileRoot=root/"FileMenuFixture";
+    fs::create_directories(fileRoot);
+    std::ofstream(fileRoot/"source.txt")<<"local file";
+    ConsoleHome fileMenu(fileRoot.string()+"/",std::vector<std::string>());
+    fileMenu.Load();
+    fileMenu.Press(ConsoleHome::Right);  // IPTV tile
+    fileMenu.Press(ConsoleHome::Down);   // Arquivos
+    fileMenu.Press(ConsoleHome::Accept);
+    fileMenu.Press(ConsoleHome::Favorite); // X marks source.txt
+    fileMenu.Press(ConsoleHome::Guide);    // Start: create personal workspace
+    fileMenu.Press(ConsoleHome::Refresh);  // Y confirms prefilled UserFiles
+    assert(fs::is_directory(fileRoot/"UserFiles"));
+    fileMenu.Press(ConsoleHome::Accept);   // first row is UserFiles
+    fileMenu.Press(ConsoleHome::PageUp);   // LB requests paste
+    fileMenu.Press(ConsoleHome::Back);     // cancel
+    assert(!fs::exists(fileRoot/"UserFiles"/"source.txt"));
+    fileMenu.Press(ConsoleHome::PageUp);
+    fileMenu.Press(ConsoleHome::Accept);   // confirm paste
+    assert(fs::exists(fileRoot/"UserFiles"/"source.txt"));
+    assert(fs::exists(fileRoot/"source.txt"));
+    fileMenu.Press(ConsoleHome::Search);   // RS opens rename keyboard
+    for(int i=0;i<10;++i)fileMenu.Press(ConsoleHome::Favorite);
+    fileMenu.Press(ConsoleHome::Accept);   // type A
+    fileMenu.Press(ConsoleHome::Refresh);  // confirm rename
+    assert(fs::exists(fileRoot/"UserFiles"/"A"));
+    assert(!fs::exists(fileRoot/"UserFiles"/"source.txt"));
+    fileMenu.Draw(canvas,"19:55");
+
     fs::remove_all(root);
 }
