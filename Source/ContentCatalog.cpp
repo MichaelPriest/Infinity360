@@ -150,6 +150,34 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     return true;
 }
 
+XboxTitleMetadata ContentCatalog::DescribeTitle(const std::string& path,bool package) {
+    XboxTitleMetadata result;
+    result.package=package;
+    if(package) {
+        XboxContentPackage info;
+        if(!ReadHeader(path,info) || !gameType(info.contentType))return result;
+        result.titleId=info.titleId;
+        result.mediaId=info.mediaId;
+        result.version=info.version;
+        result.contentType=info.contentType;
+        result.volumeType=info.volumeType;
+        result.declaredBytes=info.sizeBytes;
+    } else {
+        XboxExecutionInfo info;
+        if(!ReadExecutionInfo(path,info))return result;
+        result.titleId=info.titleId;
+        result.mediaId=info.mediaId;
+        result.version=info.version;
+        result.baseVersion=info.baseVersion;
+        if(info.discNumber && info.discCount && info.discNumber<=info.discCount) {
+            result.discNumber=info.discNumber;
+            result.discCount=info.discCount;
+        }
+    }
+    result.known=true;
+    return result;
+}
+
 const char* ContentCatalog::PackageStatus(XboxPackageCheck::Status status) {
     switch(status) {
     case XboxPackageCheck::NotGame:return "Conteudo nao executavel";
