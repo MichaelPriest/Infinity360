@@ -2,7 +2,7 @@
 
 Status: **compilacao portatil integrada aprovada; XEX completo ainda nao compilado/validado no console**.
 
-Evidencia: [run 45298625676](https://github.com/MichaelPriest/AuroraX/actions/runs/45298625676), commit `f56eeb1`, 12/12 CTest e 3 testes de empacotamento aprovados. O teste `stream_playback` nao foi registrado nessa execucao (dependencia FFmpeg ausente ou nao detectada); o workflow agora exige sua presenca e retencao dos resultados JUnit. A etapa XDK foi ignorada por se tratar de push, nao de disparo manual.
+Evidencia: [run 45299108755](https://github.com/MichaelPriest/AuroraX/actions/runs/45299108755), commit `aa089c8`, 13/13 CTest (incluindo stream_playback) e 3 testes de empacotamento aprovados. [Relatorio JUnit e logs](https://github.com/MichaelPriest/AuroraX/actions/runs/45299108755/artifacts/14877512921). A etapa XDK foi ignorada por se tratar de push, nao de disparo manual; nenhum XEX foi gerado.
 
 ## Referencia visual aprovada
 
