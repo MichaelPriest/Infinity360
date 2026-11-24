@@ -26,6 +26,7 @@
     <ClCompile Include="XboxHttpStream.cpp" />
     <ClCompile Include="ConsoleHome.cpp" />
     <ClCompile Include="CollectionStore.cpp" />
+    <ClCompile Include="FileWorkspace.cpp" />
     <ClCompile Include="HomeCanvas.cpp" />
     <ClCompile Include="CloudTv.cpp" />
     <ClCompile Include="TvCatalog.cpp" />
