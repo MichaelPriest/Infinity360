@@ -141,7 +141,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
-      contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),section_(Library),page_(Home) {}
+      contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),trainerConfirm_(false),section_(Library),page_(Home) {}
 
 void ConsoleHome::Load() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
@@ -465,7 +465,7 @@ void ConsoleHome::OpenContent() {
     contentActive_=true;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
-    contentItems_.clear();
+    contentItems_.clear();trainers_.clear();trainerConfirm_=false;
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
@@ -479,9 +479,11 @@ void ConsoleHome::OpenContent() {
     contentInfo_.discNumber=detailMetadata_.discNumber;
     contentInfo_.discCount=detailMetadata_.discCount;
     contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
+    trainers_=TrainerCatalog::Scan(dir_,contentInfo_.titleId);
 }
 
 size_t ConsoleHome::ContentCount() const {
+    if(contentTab_==3)return trainers_.size();
     const unsigned types[]={0x000b0000u,2u,1u};
     size_t count=0;
     for(size_t i=0;i<contentItems_.size();++i)
@@ -489,6 +491,7 @@ size_t ConsoleHome::ContentCount() const {
     return count;
 }
 const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
+    if(contentTab_==3)return 0;
     const unsigned types[]={0x000b0000u,2u,1u};
     for(size_t i=0;i<contentItems_.size();++i) {
         if(contentItems_[i].contentType!=types[contentTab_])continue;
@@ -610,13 +613,36 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(contentActive_) {
+        if(trainerConfirm_) {
+            trainerConfirm_=false;
+            if(key!=Accept) {notice_="Lancamento cancelado.";return "";}
+            if(contentTab_!=3 || static_cast<size_t>(contentRow_)>=trainers_.size() ||
+               TransferRunning() || detailMetadata_.package ||
+               !Count()) {notice_="Lancamento indisponivel.";return "";}
+            const TrainerEntry& trainer=trainers_[contentRow_];
+            XboxExecutionInfo current;
+            if(!ContentCatalog::ReadExecutionInfo(visible_[row_]->executable,current) ||
+               trainer.Compatibility(current)!=TrainerEntry::HeaderMatches ||
+               !TrainerCatalog::Recheck(dir_,trainer)) {
+                notice_="Trainer ou jogo mudou; atualize e confira a compatibilidade.";return "";
+            }
+            return trainer.launcher; // Standalone utility only, no injection or automatic game launch.
+        }
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
         if(key==Left && contentTab_>0) {--contentTab_;contentRow_=0;}
-        if(key==Right && contentTab_<2) {++contentTab_;contentRow_=0;}
+        if(key==Right && contentTab_<3) {++contentTab_;contentRow_=0;}
         if(key==Up && contentRow_>0)--contentRow_;
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
-        if(key==Accept) {
+        if(key==Accept && contentTab_==3 && static_cast<size_t>(contentRow_)<trainers_.size()) {
+            if(TransferRunning() || detailMetadata_.package ||
+               trainers_[contentRow_].Compatibility(contentInfo_)!=TrainerEntry::HeaderMatches) {
+                notice_="Lancamento bloqueado: formato, transferencia ou versao incompativel.";
+            } else {
+                trainerConfirm_=true;
+                notice_="A confirma utilitario local confiavel/offline; B cancela.";
+            }
+        } else if(key==Accept) {
             const XboxContentPackage* item=ContentAt(contentRow_);
             if(item)notice_=item->path;
         }
@@ -1077,6 +1103,29 @@ std::string hexId(unsigned value) {
     return text;
 }
 }
+void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
+    c.Text(48,241,number(trainers_.size())+" trainers locais | Versao do cabecalho, nao TU ativo",20,Muted,1175);
+    if(trainers_.empty()) {
+        c.Text(48,305,"Nenhum trainer registrado em Trainers/"+hexId(contentInfo_.titleId),24,White,1170);
+        c.Text(48,351,"Adicione um utilitario XEX e seu manifesto trainer.axtrainer.",20,Muted,1170);
+    }
+    const int first=(contentRow_/4)*4;
+    for(int i=first;i<first+4 && static_cast<size_t>(i)<trainers_.size();++i) {
+        const TrainerEntry& item=trainers_[i];
+        const int y=280+(i-first)*66;
+        panel(c,45,y,1189,59,Panel,i==contentRow_);
+        c.Text(62,y+4,item.name,23,White,715);
+        c.Text(62,y+31,"Media "+hexId(item.mediaId)+" | Versao "+hexId(item.version),17,Muted,715);
+        const TrainerEntry::Match match=item.Compatibility(contentInfo_);
+        const char* status=match==TrainerEntry::HeaderMatches?"Cabecalho coincide":
+            match==TrainerEntry::DifferentMedia?"Media ID diferente":
+            match==TrainerEntry::DifferentVersion?"Versao diferente":"Indeterminado";
+        c.Text(810,y+14,status,20,match==TrainerEntry::HeaderMatches?Lime:Muted,398);
+    }
+    c.Text(48,555,"Use apenas offline e com arquivos confiaveis. TU ativo e funcionamento nao verificados.",19,Muted,1180);
+    c.Text(48,600,trainerConfirm_?"A Confirmar saida para trainer | B Cancelar":
+        "A Abrir utilitario independente | Y Atualizar | B Voltar",18,Lime,1175);
+}
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(44,78,"Conteudo instalado",40,White,1170);
     if(!contentKnown_) {
@@ -1088,12 +1137,13 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(45,135,"Title ID: "+hexId(contentInfo_.titleId)+"    Media ID: "+
            hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
            21,Muted,1180);
-    const char* const tabs[]={"Title Updates","DLC","Saves"};
-    for(int i=0;i<3;++i) {
-        const int x=45+i*310;
-        panel(c,x,183,295,47,Panel,i==contentTab_);
-        c.Text(x+16,191,tabs[i],23,i==contentTab_?Lime:White,265);
+    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers"};
+    for(int i=0;i<4;++i) {
+        const int x=45+i*299;
+        panel(c,x,183,287,47,Panel,i==contentTab_);
+        c.Text(x+16,191,tabs[i],23,i==contentTab_?Lime:White,257);
     }
+    if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+" pacotes encontrados - somente leitura",20,Muted,1175);
     if(ContentCount()==0)c.Text(48,305,"Nenhum pacote encontrado neste local.",24,White,1170);
     const int first=(contentRow_/5)*5;
@@ -1321,7 +1371,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Library || section_==Recent || section_==Favorites)
             c.Text(47,593,"Start Personalizar capa e fundo | Y Atualizar",18,Muted,1170);
         if(section_==Library || section_==Recent || section_==Favorites) {
-            c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves)",20,Muted,1110);
+            c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves / Trainers)",20,Muted,1110);
             c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);
         }
         return;

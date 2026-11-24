@@ -38,6 +38,7 @@
     <ClCompile Include="..\..\Source\GameScanner.cpp" />
     <ClCompile Include="..\..\Source\ContentCatalog.cpp" />
     <ClCompile Include="..\..\Source\PluginRegistry.cpp" />
+    <ClCompile Include="..\..\Source\TrainerCatalog.cpp" />
     <ClCompile Include="..\..\IPTV\Cloud360\core\cloud360.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>

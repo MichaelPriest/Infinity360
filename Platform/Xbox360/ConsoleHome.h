@@ -7,6 +7,7 @@
 #include "FileWorkspace.h"
 #include "StorageInfo.h"
 #include "NetworkInfo.h"
+#include "TrainerCatalog.h"
 #include <map>
 
 class ConsoleHome {
@@ -76,6 +77,9 @@ private:
     std::string ArtPath(const Game& game,bool cover) const;
     void DrawArtEditor(HomeCanvas& c) const;
     std::vector<XboxContentPackage> contentItems_;
+    std::vector<TrainerEntry> trainers_;
+    bool trainerConfirm_;
+    void DrawTrainers(HomeCanvas& c) const;
     void OpenContent();
     size_t ContentCount() const;
     const XboxContentPackage* ContentAt(size_t index) const;

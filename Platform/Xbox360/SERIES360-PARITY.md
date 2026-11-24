@@ -58,7 +58,7 @@ operações funcionaram numa unidade real.
 | 19 | Descobrir, instalar, ativar/desativar DLC local | T | **Inventário de DLC por Title ID** | Instalação/remoção autorizada, validação e ativação |
 | 20 | Exibir e gerenciar saves por perfil | T | **Inventário local de saves por Title ID em diretórios de perfil** | Perfil Xbox ativo, backup, restauração e confirmação de exclusão |
 | 21 | Conquistas por título, secretas e recentes | T | Pendente | Provedor nativo XDK/XAM, somente leitura |
-| 22 | Trainers locais/servidor e compatibilidade de versão TU | T | Pendente | Segurança, proveniência, seleção explícita, suporte limitado a homebrew legal |
+| 22 | Trainers locais/servidor e compatibilidade de versão TU | T | **Catálogo local por título, verificação de cabeçalho Media ID/versão e abertura explícita de XEX independente** | TU ativo, runtime in-game, servidor, homologação XDK |
 | 23 | Instalação manual de pacotes locais pelo gerenciador | T | Pendente | Validar formatos de conteúdo e licença antes da cópia |
 
 ## 3. Sistema, arquivos e rede
@@ -309,3 +309,8 @@ O exportador exibe `PRAGMA table_info(ContentItems)` na prévia. Não há esquem
 ## Migração de arte RXEA
 
 `Platform/Xbox360/tools/import_aurora_art.py` lê `Data/GameData/<TitleID>_<ContentID>/GC*.asset` e `BK*.asset` em uma cópia local do Aurora. Valida RXEA v1, offsets, comprimento, dimensões, pitch, swizzle, endian e textura BC3 linear 2D. Usa Pillow para decodificar blocos e ajustar para as dimensões RGBA da AuroraX. Preview por padrão, `--apply` grava sem sobrescrever, `--alternate` usa os slots alternativos. `--front-right` permite recortar explicitamente a frente de capas largas; padrão preserva a imagem inteira. Arquivos ambíguos, truncados e layouts não suportados são ignorados/registrados. Não modifica Aurora. Dependência: Pillow 10+. Testes sintéticos de pixels, endian, tamanhos, preview, preservação e rejeição; nenhum arquivo .asset real foi fornecido nesta etapa. Fontes de formato: https://github.com/jrobiche/xbox360-aurora-developer-documentation/blob/main/docs/aurora-0.7b.2r1655-assets/README.md e https://github.com/XboxUnity/AuroraAssetEditor/blob/master/010%20Editor%20Binary%20Template/AuroraAssetTemplate.bt . CI anterior 45509506583 aprovada; nova revisão pendente.
+
+
+## Trainers locais
+
+RB nos detalhes > quarta aba Trainers. A lista registra utilitários independentes em `Trainers/<TITLEID>/<pasta>/trainer.axtrainer`, valida Title ID, Media ID, versão hexadecimal e existência do XEX2. A exige segunda confirmação para abrir um utilitário local; B cancela; Y recarrega. Incompatibilidade, pacote GOD, transferência ativa ou arquivo removido bloqueiam lançamento. Comparação é somente com o cabeçalho do jogo, não com o TU ativo. Nenhuma injeção, hook, download ou ativação automática; o usuário deve usar apenas utilitários confiáveis para jogo offline. O manifesto não autentica assinatura nem garante funcionamento. Exemplo em `Platform/Xbox360/docs/TRAINERS.md`. Testes de catálogo e controle adicionados; CI anterior 45510023506 aprovada, nova revisão e hardware pendentes.

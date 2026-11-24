@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/ContentCatalog.cpp Source/PluginRegistry.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
+add_library(aurorax_core Source/Dashboard.cpp Source/GameScanner.cpp Source/ContentCatalog.cpp Source/PluginRegistry.cpp Source/TrainerCatalog.cpp Source/Input.cpp Engine/Tile.cpp Engine/UIManager.cpp)
 target_include_directories(aurorax_core PUBLIC Source Engine)
 target_compile_options(aurorax_core PRIVATE -Wall -Wextra -Wpedantic)
 

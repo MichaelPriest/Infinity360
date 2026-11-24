@@ -678,5 +678,58 @@ int main(int argc,char** argv) {
         assert(data.find(entry,data.find(entry)+1)==std::string::npos);
     }
 
+    // Trainer catalogue: exact title/media/version, no auto-launch, two confirmations.
+    const fs::path trainerRoot=root/"TrainerFixture";
+    const fs::path trainerGame=trainerRoot/"Games"/"TestGame"/"default.xex";
+    const fs::path trainerFolder=trainerRoot/"Trainers"/"4D5307E6"/"Example";
+    fs::create_directories(trainerGame.parent_path());
+    fs::create_directories(trainerFolder);
+    std::vector<unsigned char> trainerGameHeader(128,0);
+    const auto trainerPut=[&](size_t at,unsigned n) {
+        for(int i=0;i<4;++i)trainerGameHeader[at+i]=static_cast<unsigned char>(n>>(24-8*i));
+    };
+    trainerPut(0,0x58455832);trainerPut(8,128);trainerPut(0x14,1);
+    trainerPut(24,0x00040006);trainerPut(28,64);
+    trainerPut(64,0x12345678);trainerPut(68,0x20010002);trainerPut(76,0x4d5307e6);
+    {std::ofstream out(trainerGame,std::ios::binary);
+     out.write(reinterpret_cast<const char*>(trainerGameHeader.data()),trainerGameHeader.size());}
+    const fs::path trainerLauncher=trainerFolder/"trainer.xex";
+    std::ofstream(trainerLauncher,std::ios::binary)<<"XEX2 fixture";
+    const fs::path trainerManifest=trainerFolder/"trainer.axtrainer";
+    const auto writeTrainer=[&](const char* version,const char* entry) {
+        std::ofstream out(trainerManifest);
+        out<<"schema=1\nmode=standalone\nname=Example Trainer\ntitle_id=4D5307E6\n"
+           <<"media_id=12345678\nversion="<<version<<"\nentry="<<entry<<"\n";
+    };
+    writeTrainer("20010002","trainer.xex");
+    const auto trainerItems=TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6);
+    assert(trainerItems.size()==1);
+    XboxExecutionInfo trainerInfo;
+    assert(ContentCatalog::ReadExecutionInfo(trainerGame.string(),trainerInfo));
+    assert(trainerItems[0].Compatibility(trainerInfo)==TrainerEntry::HeaderMatches);
+    trainerInfo.mediaId=1;
+    assert(trainerItems[0].Compatibility(trainerInfo)==TrainerEntry::DifferentMedia);
+    ConsoleHome trainerMenu(trainerRoot.string()+"/",std::vector<std::string>(1,(trainerRoot/"Games").string()));
+    trainerMenu.Load();
+    trainerMenu.Press(ConsoleHome::Accept);trainerMenu.Press(ConsoleHome::Accept);
+    trainerMenu.Press(ConsoleHome::PageDown);
+    for(int i=0;i<3;++i)trainerMenu.Press(ConsoleHome::Right);
+    trainerMenu.Draw(canvas,"20:10");
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty()); // prompt only
+    assert(trainerMenu.Press(ConsoleHome::Back).empty()); // cancel
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty());
+    assert(trainerMenu.Press(ConsoleHome::Accept)==trainerLauncher.string());
+    writeTrainer("20010003","trainer.xex");
+    trainerMenu.Press(ConsoleHome::Refresh);
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty());
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty()); // incompatible
+    writeTrainer("20010002","../trainer.xex");
+    assert(TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6).empty());
+    writeTrainer("20010002","trainer.xex");
+    trainerMenu.Press(ConsoleHome::Refresh);
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty());
+    fs::remove(trainerLauncher);
+    assert(trainerMenu.Press(ConsoleHome::Accept).empty()); // recheck blocks removed file
+
     fs::remove_all(root);
 }
