@@ -2629,11 +2629,11 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         for(int i=0;i<8;++i){
             const int x=45+(i%4)*300,y=390+(i/4)*78;
             panel(c,x,y,289,70,Panel,false);
-            c.Text(x+9,y+5,labels[i],17,Muted,270);
+            c.Text(x+9,y+5,c.Tr(labels[i].c_str()),17,Muted,270);
             c.Text(x+9,y+30,values[i],22,White,270);
         }
         c.Text(48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
-        c.Text(48,580,"LB/RB Pagina | Y Atualizar | B Voltar | Modo fisico inalterado",18,Muted,1170);
+        c.Text(48,580,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar | Modo fisico inalterado")),18,Muted,1170);
         return;
     }
     c.Text(45,349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);
@@ -2644,54 +2644,54 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         for(int i=0;i<8;++i){
             const int x=45+(i%4)*300,y=390+(i/4)*78;
             panel(c,x,y,289,70,Panel,false);
-            c.Text(x+9,y+5,labels[i],17,Muted,270);
+            c.Text(x+9,y+5,c.Tr(labels[i]),17,Muted,270);
             c.Text(x+9,y+30,StorageInfo::FormatBytes(bytes[i]),22,White,270);
         }
     }else{
         c.Box(45,391,1190,150,Panel,10);
-        c.Text(65,420,"Memoria: provider indisponivel ou consulta recusada.",23,White,1145);
-        c.Text(65,467,"Nenhuma medida simulada e exibida.",19,Muted,1145);
+        c.Text(65,420,std::string(c.Tr("Memoria: provider indisponivel ou consulta recusada.")),23,White,1145);
+        c.Text(65,467,std::string(c.Tr("Nenhuma medida simulada e exibida.")),19,Muted,1145);
     }
-    c.Text(48,559,"START Sensores SMC | Consulta experimental somente leitura",18,Muted,1170);
-    c.Text(48,585,"LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(48,559,std::string(c.Tr("START Sensores SMC | Consulta experimental somente leitura")),18,Muted,1170);
+    c.Text(48,585,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     if(coolingPage_){DrawCooling(c);return;}
-    c.Text(45,349,"Temperaturas SMC | Experimental",27,White,1170);
+    c.Text(45,349,std::string(c.Tr("Temperaturas SMC | Experimental")),27,White,1170);
     const char* labels[]={"CPU","GPU","EDRAM","Chassi"};
     for(unsigned i=0;i<4;++i){
         const int x=45+int(i)*300;
         panel(c,x,396,289,121,Panel,false);
-        c.Text(x+12,405,labels[i],19,Muted,260);
+        c.Text(x+12,405,c.Tr(labels[i]),19,Muted,260);
         c.Text(x+12,432,thermal_.Celsius(i),27,thermal_.available[i]?Lime:Muted,260);
         c.Text(x+12,471,"Min: "+thermalHistory_.Min(i),17,White,260);
         c.Text(x+12,493,"Max: "+thermalHistory_.Max(i),17,White,260);
     }
     const char* state=!ThermalTelemetry::Supported()?"Provider nao incluido nesta build.":thermal_.state==ThermalTelemetry::NotRead?"A solicita leitura manual.":thermal_.state==ThermalTelemetry::Valid?"Resposta SMC valida; leitura instantanea.":thermal_.state==ThermalTelemetry::Partial?"Resposta parcial; sensores ausentes nao estimados.":"Resposta invalida ou indisponivel.";
-    c.Text(48,526,state,20,White,1170);
+    c.Text(48,526,c.Tr(state),20,White,1170);
     c.Text(48,554,"Sessao: "+number(thermalHistory_.attempts)+" consultas | "+number(thermalHistory_.valid)+" validas | "+number(thermalHistory_.partial)+" parciais | "+number(thermalHistory_.invalid)+" invalidas",18,Muted,1170);
-    c.Text(48,580,"LB/RB Refrigeracao | Min/max apenas de leituras manuais.",17,Muted,1170);
-    c.Text(48,607,"A Consultar | X Limpar historico | START Telemetria | B Voltar",18,Lime,1170);
+    c.Text(48,580,std::string(c.Tr("LB/RB Refrigeracao | Min/max apenas de leituras manuais.")),17,Muted,1170);
+    c.Text(48,607,std::string(c.Tr("A Consultar | X Limpar historico | START Telemetria | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawCooling(HomeCanvas& c)const{
-    c.Text(45,349,"SMC | Diagnostico de refrigeracao",27,White,1170);
+    c.Text(45,349,std::string(c.Tr("SMC | Diagnostico de refrigeracao")),27,White,1170);
     panel(c,45,394,585,110,Panel,false);
-    c.Text(62,406,"Alvo calculado pelo SMC",20,Muted,550);
+    c.Text(62,406,std::string(c.Tr("Alvo calculado pelo SMC")),20,Muted,550);
     c.Text(62,437,thermal_.FanTargetLabel(),34,thermal_.fanTargetAvailable?Lime:Muted,550);
-    c.Text(62,478,"Nao representa RPM nem override ativo.",17,Muted,550);
+    c.Text(62,478,std::string(c.Tr("Nao representa RPM nem override ativo.")),17,Muted,550);
     panel(c,645,394,585,110,Panel,false);
-    c.Text(662,406,"Limite de aviso (sessao)",20,Muted,550);
+    c.Text(662,406,std::string(c.Tr("Limite de aviso (sessao)")),20,Muted,550);
     c.Text(662,437,thermalLimit_?number(thermalLimit_)+" C":"Desativado",30,White,550);
-    c.Text(662,478,"Esq/Dir: alterar limite escolhido",17,Muted,550);
+    c.Text(662,478,std::string(c.Tr("Esq/Dir: alterar limite escolhido")),17,Muted,550);
     const auto status=ThermalAdvisory::Evaluate(thermal_,thermalLimit_);
     const char* message=status==ThermalAdvisory::Reached?"ATENCAO: limite escolhido atingido em pelo menos um sensor.":
         status==ThermalAdvisory::Below?"Ultima amostra: abaixo do limite escolhido.":
         status==ThermalAdvisory::Incomplete?"Amostra parcial: sensores ausentes impedem conclusao.":
         status==ThermalAdvisory::NoReading?"Sem amostra valida para avaliar.":"Avisos desativados.";
-    c.Text(48,525,message,20,status==ThermalAdvisory::Reached?0xffffb454u:White,1170);
-    c.Text(48,553,"Aviso apenas na leitura manual; nao substitui a protecao do hardware.",18,Muted,1170);
-    c.Text(48,579,"Nenhuma escrita SMC; controle real da ventoinha indisponivel.",17,Muted,1170);
-    c.Text(48,607,"A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria",18,Lime,1170);
+    c.Text(48,525,c.Tr(message),20,status==ThermalAdvisory::Reached?0xffffb454u:White,1170);
+    c.Text(48,553,std::string(c.Tr("Aviso apenas na leitura manual; nao substitui a protecao do hardware.")),18,Muted,1170);
+    c.Text(48,579,std::string(c.Tr("Nenhuma escrita SMC; controle real da ventoinha indisponivel.")),17,Muted,1170);
+    c.Text(48,607,std::string(c.Tr("A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria")),18,Lime,1170);
 }
 bool ConsoleHome::PowerBusy()const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
@@ -2704,18 +2704,18 @@ bool ConsoleHome::PowerBusy()const{
         updatePending_||unityPending_||unityDownloadPending_;
 }
 void ConsoleHome::DrawPower(HomeCanvas& c)const{
-    c.Text(45,349,"Console | Energia experimental",27,White,1170);
+    c.Text(45,349,std::string(c.Tr("Console | Energia experimental")),27,White,1170);
     const char* names[]={"Desligar console","Reiniciar console"};
     for(int i=0;i<2;++i){
         const int x=45+i*600;
         const bool selected=int(powerConfirm_.action)==i;
         panel(c,x,400,585,96,Panel,selected);
-        c.Text(x+16,426,names[i],26,selected?Lime:White,550);
+        c.Text(x+16,426,c.Tr(names[i]),26,selected?Lime:White,550);
     }
     const bool supported=ConsolePower::Supported(),busy=PowerBusy();
-    c.Text(48,520,!supported?"Provider nao incluido nesta build.":busy?"Bloqueado: encerre operacoes e FTP.":"Provider experimental: nao homologado no console.",20,White,1170);
-    c.Text(48,556,powerConfirm_.armed?"CONFIRMACAO: A executa a acao selecionada; B cancela.":"Nenhuma acao automatica; exige dupla confirmacao.",19,Muted,1170);
-    c.Text(48,607,"Esq/Dir Selecionar | A Confirmar | B Voltar",18,Lime,1170);
+    c.Text(48,520,!supported?std::string(c.Tr("Provider nao incluido nesta build.")):busy?std::string(c.Tr("Bloqueado: encerre operacoes e FTP.")):std::string(c.Tr("Provider experimental: nao homologado no console.")),20,White,1170);
+    c.Text(48,556,powerConfirm_.armed?std::string(c.Tr("CONFIRMACAO: A executa a acao selecionada; B cancela.")):std::string(c.Tr("Nenhuma acao automatica; exige dupla confirmacao.")),19,Muted,1170);
+    c.Text(48,607,std::string(c.Tr("Esq/Dir Selecionar | A Confirmar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     if(achievementsPage_){DrawAchievements(c);return;}
@@ -2754,8 +2754,8 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
         c.Text(x+10,y+28,std::to_string(values[i]),26,Lime,365);
     }
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
-    c.Text(48,579,"A Conquistas GPD offline | Sem sincronizacao Xbox Live",19,Muted,1170);
-    c.Text(48,606,"START Central de saves | Cima/Baixo Perfis | B Voltar",18,Lime,1170);
+    c.Text(48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
+    c.Text(48,606,std::string(c.Tr("START Central de saves | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
@@ -2765,18 +2765,18 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         const int x=42+(static_cast<int>(i)%2)*602;
         const int y=391+(static_cast<int>(i)/2)*106;
         c.Box(x,y,589,97,Panel,10);
-        const std::string label=index==0?"Pasta INFINITY 360":v.path;
+        const std::string label=index==0?std::string(c.Tr("Pasta INFINITY 360")):v.path;
         c.Text(x+14,y+7,label,22,White,550);
         if(!v.available) {
-            c.Text(x+14,y+44,"Indisponivel / capacidade nao informada",18,Muted,552);
+            c.Text(x+14,y+44,std::string(c.Tr("Indisponivel / capacidade nao informada")),18,Muted,552);
             continue;
         }
         const unsigned percent=v.UsedPercent();
-        c.Text(x+14,y+34,StorageInfo::FormatBytes(v.freeBytes)+" livres / "+
+        c.Text(x+14,y+34,StorageInfo::FormatBytes(v.freeBytes)+std::string(c.Tr(" livres / "))+
                StorageInfo::FormatBytes(v.capacity)+" total",18,Muted,552);
         c.Box(x+14,y+63,551,10,0xff28413a,5);
         if(percent)c.Box(x+14,y+63,static_cast<int>(551*percent/100),10,Lime,5);
-        c.Text(x+14,y+76,number(percent)+"% ocupado",15,White,550);
+        c.Text(x+14,y+76,number(percent)+std::string(c.Tr("% ocupado")),15,White,550);
     }
     c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
@@ -2784,31 +2784,31 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
     if(smbUi_!=SmbClosed){DrawSmbSession(c);return;}
 #endif
-    c.Text(45,349,"Rede | SMB2/3 experimental",27,White,1170);
+    c.Text(45,349,std::string(c.Tr("Rede | SMB2/3 experimental")),27,White,1170);
     if(smbEditing_){
-        c.Text(48,392,"IPv4 privado do servidor SMB",23,White,1170);
+        c.Text(48,392,std::string(c.Tr("IPv4 privado do servidor SMB")),23,White,1170);
         for(unsigned i=0;i<4;++i){
             const int x=48+int(i)*175;
             panel(c,x,438,155,67,Panel,i==smbOctet_);
             c.Text(x+14,451,number(smbDraft_[i]),30,i==smbOctet_?Lime:White,130);
         }
-        c.Text(48,535,"Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar",19,Lime,1170);return;
+        c.Text(48,535,std::string(c.Tr("Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar")),19,Lime,1170);return;
     }
     LanPeerConfig::Octets configured{};
     const bool known=LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",configured);
-    c.Text(48,392,"Servidor: "+(known?LanPeerConfig::Format(configured):std::string("Nao configurado"))+" | TCP 445",22,White,1170);
-    c.Text(48,435,(smbProbe_.Peer().empty()?std::string(""):smbProbe_.Peer()+" | ")+smbProbe_.Label(),22,smbProbe_.Status()==SmbProbe::Negotiated?Lime:White,1170);
+    c.Text(48,392,std::string(c.Tr("Servidor: "))+(known?LanPeerConfig::Format(configured):std::string(std::string(c.Tr("Nao configurado"))))+" | TCP 445",22,White,1170);
+    c.Text(48,435,(smbProbe_.Peer().empty()?std::string(""):smbProbe_.Peer()+" | ")+c.Tr(smbProbe_.Label().c_str()),22,smbProbe_.Status()==SmbProbe::Negotiated?Lime:White,1170);
     const auto& result=smbProbe_.Info();
-    c.Text(48,480,std::string("Dialeto: ")+SmbProbe::Dialect(result.dialect)+(smbProbe_.Status()==SmbProbe::Negotiated?(result.signingRequired?" | Assinatura exigida":" | Assinatura suportada"):""),21,Muted,1170);
+    c.Text(48,480,std::string(std::string(c.Tr("Dialeto: ")))+SmbProbe::Dialect(result.dialect)+(smbProbe_.Status()==SmbProbe::Negotiated?(result.signingRequired?std::string(c.Tr(" | Assinatura exigida")):std::string(c.Tr(" | Assinatura suportada"))):""),21,Muted,1170);
     if(smbProbe_.Status()==SmbProbe::Rejected)c.Text(48,510,"Status NT: "+number(result.status),18,Muted,1170);
-    c.Text(48,550,"Dashboard: somente negociacao; adaptador de sessao em homologacao.",19,Muted,1170);
+    c.Text(48,550,std::string(c.Tr("Dashboard: somente negociacao; adaptador de sessao em homologacao.")),19,Muted,1170);
     c.Text(48,579,smbProbe_.Status()==SmbProbe::Negotiated?
-        std::string(result.preauthSha512?"SHA-512 selecionado | ":"")+"Token de seguranca: "+number(result.securityTokenBytes)+" bytes | Sessao nao autenticada":
-        "SMB 2.0.2 a 3.1.1 | Sem SMB1 ou acesso anonimo.",17,Muted,1170);
+        std::string(result.preauthSha512?std::string(c.Tr("SHA-512 selecionado | ")):"")+std::string(c.Tr("Token de seguranca: "))+number(result.securityTokenBytes)+std::string(c.Tr(" bytes | Sessao nao autenticada")):
+        std::string(c.Tr("SMB 2.0.2 a 3.1.1 | Sem SMB1 ou acesso anonimo.")),17,Muted,1170);
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
-    c.Text(48,607,"A Testar | X Cancelar | START IP | R3 Sessao | B Voltar",18,Lime,1170);
+    c.Text(48,607,std::string(c.Tr("A Testar | X Cancelar | START IP | R3 Sessao | B Voltar")),18,Lime,1170);
 #else
-    c.Text(48,607,"A Testar | X Cancelar | START Configurar | B Voltar",18,Lime,1170);
+    c.Text(48,607,std::string(c.Tr("A Testar | X Cancelar | START Configurar | B Voltar")),18,Lime,1170);
 #endif
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
@@ -2817,45 +2817,45 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.Text(45,349,c.Tr("Rede 2/2 | Diagnostico UDP entre consoles"),27,White,1170);
         if(peerOptions_){
             const unsigned durations[]={15,30,60};
-            c.Text(48,397,"Modo: "+std::string(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))),25,Lime,1170);
-            c.Text(48,445,"Duracao: "+number(durations[peerDuration_])+" segundos",25,White,1170);
-            c.Text(48,492,"Anfitriao responde | Cliente envia | Bidirecional envia e responde",19,Muted,1170);
-            c.Text(48,550,"Protocolo de diagnostico INFL; nao cria sala de jogo.",18,Muted,1170);
-            c.Text(48,607,"Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar",18,Lime,1170);return;
+            c.Text(48,397,std::string(c.Tr("Modo: "))+std::string(c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_)))),25,Lime,1170);
+            c.Text(48,445,std::string(c.Tr("Duracao: "))+number(durations[peerDuration_])+std::string(c.Tr(" segundos")),25,White,1170);
+            c.Text(48,492,std::string(c.Tr("Anfitriao responde | Cliente envia | Bidirecional envia e responde")),19,Muted,1170);
+            c.Text(48,550,std::string(c.Tr("Protocolo de diagnostico INFL; nao cria sala de jogo.")),18,Muted,1170);
+            c.Text(48,607,std::string(c.Tr("Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar")),18,Lime,1170);return;
         }
         if(peerEditing_){
-            c.Text(48,392,"IPv4 privado do outro console",23,White,1170);
+            c.Text(48,392,std::string(c.Tr("IPv4 privado do outro console")),23,White,1170);
             for(unsigned i=0;i<4;++i){
                 const int x=48+static_cast<int>(i)*175;
                 panel(c,x,438,155,67,Panel,i==peerOctet_);
                 c.Text(x+14,451,number(peerDraft_[i]),30,i==peerOctet_?Lime:White,130);
             }
-            c.Text(48,535,"Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar",19,Lime,1170);return;
+            c.Text(48,535,std::string(c.Tr("Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar")),19,Lime,1170);return;
         }
-        c.Text(48,392,"Local: "+(network_.ipv4.empty()?"-":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
-        c.Text(48,433,peerProbe_.Label(),23,Lime,1170);
-        c.Text(48,475,"Tentativas: "+number(peerProbe_.Attempts())+" | Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
-        c.Text(48,513,peerProbe_.Received()?"RTT min/media/max: "+number(peerProbe_.MinRtt())+"/"+number(peerProbe_.MeanRtt())+"/"+number(peerProbe_.MaxRtt())+" ms | Variacao: "+(peerProbe_.Received()>1?number(peerProbe_.Jitter())+" ms":"--"):"RTT indisponivel | Pedidos: "+number(peerProbe_.Requests())+" | Respostas enviadas: "+number(peerProbe_.Replies()),19,Muted,1170);
+        c.Text(48,392,std::string(c.Tr("Local: "))+(network_.ipv4.empty()?"-":network_.ipv4)+std::string(c.Tr(" | Par: "))+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
+        c.Text(48,433,c.Tr(peerProbe_.Label().c_str()),23,Lime,1170);
+        c.Text(48,475,std::string(c.Tr("Tentativas: "))+number(peerProbe_.Attempts())+std::string(c.Tr(" | Enviados: "))+number(peerProbe_.Sent())+std::string(c.Tr(" | Respostas: "))+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
+        c.Text(48,513,peerProbe_.Received()?std::string(c.Tr("RTT min/media/max: "))+number(peerProbe_.MinRtt())+"/"+number(peerProbe_.MeanRtt())+"/"+number(peerProbe_.MaxRtt())+std::string(c.Tr(" ms | Variacao: "))+(peerProbe_.Received()>1?number(peerProbe_.Jitter())+" ms":"--"):std::string(c.Tr("RTT indisponivel | Pedidos: "))+number(peerProbe_.Requests())+std::string(c.Tr(" | Respostas enviadas: "))+number(peerProbe_.Replies()),19,Muted,1170);
         const unsigned durations[]={15,30,60};
-        c.Text(48,540,std::string(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_)))+" | "+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s"+(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished?" | Sem resposta: "+number(peerProbe_.LossPercent())+"%":""),18,Muted,1170);
-        c.Text(48,560,"Inicie nos dois consoles. Nao confirma System Link de jogos.",18,Muted,1170);
-        c.Text(48,607,"A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina",18,Lime,1170);return;
+        c.Text(48,540,std::string(c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))))+" | "+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s"+(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished?std::string(c.Tr(" | Sem resposta: "))+number(peerProbe_.LossPercent())+"%":""),18,Muted,1170);
+        c.Text(48,560,std::string(c.Tr("Inicie nos dois consoles. Nao confirma System Link de jogos.")),18,Muted,1170);
+        c.Text(48,607,std::string(c.Tr("A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina")),18,Lime,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
     c.Box(42,391,589,190,Panel,10);
     c.Text(58,404,c.Tr("Conexao e endereco IPv4"),25,White,550);
-    c.Text(58,447,NetworkInfo::StateLabel(network_.state),20,Muted,550);
-    c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string("Nao identificado"):network_.ipv4),
+    c.Text(58,447,c.Tr(NetworkInfo::StateLabel(network_.state)),20,Muted,550);
+    c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string(std::string(c.Tr("Nao identificado"))):network_.ipv4),
            23,network_.ipv4.empty()?Muted:Lime,550);
     c.Text(58,534,network_.ethernetKnown?
            (network_.ethernetActive?"Ethernet: ativo"+(network_.linkMbps?" | "+number(network_.linkMbps)+" Mbps":"")+(network_.duplex.empty()?"":" | "+network_.duplex):"Ethernet: sem link"):
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,c.Tr("Servicos de rede"),25,White,558);
-    c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado",21,ftp_.Running()?Lime:Muted,558);
-    c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?"Leitura/upload":"Somente leitura"):"A Leitura | X Leitura/upload (ALLO)",20,Muted,558);
-    c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
-    c.Text(45,607,"A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar",18,Muted,1180);
+    c.Text(660,447,ftp_.Running()?(ftp_.Connected()?std::string(c.Tr("FTP: cliente conectado")):std::string(c.Tr("FTP: aguardando cliente"))):std::string(c.Tr("FTP: desligado")),21,ftp_.Running()?Lime:Muted,558);
+    c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string(c.Tr("A Leitura | X Leitura/upload (ALLO)")),20,Muted,558);
+    c.Text(660,534,std::string(c.Tr("Internet e Xbox Live: nao testados")),19,Muted,558);
+    c.Text(45,607,std::string(c.Tr("A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar")),18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     const auto rows=notifications_.Visible(eventFilter_);
@@ -3396,23 +3396,23 @@ void ConsoleHome::PressSmbSession(Key key){
     }
 }
 void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
-    c.Text(45,349,"SMB 3.1.1 | Sessao experimental",27,White,1170);
+    c.Text(45,349,std::string(c.Tr("SMB 3.1.1 | Sessao experimental")),27,White,1170);
     if(smbUi_==SmbCredentials){
         const char* labels[]={"Compartilhamento","Usuario","Dominio (opcional)","Senha"};
         for(unsigned i=0;i<4;++i){
             const int x=48+(i%2)*600,y=386+(i/2)*61;
             panel(c,x,y,582,55,Panel,i==smbField_);
             const std::string value=i==3?std::string(smbCredentials_[i].size(),'*'):smbCredentials_[i];
-            c.Text(x+10,y+3,labels[i],16,Muted,550);
+            c.Text(x+10,y+3,c.Tr(labels[i]),16,Muted,550);
             c.Text(x+10,y+24,value.empty()?"--":value,19,White,550);
         }
-        c.Text(48,515,std::string("Caractere selecionado: [")+char(32+smbChar_)+"] | A adiciona | X apaga",20,Lime,1170);
-        c.Text(48,550,smbMessage_.empty()?"Credenciais em RAM; use conta de teste. Nunca use senha real no emulador.":smbMessage_,17,Muted,1170);
-        c.Text(48,607,"Direcoes Caractere | LB/RB Campo | Y Conectar | B Cancelar",18,Lime,1170);return;
+        c.Text(48,515,std::string(std::string(c.Tr("Caractere selecionado: [")))+char(32+smbChar_)+std::string(c.Tr("] | A adiciona | X apaga")),20,Lime,1170);
+        c.Text(48,550,smbMessage_.empty()?std::string(c.Tr("Credenciais em RAM; use conta de teste. Nunca use senha real no emulador.")):c.Tr(smbMessage_.c_str()),17,Muted,1170);
+        c.Text(48,607,std::string(c.Tr("Direcoes Caractere | LB/RB Campo | Y Conectar | B Cancelar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbBrowsing){
         c.Text(48,386,"/"+smbBrowser_.Current(),20,White,1170);
-        if(smbBrowser_.Pending())c.Text(48,434,"Consultando diretorio...",22,Muted,1170);
+        if(smbBrowser_.Pending())c.Text(48,434,std::string(c.Tr("Consultando diretorio...")),22,Muted,1170);
         else{
             const auto& rows=smbBrowser_.Rows();const auto first=(smbBrowser_.Row()/4)*4;
             for(size_t i=first;i<rows.size()&&i<first+4;++i){
@@ -3421,16 +3421,16 @@ void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
                 c.Text(57,y+3,(e.directory?"[DIR] ":"[FILE] ")+e.name,18,White,930);
                 if(!e.directory)c.Text(1000,y+3,number(e.size)+" B",17,Muted,220);
             }
-            if(rows.empty())c.Text(48,434,"Diretorio vazio.",22,Muted,1170);
+            if(rows.empty())c.Text(48,434,std::string(c.Tr("Diretorio vazio.")),22,Muted,1170);
         }
-        c.Text(48,561,smbMessage_.empty()?(smbBrowser_.Truncated()?"Listagem limitada a 512 itens.":"Somente leitura remota; arquivos copiados apenas em workspace."):smbMessage_,17,Muted,1170);
-        c.Text(48,607,"A Abrir/Copiar | Y Atualizar | LB/RB Pagina | B Voltar",18,Lime,1170);return;
+        c.Text(48,561,smbMessage_.empty()?(smbBrowser_.Truncated()?std::string(c.Tr("Listagem limitada a 512 itens.")):std::string(c.Tr("Somente leitura remota; arquivos copiados apenas em workspace."))):std::string(c.Tr(smbMessage_.c_str())),17,Muted,1170);
+        c.Text(48,607,std::string(c.Tr("A Abrir/Copiar | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbDestination){
         c.Text(48,395,smbPlan_.name+" | "+number(smbPlan_.bytes)+" B",22,White,1170);
-        c.Text(48,447,"Destino: "+fileWorkspace_.WorkspaceFor(smbDestinations_[smbDest_]),22,Lime,1170);
-        c.Text(48,503,smbConfirm_?"A novamente confirma a copia sem sobrescrever.":"Esquerda/Direita escolhe HDD ou USB.",20,Muted,1170);
-        c.Text(48,607,"A Confirmar | B Cancelar",18,Lime,1170);return;
+        c.Text(48,447,std::string(c.Tr("Destino: "))+fileWorkspace_.WorkspaceFor(smbDestinations_[smbDest_]),22,Lime,1170);
+        c.Text(48,503,smbConfirm_?std::string(c.Tr("A novamente confirma a copia sem sobrescrever.")):std::string(c.Tr("Esquerda/Direita escolhe HDD ou USB.")),20,Muted,1170);
+        c.Text(48,607,std::string(c.Tr("A Confirmar | B Cancelar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbCopying){
         const auto done=smbSession_.Done(),total=smbSession_.Total();
@@ -3438,11 +3438,11 @@ void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
         c.Text(48,395,smbPlan_.name,23,White,1170);
         c.Box(48,450,1180,24,Panel,5);c.Box(48,450,int(1180*percent/100),24,Lime,5);
         c.Text(48,488,number(done)+" / "+number(total)+" B | "+number(percent)+"%",21,White,1170);
-        c.Text(48,549,smbSession_.Label(),18,Muted,1170);
-        c.Text(48,607,"X/B Cancelar sessao e remover parcial",18,Lime,1170);return;
+        c.Text(48,549,c.Tr(smbSession_.Label().c_str()),18,Muted,1170);
+        c.Text(48,607,std::string(c.Tr("X/B Cancelar sessao e remover parcial")),18,Lime,1170);return;
     }
-    c.Text(48,418,smbUi_==SmbError?smbMessage_:smbSession_.Label(),23,White,1170);
-    c.Text(48,607,"B Voltar",18,Lime,1170);
+    c.Text(48,418,c.Tr((smbUi_==SmbError?smbMessage_:smbSession_.Label()).c_str()),23,White,1170);
+    c.Text(48,607,std::string(c.Tr("B Voltar")),18,Lime,1170);
 }
 #endif
 
@@ -3508,7 +3508,7 @@ void ConsoleHome::PressSaveCenter(Key key){
     }
 }
 void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
-    c.Text(45,349,saveBackups_?"Saves | Backups do Title ID "+hexId(saveTitle_):saveList_?"Saves | "+saveProfiles_[saveProfileRow_].owner+" / "+saveProfiles_[saveProfileRow_].device:"Perfis e saves | Inventario de armazenamento",25,White,1170);
+    c.Text(45,349,saveBackups_?std::string(c.Tr("Saves | Backups do Title ID "))+hexId(saveTitle_):saveList_?std::string(c.Tr("Saves | "))+saveProfiles_[saveProfileRow_].owner+" / "+saveProfiles_[saveProfileRow_].device:std::string(c.Tr("Perfis e saves | Inventario de armazenamento")),25,White,1170);
     const size_t row=saveBackups_?saveBackupRow_:saveList_?saveRow_:saveProfileRow_;
     const size_t count=saveBackups_?saveRecords_.size():saveList_?saveItems_.size():saveProfiles_.size();
     const size_t first=(row/4)*4;
@@ -3517,12 +3517,12 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
         std::string label;
         if(saveBackups_)label=saveRecords_[i].slot+" | "+saveRecords_[i].package.name+" | "+number(saveRecords_[i].bytes)+" B";
         else if(saveList_)label=hexId(saveItems_[i].titleId)+" | "+saveItems_[i].name+" | "+saveItems_[i].path.substr(saveItems_[i].path.find_last_of("/\\")+1);
-        else label=saveProfiles_[i].owner+" | "+saveProfiles_[i].device+(saveProfiles_[i].owner=="0000000000000000"?" | Compartilhado":" | Pasta de perfil");
+        else label=saveProfiles_[i].owner+" | "+saveProfiles_[i].device+(saveProfiles_[i].owner=="0000000000000000"?std::string(c.Tr(" | Compartilhado")):std::string(c.Tr(" | Pasta de perfil")));
         c.Text(58,y+6,label,19,White,1150);
     }
-    if(!count)c.Text(48,410,"Nenhum registro reconhecido.",22,Muted,1170);
-    c.Text(48,555,notice_.empty()?(saveBackups_?"Backups por Title ID, podem pertencer a outros perfis.":"Inventario por pasta, nao comprova titularidade. "+std::string(saveLimited_?"Limite atingido.":"")):notice_,17,Muted,1170);
-    c.Text(48,607,saveConfirm_?"A Confirmar | B Cancelar":saveBackups_?"A Recuperar copia | X Verificar | Y Atualizar | B Voltar":saveList_?"A Backup | START Backups do jogo | Y Atualizar | B Voltar":"A Saves | Y Atualizar | LB/RB Pagina | B Voltar",18,Lime,1170);
+    if(!count)c.Text(48,410,std::string(c.Tr("Nenhum registro reconhecido.")),22,Muted,1170);
+    c.Text(48,555,notice_.empty()?(saveBackups_?std::string(c.Tr("Backups por Title ID, podem pertencer a outros perfis.")):std::string(c.Tr("Inventario por pasta, nao comprova titularidade. "))+std::string(saveLimited_?std::string(c.Tr("Limite atingido.")):"")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
+    c.Text(48,607,saveConfirm_?std::string(c.Tr("A Confirmar | B Cancelar")):saveBackups_?std::string(c.Tr("A Recuperar copia | X Verificar | Y Atualizar | B Voltar")):saveList_?std::string(c.Tr("A Backup | START Backups do jogo | Y Atualizar | B Voltar")):std::string(c.Tr("A Saves | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);
 }
 
 void ConsoleHome::RefreshAchievements(){
@@ -3561,10 +3561,10 @@ void ConsoleHome::PressAchievements(Key key){
     }
 }
 void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
-    c.Text(45,349,achievementDetails_?"Conquistas | "+achievementSummary_.titles[achievementRow_].name:"Conquistas Xbox | GPD offline",26,White,1170);
+    c.Text(45,349,achievementDetails_?std::string(c.Tr("Conquistas | "))+achievementSummary_.titles[achievementRow_].name:std::string(c.Tr("Conquistas Xbox | GPD offline")),26,White,1170);
     if(achievementLoaded_&&!achievementDetails_){
         const auto& s=achievementSummary_;
-        c.Text(48,382,"G "+number(s.earnedScore)+"/"+number(s.score)+" | Conquistas "+number(s.earned)+"/"+number(s.total)+" | Titulos "+number(s.titles.size()),19,Lime,1170);
+        c.Text(48,382,"G "+number(s.earnedScore)+"/"+number(s.score)+std::string(c.Tr(" | Conquistas "))+number(s.earned)+"/"+number(s.total)+std::string(c.Tr(" | Titulos "))+number(s.titles.size()),19,Lime,1170);
     }
     const size_t row=achievementDetails_?achievementDetailRow_:achievementRow_;
     const size_t count=achievementDetails_?achievementItems_.size():achievementSummary_.titles.size();
@@ -3576,7 +3576,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
         else{const auto& t=achievementSummary_.titles[i];label=hexId(t.id)+" | "+t.name+" | "+number(t.earned)+"/"+number(t.total)+" | "+number(t.earnedScore)+"/"+number(t.score)+" G";}
         c.Text(58,y+4,label,18,White,1150);
     }
-    if(achievementLoaded_&&!count)c.Text(48,432,"Nenhuma entrada de conquista reconhecida.",21,Muted,1170);
-    c.Text(48,555,notice_.empty()?"Dados locais, nao verificados pela Xbox Live.":notice_,17,Muted,1170);
-    c.Text(48,607,achievementDetails_?"LB/RB Pagina | Y Recarregar resumo | B Voltar":"A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar",18,Lime,1170);
+    if(achievementLoaded_&&!count)c.Text(48,432,std::string(c.Tr("Nenhuma entrada de conquista reconhecida.")),21,Muted,1170);
+    c.Text(48,555,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
+    c.Text(48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
 }

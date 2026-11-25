@@ -258,3 +258,7 @@ Inventário de pastas e saves STFS por perfil/dispositivo, backup e recuperaçã
 ### V0.2.31 — P3 Conquistas offline
 
 Leitura de cópias GPD exportadas, resumo e detalhes, sem modificar perfil ou sincronizar. Não há extração STFS automática, autenticação de dados ou provider de consulta online; testes sintéticos e captura 52 preparados. Nenhuma build/CI.
+
+### V0.2.32 — P3 Internacionalização
+
+Catálogo ampliado para módulos recentes e aplicação de chaves na interface. Cobertura completa de mensagens dinâmicas e módulos antigos ainda pendente; sem build/CI/capturas.

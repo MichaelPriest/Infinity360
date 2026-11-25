@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.32 — em desenvolvimento (sem build XEX)
+
+- 178 chaves PT-BR/EN/ES para módulos recentes, incluindo legendas e controles.
+- Tradução explícita de rótulos, mantendo valores e nomes originais; fallback português preservado.
+- Nenhuma build executada; cobertura integral ainda pendente.
+
 ## V0.2.31 — em desenvolvimento (sem build XEX)
 
 - Leitor offline GPD/XDBF, resumo de conquistas e Gamerscore por título, detalhes e ocultação de conquistas secretas bloqueadas.

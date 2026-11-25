@@ -1174,6 +1174,11 @@ int main(int argc,char** argv) {
         assert(GpdAchievements::Dashboard(data,summary)&&summary.titles.size()==1&&summary.earnedScore==200&&summary.earned==3);
         put(50,11);assert(!GpdAchievements::Dashboard(data,summary)&&summary.titles.empty());
         put(50,3);put(38,43);assert(!GpdAchievements::Dashboard(data,summary));
+        assert(std::string(UiLanguage::Translate(1,"Desligar console"))=="Shut down console");
+        assert(std::string(UiLanguage::Translate(2,"Senha"))=="Contraseña");
+        assert(std::string(UiLanguage::Translate(1,"Conquistas Xbox | GPD offline"))=="Xbox achievements | Offline GPD");
+        assert(std::string(UiLanguage::Translate(2,"hdd:/Content"))=="hdd:/Content");
+        assert(std::string(UiLanguage::Translate(0,"Senha"))=="Senha");
         LaunchStatistics stats;
         assert(stats.Attempt("game:/Games/Test/default.xex",1795570920));
         assert(!stats.Failed("other")&&stats.Failed("game:/Games/Test/default.xex"));
