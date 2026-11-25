@@ -1,4 +1,5 @@
 #include "ConsoleHome.h"
+#include "LaunchStatistics.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
 #include <cassert>
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 
 static int captureScreens(const char* atlas,const char* destination) {
     namespace fs=std::filesystem;
@@ -1078,6 +1080,22 @@ int main(int argc,char** argv) {
         assert(DisplaySafeArea::Apply(pixels.data(),10,buffer)==buffer.data());
         assert(buffer[0]==0xff000000u&&buffer[72*1280+128]==0xff123456u);
         assert(buffer[360*1280+640]==0xff123456u&&buffer.back()==0xff000000u);
+    }
+    {
+        LaunchStatistics stats;
+        assert(stats.Attempt("game:/Games/Test/default.xex",1795570920));
+        assert(!stats.Failed("other")&&stats.Failed("game:/Games/Test/default.xex"));
+        assert(!stats.Failed("game:/Games/Test/default.xex"));
+        assert(stats.Attempt("game:/Games/Test/default.xex",0));
+        auto entry=stats.Get("game:/Games/Test/default.xex");
+        assert(entry.attempts==2&&entry.failed==1&&entry.last==0);
+        std::ostringstream out;stats.Write(out);
+        LaunchStatistics restored;const auto line=out.str();
+        assert(restored.LoadLine(line.substr(2,line.size()-3)));
+        assert(restored.Get("game:/Games/Test/default.xex").attempts==2);
+        assert(!restored.LoadLine("1\t2\t0\tbad"));
+        assert(!restored.LoadLine("1000001\t0\t0\tbad"));
+        assert(!restored.LoadLine("1\t0\t0\tbad\tpath"));
     }
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);

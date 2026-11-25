@@ -19,6 +19,7 @@
 #include "DiscInstaller.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
+#include "LaunchStatistics.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
 #include "DisplaySafeArea.h"
@@ -70,10 +71,13 @@ public:
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
     void RecordLaunchAttempt(const std::string& path);
+    void RecordLaunchFailure(const std::string& path);
+    LaunchStatistics::Entry LaunchStats(const std::string& path)const{return launchStats_.Get(path);}
 private:
     enum Section { Library, Iptv, Apps, Emulators, Files, System, Recent, Favorites };
     enum Page { Home, Listing, Details };
     std::string dir_, notice_;
+    LaunchStatistics launchStats_;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
     std::set<unsigned> translationReferences_;

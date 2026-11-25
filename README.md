@@ -181,3 +181,7 @@ Na aba Saves, o inventário indica o dispositivo e o sufixo da pasta de perfil (
 Sistema > Rede/FTP > RB abre o teste privado entre dois dispositivos. Em cada MenuPreview, coloque em infinity360-lan-peer.txt o IPv4 privado do outro console. Inicie A em ambos; usa UDP 32160, mensagens fixas, aceita apenas o endereço/porta configurados, até cinco sondas em 15 segundos e respostas limitadas. Mostra respostas e RTT, encerra ao sair. Não é descoberta de jogos, relay ou System Link funcional; não verifica Xbox Live. A página Ethernet também exibe velocidade/duplex quando o XSDK informa bits inequívocos.
 
 O diagnóstico distingue tentativas, envios bem-sucedidos e respostas únicas vinculadas ao último envio confirmado. O teste Linux `lan_peer_loopback` utiliza dois endereços de loopback exclusivamente sob uma definição de compilação de testes; a build XSDK continua aceitando apenas pares privados. Galeria ampliada para 29 telas. O CI de 605e36c terminou sem runner e sem etapas executadas; a causa de infraestrutura não pôde ser confirmada.
+
+### Estatísticas locais de lançamento
+
+Detalhes dos jogos mostram tentativas encaminhadas ao loader XSDK, falhas imediatas quando o loader retorna e horário da última tentativa quando o relógio é válido. Registros S no perfil local, por caminho da cópia instalada; histórico legado não é convertido em contagens. Não mede horas jogadas, sucesso real do lançamento ou conquistas Xbox Live. Testes de persistência, limites e falhas duplicadas. CI segue sem runner atribuído.

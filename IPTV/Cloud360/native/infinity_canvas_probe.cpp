@@ -278,6 +278,7 @@ int main(){
                             menu.RecordLaunchAttempt(path);
                             // Successful xsdk_launch terminates the title; on early failure close the mount.
                             (void)xsdk_launch(XsdkPackageMount::Executable,nullptr,0);
+                            menu.RecordLaunchFailure(path);
                             launchNotice="Loader retornou erro; montagem encerrada.";
                         }else launchNotice="Pacote mudou antes do lancamento.";
                         mount.Close();p=Presenter{};if(!p.Open()){p.Close();ok=false;break;}dirty=true;
@@ -294,6 +295,7 @@ int main(){
                         menu.RecordLaunchAttempt(path);
                         xsdk_log_write("XEX launch confirmed");
                         (void)xsdk_launch(path.c_str(),nullptr,0);
+                        menu.RecordLaunchFailure(path);
                         xsdk_log_write("XEX launch returned errno=%d",errno);
                         launchNotice="O console recusou o executavel. Retornando ao menu.";
                     }else launchNotice="Midia alterada antes do lancamento.";

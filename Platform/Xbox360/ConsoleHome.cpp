@@ -180,7 +180,7 @@ void ConsoleHome::Load() {
     const std::string path=dir_+"aurorax-profile.txt";
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
-    history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
+    history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
@@ -203,6 +203,7 @@ void ConsoleHome::Load() {
         if(line[0]=='F' && !contains(favorites_,file)) favorites_.push_back(file);
         if(line[0]=='K' && pinned_.size()<PinLimit && !contains(pinned_,file)) pinned_.push_back(file);
         if(line[0]=='H' && !contains(hidden_,file)) hidden_.push_back(file);
+        if(line[0]=='S')launchStats_.LoadLine(file);
         if(line[0]=='P' && launched_.size()<4096 && !contains(launched_,file))
             launched_.push_back(file);
     }
@@ -249,6 +250,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"O\t"<<homeOrder_<<"\n";
     out<<"T\t"<<theme_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
+    launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
         out<<"A\t"<<it->first<<"\t"<<it->second<<"\n";
@@ -765,11 +767,15 @@ const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
 }
 void ConsoleHome::RecordLaunchAttempt(const std::string& path){
     if(!Installed(path))return;
+    const auto now=std::time(nullptr);launchStats_.Attempt(path,now<0?0:static_cast<uint64_t>(now));
     if(launched_.size()<4096&&!contains(launched_,path))launched_.push_back(path);
     history_.erase(std::remove(history_.begin(),history_.end(),path),history_.end());
     history_.insert(history_.begin(),path);
     if(history_.size()>HistoryLimit)history_.resize(HistoryLimit);
     if(!SaveProfile())notice_="Historico desta sessao; falha ao salvar.";
+}
+void ConsoleHome::RecordLaunchFailure(const std::string& path){
+    if(launchStats_.Failed(path)&&!SaveProfile())notice_="Falha ao salvar estatistica de lancamento.";
 }
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; RecordEvent("Falha de lancamento"); }
 
@@ -2735,6 +2741,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(section_==Library || section_==Recent || section_==Favorites) {
             c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves / Trainers)",20,Muted,1110);
             c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);
+            const auto stats=LaunchStats(visible_[row_]->executable);
+            c.Text(47,617,stats.attempts?"Tentativas "+number(stats.attempts)+" | Falhas imediatas "+number(stats.failed)+" | Ultima "+LaunchStatistics::Date(stats.last):"Estatisticas: nenhuma tentativa registrada nesta versao",17,Muted,1170);
         }
         return;
     }

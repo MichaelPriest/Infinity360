@@ -166,3 +166,7 @@ Velocidade/duplex Ethernet consultados pelo XSDK. Segunda página de rede com te
 ### P2 — Robustez do diagnóstico LAN
 
 Contabilização separada de tentativas e envios, nonce pendente somente após envio bem-sucedido, validação do tamanho do endereço de origem e rejeição de respostas repetidas. Teste real UDP com dois pares loopback Linux, exclusivo do target de teste; captura 29 da página UDP. CI de 605e36c terminou em dois segundos, runner vazio, nenhuma etapa executada, logs indisponíveis; não se conclui falha de compilação. Nova revisão aguarda validação.
+
+### P3 — Estatísticas locais de lançamento
+
+Contagem persistente de tentativas e falhas imediatas por caminho, data/hora da última tentativa, limites de registros e validação de campos. Atualização antes do handoff e quando loader retorna. Sem estimativa de tempo jogado ou conquistas. CI de 2574f59 falhou antes das etapas (runner vazio); nova revisão aguarda validação.
