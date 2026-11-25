@@ -5,6 +5,9 @@
 #include <xtl.h>
 #include <winsockx.h>
 #include <xnet.h>
+#elif defined(__XSDK__)
+#include "xsdk/net.h"
+#include <cerrno>
 #elif defined(__linux__)
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -55,6 +58,22 @@ NetworkSnapshot NetworkInfo::Read() {
         result.state=result.ipv4.empty()?NetworkSnapshot::NoAddress:NetworkSnapshot::AddressReady;
     }
     XNetCleanup();
+#elif defined(__XSDK__)
+    uint32_t link=0;
+    if(xsdk_net_link(&link)==0){
+        result.ethernetKnown=true;
+        result.ethernetActive=(link&XSDK_NET_LINK_ACTIVE)!=0;
+    }
+    struct in_addr address={};
+    const int status=xsdk_net_address(&address);
+    // The XSDK functions return an errno value, not a POSIX -1.
+    if(status==EAGAIN)result.state=NetworkSnapshot::Pending;
+    else if(status==EADDRNOTAVAIL)result.state=NetworkSnapshot::NoAddress;
+    else if(status!=0)result.state=NetworkSnapshot::Error;
+    else{
+        result.ipv4=IPv4(reinterpret_cast<const unsigned char*>(&address.s_addr));
+        result.state=result.ipv4.empty()?NetworkSnapshot::NoAddress:NetworkSnapshot::AddressReady;
+    }
 #elif defined(__linux__)
     // Host diagnostics only: do not simulate Xbox Ethernet link flags.
     struct ifaddrs* list=0;

@@ -52,7 +52,7 @@ xsdk_add_shaders(infinity_canvas_probe infinity_canvas.vert infinity_canvas.frag
 xsdk_add_xex(infinity_canvas_probe TITLE_ID 0x494E4632 NAME "INFINITY 360 Canvas Probe" VERSION 0.1.2.0)
 
 # Full production menu linked to the same Xenos presenter. File operations
-# are opt-in in this isolated build; optional XEX launch, no network or media adapters.
+# are opt-in in this isolated build; optional XEX launch and LAN FTP read-only, no media adapter.
 add_executable(infinity_menu_preview infinity_canvas_probe.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/FileWorkspace.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/ConsoleHome.cpp
@@ -62,6 +62,7 @@ add_executable(infinity_menu_preview infinity_canvas_probe.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/StorageInfo.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/NetworkInfo.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/FtpServer.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/FtpSession.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/TvCatalog.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/TvGuide.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/CloudTv.cpp
@@ -76,7 +77,7 @@ target_include_directories(infinity_menu_preview PRIVATE
   ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
 set_target_properties(infinity_menu_preview PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 xsdk_add_shaders(infinity_menu_preview infinity_canvas.vert infinity_canvas.frag)
-xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.6.0)
+xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.7.0)
 
 add_executable(infinity_launch_target infinity_launch_target.c)
 set_target_properties(infinity_launch_target PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON)

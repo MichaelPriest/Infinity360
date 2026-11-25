@@ -540,10 +540,18 @@ void ConsoleHome::RefreshResidentPlugins() {
 }
 void ConsoleHome::ToggleFtp(bool allowUpload) {
     if(ftp_.Running()){ftp_.Stop();notice_="FTP encerrado.";RecordEvent("FTP encerrado");return;}
-#ifndef _XBOX
+#if !defined(_XBOX) && !defined(__XSDK__)
     (void)allowUpload;
     notice_="FTP nativo: somente no Xbox; teste de transporte separado no PC.";
 #else
+#ifdef __XSDK__
+    if(allowUpload){notice_="Upload FTP ainda indisponivel no XSDK.";return;}
+    std::ifstream opt((dir_+"enable-ftp.txt").c_str());
+    std::string signature;
+    if(!std::getline(opt,signature)||signature!="ENABLE-FTP-LAN"){
+        notice_="FTP bloqueado: habilite enable-ftp.txt na pasta de teste.";return;
+    }
+#endif
     RefreshNetwork();
     std::ifstream in((dir_+"infinity360-ftp.txt").c_str(),std::ios::binary);
     char data[132];

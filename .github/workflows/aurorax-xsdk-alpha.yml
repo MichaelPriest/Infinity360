@@ -92,9 +92,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.6.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.1.6 - experimental hardware preview ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.1.7 - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -102,7 +102,10 @@ jobs:
               "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
               "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
-              "Optional XEX launch only after GPU checks pass; no playback/network.\n"
+              "Optional XEX launch only after GPU checks pass; no playback or HTTPS.\n"
+              "FTP LAN read-only is opt-in: create MenuPreview/enable-ftp.txt containing ENABLE-FTP-LAN.\n"
+              "Requires enable-file-writes.txt and private credentials in infinity360-ftp.txt (two lines).\n"
+              "Use an isolated trusted LAN; FTP credentials are not encrypted. Never forward port 2121.\n"
               "File writes OFF by default. To opt in create MenuPreview/enable-file-writes.txt containing ENABLE-FILE-WRITES.\n"
               "Write only to MenuPreview/UserFiles or Infinity360Files on HDD/USB. Use disposable test data.\n"
               "To enable, manually create MenuPreview/enable-xex-launch.txt containing ENABLE-XEX-LAUNCH.\n"
@@ -136,14 +139,14 @@ jobs:
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.1.6.zip > Infinity360-Alpha-XSDK-0.1.6.zip.sha256
+          sha256sum Infinity360-Alpha-XSDK-0.1.7.zip > Infinity360-Alpha-XSDK-0.1.7.zip.sha256
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.6
+          name: Infinity360-Alpha-XSDK-0.1.7
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.6.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.6.zip.sha256
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip.sha256
           retention-days: 14
           if-no-files-found: error
 
@@ -161,7 +164,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.6
+          name: Infinity360-Alpha-XSDK-0.1.7
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
@@ -171,33 +174,33 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.1.6.zip.sha256
+          sha256sum -c Infinity360-Alpha-XSDK-0.1.7.zip.sha256
           python3 - <<'PY'
           from zipfile import ZipFile
           import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.1.6.zip") as z:
+          with ZipFile("Infinity360-Alpha-XSDK-0.1.7.zip") as z:
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
                   raw = z.read(name)
                   assert raw[:4] == b"XEX2" and hashlib.sha256(raw).hexdigest() == digest
           PY
-          tag="xsdk-v0.1.6-${GITHUB_SHA:0:12}"
+          tag="xsdk-v0.1.7-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.1.6 — experimental prerelease.
+          INFINITY 360 XSDK Alpha 0.1.7 — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
           Not hardware-homologated; do not replace your installed dashboard or enable autoboot.
           Read LEIA-ME-SEGURANCA.txt before testing. XEX launch and file writes are opt-in.
-          GOD/XBLA launching, native IPTV playback and network services remain pending.
+          Experimental IPv4/Ethernet and LAN read-only FTP; HTTPS, FTP uploads, GOD/XBLA launch and native IPTV remain pending.
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.6.zip Infinity360-Alpha-XSDK-0.1.6.zip.sha256 \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.6 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.7.zip Infinity360-Alpha-XSDK-0.1.7.zip.sha256 \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.7 (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

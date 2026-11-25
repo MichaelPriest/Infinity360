@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cctype>
-#if defined(_XBOX) || defined(__linux__)
+#if defined(_XBOX) || defined(__linux__) || defined(__XSDK__)
 #ifdef _XBOX
 #include <xtl.h>
 #include <winsockx.h>
@@ -61,7 +61,7 @@ unsigned ticks() {
 bool localAddress(unsigned long ip) {
     const unsigned long h=ntohl(ip);
     return (h>>24)==10||(h>>20)==0xac1||(h>>16)==0xc0a8
-#ifndef _XBOX
+#if !defined(_XBOX) && !defined(__XSDK__)
         ||(h>>24)==127
 #endif
         ;
@@ -81,6 +81,8 @@ Sock listener(unsigned long address,unsigned port,unsigned& assigned) {
 int sendSome(Sock socket,const char* data,unsigned size) {
 #ifdef _XBOX
     return send(socket,data,static_cast<int>(size),0);
+#elif defined(__XSDK__)
+    return static_cast<int>(send(socket,data,size,0));
 #else
     return static_cast<int>(send(socket,data,size,MSG_NOSIGNAL));
 #endif
@@ -102,6 +104,17 @@ bool listEntry(FtpSession& ftp,const std::string& name,bool names,std::string& r
     return result.size()<=65536;
 }
 // Exact-size, exclusive upload. Temp names cannot be accessed through FTP.
+#ifdef __XSDK__
+// The native file adapter supports safe publication, but FTP upload needs a
+// separate reviewed transport adapter. Never fall back to FATX hard links.
+class Upload {
+public:
+    bool Open(FtpSession&,const std::string&,unsigned long long){return false;}
+    bool Write(const char*,unsigned){return false;}
+    bool Publish(FtpSession&){return false;}
+    void Cancel(){}
+};
+#else
 class Upload {
 public:
     Upload():expected_(0),received_(0)
@@ -201,6 +214,7 @@ private:
     int dir_,handle_;
 #endif
 };
+#endif
 bool parseUploadSize(const std::string& text,unsigned long long& result) {
     result=0;
     if(text.empty()||text.size()>8)return false;
@@ -396,10 +410,19 @@ unsigned FtpServer::Port()const{return impl_?impl_->port:0;}
 bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned port,
                       const std::string& user,const std::string& password,bool allowUpload) {
     Stop();error_.clear();
+#ifdef __XSDK__
+    if(allowUpload){error_="Upload FTP ainda indisponivel no XSDK.";return false;}
+#endif
     if(!workspace_.CanWrite(root)||!FtpSession::ValidCredentials(user,password)||port>65535) {
         error_="Workspace ou credenciais invalidos.";return false;
     }
+#ifdef __XSDK__
+    struct in_addr parsed={};
+    if(inet_pton(AF_INET,addr.c_str(),&parsed)!=1){error_="IPv4 invalido.";return false;}
+    const unsigned long ip=parsed.s_addr;
+#else
     const unsigned long ip=inet_addr(addr.c_str());
+#endif
     if(!localAddress(ip)){error_="IPv4 LAN privado necessario.";return false;}
     Impl* p=new Impl;
 #ifdef _XBOX
