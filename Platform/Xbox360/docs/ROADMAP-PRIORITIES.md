@@ -54,3 +54,7 @@ No editor de arte, LB abre confirmação para arquivar a capa ou fundo pessoal s
 ### P1 — Central de downloads Store
 
 Fila nativa persistente e retomada de parciais já existentes. Nesta revisão: R3 prioriza item no início da fila, a ordem é persistida, e a central apresenta quantidade, parciais, registros verificados, referências ausentes e bytes restantes estimados. Captura nativa da fila acrescentada à galeria. Não inicia downloads sem comando; integração HTTPS e retomada em hardware permanecem em homologação.
+
+### P1 — Velocidade e ETA
+
+Downloads HTTPS da Store e cópias locais apresentam velocidade recente e tempo restante estimado, com relógio monotônico e tratamento de retomada/pausa. Não mede downloads em segundo plano nem confirma integridade antes da verificação final. CI e medição em hardware pendentes.

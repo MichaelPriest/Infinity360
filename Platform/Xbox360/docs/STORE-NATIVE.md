@@ -21,3 +21,7 @@ Na listagem Store, R3 abre Provedores. Configure MenuPreview/infinity360-provide
 ## Fila persistente — gerenciamento de prioridade
 
 A fila nativa guarda até 64 identidades exatas de catálogo (ID + SHA-256), sem iniciar automaticamente ao recarregar. Sistema > Downloads > RB abre a fila Store; R3 move o item selecionado ao início e persiste a ordem. START executa a fila explicitamente, A baixa/retoma o item, X retira o pedido sem apagar parciais e LB revisa referências ausentes. O resumo informa itens conhecidos, parciais, registros verificados, referências ausentes e volume restante estimado com base em arquivos parciais nativos. Referências offline não entram no volume. Não é uma medição de tráfego nem garantia de retomada do servidor. Testes de reordenação, persistência e fila inválida adicionados.
+
+## Indicadores de transferência
+
+O download HTTPS nativo apresenta velocidade estimada por deltas de bytes observados e tempo monotônico, com ETA quando há total e taxa positivos. Bytes anteriores à retomada não entram na medição. Reinício, mudança de total, pausa e intervalos sem progresso invalidam a taxa anterior. A mesma estimativa aparece nas cópias locais. A conclusão dos bytes não comprova a validação final SHA-256. Não há promessa de velocidade do servidor; testes determinísticos cobrem retomada, stall e reinício.

@@ -6,6 +6,7 @@
 #include "ContentCatalog.h"
 #include "FileWorkspace.h"
 #include "StorageInfo.h"
+#include "TransferRate.h"
 #include "NetworkInfo.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
@@ -80,6 +81,7 @@ private:
     FtpServer ftp_;
     void ToggleFtp(bool allowUpload=false);
     FileTransfer transfer_;
+    TransferRate copyRate_;
     std::vector<WorkspaceCopyStep> copyQueue_;
     std::string activeCopyTarget_;
     bool StartNextCopy();

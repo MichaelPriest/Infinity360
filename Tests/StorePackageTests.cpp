@@ -1,10 +1,23 @@
 #include "StorePackage.h"
+#include "TransferRate.h"
 #include "DiscInstaller.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 namespace fs=std::filesystem;
 int main(){
+    TransferRate rate;
+    assert(rate.Sample(500,4500,100)); // resume at 500 bytes
+    assert(rate.BytesPerSecond()==0);
+    assert(!rate.Sample(1000,4500,500));
+    assert(rate.Sample(1500,4500,1100));
+    assert(rate.BytesPerSecond()==1000&&rate.RemainingSeconds(1500,4500)==3);
+    assert(rate.Sample(1500,4500,2100)&&rate.BytesPerSecond()==0);
+    assert(rate.Sample(0,4500,3100)&&rate.BytesPerSecond()==0);
+    assert(rate.Sample(1000,4500,4100)&&rate.BytesPerSecond()==1000);
+    assert(rate.Sample(1000,9000,4200)&&rate.BytesPerSecond()==0);
+    rate.Reset();assert(rate.BytesPerSecond()==0);
+
     StoreSha256 empty;assert(empty.Finish()=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     StoreSha256 abc;abc.Update((const unsigned char*)"a",1);abc.Update((const unsigned char*)"bc",2);
     const std::string digest="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";

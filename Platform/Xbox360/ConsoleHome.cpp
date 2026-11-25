@@ -448,6 +448,7 @@ bool ConsoleHome::StartNextCopy() {
     if(!transfer_.Start(fileWorkspace_,task.source,task.name,task.destination)) {
         copyQueue_.clear();notice_="Fila interrompida: "+transfer_.Error();RecordEvent("Falha ao iniciar copia");return false;
     }
+    copyRate_.Reset();copyRate_.Sample(0,transfer_.Total(),TransferRate::Now());
     activeCopyTarget_=FileWorkspace::Join(task.destination,task.name);
     notice_="Proxima copia iniciada.";return true;
 }
@@ -507,6 +508,7 @@ bool ConsoleHome::Tick() {
     }
     const unsigned previous=transfer_.Percent();
     transfer_.Tick();
+    const bool rateChanged=copyRate_.Sample(transfer_.Done(),transfer_.Total(),TransferRate::Now());
     if(transfer_.Status()!=FileTransfer::Running) {
         activeCopyTarget_.clear();
         if(transfer_.Status()!=FileTransfer::Completed)copyQueue_.clear();
@@ -515,7 +517,7 @@ bool ConsoleHome::Tick() {
             "Copia interrompida: "+transfer_.Error();
         RecordEvent(transfer_.Status()==FileTransfer::Completed?"Arquivo copiado":"Copia interrompida");return true;
     }
-    return ftpChanged || previous!=transfer_.Percent();
+    return ftpChanged || rateChanged || previous!=transfer_.Percent();
 }
 std::string ConsoleHome::TakeMovie() {
     const std::string movie=tv_.TakeMovie();
@@ -1664,7 +1666,8 @@ std::string ConsoleHome::Press(Key key) {
             notice_="Fila cancelada; origens preservadas.";RecordEvent("Fila de copias cancelada");return "";
         }
         if(page_==Details && systemTab_==3 && key==Accept && TransferRunning()) {
-            copyPaused_=!copyPaused_;
+            copyPaused_=!copyPaused_;copyRate_.Reset();
+            if(!copyPaused_)copyRate_.Sample(transfer_.Done(),transfer_.Total(),TransferRate::Now());
             notice_=copyPaused_?"Fila pausada. A para continuar.":"Fila retomada.";
             RecordEvent(copyPaused_?"Fila pausada":"Fila retomada");return "";
         }
@@ -2429,7 +2432,7 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
         c.Box(60,493,1155,16,0xff28413a,5);
         const unsigned percent=transfer_.Percent();
         if(percent)c.Box(60,493,static_cast<int>(1155*percent/100),16,Lime,5);
-        c.Text(60,526,number(percent)+"%"+(transfer_.Error().empty()?
+        c.Text(60,526,number(percent)+"%"+(state==FileTransfer::Running&&!copyPaused_?" | "+copyRate_.Label(transfer_.Done(),transfer_.Total()):std::string(""))+(transfer_.Error().empty()?
                std::string(""):" | "+transfer_.Error()),20,White,1145);
     }
     c.Text(60,562,"Na fila: "+number(copyQueue_.size())+
