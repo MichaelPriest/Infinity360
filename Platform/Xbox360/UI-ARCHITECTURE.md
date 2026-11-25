@@ -14,6 +14,10 @@ O design AuroraX inclui fundo verde-escuro, verde-limão para foco, cabeçalho
 próprio, capas, blocos Biblioteca e Cloud360, atalhos, Recentes/Favoritos,
 navegação por controle e telas próprias para todas as seções.
 
+## Evolução visual aprovada (25/11/2026)
+
+O PDF permanece referência do layout atual durante P0–P3. Após o desenvolvimento funcional, a fase P4 Modern UI passa a adotar a direção visual conceitual aprovada: interface escura, foco verde-limão, acentos ciano, sidebar, banners e painéis por módulo. Essa decisão substitui a exigência de fidelidade permanente ao PDF somente na fase P4. O código e a galeria atuais não são alterados nesta etapa. As imagens conceituais não constituem capturas reais. Consulte [Modern UI](docs/MODERN-UI.md).
+
 ## Separação de responsabilidades
 
 | Elemento | Implementação decidida | Regra |

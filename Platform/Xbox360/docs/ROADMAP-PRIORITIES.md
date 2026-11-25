@@ -6,6 +6,7 @@
 | P1 | TU/DLC, XboxUnity, Store, Cloud360 IPTV e integração com plugins |
 | P2 | SMC, energia, System Link e saves |
 | P3 | Temas, idiomas, guia e conquistas |
+| P4 | Modern UI — redesign nativo aprovado, após o desenvolvimento funcional P0–P3 |
 
 ## Instalação e lançamento
 
@@ -23,7 +24,8 @@ A instalação local, o recibo de staging e o download XboxUnity compartilham ag
 - P1: cache TU legado, seleção/ativação efetiva de TU, DLC e licenças legítimas em hardware, metadados/capas XboxUnity, fila de downloads persistente, compatibilidade de plugins, IPTV nativo HLS/MP4 e validação Store.
 - P2: sensores SMC e energia, System Link autorizado, integração de perfil ativo e saves, SMB, captura de tela, rede e resolução de vídeo.
 - P3: temas e fontes nativos, localização, Guide, conquistas, estatísticas e personalização de blocos.
-- Windows e checklist físico: após desenvolvimento das funções de console.
+- P4: aplicar a nova direção visual aprovada após concluir o desenvolvimento funcional P0–P3, preservando fluxos e providers. Ver [Modern UI](MODERN-UI.md).
+- Windows e checklist físico: após desenvolvimento e modernização das funções de console. A validação física permanece necessária; nenhuma prioridade é homologada apenas por CI.
 
 ### P1 — Recuperação de TU arquivada
 

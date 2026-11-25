@@ -47,6 +47,7 @@ O [workflow de capturas](https://github.com/MichaelPriest/Infinity360/actions/wo
 - P0: indexação XEX/GOD/XBLA, importação de pacotes, DVD para XEX/GOD e multidisco no código; lançamento e montagem no console em homologação.
 - P1: inventário TU/DLC/saves, staging XboxUnity, instalação local verificada, diagnóstico de Base Version, backups e recuperação de TUs arquivadas. Ativação efetiva e cache legado ainda pendentes. Store e Cloud360 IPTV experimentais.
 - P2/P3: sensores, energia, System Link, personalização e conquistas ainda incompletos.
+- P4 — Modern UI: redesign aprovado em 25/11/2026, inspirado nos conceitos visuais de referência (sidebar, verde-limão/ciano e painéis escuros). Planejado após concluir as funcionalidades P0–P3, sem substituir as telas atuais nesta etapa. [Direção visual e critérios de aceite](Platform/Xbox360/docs/MODERN-UI.md).
 - [Roadmap detalhado](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md) · [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Builds](https://github.com/MichaelPriest/Infinity360/actions)
 
 ## Instalar um DVD no Xbox 360
