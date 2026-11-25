@@ -1,5 +1,6 @@
 #include "ConsoleHome.h"
 #include "LaunchStatistics.h"
+#include "DashboardLayout.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
 #include <cassert>
@@ -1151,6 +1152,23 @@ int main(int argc,char** argv) {
         palette.SetTheme(999);palette.Box(0,0,1,1,0xff9dec31u);assert(palette.Pixels()[0]==0xff9dec31u);
         const unsigned char video[]={0,255,0};palette.SetTheme(4);palette.VideoRgb(video,1,1);
         assert(palette.Pixels()[360*1280+640]==0xff00ff00u);
+    }
+    // Layout geometry: each destination is within the TV safe canvas and
+    // reachable from every other destination using the directional model.
+    {
+        for(unsigned style=1;style<DashboardLayout::Count;++style){
+            const auto g=DashboardLayout::Get(style);
+            for(const auto& a:g.nav)assert(a.x>=0&&a.y>=0&&a.w>0&&a.h>0&&a.x+a.w<=1280&&a.y+a.h<=628);
+            for(int start=0;start<DashboardLayout::Slots;++start){
+                unsigned visited=1u<<start;
+                for(int pass=0;pass<DashboardLayout::Slots;++pass)
+                    for(int i=0;i<DashboardLayout::Slots;++i)if(visited&(1u<<i))
+                        for(int d=0;d<4;++d)visited|=1u<<DashboardLayout::Move(g,i,d);
+                assert(visited==(1u<<DashboardLayout::Slots)-1);
+            }
+        }
+        unsigned mode=0;assert(DashboardLayout::Parse("9",mode)&&mode==9);
+        assert(!DashboardLayout::Parse("10",mode)&&mode==9);
     }
     // Appearance: invalid profile values leave the old preferences intact.
     {

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.34 — P4 primeira etapa (sem build)
+
+- Nove layouts selecionáveis da tela inicial e Classic preservado, navegação e destinos compartilhados.
+- Preferências persistentes, prévia de layout e paletas independentes.
+- Telas internas ainda clássicas; testes preparados, não executados.
+
 ## V0.2.33 — em desenvolvimento (sem build XEX)
 
 - Editor de aparência com prévia, 7 paletas, 3 fundos, escurecimento e preferência de arte dos jogos.

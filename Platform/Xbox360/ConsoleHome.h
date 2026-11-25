@@ -283,6 +283,9 @@ private:
     ConsoleStatus status_;
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     AppearanceSettings appearance_,appearanceDraft_;
+    unsigned layout_=0,layoutDraft_=0;
+    bool layoutPreview_=false;
+    void DrawModernHome(HomeCanvas& c,unsigned style,bool preview=false)const;
     unsigned themeDraft_=0,appearanceRow_=0;
     bool appearanceEditor_=false;
     mutable bool wallpaperDirty_=true;

@@ -266,3 +266,7 @@ Catálogo ampliado para módulos recentes e aplicação de chaves na interface. 
 ### V0.2.33 — P3 Personalização visual
 
 Editor de paleta, fundo, escurecimento e arte do início/detalhes com rascunho e persistência, wallpaper RGBA fixo e cache. Atalhos e arte individual reaproveitam editores existentes. Conversão local de formatos no console e layout P4 pendentes. Sem build/CI; 53 capturas preparadas.
+
+### V0.2.34 — P4 Home multi-layout
+
+Dez estilos incluindo Classic, seleção persistente e prévia, nove geometrias e menu navegável. Redesign das telas internas, grade de biblioteca e captura real de cada layout permanecem pendentes. Build V0.2.33 corrigida solicitada em commit separado; nenhuma build V0.2.34.

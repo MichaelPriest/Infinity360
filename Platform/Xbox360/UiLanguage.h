@@ -383,6 +383,13 @@ inline const char* Translate(unsigned language,const char* key){
         {"Aparencia salva.","Appearance saved.","Apariencia guardada."},
         {"Falha ao salvar aparencia.","Could not save appearance.","No se pudo guardar la apariencia."},
         {"Papel de parede recarregado na proxima renderizacao.","Wallpaper reloads on next render.","El fondo se recarga en el próximo renderizado."},
+        {"Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar","D-pad Adjust | R3 Preview | X Defaults | Y Save | B Cancel","Direcciones Ajustar | R3 Vista previa | X Predeterminado | Y Guardar | B Cancelar"},
+        {"Destaque","Featured","Destacado"},
+        {"Abra Jogos para selecionar o titulo.","Open Games to select the title.","Abre Juegos para seleccionar el título."},
+        {"Indicadores locais","Local indicators","Indicadores locales"},
+        {"Sensores e rede: consultar em Sistema.","Sensors and network: see System.","Sensores y red: consulta Sistema."},
+        {"Selecione uma secao pelo menu.","Select a section from the menu.","Selecciona una sección del menú."},
+        {"Previa de layout | B Voltar ao editor","Layout preview | B Back to editor","Vista previa de diseño | B Volver al editor"},
     };
     for(const auto& row:rows)if(std::strcmp(key,row[0])==0)return row[language];
     return key;
