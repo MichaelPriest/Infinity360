@@ -218,3 +218,7 @@ Mínimo e máximo por sensor em RAM, última consulta preservada entre telas, co
 ### V0.2.21 — P2 Energia experimental
 
 Painel de energia com dupla confirmação e cancelamento, bloqueio de transferências, FTP, LAN e solicitações pendentes. Provider kernel opt-in independente, rotinas power down/reboot quiesce; sem reset forçado. Nenhuma confirmação de comportamento físico. CI de teste e XEX experimental pendentes; Release padrão exclui power_control. Galeria 46 preparada.
+
+### V0.2.22 — P2 Refrigeração e aviso térmico
+
+Leitura do alvo percentual SMC pela resposta 0x07, validação de faixa, aviso de sessão configurável, estados parcial/inválido e captura 47. Sem alterar controle térmico, sem medir RPM, sem proteção automática. Controle real de ventoinha permanece pendente de provider e homologação por revisão de placa. Nenhuma build/CI.

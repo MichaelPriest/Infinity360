@@ -103,7 +103,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
         if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("43-configurar-rede",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::PageUp);}
-        if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);ok=save("45-temperaturas",system)&&ok;system.Press(ConsoleHome::Guide);}
+        if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);ok=save("45-temperaturas",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("47-refrigeracao",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);}
         if(i==4){system.Press(ConsoleHome::Guide);ok=save("44-plugins-locais",system)&&ok;system.Press(ConsoleHome::Guide);}
         if(i==5){system.Press(ConsoleHome::PageDown);ok=save("38-notificacoes-pendentes",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("39-notificacoes-alertas",system)&&ok;system.Press(ConsoleHome::Favorite);assert(system.UnreadNotifications()==0);}
         if(i==3){
@@ -1198,6 +1198,22 @@ int main(int argc,char** argv) {
      smc[3]=0;smc[4]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Partial);
      assert(ThermalTelemetry::Decode(smc,8).state==ThermalTelemetry::Invalid);
      smc[0]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Invalid);}
+    {unsigned char reply[16]={0x07,0,60,0,80,0,65,0,40,73};
+      auto sample=ThermalTelemetry::Decode(reply,sizeof reply);
+      assert(sample.fanTargetAvailable&&sample.FanTargetLabel()=="73%");
+      assert(ThermalAdvisory::Evaluate(sample,0)==ThermalAdvisory::Disabled);
+      assert(ThermalAdvisory::Evaluate(sample,80)==ThermalAdvisory::Reached);
+      assert(ThermalAdvisory::Evaluate(sample,85)==ThermalAdvisory::Below);
+      reply[3]=reply[4]=0;sample=ThermalTelemetry::Decode(reply,sizeof reply);
+      assert(ThermalAdvisory::Evaluate(sample,85)==ThermalAdvisory::Incomplete);
+      assert(ThermalAdvisory::Evaluate(sample,60)==ThermalAdvisory::Reached);
+      reply[9]=101;assert(!ThermalTelemetry::Decode(reply,sizeof reply).fanTargetAvailable);
+      reply[9]=0;assert(!ThermalTelemetry::Decode(reply,sizeof reply).fanTargetAvailable);
+      reply[0]=0;reply[9]=73;sample=ThermalTelemetry::Decode(reply,sizeof reply);
+      assert(!sample.fanTargetAvailable&&ThermalAdvisory::Evaluate(sample,80)==ThermalAdvisory::NoReading);
+      assert(ThermalAdvisory::Next(0,1)==60&&ThermalAdvisory::Next(95,1)==0);
+      assert(ThermalAdvisory::Next(0,-1)==95&&ThermalAdvisory::Next(60,-1)==0);
+      assert(!ThermalAdvisory::Valid(82)&&ThermalAdvisory::Next(82,1)==0);}
     {ThermalHistory history;
       unsigned char smc[16]={0x07,0x80,60,0,70,0,65,0,40};
       history.Add(ThermalTelemetry::Decode(smc,sizeof smc));

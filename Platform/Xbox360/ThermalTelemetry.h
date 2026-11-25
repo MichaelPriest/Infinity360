@@ -13,6 +13,8 @@ struct ThermalTelemetry {
     State state=NotRead;
     uint16_t raw[4]={};
     bool available[4]={};
+    unsigned fanTarget=0;
+    bool fanTargetAvailable=false;
     static bool Supported(){
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMC_READ)
         return true;
@@ -32,7 +34,11 @@ struct ThermalTelemetry {
                 t.raw[i]=static_cast<uint16_t>(value);t.available[i]=true;++good;
             }
         }
-        t.state=good==4?Valid:good?Partial:Invalid;return t;
+        t.state=good==4?Valid:good?Partial:Invalid;
+        // Documented byte 9 is the SMC-computed target, not RPM or override.
+        // Zero is ambiguous on unverified revisions; fail closed.
+        if(good&&b[9]>0&&b[9]<=100){t.fanTarget=b[9];t.fanTargetAvailable=true;}
+        return t;
     }
     static ThermalTelemetry Read(){
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMC_READ)
@@ -48,6 +54,7 @@ struct ThermalTelemetry {
         const unsigned tenths=(unsigned(rawValue)*10+128)/256;
         char value[24];std::snprintf(value,sizeof value,"%u.%u C",tenths/10,tenths%10);return value;
     }
+    std::string FanTargetLabel()const{return fanTargetAvailable?std::to_string(fanTarget)+"%":"--";}
     std::string Celsius(unsigned i)const{
         return i<4&&available[i]?FormatCelsius(raw[i]):"--";
     }
@@ -74,4 +81,26 @@ struct ThermalHistory {
     void Clear(){*this=ThermalHistory();}
     std::string Min(unsigned i)const{return i<4&&seen[i]?ThermalTelemetry::FormatCelsius(minimum[i]):"--";}
     std::string Max(unsigned i)const{return i<4&&seen[i]?ThermalTelemetry::FormatCelsius(maximum[i]):"--";}
+};
+
+ // User-selected advisory limit, not a hardware safety threshold.
+struct ThermalAdvisory {
+    enum Status { Disabled, NoReading, Below, Incomplete, Reached };
+    static bool Valid(unsigned limit){return !limit||(limit>=60&&limit<=95&&limit%5==0);}
+    static unsigned Next(unsigned limit,int direction){
+        if(!Valid(limit))return 0;
+        if(direction>0)return !limit?60:limit==95?0:limit+5;
+        if(direction<0)return !limit?95:limit==60?0:limit-5;
+        return limit;
+    }
+    static Status Evaluate(const ThermalTelemetry& sample,unsigned limit){
+        if(!limit||!Valid(limit))return Disabled;
+        if(sample.state!=ThermalTelemetry::Valid&&sample.state!=ThermalTelemetry::Partial)return NoReading;
+        unsigned good=0;
+        for(unsigned i=0;i<4;++i){
+            if(!sample.available[i]||sample.raw[i]<256||sample.raw[i]>125u*256u)continue;
+            ++good;if(sample.raw[i]>=limit*256u)return Reached;
+        }
+        return !good?NoReading:good==4?Below:Incomplete;
+    }
 };

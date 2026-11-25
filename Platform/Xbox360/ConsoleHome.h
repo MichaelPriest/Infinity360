@@ -153,6 +153,9 @@ private:
     bool telemetryVideo_=false,thermalPage_=false;
     ThermalTelemetry thermal_;
     ThermalHistory thermalHistory_;
+    bool coolingPage_=false;
+    unsigned thermalLimit_=0;
+    void DrawCooling(HomeCanvas& c)const;
     void DrawThermal(HomeCanvas& c)const;
     void DrawTelemetry(HomeCanvas& c) const;
     void RefreshResidentPlugins();

@@ -1753,12 +1753,18 @@ std::string ConsoleHome::Press(Key key) {
             StopFtp();peerProbe_.Start(network_.ipv4,LanPeerConfig::Format(configured));return "";
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
-        if(page_==Details&&systemTab_==2&&key==Guide){thermalPage_=!thermalPage_;return "";}
+        if(page_==Details&&systemTab_==2&&key==Guide){thermalPage_=!thermalPage_;coolingPage_=false;return "";}
         if(page_==Details&&systemTab_==2&&thermalPage_){
+            if(key==PageUp||key==PageDown){coolingPage_=!coolingPage_;notice_.clear();return "";}
+            if(coolingPage_&&(key==Left||key==Right)){
+                thermalLimit_=ThermalAdvisory::Next(thermalLimit_,key==Right?1:-1);
+                notice_="Limite de aviso desta sessao atualizado.";return "";
+            }
             if(key==Accept){
                 if(TransferRunning()){notice_="Conclua transferencias antes da consulta.";return "";}
                 thermal_=ThermalTelemetry::Read();thermalHistory_.Add(thermal_);
-                notice_="Consulta termica concluida; confira disponibilidade.";
+                notice_=ThermalAdvisory::Evaluate(thermal_,thermalLimit_)==ThermalAdvisory::Reached
+                    ?"Atencao: limite de aviso escolhido atingido.":"Consulta termica concluida; confira disponibilidade.";
             }else if(key==Favorite){
                 thermalHistory_.Clear();thermal_=ThermalTelemetry();
                 notice_="Historico termico da sessao limpo.";
@@ -1847,7 +1853,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();}
-                else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;}
+                else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;coolingPage_=false;}
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
@@ -2592,8 +2598,9 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
     c.Text(48,585,"LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawThermal(HomeCanvas& c)const{
+    if(coolingPage_){DrawCooling(c);return;}
     c.Text(45,349,"Temperaturas SMC | Experimental",27,White,1170);
-    const char* labels[]={"CPU","GPU","EDRAM","Placa-mae"};
+    const char* labels[]={"CPU","GPU","EDRAM","Chassi"};
     for(unsigned i=0;i<4;++i){
         const int x=45+int(i)*300;
         panel(c,x,396,289,121,Panel,false);
@@ -2605,8 +2612,28 @@ void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     const char* state=!ThermalTelemetry::Supported()?"Provider nao incluido nesta build.":thermal_.state==ThermalTelemetry::NotRead?"A solicita leitura manual.":thermal_.state==ThermalTelemetry::Valid?"Resposta SMC valida; leitura instantanea.":thermal_.state==ThermalTelemetry::Partial?"Resposta parcial; sensores ausentes nao estimados.":"Resposta invalida ou indisponivel.";
     c.Text(48,526,state,20,White,1170);
     c.Text(48,554,"Sessao: "+number(thermalHistory_.attempts)+" consultas | "+number(thermalHistory_.valid)+" validas | "+number(thermalHistory_.partial)+" parciais | "+number(thermalHistory_.invalid)+" invalidas",18,Muted,1170);
-    c.Text(48,580,"Min/max apenas de leituras manuais; sem controle de ventoinha ou energia.",17,Muted,1170);
+    c.Text(48,580,"LB/RB Refrigeracao | Min/max apenas de leituras manuais.",17,Muted,1170);
     c.Text(48,607,"A Consultar | X Limpar historico | START Telemetria | B Voltar",18,Lime,1170);
+}
+void ConsoleHome::DrawCooling(HomeCanvas& c)const{
+    c.Text(45,349,"SMC | Diagnostico de refrigeracao",27,White,1170);
+    panel(c,45,394,585,110,Panel,false);
+    c.Text(62,406,"Alvo calculado pelo SMC",20,Muted,550);
+    c.Text(62,437,thermal_.FanTargetLabel(),34,thermal_.fanTargetAvailable?Lime:Muted,550);
+    c.Text(62,478,"Nao representa RPM nem override ativo.",17,Muted,550);
+    panel(c,645,394,585,110,Panel,false);
+    c.Text(662,406,"Limite de aviso (sessao)",20,Muted,550);
+    c.Text(662,437,thermalLimit_?number(thermalLimit_)+" C":"Desativado",30,White,550);
+    c.Text(662,478,"Esq/Dir: alterar limite escolhido",17,Muted,550);
+    const auto status=ThermalAdvisory::Evaluate(thermal_,thermalLimit_);
+    const char* message=status==ThermalAdvisory::Reached?"ATENCAO: limite escolhido atingido em pelo menos um sensor.":
+        status==ThermalAdvisory::Below?"Ultima amostra: abaixo do limite escolhido.":
+        status==ThermalAdvisory::Incomplete?"Amostra parcial: sensores ausentes impedem conclusao.":
+        status==ThermalAdvisory::NoReading?"Sem amostra valida para avaliar.":"Avisos desativados.";
+    c.Text(48,525,message,20,status==ThermalAdvisory::Reached?0xffffb454u:White,1170);
+    c.Text(48,553,"Aviso apenas na leitura manual; nao substitui a protecao do hardware.",18,Muted,1170);
+    c.Text(48,579,"Nenhuma escrita SMC; controle real da ventoinha indisponivel.",17,Muted,1170);
+    c.Text(48,607,"A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria",18,Lime,1170);
 }
 bool ConsoleHome::PowerBusy()const{
     return TransferRunning()||ftp_.Running()||peerProbe_.Running()||

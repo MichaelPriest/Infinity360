@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.22 — em desenvolvimento (sem build XEX)
+
+- Diagnóstico de refrigeração com alvo calculado pelo SMC, sem inferir RPM ou override.
+- Avisos manuais configuráveis por sessão, distinção de leituras parciais e indisponíveis.
+- Testes e captura 47 preparados; nenhuma build ou captura executada.
+
 ## V0.2.21 — em desenvolvimento (sem build XEX)
 
 - Painel de desligamento/reinício experimental, dupla confirmação e bloqueio de operações ativas.
