@@ -793,12 +793,40 @@ void ConsoleHome::RebuildStore() {
         if(storeTab_==0||store_.Items()[i].category==tabs[storeTab_])storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
 }
+bool ConsoleHome::StartNativeStore(const StoreItem& item){
+#if defined(INFINITY_XSDK_HTTPS) || defined(_XBOX)
+    if(TransferRunning()||!TranslationMatches(item)){notice_="Copia ativa ou traducao incompativel.";return false;}
+    if(store_.Staged(item)){notice_="Arquivo local ja existe; nenhum download iniciado.";return false;}
+    nativeStoreItem_=item;nativeStorePending_=true;notice_="Preparando download HTTPS nativo.";return true;
+#else
+    (void)item;notice_="Provider HTTPS indisponivel.";return false;
+#endif
+}
+bool ConsoleHome::NextNativeStore(){
+    for(size_t index:store_.NativeQueue()){
+        const StoreItem item=store_.Items()[index];
+        const StoreProgress::State state=store_.Progress(item).state;
+        if(state==StoreProgress::NativeVerified||state==StoreProgress::Verified){
+            if(!store_.RemoveNative(item)){notice_="Falha ao salvar fila nativa.";return false;}
+            continue;
+        }
+        return StartNativeStore(item);
+    }
+    notice_="Fila nativa concluida.";return false;
+}
 bool ConsoleHome::TakeNativeStoreRequest(StoreItem& item) {
     if(!nativeStorePending_)return false;
     nativeStorePending_=false;item=nativeStoreItem_;return true;
 }
 void ConsoleHome::NativeStoreResult(const std::string& message,bool success) {
     notice_=message;RecordEvent(success?"Download nativo verificado":"Download nativo interrompido");
+    if(success&&store_.NativeQueued(nativeStoreItem_)&&!store_.RemoveNative(nativeStoreItem_)){
+        nativeBatch_=false;notice_+=" | Falha ao salvar fila.";
+    }
+    if(nativeBatch_){
+        if(!success||!NextNativeStore())nativeBatch_=false;
+    }
+    if(storeDownloads_)RebuildStoreDownloads();
 }
 bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     if(item.category!="translation")return true;
@@ -837,15 +865,21 @@ std::string ConsoleHome::Press(Key key) {
             const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
             if(key==Guide) {
 #if defined(_XBOX) || defined(INFINITY_XSDK_HTTPS)
-                if(TransferRunning()||!TranslationMatches(item)) {
-                    notice_="Copia ativa ou traducao incompativel.";return "";
-                }
-                storeConfirm_=false;nativeStoreItem_=item;nativeStorePending_=true;
-                notice_="Preparando download HTTPS nativo.";
+                nativeBatch_=false;storeConfirm_=false;StartNativeStore(item);
 #else
                 notice_="Download nativo disponivel no Xbox; testes usam o gravador comum.";
 #endif
                 return "";
+            }
+            if(key==PageUp){
+#if defined(INFINITY_XSDK_HTTPS)
+                if(store_.NativeQueued(item))notice_=store_.RemoveNative(item)?"Removido da fila nativa; parcial preservado.":"Falha ao salvar fila.";
+                else if(store_.Staged(item)||!TranslationMatches(item))notice_="Item local ou traducao incompativel.";
+                else notice_=store_.QueueNative(item)?"Adicionado a fila nativa.":"Fila cheia, invalida ou falha ao salvar.";
+#else
+                notice_="Fila nativa disponivel no XSDK HTTPS.";
+#endif
+                storeConfirm_=false;return "";
             }
             if(key==PageDown && store_.Progress(item).state==StoreProgress::NativePaused){
                 // Explicit two-press discard, separate from removing a PC request.
@@ -1247,6 +1281,23 @@ std::string ConsoleHome::Press(Key key) {
             const size_t count=storeDownloadItems_.size();
             if(key==Up&&storeDownloadRow_>0)--storeDownloadRow_;
             if(key==Down&&static_cast<size_t>(storeDownloadRow_+1)<count)++storeDownloadRow_;
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Guide){
+                nativeBatch_=true;
+                if(!NextNativeStore())nativeBatch_=false;
+                return "";
+            }
+            if(count&&(key==Accept||key==Favorite)){
+                const StoreItem item=store_.Items()[storeDownloadItems_[storeDownloadRow_]];
+                nativeBatch_=false;
+                if(key==Accept)StartNativeStore(item);
+                else{
+                    if(store_.NativeQueued(item))notice_=store_.RemoveNative(item)?"Removido da fila; parcial preservado.":"Falha ao salvar fila.";
+                    else notice_="Item fora da fila nativa. Arquivos preservados.";
+                    RebuildStoreDownloads();
+                }
+            }
+#endif
             return "";
         }
         if(page_==Details && systemTab_==3 && key==Favorite && TransferRunning()) {
@@ -1502,7 +1553,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
         c.Text(55,415,store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
-            store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
+            store_.NativeQueued(item)?"Na fila nativa":store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
         if(item.category=="translation") {
             char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
                                        item.titleId,item.mediaId,item.gameVersion);
@@ -1510,7 +1561,10 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(55,505,storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":
                 "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
         } else c.Text(55,470,item.url,18,Muted,1150);
-        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover | B Voltar",21,Lime,1150);
+#if defined(INFINITY_XSDK_HTTPS)
+        c.Text(55,560,store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
+#endif
+        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover PC | B Voltar",21,Lime,1150);
         return;
     } else {
         const int first=(storeRow_/5)*5;
@@ -1707,10 +1761,10 @@ void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     c.Text(48,610,"6 mais recentes na tela | Arquivo infinity360-events.log | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::RebuildStoreDownloads() {
-    storeDownloadItems_.clear();
+    storeDownloadItems_=store_.NativeQueue();
     for(size_t i=0;i<store_.Items().size();++i)
-        if(store_.ListedDownload(store_.Items()[i]))storeDownloadItems_.push_back(i);
-    storeDownloadRow_=0;
+        if(store_.ListedDownload(store_.Items()[i])&&std::find(storeDownloadItems_.begin(),storeDownloadItems_.end(),i)==storeDownloadItems_.end())storeDownloadItems_.push_back(i);
+    clampRow(storeDownloadRow_,storeDownloadItems_.size());
 }
 void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
     c.Text(45,349,"INFINITY Store | Downloads",25,White,1170);
@@ -1725,12 +1779,17 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
             status.state==StoreProgress::NativePaused?"Pausado "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
             status.state==StoreProgress::Failed?"Ultima tentativa falhou":
             status.state==StoreProgress::Receiving?"Ultimo progresso "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
-            "Pedido pendente / sem estado";
+            store_.NativeQueued(item)?"Na fila nativa":"Pedido PC / sem estado";
         c.Text(745,y+8,label,18,Muted,465);
     }
     if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
+#if defined(INFINITY_XSDK_HTTPS)
+    c.Text(48,590,"A Baixar/Retomar | START Rodar fila | X Remover da fila",18,Muted,1170);
+    c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
+#else
     c.Text(48,590,"Registros locais do Xbox e PC; nao indicam conexao ativa.",18,Muted,1170);
     c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
+#endif
 }
 void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
     if(storeDownloads_) {DrawStoreDownloads(c);return;}

@@ -101,9 +101,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.2.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.3.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.1.8.2 - experimental hardware preview ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.1.8.3 - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -157,14 +157,14 @@ jobs:
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.1.8.2.zip > Infinity360-Alpha-XSDK-0.1.8.2.zip.sha256
+          sha256sum Infinity360-Alpha-XSDK-0.1.8.3.zip > Infinity360-Alpha-XSDK-0.1.8.3.zip.sha256
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.8.2
+          name: Infinity360-Alpha-XSDK-0.1.8.3
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.2.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.2.zip.sha256
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.3.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.3.zip.sha256
           retention-days: 14
           if-no-files-found: error
 
@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.8.2
+          name: Infinity360-Alpha-XSDK-0.1.8.3
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
@@ -192,33 +192,33 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.1.8.2.zip.sha256
+          sha256sum -c Infinity360-Alpha-XSDK-0.1.8.3.zip.sha256
           python3 - <<'PY'
           from zipfile import ZipFile
           import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.1.8.2.zip") as z:
+          with ZipFile("Infinity360-Alpha-XSDK-0.1.8.3.zip") as z:
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
                   raw = z.read(name)
                   assert raw[:4] == b"XEX2" and hashlib.sha256(raw).hexdigest() == digest
           PY
-          tag="xsdk-v0.1.8.2-${GITHUB_SHA:0:12}"
+          tag="xsdk-v0.1.8.3-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.1.8.2 — experimental prerelease.
+          INFINITY 360 XSDK Alpha 0.1.8.3 — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
           Not hardware-homologated; do not replace your installed dashboard or enable autoboot.
           Read LEIA-ME-SEGURANCA.txt before testing. XEX launch and file writes are opt-in.
-          Experimental LAN FTP read/upload, TLS Store staging with persistent partials and bounded retries. GOD/XBLA launch, installation and native IPTV remain pending.
+          Experimental LAN FTP read/upload, TLS Store staging with persistent partials and a manual sequential native queue. GOD/XBLA launch, installation and native IPTV remain pending.
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.8.2.zip Infinity360-Alpha-XSDK-0.1.8.2.zip.sha256 \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.8.2 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.8.3.zip Infinity360-Alpha-XSDK-0.1.8.3.zip.sha256 \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.8.3 (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

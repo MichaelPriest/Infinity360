@@ -52,5 +52,21 @@ int main(){
     {StorePackage first(workspace);assert(first.Begin(item,base,true));assert(first.Write((const unsigned char*)"a",1));assert(first.Pause());}
     assert(cat.DiscardPartial(item));assert(!cat.ListedDownload(item));
 #endif
+    // The native queue is independent of the PC request queue, ordered and
+    // keyed by exact catalog identity. Reload does not auto-start downloads.
+    StoreItem one=item;one.id="first";one.url="https://example.org/first";
+    StoreItem two=one;two.id="second";
+    {std::ofstream catalog(root/"aurorax-store.tsv");
+     for(const auto& q:{one,two})catalog<<q.id<<"\thomebrew\tTest\t1\t3\t"<<q.sha256<<"\t"<<q.url<<"\tfixture\n";}
+    assert(cat.Load());assert(cat.QueueNative(two));assert(cat.QueueNative(one));assert(cat.QueueNative(two));
+    assert(!cat.Requested(two));assert(cat.ListedDownload(two));
+    StoreCatalog reloaded(base);assert(reloaded.Load());
+    auto ordered=reloaded.NativeQueue();assert(ordered.size()==2);
+    assert(reloaded.Items()[ordered[0]].id=="second");
+    assert(reloaded.Items()[ordered[1]].id=="first");
+    assert(reloaded.RemoveNative(two));assert(!reloaded.NativeQueued(two));assert(reloaded.NativeQueued(one));
+    StoreItem changed=one;changed.sha256=std::string(64,'f');assert(!reloaded.NativeQueued(changed));
+    {std::ofstream broken(root/"infinity360-native-queue.tsv");broken<<"malformed\n";}
+    assert(reloaded.Load());assert(!reloaded.NativeQueueValid());assert(!reloaded.QueueNative(two));
     fs::remove_all(root);
 }

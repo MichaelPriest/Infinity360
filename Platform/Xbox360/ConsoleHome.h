@@ -98,6 +98,9 @@ private:
     bool TranslationMatches(const StoreItem& item) const;
     bool storeTranslationMatch_;
     bool nativeStorePending_;
+    bool nativeBatch_=false;
+    bool StartNativeStore(const StoreItem& item);
+    bool NextNativeStore();
     StoreItem nativeStoreItem_;
     void DrawStore(HomeCanvas& c) const;
     bool importPreview_;

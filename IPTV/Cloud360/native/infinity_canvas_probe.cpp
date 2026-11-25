@@ -214,7 +214,7 @@ int main(){
             }
             if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
             StoreItem pending;
-            if(menu.TakeNativeStoreRequest(pending)){
+            while(menu.TakeNativeStoreRequest(pending)){
 #ifdef INFINITY_XSDK_HTTPS
                 menu.StopFtp();
                 bool success=false;
@@ -245,6 +245,7 @@ int main(){
                 const std::string result=XsdkDownload(pending,dir,progress,success);
                 menu.NativeStoreResult(result,success);
                 if(videoFailed){ok=false;break;}
+                // A successful batch item schedules the next; a paused or failed one stops the batch.
 #else
                 menu.NativeStoreResult("HTTPS ainda indisponivel no XSDK.",false);
 #endif

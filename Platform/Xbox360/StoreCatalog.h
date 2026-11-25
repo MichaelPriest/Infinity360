@@ -23,11 +23,18 @@ public:
     bool Staged(const StoreItem& item) const;
     bool ListedDownload(const StoreItem& item) const;
     bool DiscardPartial(const StoreItem& item);
+    bool QueueNative(const StoreItem& item);
+    bool RemoveNative(const StoreItem& item);
+    bool NativeQueued(const StoreItem& item) const;
+    std::vector<size_t> NativeQueue() const;
+    bool NativeQueueValid() const{return validNative_;}
     StoreProgress Progress(const StoreItem& item) const;
 private:
     std::string root_;
     std::vector<StoreItem> items_;
     std::vector<std::string> requests_;
-    bool validRequests_;
+    bool validRequests_=true,validNative_=true;
+    std::vector<std::string> native_;
+    bool SaveNative();
     bool SaveRequests();
 };

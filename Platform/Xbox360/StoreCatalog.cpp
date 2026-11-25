@@ -77,6 +77,25 @@ std::string key(const StoreItem& item){return item.id+"\t"+item.sha256;}
 }
 bool StoreCatalog::Load() {
     items_.clear();requests_.clear();validRequests_=true;
+    native_.clear();validNative_=true;
+    const std::string nativePath=savedFile(root_+"infinity360-native-queue.tsv");
+    if(fileExists(nativePath)){
+        std::string data,line;
+        if(!readBound(nativePath,8192,data))validNative_=false;
+        else{
+            std::istringstream input(data);
+            while(std::getline(input,line)){
+                if(!line.empty()&&line.back()=='\r')line.pop_back();
+                const size_t tab=line.find('\t');
+                if(tab==std::string::npos||!token(line.substr(0,tab),32)||!hash(line.substr(tab+1))||
+                   native_.size()>=64||std::find(native_.begin(),native_.end(),line)!=native_.end()){
+                    validNative_=false;break;
+                }
+                native_.push_back(line);
+            }
+        }
+        if(!validNative_)native_.clear();
+    }
     const std::string queue=root_+"aurorax-store-requests.tsv";
     const std::string qpath=savedFile(queue);
     std::string data,line;
@@ -130,9 +149,44 @@ bool StoreCatalog::Cancel(const StoreItem& item) {
     if(SaveRequests())return true;
     requests_=old;return false;
 }
+bool StoreCatalog::NativeQueued(const StoreItem& item) const {
+    return validNative_&&std::find(native_.begin(),native_.end(),key(item))!=native_.end();
+}
+bool StoreCatalog::SaveNative(){
+    if(!validNative_)return false;
+    const std::string path=root_+"infinity360-native-queue.tsv";
+    std::ofstream out((path+".tmp").c_str(),std::ios::binary|std::ios::trunc);
+    for(const auto& entry:native_)out<<entry<<"\n";
+    out.close();return out&&replaceSavedFile(path);
+}
+bool StoreCatalog::QueueNative(const StoreItem& item){
+    if(!validNative_||!token(item.id,32)||!hash(item.sha256)||!item.bytes||item.bytes>512ULL*1024*1024)return false;
+    if(NativeQueued(item))return true;
+    if(native_.size()>=64)return false;
+    native_.push_back(key(item));
+    if(SaveNative())return true;
+    native_.pop_back();return false;
+}
+bool StoreCatalog::RemoveNative(const StoreItem& item){
+    if(!validNative_)return false;
+    if(!NativeQueued(item))return true;
+    const auto old=native_;
+    native_.erase(std::remove(native_.begin(),native_.end(),key(item)),native_.end());
+    if(SaveNative())return true;
+    native_=old;return false;
+}
+std::vector<size_t> StoreCatalog::NativeQueue() const {
+    std::vector<size_t> ordered;
+    if(!validNative_)return ordered;
+    for(const auto& entry:native_){
+        for(size_t i=0;i<items_.size();++i)
+            if(key(items_[i])==entry){ordered.push_back(i);break;}
+    }
+    return ordered;
+}
 bool StoreCatalog::ListedDownload(const StoreItem& item) const {
     const StoreProgress::State state=Progress(item).state;
-    return Requested(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;
+    return Requested(item)||NativeQueued(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;
 }
 bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.
