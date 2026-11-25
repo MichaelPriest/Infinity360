@@ -50,3 +50,29 @@ target_include_directories(infinity_canvas_probe PRIVATE
 set_target_properties(infinity_canvas_probe PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 xsdk_add_shaders(infinity_canvas_probe infinity_canvas.vert infinity_canvas.frag)
 xsdk_add_xex(infinity_canvas_probe TITLE_ID 0x494E4632 NAME "INFINITY 360 Canvas Probe" VERSION 0.1.2.0)
+
+# Full production menu linked to the same Xenos presenter. File operations
+# are read-only in this isolated build; no network, launch or media adapters.
+add_executable(infinity_menu_preview infinity_canvas_probe.cpp xsdk_preview_workspace.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/ConsoleHome.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/HomeCanvas.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/StoreCatalog.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/CollectionStore.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/StorageInfo.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/NetworkInfo.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/FtpServer.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/TvCatalog.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/TvGuide.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/CloudTv.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/MediaUrl.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/third_party/yxml/yxml.c
+  ${INFINITY_ROOT}/Source/GameScanner.cpp
+  ${INFINITY_ROOT}/Source/ContentCatalog.cpp
+  ${INFINITY_ROOT}/Source/PluginRegistry.cpp
+  ${INFINITY_ROOT}/Source/TrainerCatalog.cpp ../core/cloud360.c)
+target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_FULL_MENU_PREVIEW=1)
+target_include_directories(infinity_menu_preview PRIVATE
+  ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
+set_target_properties(infinity_menu_preview PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+xsdk_add_shaders(infinity_menu_preview infinity_canvas.vert infinity_canvas.frag)
+xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.3.0)

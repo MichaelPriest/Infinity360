@@ -3,7 +3,13 @@
 #include "HomeCanvas.h"
 #include "GameScanner.h"
 #include "TvCatalog.h"
+#ifdef INFINITY_FULL_MENU_PREVIEW
+#include "ConsoleHome.h"
+#include "infinity_menu_preview_shaders.h"
+#include <ctime>
+#else
 #include "infinity_canvas_probe_shaders.h"
+#endif
 #include "xsdk/gpu.h"
 #include "xsdk/present.h"
 #include "xsdk/log.h"
@@ -80,6 +86,7 @@ struct Presenter {
         return idle&&closed;
     }
 };
+#ifndef INFINITY_FULL_MENU_PREVIEW
 void panel(HomeCanvas& c,int x,int y,int w,int h,bool selected){
     c.Box(x,y,w,h,selected?LIME:0xff365344u,8);
     c.Box(x+3,y+3,w-6,h-6,PANEL,6);
@@ -107,7 +114,9 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
     }
     c.Text(45,648,"Direcional Navegar | A Abrir | Back Sair | encerramento automatico",20,LIME,1180);
 }
+#endif
 }
+#ifndef INFINITY_FULL_MENU_PREVIEW
 int main(){
     HomeCanvas canvas;
     if(!canvas.LoadArt("game:/home.tga")){xsdk_log_write("FAIL: canvas atlas");return 1;}
@@ -141,3 +150,57 @@ int main(){
     xsdk_log_write("%s: canvas GPU return",ok&&restored?"PASS":"FAIL");
     return ok&&restored?0:3;
 }
+
+#else
+int main(){
+    HomeCanvas canvas;
+    if(!canvas.LoadArt("game:/home.tga")){xsdk_log_write("FAIL: menu atlas");return 1;}
+    // Require an isolated test-data directory. Never use the live dashboard profile.
+    const std::string dir="game:/MenuPreview/";
+    std::ifstream marker((dir+"infinity-preview.txt").c_str());
+    std::string signature;
+    if(!std::getline(marker,signature)||signature!="INFINITY360-XSDK-PREVIEW"){
+        xsdk_log_write("FAIL: isolated MenuPreview marker missing");return 2;
+    }
+    ConsoleHome menu(dir,GameScanner::DefaultRoots());menu.Load();
+    Presenter p;
+    if(!p.Open()){xsdk_log_write("FAIL: menu presenter open");p.Close();return 3;}
+    const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
+        INPUT_GAMEPAD_DPAD_UP,INPUT_GAMEPAD_DPAD_DOWN,INPUT_GAMEPAD_A,
+        INPUT_GAMEPAD_B,INPUT_GAMEPAD_X,INPUT_GAMEPAD_Y,0x0100,0x0200,
+        INPUT_GAMEPAD_START,0x0080};
+    uint16_t previous=0;
+    bool ok=true,dirty=true;
+    // Longer than the minimal GPU probe, but still bounded.
+    for(unsigned frame=0;frame<3600;++frame){
+        INPUT_STATE input{};
+        uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
+        if(input.gamepad.thumb_lx < -16000)buttons|=INPUT_GAMEPAD_DPAD_LEFT;
+        if(input.gamepad.thumb_lx > 16000)buttons|=INPUT_GAMEPAD_DPAD_RIGHT;
+        if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
+        if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
+        const uint16_t edge=buttons&~previous;previous=buttons;
+        if(edge&INPUT_GAMEPAD_BACK)break;
+        for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
+            const std::string launch=menu.Press(static_cast<ConsoleHome::Key>(i));
+            if(!launch.empty())menu.LaunchFailed();
+            if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
+            StoreItem pending;
+            if(menu.TakeNativeStoreRequest(pending))menu.NativeStoreResult("HTTPS ainda indisponivel no XSDK.",false);
+            dirty=true;break;
+        }
+        if(menu.Tick())dirty=true;
+        if(dirty){
+            menu.Draw(canvas,"XSDK");
+            canvas.Box(895,13,180,45,0xff102923u,5);
+            canvas.Text(905,20,"ALPHA TESTE",20,LIME,170);
+        }
+        if(!p.Show(canvas,dirty)){ok=false;break;}
+        dirty=false;
+    }
+    menu.StopFtp();
+    const bool restored=p.Close();
+    xsdk_log_write("%s: full menu preview GPU return",ok&&restored?"PASS":"FAIL");
+    return ok&&restored?0:4;
+}
+#endif

@@ -76,3 +76,7 @@ O mesmo pipeline aberto agora também compila e empacota `infinity_core_probe.xe
 ## Estágio 0.1.2 — Canvas Xenos experimental
 
 `infinity_canvas_probe.xex` usa o HomeCanvas C++ de produção e a arte original, upload ARGB para textura Xenos, shaders GLSL compilados pelo xsc e apresentação 720p. Mostra início, biblioteca local `game:/Games` e catálogo M3U local, com navegação pelo controle. Não é ConsoleHome completo: não lança jogos, não reproduz mídia, não grava perfis, não ativa rede e não acessa volumes externos. O teste encerra por Back/B na home ou após 900 frames. Aguardar fence antes de reusar textura e verificar retorno de GPU. Teste isolado somente após os probes anteriores aprovados em hardware. A compilação cruzada não homologa GPU nem confirma compatibilidade de drives.
+
+## Estágio 0.1.3 — menu completo em prévia XSDK
+
+O executável separado `infinity_menu_preview.xex` liga o ConsoleHome original, CloudTv, EPG, Store, coleções, metadados, conteúdo e plugins locais ao mesmo presenter Xenos. Os dados de perfil/catálogo do teste ficam em `game:/MenuPreview/`, exigindo o marcador do pacote. O explorador usa um adaptador explicitamente somente leitura, limitado à pasta de prévia; não há cópias, instalação, escrita em HDD/USB, rede, lançamento ou reprodução. As ações de perfil podem gravar apenas arquivos de teste nessa pasta. Solicitações de execução não são executadas. Back encerra; há limite de 3600 frames. A prévia não substitui a dashboard instalada. Compilação cruzada e validação no console são etapas distintas.
