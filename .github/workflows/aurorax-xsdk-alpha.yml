@@ -73,6 +73,10 @@ jobs:
           git -C "$HOME/mbedtls-xenon" submodule update --init --recursive
           git clone https://github.com/xenosworks/curl-xenon.git "$HOME/curl-xenon"
           git -C "$HOME/curl-xenon" checkout a6b70bd06820e1c625f47fe0e592e08c5daaa6b4
+      - name: Pin ZIP reader
+        run: |
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
       - name: Compile isolated INFINITY 360 Alpha and no-GPU probe
         run: |
           cmake -S IPTV/Cloud360/native -B IPTV/Cloud360/native/build -G Ninja \
@@ -80,6 +84,7 @@ jobs:
             -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
+            -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
@@ -103,9 +108,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.6.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.7.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.1.8.6 - experimental hardware preview ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.1.8.7 - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -142,6 +147,8 @@ jobs:
               archive.write(home / "mbedtls-xenon/programs/xsdk/cacert.pem", "cacert.pem")
               archive.write(home / "mbedtls-xenon/LICENSE", "Licenses/mbedtls-LICENSE.txt")
               archive.write(home / "curl-xenon/COPYING", "Licenses/curl-COPYING.txt")
+              archive.write(home / "infinity-miniz/LICENSE", "Licenses/miniz-LICENSE.txt")
+              archive.writestr("Licenses/miniz-SOURCE.txt", "https://github.com/richgel999/miniz/tree/77d0dce8627735138c51770d1799a1ef48f2117d\n")
               archive.writestr("Licenses/SOURCES.txt", "Mbed TLS: https://github.com/xenosworks/mbedtls-xenon/tree/591b04adbec4bc5582649601f4407506a610162b\nlibcurl: https://github.com/xenosworks/curl-xenon/tree/a6b70bd06820e1c625f47fe0e592e08c5daaa6b4\nCA bundle: Mozilla roots, MPL-2.0; source https://curl.se/docs/caextract.html\n")
               archive.writestr("MenuPreview/infinity-preview.txt", "INFINITY360-XSDK-PREVIEW\n")
               archive.writestr("MenuPreview/UserFiles/", "")
@@ -159,14 +166,14 @@ jobs:
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.1.8.6.zip > Infinity360-Alpha-XSDK-0.1.8.6.zip.sha256
+          sha256sum Infinity360-Alpha-XSDK-0.1.8.7.zip > Infinity360-Alpha-XSDK-0.1.8.7.zip.sha256
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.8.6
+          name: Infinity360-Alpha-XSDK-0.1.8.7
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.6.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.6.zip.sha256
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.7.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.7.zip.sha256
           retention-days: 14
           if-no-files-found: error
 
@@ -180,8 +187,11 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg openssl
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
           cmake --build build --parallel 2
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: store_zip"
           ctest --test-dir build --output-on-failure
 
   publish-prerelease:
@@ -198,7 +208,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.8.6
+          name: Infinity360-Alpha-XSDK-0.1.8.7
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
@@ -208,33 +218,33 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.1.8.6.zip.sha256
+          sha256sum -c Infinity360-Alpha-XSDK-0.1.8.7.zip.sha256
           python3 - <<'PY'
           from zipfile import ZipFile
           import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.1.8.6.zip") as z:
+          with ZipFile("Infinity360-Alpha-XSDK-0.1.8.7.zip") as z:
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
                   raw = z.read(name)
                   assert raw[:4] == b"XEX2" and hashlib.sha256(raw).hexdigest() == digest
           PY
-          tag="xsdk-v0.1.8.6-${GITHUB_SHA:0:12}"
+          tag="xsdk-v0.1.8.7-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.1.8.6 — experimental prerelease.
+          INFINITY 360 XSDK Alpha 0.1.8.7 — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
           Not hardware-homologated; do not replace your installed dashboard or enable autoboot.
           Read LEIA-ME-SEGURANCA.txt before testing. XEX launch and file writes are opt-in.
-          DVD method selector, verified XEX copy with disc identity lock, and explicit normal return to system for manual NXE installation. Native GOD conversion, ZIP, GOD/XBLA launch and IPTV remain pending.
+          DVD method selector, verified XEX copy with disc identity lock, and explicit normal return to system for manual NXE installation. Authorized XEX/ZIP app installation with bounded decompression. Native GOD conversion, GOD/XBLA launch and IPTV remain pending.
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.8.6.zip Infinity360-Alpha-XSDK-0.1.8.6.zip.sha256 \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.8.6 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.8.7.zip Infinity360-Alpha-XSDK-0.1.8.7.zip.sha256 \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.8.7 (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

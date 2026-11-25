@@ -194,7 +194,15 @@ bool StoreCatalog::Installed(const StoreItem& item) const{
     const std::string folder=StoreInstallPath::Folder(root_,item);
     if(folder.empty())return false;
     std::ifstream input(FileWorkspace::Join(folder,"default.xex").c_str(),std::ios::binary|std::ios::ate);
-    return input&&input.tellg()>=0&&static_cast<unsigned long long>(input.tellg())==item.bytes&&XexLaunchCheck::Header(input);
+    if(!input||input.tellg()<0)return false;
+    const auto size=static_cast<unsigned long long>(input.tellg());
+    if(!XexLaunchCheck::Header(input))return false;
+    std::string record;
+    if(readBound(FileWorkspace::Join(folder,"infinity-install.txt"),128,record)){
+        std::istringstream in(record);std::string sha,extra;unsigned long long expected=0;
+        return (in>>sha>>expected)&&!(in>>extra)&&sha==item.sha256&&expected==size;
+    }
+    return size==item.bytes;
 }
 bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.

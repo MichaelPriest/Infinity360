@@ -48,12 +48,15 @@ jobs:
           .art-venv/bin/python Tests/XboxUnityDownloadTests.py
       - name: Compile portable dashboard and console UI
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
           cmake --build build --parallel 2
       - name: Run portable regression suite (including streaming)
         run: |
           ctest --test-dir build -N | tee build/test-inventory.txt
           grep -Eq 'Test +#[0-9]+: stream_playback' build/test-inventory.txt
+          grep -Eq 'Test +#[0-9]+: store_zip' build/test-inventory.txt
           ctest --test-dir build --output-on-failure --output-junit test-results.xml
       - name: Retain test evidence
         if: always()

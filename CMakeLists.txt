@@ -98,3 +98,13 @@ target_include_directories(store_package_tests PRIVATE Platform/Xbox360 Source)
 target_sources(store_package_tests PRIVATE Platform/Xbox360/DiscInstaller.cpp Platform/Xbox360/StorageInfo.cpp)
 target_link_libraries(store_package_tests PRIVATE aurorax_core)
 add_test(NAME store_package COMMAND store_package_tests)
+
+# Native ZIP installer regression, using the same pinned decompressor as XSDK.
+if(DEFINED INFINITY_MINIZ_DIR AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
+    include(Platform/Xbox360/third_party/MinizReader.cmake)
+    infinity_miniz(infinity_zip_reader "${INFINITY_MINIZ_DIR}")
+    add_executable(store_zip_probe Tests/StoreZipProbe.cpp Platform/Xbox360/StoreZipInstaller.cpp Platform/Xbox360/StorePackage.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/MediaUrl.cpp)
+    target_include_directories(store_zip_probe PRIVATE Platform/Xbox360 Source)
+    target_link_libraries(store_zip_probe PRIVATE infinity_zip_reader aurorax_core)
+    add_test(NAME store_zip COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/StoreZipTests.py $<TARGET_FILE:store_zip_probe>)
+endif()

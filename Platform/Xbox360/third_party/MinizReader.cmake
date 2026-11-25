@@ -1,0 +1,11 @@
+# Pinned external source supplied by CI or an offline checkout.
+function(infinity_miniz target directory)
+  if(NOT EXISTS "${directory}/miniz_zip.c")
+    message(FATAL_ERROR "INFINITY_MINIZ_DIR missing pinned miniz sources")
+  endif()
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/infinity-miniz-export")
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/infinity-miniz-export/miniz_export.h" "#pragma once\n#define MINIZ_EXPORT\n")
+  add_library(${target} STATIC "${directory}/miniz.c" "${directory}/miniz_zip.c" "${directory}/miniz_tinfl.c")
+  target_include_directories(${target} PUBLIC "${directory}" "${CMAKE_CURRENT_BINARY_DIR}/infinity-miniz-export")
+  target_compile_definitions(${target} PUBLIC MINIZ_NO_STDIO MINIZ_NO_TIME MINIZ_NO_DEFLATE_APIS MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_ZLIB_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+endfunction()

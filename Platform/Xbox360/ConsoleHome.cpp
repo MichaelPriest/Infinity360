@@ -855,7 +855,7 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
     }
     if(storeActive_) {
-        if(key!=Search&&notice_=="R3 novamente: confirmar instalacao XEX?")notice_.clear();
+        if(key!=Search&&notice_=="R3 novamente: confirmar instalacao?")notice_.clear();
         if(key==Back) {
             if(storeConfirm_)storeConfirm_=false;
             else if(storeDetails_)storeDetails_=false;
@@ -889,9 +889,9 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Search){
 #if defined(INFINITY_XSDK_HTTPS)
                 if(TransferRunning()||!store_.Staged(item)||store_.Installed(item)||(item.category!="app"&&item.category!="homebrew"&&item.category!="emulator")){
-                    notice_="Instalacao: apenas XEX autorizado, baixado e ainda nao instalado.";return "";
+                    notice_="Instalacao: pacote autorizado, baixado e ainda nao instalado.";return "";
                 }
-                if(notice_!="R3 novamente: confirmar instalacao XEX?"){notice_="R3 novamente: confirmar instalacao XEX?";return "";}
+                if(notice_!="R3 novamente: confirmar instalacao?"){notice_="R3 novamente: confirmar instalacao?";return "";}
                 storeInstallItem_=item;storeInstallPending_=true;notice_="Verificando e instalando XEX.";
 #else
                 notice_="Instalador nativo indisponivel.";
@@ -1607,7 +1607,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,260,item.name,32,White,1150);
         c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
-        c.Text(55,415,store_.Installed(item)?"XEX instalado (presenca local)":store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
+        c.Text(55,415,store_.Installed(item)?"Instalado (presenca local)":store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
             store_.NativeQueued(item)?"Na fila nativa":store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
         if(item.category=="translation") {
             char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
@@ -1617,7 +1617,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
                 "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
         } else c.Text(55,470,item.url,18,Muted,1150);
 #if defined(INFINITY_XSDK_HTTPS)
-        c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar XEX independente":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
+        c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar XEX/ZIP":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
 #endif
         c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover PC | B Voltar",21,Lime,1150);
         return;

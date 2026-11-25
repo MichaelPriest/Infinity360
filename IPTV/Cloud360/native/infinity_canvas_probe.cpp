@@ -8,6 +8,9 @@
 #include "XexLaunchCheck.h"
 #ifdef INFINITY_XSDK_HTTPS
 #include "XsdkDownload.h"
+#ifdef INFINITY_STORE_ZIP
+#include "StoreZipInstaller.h"
+#endif
 #include "DiscInstaller.h"
 #include "StorageInfo.h"
 #include <chrono>
@@ -255,7 +258,7 @@ int main(){
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
-                    canvas.Text(48,100,"INFINITY Store | Instalar XEX",36,WHITE,1180);
+                    canvas.Text(48,100,"INFINITY Store | Instalar pacote",36,WHITE,1180);
                     canvas.Text(48,210,pending.name,28,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);
@@ -265,8 +268,12 @@ int main(){
                     return true;
                 };
                 std::string error;
+#ifdef INFINITY_STORE_ZIP
+                const bool success=StoreInstallPackage(workspace,pending,dir,progress,error);
+#else
                 const bool success=StoreInstallXex(workspace,pending,dir,progress,error);
-                menu.StoreInstallResult(success?"XEX instalado. Abra Apps, Homebrew ou Emuladores.":error,success);
+#endif
+                menu.StoreInstallResult(success?"Pacote instalado. Abra Apps, Homebrew ou Emuladores.":error,success);
                 if(videoFailed){ok=false;break;}
             }
 #endif
