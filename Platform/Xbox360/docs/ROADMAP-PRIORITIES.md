@@ -238,3 +238,7 @@ Integração opcional de libsmb2 fixada, sessão assíncrona e listagem de diret
 ### V0.2.26 — P2 Port SMB XSDK
 
 Preparação do upstream por git archive/revisão fixada, CMake estático, I/O vetorial sem buffer integral, ausência de conta local tratada com ENXIO, listener síncrono recusado e guest/null rejeitado. Link probe isolado agora compila a dependência a partir do código quando autorizado. Não compilado; faltam validação de port, entropia real, integração no console e cópia. Sem CI/build; galeria 49 preparada.
+
+### V0.2.27 — P2 Navegador e transferência SMB
+
+Modelo de navegação portátil, seleção e plano de cópia FATX, leitura assíncrona em blocos, comparação de tamanho/mtime e staging exclusivo no host. Ainda não ligado ao explorador, HDD/USB ou fila nativa Xbox; port XSDK, UI de credenciais, cancelamento interativo de cópia e integração FileWorkspace pendentes. Nenhuma build/CI; galeria 49 preparada.

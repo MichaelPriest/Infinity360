@@ -1,6 +1,11 @@
 #pragma once
 // Optional libsmb2 adapter. No SMB writes, anonymous access or unsigned fallback.
 #include "LanPeerProbe.h"
+#include "SmbBrowser.h"
+#include <array>
+#include <functional>
+#include <fcntl.h>
+#include <algorithm>
 #include <smb2/smb2.h>
 #include <smb2/libsmb2.h>
 #include <poll.h>
@@ -12,7 +17,7 @@
 
 class SmbReadSession {
 public:
-    enum State { Idle, Connecting, Opening, Listing, Ready, Failed, Cancelled };
+    enum State { Idle, Connecting, Opening, Listing, Ready, FileOpening, FileStat, FileReading, FileClosing, Failed, Cancelled };
     struct Entry { std::string name; uint64_t size; bool directory; };
     static bool Field(const std::string& s,size_t max,bool empty=false){
         if(s.size()>max||(!empty&&s.empty()))return false;
@@ -42,11 +47,27 @@ public:
     SmbReadSession(const SmbReadSession&)=delete;
     SmbReadSession& operator=(const SmbReadSession&)=delete;
     State Status()const{return state_;}
-    bool Busy()const{return state_==Connecting||state_==Opening||state_==Listing;}
+    bool Busy()const{return state_==Connecting||state_==Opening||state_==Listing||state_==FileOpening||state_==FileStat||state_==FileReading||state_==FileClosing;}
     const std::vector<Entry>& Entries()const{return entries_;}
     const std::string& Label()const{return label_;}
     bool Truncated()const{return truncated_;}
     unsigned Dialect()const{return dialect_;}
+    uint64_t Done()const{return copied_;}
+    uint64_t Total()const{return expected_;}
+    bool CopyComplete()const{return copyComplete_;}
+    // The sink owns exclusive staging and publication. Never write to SMB.
+    bool ReadFile(const SmbBrowser::CopyPlan& plan,std::function<bool(const uint8_t*,size_t)> sink){
+        if(state_!=Ready||!ctx_||!sink||!Path(plan.remote)||!SmbBrowser::LocalName(plan.name)||
+           plan.remote.empty()||plan.bytes>0xffffffffULL)return false;
+        const auto slash=plan.remote.find_last_of('/');
+        if(plan.remote.substr(slash==std::string::npos?0:slash+1)!=plan.name)return false;
+        expected_=plan.bytes;copied_=0;copyComplete_=false;readPending_=false;stat_={};sink_=std::move(sink);
+        state_=FileOpening;start_=Now();label_="Abrindo arquivo remoto somente leitura.";
+        if(smb2_open_async(ctx_,plan.remote.c_str(),O_RDONLY,FileOpened,this)<0){
+            Fail("Abertura remota recusada.");return false;
+        }
+        return true;
+    }
     void Cancel(){Close();entries_.clear();state_=Cancelled;label_="Sessao cancelada.";}
     bool Start(const std::string& ip,const std::string& share,const std::string& user,
                const std::string& domain,const std::string& password){
@@ -100,6 +121,20 @@ public:
             }
             return true;
         }
+        if(state_==FileReading&&!readPending_){
+            if(copied_==expected_){
+                // Re-stat after the last byte to detect length/mtime changes.
+                state_=FileStat;finalStat_=true;start_=Now();stat_={};
+                if(smb2_fstat_async(ctx_,file_,&stat_,FileStatted,this)<0){Fail("Verificacao final recusada.");return true;}
+            }else{
+                const auto maxRead=smb2_get_max_read_size(ctx_);
+                if(!maxRead){Fail("Limite de leitura remoto invalido.");return true;}
+                requested_=static_cast<uint32_t>(std::min<uint64_t>(expected_-copied_,std::min<uint64_t>(buffer_.size(),maxRead)));
+                readPending_=true;start_=Now();
+                if(smb2_pread_async(ctx_,file_,buffer_.data(),requested_,copied_,ReadDone,this)<0){Fail("Leitura remota recusada.");return true;}
+            }
+            return true;
+        }
         pollfd p{};p.fd=smb2_get_fd(ctx_);p.events=static_cast<short>(smb2_which_events(ctx_));
         if(p.fd<0){Fail("Socket SMB indisponivel.");return true;}
         const int rc=poll(&p,1,0);
@@ -127,17 +162,67 @@ private:
         if(status||!data){self.state_=Failed;self.label_="Diretorio remoto indisponivel.";return;}
         self.dir_=static_cast<smb2dir*>(data);self.state_=Listing;
     }
+    static void FileOpened(smb2_context* ctx,int status,void* data,void* opaque){
+        auto& self=*static_cast<SmbReadSession*>(opaque);
+        if(self.state_!=FileOpening)return;
+        if(status||!data){self.state_=Failed;self.label_="Arquivo remoto indisponivel.";return;}
+        self.file_=static_cast<smb2fh*>(data);self.state_=FileStat;self.finalStat_=false;self.start_=Now();
+        if(smb2_fstat_async(ctx,self.file_,&self.stat_,FileStatted,&self)<0){
+            self.state_=Failed;self.label_="Estatistica remota recusada.";
+        }
+    }
+    static void FileStatted(smb2_context* ctx,int status,void*,void* opaque){
+        auto& self=*static_cast<SmbReadSession*>(opaque);
+        if(self.state_!=FileStat)return;
+        if(status||self.stat_.smb2_type!=SMB2_TYPE_FILE||self.stat_.smb2_size!=self.expected_||
+           (self.finalStat_&&(self.stat_.smb2_mtime!=self.mtime_||self.stat_.smb2_mtime_nsec!=self.mtimeNs_))){
+            self.state_=Failed;self.label_="Arquivo remoto mudou ou nao e regular.";return;
+        }
+        if(!self.finalStat_){
+            self.mtime_=self.stat_.smb2_mtime;self.mtimeNs_=self.stat_.smb2_mtime_nsec;
+            self.state_=FileReading;self.start_=Now();return;
+        }
+        self.state_=FileClosing;self.start_=Now();
+        if(smb2_close_async(ctx,self.file_,FileClosed,&self)<0){self.state_=Failed;self.label_="Fechamento remoto recusado.";}
+        else self.file_=nullptr;
+    }
+    static void ReadDone(smb2_context*,int status,void*,void* opaque){
+        auto& self=*static_cast<SmbReadSession*>(opaque);
+        if(self.state_!=FileReading)return;
+        self.readPending_=false;
+        if(status<=0||uint32_t(status)>self.requested_||uint64_t(status)>self.expected_-self.copied_||
+           !self.sink_(self.buffer_.data(),static_cast<size_t>(status))){
+            self.state_=Failed;self.label_="Leitura incompleta ou falha no destino local.";return;
+        }
+        self.copied_+=static_cast<uint64_t>(status);self.start_=Now();
+    }
+    static void FileClosed(smb2_context*,int status,void*,void* opaque){
+        auto& self=*static_cast<SmbReadSession*>(opaque);
+        if(self.state_!=FileClosing)return;
+        if(status){self.state_=Failed;self.label_="Fechamento remoto falhou.";return;}
+        self.copyComplete_=true;self.sink_=nullptr;self.state_=Ready;
+        self.label_="Leitura remota completa; publicacao local pendente.";
+    }
     void Close(){
         if(ctx_){
             // Prevent cancellation callbacks from reopening operations.
             state_=Idle;
             if(dir_){smb2_closedir(ctx_,dir_);dir_=nullptr;}
             auto* old=ctx_;ctx_=nullptr;smb2_destroy_context(old);
+            file_=nullptr;
         }
+        sink_=nullptr;copyComplete_=false;readPending_=false;
     }
     void Fail(const char* label){Close();entries_.clear();state_=Failed;label_=label;}
     smb2_context* ctx_=nullptr;smb2dir* dir_=nullptr;
     State state_=Idle;uint64_t start_=0;unsigned dialect_=0;bool truncated_=false;
     std::string label_="Sessao nao iniciada.";
     std::vector<Entry> entries_;
+    smb2fh* file_=nullptr;
+    smb2_stat_64 stat_{};
+    std::array<uint8_t,32768> buffer_{};
+    std::function<bool(const uint8_t*,size_t)> sink_;
+    uint64_t copied_=0,expected_=0,mtime_=0,mtimeNs_=0;
+    uint32_t requested_=0;
+    bool readPending_=false,copyComplete_=false,finalStat_=false;
 };

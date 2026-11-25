@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.27 — em desenvolvimento (sem build XEX)
+
+- Modelo portátil de navegador SMB e seleção de arquivos, validação de nomes e tamanho FATX.
+- Leitura remota assíncrona em blocos de até 32 KiB, checagem de metadados antes/depois e fechamento remoto.
+- Ferramenta Linux interativa com staging exclusivo e publicação sem sobrescrever; integração Xbox e testes pendentes.
+
 ## V0.2.26 — em desenvolvimento (sem build XEX)
 
 - Preparação reproducível do upstream libsmb2 para alvo estático XSDK, adaptador de I/O vetorial e listener síncrono desativado.
