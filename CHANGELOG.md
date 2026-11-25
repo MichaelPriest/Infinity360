@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.19 — em desenvolvimento (sem build XEX)
+
+- Painel de temperaturas e provider SMC experimental de leitura manual, desligado por padrão.
+- Validação de resposta e testes de dados térmicos; build experimental somente sob autorização.
+- Galeria preparada para 45 capturas.
+
 ## V0.2.18 — em desenvolvimento (sem build XEX)
 
 - Gerenciador de plugins locais com preferência persistente e validação de manifesto/XEX.

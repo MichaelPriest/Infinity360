@@ -103,7 +103,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
         if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("43-configurar-rede",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::PageUp);}
-        if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);}
+        if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);ok=save("45-temperaturas",system)&&ok;system.Press(ConsoleHome::Guide);}
         if(i==4){system.Press(ConsoleHome::Guide);ok=save("44-plugins-locais",system)&&ok;system.Press(ConsoleHome::Guide);}
         if(i==5){system.Press(ConsoleHome::PageDown);ok=save("38-notificacoes-pendentes",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("39-notificacoes-alertas",system)&&ok;system.Press(ConsoleHome::Favorite);assert(system.UnreadNotifications()==0);}
         if(i==3){
@@ -1193,6 +1193,11 @@ int main(int argc,char** argv) {
         assert(idle.Update(180000,1,true,false)&&idle.Active());
         assert(idle.Update(100,1,true,false)&&!idle.Active());
     }
+    {unsigned char smc[16]={0x07,0x80,60,0,70,0,65,0,40};
+     auto t=ThermalTelemetry::Decode(smc,sizeof smc);assert(t.state==ThermalTelemetry::Valid&&t.Celsius(0)=="60.5 C");
+     smc[3]=0;smc[4]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Partial);
+     assert(ThermalTelemetry::Decode(smc,8).state==ThermalTelemetry::Invalid);
+     smc[0]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Invalid);}
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

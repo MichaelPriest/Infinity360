@@ -28,6 +28,7 @@
 #include "DisplaySafeArea.h"
 #include "IdleScreen.h"
 #include "ResidentPlugins.h"
+#include "ThermalTelemetry.h"
 #include "PluginRegistry.h"
 #include "FtpServer.h"
 #include <map>
@@ -148,7 +149,9 @@ private:
     void RefreshNetwork();
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;
-    bool telemetryVideo_=false;
+    bool telemetryVideo_=false,thermalPage_=false;
+    ThermalTelemetry thermal_;
+    void DrawThermal(HomeCanvas& c)const;
     void DrawTelemetry(HomeCanvas& c) const;
     void RefreshResidentPlugins();
     void DrawResidentPlugins(HomeCanvas& c) const;

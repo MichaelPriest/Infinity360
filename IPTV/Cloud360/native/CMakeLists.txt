@@ -87,6 +87,10 @@ add_executable(infinity_menu_preview infinity_canvas_probe.cpp
   ${INFINITY_ROOT}/Source/PluginRegistry.cpp
   ${INFINITY_ROOT}/Source/TrainerCatalog.cpp ../core/cloud360.c)
 target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_FULL_MENU_PREVIEW=1)
+option(INFINITY_EXPERIMENTAL_SMC_READ "Enable experimental read-only SMC import (requires patched XSDK)" OFF)
+if(INFINITY_EXPERIMENTAL_SMC_READ)
+  target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_EXPERIMENTAL_SMC_READ=1)
+endif()
 target_include_directories(infinity_menu_preview PRIVATE
   ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
 set_target_properties(infinity_menu_preview PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

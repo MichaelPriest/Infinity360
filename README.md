@@ -14,7 +14,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**28 capturas publicadas** — fonte [d4594e7](https://github.com/MichaelPriest/Infinity360/commit/d4594e71255b66b87753cff67445c49a7f9d39f3). A atualização V0.2.16 falhou antes da atribuição de runner (run 45705203325); 44 capturas estão preparadas para a próxima solicitação.
+**28 capturas publicadas** — fonte [d4594e7](https://github.com/MichaelPriest/Infinity360/commit/d4594e71255b66b87753cff67445c49a7f9d39f3). A atualização V0.2.16 falhou antes da atribuição de runner (run 45705203325); 45 capturas estão preparadas para a próxima solicitação.
 
 | Início | Biblioteca |
 | --- | --- |
@@ -48,7 +48,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-END -->
 
-### Estado atual — código-fonte V0.2.18 (Alpha)
+### Estado atual — código-fonte V0.2.19 (Alpha)
 
 - P0: indexação XEX/GOD/XBLA, importação de pacotes, DVD para XEX/GOD e multidisco no código; lançamento e montagem no console em homologação.
 - P1: inventário TU/DLC/saves, staging XboxUnity, instalação local verificada, diagnóstico de Base Version, backups, recuperação de TUs arquivadas e reinstalação de backups TU/DLC elegíveis. Inventário de TUs no Cache legado e ordenação por versão implementados; instalação verificada de TUs legadas no Cache implementada; retirada e recolocação reversíveis de TUs do HDD implementadas; ativação efetiva ainda pendente. Capas e fundos pessoais podem ser arquivados/restaurados no editor de arte. Store com fila persistente, retomada de parciais, priorização, velocidade observada, ETA estimado e seleção de destino HDD/USB com filas independentes; homologação HTTPS e Cloud360 IPTV experimentais. Player MPEG-PS XSDK com correção de aspecto, mute e pausa de arquivo local; HLS/MP4 via conversor. Demux e decodificação H.264/AAC em MP4/MPEG-TS adicionados ao diagnóstico FFmpeg local, com ponte RGB24/PCM, agendamento por PTS, decoder incremental local e fila audiovisual com liberação de quadros consumidos em alvo XSDK separado, com entrada MPEG-TS não-seekable e transporte HTTPS opcional experimental e HLS VOD e live TS sem criptografia com seleção inicial de variante, atualização de janela, controle de sequência e compensação experimental de bloqueios de leitura com read-ahead adaptativo, sem integração ao player principal. CI PowerPC separado tenta compilar FFmpeg 7.1.3 e verificar os XEX experimentais; bibliotecas PowerPC e dois XEX2 experimentais compilados e verificados no CI 45687637748; relink dos dois probes aprovado; nome do ZIP corrigido. Variante experimental da dashboard integra FFmpeg diretamente aos itens MP4/TS/M3U8, com MPEG-PS preservado na Alpha padrão; cross-build da variante aprovado no CI 45691019530; homologação física pendente. Player FFmpeg compartilhado inclui pausa local, mute, volume, painel de controles e navegação MP4 por quadro-chave com tempo/duração. HLS filtra variantes incompatíveis declaradas, aceita limite configurável e tenta alternativas antes da reprodução. Resultados e logs ficam em Actions.
@@ -222,3 +222,7 @@ Rede/FTP > RB > START edita IPv4 do par; esquerda/direita escolhe octeto, cima/b
 ### V0.2.18 — Gerenciador de plugins locais
 
 Sistema > Plugins > START alterna inventário residente e plugins locais. X alterna a disponibilidade do atalho local com persistência por ID; não altera manifesto ou launch.ini e não carrega código residente. Manifestos desativados, IDs conflitantes e XEX ausentes/inválidos não podem ser habilitados. Cabeçalho mínimo XEX2 não prova compatibilidade, segurança ou assinatura. Revalidação antes do lançamento pela aba Plugins. Parser limitado a 4096 bytes e chaves únicas. Galeria 44 preparada; nenhuma build executada.
+
+### V0.2.19 — Telemetria térmica experimental
+
+Sistema > Telemetria > START: CPU, GPU, EDRAM e placa. A consulta manual. Provider XSDK opcional `smc_read`, desligado por padrão; workflow manual produz somente artefato experimental, sem Release. Importação HalSendSMCMessage ordinal 41, comando de leitura 0x07, quatro valores little-endian 8.8; validação de resposta e campos individualmente. Referências: [Free60 SMC](https://github.com/Free60Project/wiki/blob/master/docs/Hardware/Console/SMC.md), [XexUtils](https://github.com/ClementDreptin/XexUtils/blob/main/src/SMC.cpp), [XSDK PARITY](https://github.com/xenosworks/xsdk/blob/main/docs/PARITY.md). Sem timeout garantido na API síncrona, sem fan/power writes, sem teste no console. Galeria 45 preparada; nenhuma build executada.

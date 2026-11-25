@@ -1607,7 +1607,7 @@ std::string ConsoleHome::Press(Key key) {
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
-            else if(systemTab_==2) {telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();notice_="Telemetria atualizada.";}
+            else if(systemTab_==2) {if(thermalPage_){notice_="A consulta sensores; leitura experimental manual.";}else{telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();notice_="Telemetria atualizada.";}}
             else if(systemTab_==3) {
                 if(storeDownloads_) {store_.Load();RebuildStoreDownloads();notice_="Registros de downloads atualizados.";}
                 else notice_="Transferencias locais atualizadas automaticamente.";
@@ -1729,6 +1729,11 @@ std::string ConsoleHome::Press(Key key) {
             StopFtp();peerProbe_.Start(network_.ipv4,LanPeerConfig::Format(configured));return "";
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
+        if(page_==Details&&systemTab_==2&&key==Guide){thermalPage_=!thermalPage_;return "";}
+        if(page_==Details&&systemTab_==2&&thermalPage_){
+            if(key==Accept&&!TransferRunning()){thermal_=ThermalTelemetry::Read();notice_="Consulta termica concluida; confira disponibilidade.";}
+            return "";
+        }
         if(page_==Details && systemTab_==2 && (key==PageUp||key==PageDown)){telemetryVideo_=!telemetryVideo_;return "";}
         if(page_==Details&&systemTab_==2&&telemetryVideo_&&(key==Left||key==Right||key==Favorite)){
             const unsigned old=safeArea_;
@@ -1811,7 +1816,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();}
-                else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;}
+                else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;thermal_=ThermalTelemetry();}
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
@@ -2514,6 +2519,7 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
 #endif
 }
 void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
+    if(thermalPage_){DrawThermal(c);return;}
     if(telemetryVideo_){
         c.Text(45,349,c.Tr("Telemetria 2/2 | Video e kernel"),27,White,1170);
         const auto& v=videoTelemetry_;
@@ -2551,8 +2557,22 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         c.Text(65,420,"Memoria: provider indisponivel ou consulta recusada.",23,White,1145);
         c.Text(65,467,"Nenhuma medida simulada e exibida.",19,Muted,1145);
     }
-    c.Text(48,559,"CPU / GPU / EDRAM / placa: sensores SMC ainda indisponiveis.",18,Muted,1170);
-    c.Text(48,585,"Ventoinha: pendente. LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(48,559,"START Sensores SMC | Consulta experimental somente leitura",18,Muted,1170);
+    c.Text(48,585,"LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
+}
+void ConsoleHome::DrawThermal(HomeCanvas& c)const{
+    c.Text(45,349,"Temperaturas SMC | Experimental",27,White,1170);
+    const char* labels[]={"CPU","GPU","EDRAM","Placa-mae"};
+    for(unsigned i=0;i<4;++i){
+        const int x=45+int(i)*300;
+        panel(c,x,396,289,104,Panel,false);
+        c.Text(x+12,407,labels[i],21,Muted,260);
+        c.Text(x+12,444,thermal_.Celsius(i),30,thermal_.available[i]?Lime:Muted,260);
+    }
+    const char* state=!ThermalTelemetry::Supported()?"Provider nao incluido nesta build.":thermal_.state==ThermalTelemetry::NotRead?"A solicita leitura manual.":thermal_.state==ThermalTelemetry::Valid?"Resposta SMC valida; leitura instantanea.":thermal_.state==ThermalTelemetry::Partial?"Resposta parcial; sensores ausentes nao estimados.":"Resposta invalida ou indisponivel.";
+    c.Text(48,526,state,20,White,1170);
+    c.Text(48,565,"Sem ajuste de ventoinha, temperatura alvo ou energia.",18,Muted,1170);
+    c.Text(48,607,"A Consultar | START Telemetria | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     if(localMilestones_){DrawLocalMilestones(c);return;}

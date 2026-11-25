@@ -206,3 +206,7 @@ Editor de IPv4 privado com quatro octetos, validação e persistência com backu
 ### V0.2.18 — Gerenciamento de plugins locais
 
 Inventário de manifestos habilitados/desabilitados e XEX ausentes, conflitos de ID, parsing limitado/chaves únicas, preferência local persistente por ID e revalidação no handoff pelo catálogo Plugins. Não modifica launch.ini nem carrega módulos residentes. Cabeçalho XEX2 não comprova compatibilidade. Galeria 44 preparada. Sem build/CI.
+
+### V0.2.19 — SMC leitura térmica
+
+Provider opcional com importação 0x029 confirmada em referências públicas, comando 0x07, decodificação 8.8 LE, validação parcial, leitura manual. Build experimental isolada sem Release, default OFF. API síncrona sem garantia de timeout; não validada em hardware. Não escreve ventoinha, energia ou parâmetros térmicos. Galeria 45 preparada. Sem build/CI.
