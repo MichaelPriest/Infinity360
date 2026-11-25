@@ -52,13 +52,14 @@ public:
         if(std::max(lastVideo_,audioEnd_)-origin_>MaxDuration)return false;
         ready_=true;return true;
     }
-    bool WantsInput(int64_t elapsed) const{
+    bool WantsInput(int64_t elapsed,int64_t ahead=150000) const{
+        ahead=std::max<int64_t>(150000,std::min<int64_t>(600000,ahead));
         if(eof_)return false;
         // Leave headroom for a packet that produces multiple frames; hard
         // cap is enforced separately on each callback.
         if(used_>=MaxBytes*3/4)return false;
         if(!ready_)return video_.size()<2||audio_.empty()||audioEnd_-audio_.front().pts<100000;
-        return video_.empty()||audio_.empty()||lastVideo_-origin_<elapsed+150000||audioEnd_-origin_<elapsed+150000;
+        return video_.empty()||audio_.empty()||lastVideo_-origin_<elapsed+ahead||audioEnd_-origin_<elapsed+ahead;
     }
     void EndInput(){eof_=true;}
     template<class V,class A>

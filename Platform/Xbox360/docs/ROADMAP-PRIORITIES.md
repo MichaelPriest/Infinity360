@@ -106,3 +106,7 @@ CI PowerPC experimental independente, FFmpeg 7.1.3 fixado por commit, verificaç
 ### P1 — Correção do primeiro cross-build
 
 Primeira tentativa FFmpeg PPC falhou em erf/hypot. Adicionado teste de link real e regra de link XSDK no configure, sem forçar macros de disponibilidade. Novo CI pendente; dashboard Alpha e testes host anteriores aprovados.
+
+### P1 — Compensação de leitura síncrona
+
+Relógio lógico compensado em bloqueios de rede, read-ahead de 150–600 ms com limites, métricas e testes determinísticos. Não substitui rebuffering assíncrono nem ABR. Cross-build FFmpeg em validação.

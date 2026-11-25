@@ -83,3 +83,7 @@ O workflow `.github/workflows/cloud360-ffmpeg-xsdk.yml` tenta compilar FFmpeg 7.
 ### Diagnóstico da primeira tentativa PowerPC
 
 Run 45685380748: XSDK, compilador e checkout FFmpeg passaram; libavformat falhou em `libavutil/libm.h` por redefinição de `erf` e `hypot`, declarados pela newlib. A revisão usa o linker script `xsdk.ld`, libxsdk.a e grupo de bibliotecas da regra CMake do XSDK nas verificações de configure. Um teste ELF força referências reais a ambas as funções e a configuração precisa confirmar HAVE_ERF/HAVE_HYPOT; não há execução em host, alteração manual de config.h ou garantia de que não surgirão outros erros. A nova execução é necessária antes de afirmar que os XEX foram compilados.
+
+## Compensação de bloqueios de leitura (0.5.10)
+
+CloudReadClock mede o tempo de cada step remoto. Bloqueios acima de 50 ms são descontados do relógio lógico, até 15 s por bloqueio e 120 s acumulados. A leitura antecipada sobe de 150 a 600 ms após bloqueios e reduz gradualmente após leituras rápidas, respeitando o limite de memória da fila. O probe recalcula o relógio depois da leitura, registra quantidade de bloqueios, tempo compensado e alvo de buffer. Teste determinístico verifica avanço, compensação, limites, recuperação do alvo e relógio regressivo. Não é buffering assíncrono, não controla a fila física de áudio, não garante A/V sem lacunas e não altera o bitrate. A compilação PPC continua em validação.

@@ -31,6 +31,7 @@
 #include "frame_output.h"
 #include "av_timeline.h"
 #include "av_stream_queue.h"
+#include "read_clock.h"
 #ifdef INFINITY_CONTAINER_NETWORK_PROBE
 #include "XsdkRemoteReader.h"
 #include "hls_vod.h"
@@ -154,6 +155,7 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 int main(){
     CloudAvStreamQueue timeline;
     CloudContainerSession* session=nullptr;
+    bool remoteSource=false;
 #ifdef INFINITY_CONTAINER_NETWORK_PROBE
     // Optional explicitly authorized TS URL; never silently fall back.
     XsdkMpeg::RemoteReader remote;
@@ -174,6 +176,7 @@ int main(){
     });
     std::ifstream config("game:/cloud360-test-ts-url.txt",std::ios::binary);
     if(config){
+        remoteSource=true;
         char raw[4098]{};config.getline(raw,sizeof raw);
         if(config.fail()||config.peek()!=std::char_traits<char>::eof())return 1;
         std::string address=raw;if(!address.empty()&&address.back()=='\r')address.pop_back();
@@ -204,6 +207,8 @@ int main(){
     unsigned shown=0,submitted=0;
     using Clock=std::chrono::steady_clock;
     const auto start=Clock::now();
+    CloudReadClock playbackClock;
+    auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
         ++shown;return p.Show(canvas,true);
@@ -218,13 +223,19 @@ int main(){
     while(ok){
         INPUT_STATE state{};
         if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
-        const auto elapsed=std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();
+        auto elapsed=playbackClock.Elapsed(wall());
         if(timeline.Finished(elapsed))break;
         if(elapsed>CloudAvStreamQueue::MaxDuration+1000000){ok=false;break;}
         unsigned budget=4;
-        while(rc>0&&timeline.WantsInput(elapsed)&&budget--)rc=cloud_container_step(session,1);
+        while(rc>0&&timeline.WantsInput(elapsed,playbackClock.Ahead())&&budget--){
+            const auto beforeRead=wall();
+            rc=cloud_container_step(session,1);
+            const auto afterRead=wall();
+            if(remoteSource&&!playbackClock.Observe(beforeRead,afterRead)){ok=false;break;}
+            elapsed=playbackClock.Elapsed(afterRead);
+        }
         if(rc==0)timeline.EndInput();
-        if(rc<0){ok=false;break;}
+        if(!ok||rc<0){ok=false;break;}
         const auto before=shown;
         ok=timeline.Pump(elapsed,video,audio);
         if(ok&&shown==before)ok=p.Show(canvas,false);
@@ -233,6 +244,7 @@ int main(){
     if(audioOpen)xsdk_audio_close();
     const bool closed=p.Close();
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
+    xsdk_log_write("Cloud360 read stalls=%u compensated_ms=%u ahead_ms=%u",playbackClock.Stalls(),static_cast<unsigned>(playbackClock.Stalled()/1000),static_cast<unsigned>(playbackClock.Ahead()/1000));
     return ok&&closed&&(cancelled||(shown&&submitted))?0:3;
 }
 #elif !defined(INFINITY_FULL_MENU_PREVIEW)
