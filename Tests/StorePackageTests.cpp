@@ -136,5 +136,7 @@ int main(){
     {std::ofstream revoke(root/"infinity360-providers.tsv");revoke<<"# removed\n";}
     assert(!offline.ImportProvider(provider,catalogRow,providerError));
     assert(offline.Load());assert(offline.Providers().empty());
+    assert(offline.OrphanNativeCount()==1);assert(offline.PruneOrphanNative());assert(offline.OrphanNativeCount()==0);
+    assert(offline.Load());assert(offline.OrphanNativeCount()==0);
     fs::remove_all(root);
 }

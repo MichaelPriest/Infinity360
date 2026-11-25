@@ -227,8 +227,8 @@ int main(){
                 canvas.Box(0,0,1280,720,0xff000000u);
                 canvas.Text(45,80,"Cloud360 | Abrindo MPEG-PS",32,WHITE,1180);
                 if(!p.Show(canvas,true)){ok=false;break;}
-                const auto result=XsdkMpeg::Play(movie,dir,canvas,[&](){
-                    if(!p.Show(canvas,true)){presentFailed=true;return false;}return true;
+                const auto result=XsdkMpeg::Play(movie,dir,canvas,[&](bool upload){
+                    if(!p.Show(canvas,upload)){presentFailed=true;return false;}return true;
                 });
                 menu.PlayerMessage(result);dirty=true;
                 if(presentFailed){ok=false;break;}
@@ -238,7 +238,7 @@ int main(){
 #ifdef INFINITY_XSDK_HTTPS
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}
             unsigned artTitle=0;bool artCover=false,artRemote=false;
-            XboxContentPackage backup{};
+            XboxContentPackage backup{};ContentBackup::Record recovery;
             if(menu.TakeArtRequest(artTitle,artCover,artRemote)){
                 menu.StopFtp();bool success=false,videoFailed=false;std::string result;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
@@ -254,19 +254,22 @@ int main(){
                 else{FileWorkspace ws(dir);success=ArtImport::Local(ws,dir,artTitle,artCover,result);if(success)result="Arte local importada.";}
                 menu.ArtResult(result,success);if(videoFailed){ok=false;break;}
             }
-            if(menu.TakeBackupRequest(backup)){
+            const bool recover=menu.TakeRecoverRequest(recovery);
+            if(recover||menu.TakeBackupRequest(backup)){
                 menu.StopFtp();bool videoFailed=false;auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
-                    canvas.Background();canvas.Text(48,100,"INFINITY | Backup de conteudo",36,WHITE,1180);
+                    canvas.Background();canvas.Text(48,100,recover?"INFINITY | Recuperar backup":"INFINITY | Backup de conteudo",36,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
                     canvas.Text(48,560,"B Cancelar | Origem intacta | SHA-256",22,LIME,1180);
                     if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
                 };
-                FileWorkspace ws(dir);std::string result;const bool success=ContentBackup::Archive(ws,dir,backup,progress,result);
-                menu.BackupResult(success?"Backup verificado em UserFiles/ContentBackups.":result,success);
+                FileWorkspace ws(dir);std::string result;
+                const bool success=recover?ContentBackup::Recover(ws,dir,recovery,progress,result):ContentBackup::Archive(ws,dir,backup,progress,result);
+                if(recover)menu.RecoverResult(success?"Copia verificada em area pessoal; sem ativacao.":result,success);
+                else menu.BackupResult(success?"Backup verificado em UserFiles/ContentBackups.":result,success);
                 if(videoFailed){ok=false;break;}
             }
             XboxExecutionInfo unityInfo{};

@@ -34,6 +34,8 @@ public:
     bool TakeArtRequest(unsigned& title,bool& cover,bool& remote);
     void ArtResult(const std::string& message,bool success);
     bool TakeBackupRequest(XboxContentPackage& selected);
+    bool TakeRecoverRequest(ContentBackup::Record& selected);
+    void RecoverResult(const std::string& message,bool success);
     void BackupResult(const std::string& message,bool success);
     bool TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update);
     void UnityDownloadResult(const std::string& message,bool success);
@@ -146,7 +148,10 @@ private:
     std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
     bool contentActive_, contentKnown_;
-    bool backupConfirm_=false,backupPending_=false;
+    bool backupConfirm_=false,backupPending_=false,recoverConfirm_=false,recoverPending_=false,archiveTuConfirm_=false;
+    ContentBackup::Record recoverItem_;
+    std::vector<ContentBackup::Record> backups_;
+    bool pruneQueueConfirm_=false;
     XboxContentPackage backupItem_{};
     std::vector<XboxContentPackage> stagedItems_;
     bool artPending_=false,artRemote_=false,artCover_=true;

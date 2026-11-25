@@ -280,6 +280,18 @@ std::vector<size_t> StoreCatalog::NativeQueue() const {
     }
     return ordered;
 }
+size_t StoreCatalog::OrphanNativeCount() const{
+    if(!validNative_)return 0;
+    const auto count=NativeQueue().size();return native_.size()>count?native_.size()-count:0;
+}
+bool StoreCatalog::PruneOrphanNative(){
+    if(!validNative_)return false;
+    const auto old=native_;
+    std::set<std::string> keys;for(const auto& item:items_)keys.insert(key(item));
+    native_.erase(std::remove_if(native_.begin(),native_.end(),[&](const std::string& entry){return !keys.count(entry);}),native_.end());
+    if(native_==old||SaveNative())return true;
+    native_=old;return false;
+}
 bool StoreCatalog::ListedDownload(const StoreItem& item) const {
     const StoreProgress::State state=Progress(item).state;
     return Requested(item)||NativeQueued(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;

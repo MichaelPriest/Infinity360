@@ -707,7 +707,7 @@ void ConsoleHome::OpenContent() {
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
-    contentItems_.clear();stagedItems_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;
+    contentItems_.clear();stagedItems_.clear();backups_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;recoverConfirm_=false;recoverPending_=false;archiveTuConfirm_=false;
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
@@ -723,11 +723,13 @@ void ConsoleHome::OpenContent() {
     contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
     trainers_=TrainerCatalog::Scan(dir_,contentInfo_.titleId);
     stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
+    backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
 }
 
 size_t ConsoleHome::ContentCount() const {
     if(contentTab_==3)return trainers_.size();
     if(contentTab_==4)return stagedItems_.size();
+    if(contentTab_==5)return backups_.size();
     const unsigned types[]={0x000b0000u,2u,1u};
     size_t count=0;
     for(size_t i=0;i<contentItems_.size();++i)
@@ -737,6 +739,7 @@ size_t ConsoleHome::ContentCount() const {
 const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
     if(contentTab_==3)return 0;
     if(contentTab_==4)return index<stagedItems_.size()?&stagedItems_[index]:nullptr;
+    if(contentTab_==5)return index<backups_.size()?&backups_[index].package:nullptr;
     const unsigned types[]={0x000b0000u,2u,1u};
     for(size_t i=0;i<contentItems_.size();++i) {
         if(contentItems_[i].contentType!=types[contentTab_])continue;
@@ -829,7 +832,7 @@ bool ConsoleHome::NextNativeStore(){
         }
         return StartNativeStore(item);
     }
-    notice_="Fila nativa concluida.";return false;
+    notice_=!store_.NativeQueueValid()?"Fila invalida; arquivo preservado.":store_.OrphanNativeCount()?"Fila possui referencias ausentes; LB revisa limpeza.":"Fila nativa concluida.";return false;
 }
 bool ConsoleHome::TakeStoreInstallRequest(StoreItem& item){
     if(!storeInstallPending_)return false;
@@ -1086,6 +1089,23 @@ std::string ConsoleHome::Press(Key key) {
 #endif
             return "";
         }
+        if(recoverConfirm_||archiveTuConfirm_){
+            const bool recover=recoverConfirm_;recoverConfirm_=false;archiveTuConfirm_=false;
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Accept&&!TransferRunning()){
+                if(recover){recoverPending_=true;notice_="Recuperando copia verificada.";}
+                else{
+                    StopFtp();std::string error;
+                    if(ContentBackup::ArchiveStaged(fileWorkspace_,dir_,backupItem_,error)){
+                        stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);clampRow(contentRow_,stagedItems_.size());
+                        notice_="TU arquivada em UserFiles/ArchivedTU; sem exclusao.";
+                    }else notice_=error;
+                }
+                return "";
+            }
+#endif
+            notice_="Operacao cancelada.";return "";
+        }
         if(backupConfirm_){
             backupConfirm_=false;
             if(key==Accept&&!TransferRunning()){backupPending_=true;notice_="Preparando backup de conteudo.";}
@@ -1113,11 +1133,17 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
         if(key==Left && contentTab_>0) {--contentTab_;contentRow_=0;}
-        if(key==Right && contentTab_<4) {++contentTab_;contentRow_=0;}
+        if(key==Right && contentTab_<5) {++contentTab_;contentRow_=0;}
         if(key==Up && contentRow_>0)--contentRow_;
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
 #if defined(INFINITY_XSDK_HTTPS)
-        if(key==PageDown&&contentTab_!=3&&!TransferRunning()){
+        if(key==Accept&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
+            recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_="A confirma recuperar para area pessoal, sem ativacao.";return "";
+        }
+        if(key==Favorite&&contentTab_==4&&!TransferRunning()&&static_cast<size_t>(contentRow_)<stagedItems_.size()){
+            backupItem_=stagedItems_[contentRow_];archiveTuConfirm_=true;notice_="A confirma arquivar TU baixada; B cancela.";return "";
+        }
+        if(key==PageDown&&contentTab_!=3&&contentTab_!=5&&!TransferRunning()){
             const auto* item=ContentAt(contentRow_);
             if(item){backupItem_=*item;backupConfirm_=true;notice_="A confirma backup sem modificar a origem; B cancela.";}
             return "";
@@ -1449,10 +1475,19 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(page_==Details && systemTab_==3 && storeDownloads_) {
+            if(key!=PageUp)pruneQueueConfirm_=false;
             const size_t count=storeDownloadItems_.size();
             if(key==Up&&storeDownloadRow_>0)--storeDownloadRow_;
             if(key==Down&&static_cast<size_t>(storeDownloadRow_+1)<count)++storeDownloadRow_;
 #if defined(INFINITY_XSDK_HTTPS)
+            if(key==PageUp){
+                if(!store_.NativeQueueValid()){notice_="Fila invalida; arquivo preservado.";return "";}
+                if(!store_.OrphanNativeCount()){notice_="Nenhuma referencia ausente.";return "";}
+                if(!pruneQueueConfirm_){pruneQueueConfirm_=true;notice_="LB confirma remover referencias ausentes, inclusive caches offline. Parciais preservados.";return "";}
+                pruneQueueConfirm_=false;
+                notice_=store_.PruneOrphanNative()?"Referencias removidas; arquivos preservados.":"Falha ao salvar fila.";
+                RebuildStoreDownloads();return "";
+            }
             if(key==Guide){
                 nativeBatch_=true;
                 if(!NextNativeStore())nativeBatch_=false;
@@ -1899,7 +1934,15 @@ bool ConsoleHome::TakeBackupRequest(XboxContentPackage& selected){
     if(!backupPending_)return false;backupPending_=false;selected=backupItem_;return true;
 }
 void ConsoleHome::BackupResult(const std::string& message,bool success){
+    if(success)backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
     notice_=message;RecordEvent(success?"Backup de conteudo verificado":"Backup recusado");
+}
+bool ConsoleHome::TakeRecoverRequest(ContentBackup::Record& selected){
+    if(!recoverPending_)return false;recoverPending_=false;selected=recoverItem_;return true;
+}
+void ConsoleHome::RecoverResult(const std::string& message,bool success){
+    if(success)stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
+    notice_=message;RecordEvent(success?"Copia de conteudo recuperada":"Recuperacao recusada");
 }
 bool ConsoleHome::TakeUnityRequest(XboxExecutionInfo& info){
     if(!unityPending_)return false;
@@ -1944,11 +1987,11 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(45,135,"Title ID: "+hexId(contentInfo_.titleId)+"    Media ID: "+
            hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
            21,Muted,1180);
-    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas"};
-    for(int i=0;i<5;++i) {
-        const int x=45+i*239;
-        panel(c,x,183,228,47,Panel,i==contentTab_);
-        c.Text(x+12,191,tabs[i],21,i==contentTab_?Lime:White,208);
+    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas","Backups"};
+    for(int i=0;i<6;++i) {
+        const int x=45+i*199;
+        panel(c,x,183,188,47,Panel,i==contentTab_);
+        c.Text(x+12,191,tabs[i],21,i==contentTab_?Lime:White,168);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+" pacotes encontrados - somente leitura",20,Muted,1175);
@@ -1965,11 +2008,12 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
             status=(!contentInfo_.mediaId || !item->mediaId)?"Media ID desconhecido":
                 item->mediaId==contentInfo_.mediaId?"Media ID igual":"Media ID diferente";
             c.Text(62,y+31,"Versao: "+hexId(item->version)+(contentTab_==4?" | NAO ATIVADA":""),17,Muted,690);
-        } else if(contentTab_==1)status="Marketplace / DLC";
+        } else if(contentTab_==5)status="Backup | "+StorageInfo::FormatBytes(backups_[i].bytes);
+        else if(contentTab_==1)status="Marketplace / DLC";
         else status="Save localizado";
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,backupConfirm_?"A Confirmar backup | B Cancelar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar | Sem ativacao",18,Lime,1175);
+    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==5?"A Recuperar copia pessoal | Y Atualizar | B Voltar":contentTab_==4?"X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){
@@ -2111,7 +2155,7 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
     if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
 #if defined(INFINITY_XSDK_HTTPS)
     c.Text(48,590,"A Baixar/Retomar | START Rodar fila | X Remover da fila",18,Muted,1170);
-    c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(48,612,"LB Limpar ausentes ("+number(store_.OrphanNativeCount())+") | RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
 #else
     c.Text(48,590,"Registros locais do Xbox e PC; nao indicam conexao ativa.",18,Muted,1170);
     c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);

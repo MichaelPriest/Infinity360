@@ -139,7 +139,7 @@ public:
         return true;
     }
 };
-inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool()>& present){
+inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool(bool)>& present){
     Output output(canvas);MpegPlayback player(reader,output);
     if(!player.Open())return player.Error();
     if(!output.Start(player.SampleRate()))return "Audio XSDK indisponivel.";
@@ -147,15 +147,16 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
     auto last=Clock::now();double elapsed=0;
     while(!Cancelled()){
         auto now=Clock::now();const double delta=std::chrono::duration<double>(now-last).count();
-        if(delta<0.025){if(!present())return "Falha GPU.";continue;}
+        if(delta<0.025){if(!present(false))return "Falha GPU.";continue;}
         last=now;elapsed=std::min(0.1,delta);
         const bool running=player.Advance(elapsed);
-        if(!present())return "Falha GPU.";
+        if(!present(output.dirty))return "Falha GPU.";
+        output.dirty=false;
         if(!running)return player.Error().empty()?"Reproducao encerrada.":player.Error();
     }
     return "Reproducao cancelada.";
 }
-inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,const std::function<bool()>& present){
+inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,const std::function<bool(bool)>& present){
     std::ifstream marker((root+"enable-iptv-playback.txt").c_str());std::string enabled;
     if(!std::getline(marker,enabled)||enabled!="ENABLE-IPTV-PLAYBACK")return "Habilite enable-iptv-playback.txt.";
     MediaUrl url;

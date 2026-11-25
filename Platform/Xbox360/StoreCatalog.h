@@ -44,6 +44,8 @@ public:
     bool RemoveNative(const StoreItem& item);
     bool NativeQueued(const StoreItem& item) const;
     std::vector<size_t> NativeQueue() const;
+    size_t OrphanNativeCount() const;
+    bool PruneOrphanNative();
     bool NativeQueueValid() const{return validNative_;}
     StoreProgress Progress(const StoreItem& item) const;
 private:

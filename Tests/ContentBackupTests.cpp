@@ -20,6 +20,16 @@ int main(){
     assert(ContentBackup::Archive(ws,root,rows[0],go,error));
     assert(fs::exists(source));assert(fs::file_size(base/"UserFiles/ContentBackups/494E4635/000B0000-0000/content.bin")==raw.size());
     assert(ContentBackup::Archive(ws,root,rows[0],go,error));
+    auto backups=ContentBackup::List(ws,root,0x494E4635);assert(backups.size()==2);
+    assert(!ContentBackup::Recover(ws,root,backups[0],[](auto,auto){return false;},error));
+    assert(ContentBackup::Recover(ws,root,backups[0],go,error));
+    assert(!ContentBackup::Recover(ws,root,backups[0],go,error));
+    auto staged=ContentBackup::Staged(ws,root,0x494E4635);assert(staged.size()==2);
+    assert(ContentBackup::ArchiveStaged(ws,root,rows[0],error));assert(!fs::exists(source));
+    assert(fs::exists(base/"UserFiles/ArchivedTU/494E4635/update.tu"));
+    assert(!ContentBackup::ArchiveStaged(ws,root,rows[0],error));
+    {std::fstream corrupt(backups[1].package.path,std::ios::binary|std::ios::in|std::ios::out);corrupt.seekp(0x17ff);corrupt.put('x');}
+    assert(!ContentBackup::Recover(ws,root,backups[1],go,error));
     std::vector<unsigned char> rgba;assert(!ArtImport::Convert("not png",true,rgba));
     const unsigned char png[]={137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,6,0,0,0,31,21,196,137,0,0,0,13,73,68,65,84,120,156,99,248,207,192,240,31,0,5,0,1,255,137,153,61,29,0,0,0,0,73,69,78,68,174,66,96,130};
     std::string encoded(reinterpret_cast<const char*>(png),sizeof png);
