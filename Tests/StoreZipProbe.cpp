@@ -19,6 +19,25 @@ int main(int argc,char** argv){
         assert(cat.Installed(item));
         assert(fs::exists(fs::path(root)/"UserFiles/Homebrew/fixture/data/resource.bin"));
         assert(!StoreInstallPackage(workspace,item,root,[](auto,auto){return true;},error));
+        const auto installed=fs::path(root)/"UserFiles/Homebrew/fixture";
+        std::ofstream(installed/"user-settings.ini")<<"keep me";
+        std::string saved;
+        assert(cat.ArchiveInstalled(item,saved));assert(!fs::exists(installed));
+        assert(fs::exists(fs::path(saved)/"user-settings.ini"));assert(cat.BackupAvailable(item));
+        assert(cat.RestoreInstalled(item,error));assert(fs::exists(installed/"user-settings.ini"));
+        // Same-size stale catalog is not current when install receipt differs.
+        StoreItem newer=item;newer.sha256=std::string(64,'0');
+        assert(!cat.Installed(newer));assert(cat.InstalledFolder(newer));
+        assert(!StoreInstallManaged(workspace,newer,root,[](auto,auto){return true;},error));
+        assert(fs::exists(installed/"user-settings.ini"));
+        // Restore an archived version over another active folder, keeping both.
+        assert(cat.ArchiveInstalled(item,saved));
+        assert(StoreInstallPackage(workspace,item,root,[](auto,auto){return true;},error));
+        assert(!fs::exists(installed/"user-settings.ini"));
+        assert(cat.RestoreInstalled(item,error));assert(fs::exists(installed/"user-settings.ini"));
+        assert(cat.BackupAvailable(item));
+        assert(cat.ArchivePackage(item,saved));
+        assert(!cat.PackagePresent(item));assert(fs::exists(saved));
     }else assert(!cat.Installed(item));
     for(auto& entry:fs::recursive_directory_iterator(root))assert(entry.path().filename().string().find("AXCOPY-DISC-")!=0);
     return 0;

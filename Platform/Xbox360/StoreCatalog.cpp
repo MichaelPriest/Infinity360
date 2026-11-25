@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <set>
+#include <cstdio>
 namespace {
 bool token(const std::string& s,size_t max) {
     if(s.empty()||s.size()>max)return false;
@@ -190,6 +191,94 @@ bool StoreCatalog::ListedDownload(const StoreItem& item) const {
     const StoreProgress::State state=Progress(item).state;
     return Requested(item)||NativeQueued(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;
 }
+namespace {
+std::string backupRoot(const std::string& root,const StoreItem& item,bool package){
+    if(StoreInstallPath::Folder(root,item).empty())return "";
+    return FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(
+        FileWorkspace::Join(root,"UserFiles"),"StoreBackups"),package?"Packages":StoreInstallPath::Category(item)),item.id);
+}
+bool enableManagement(const std::string& root){
+    std::ifstream f(FileWorkspace::Join(root,"enable-store-install.txt").c_str());
+    std::string line;return bool(std::getline(f,line))&&line=="ENABLE-STORE-INSTALL";
+}
+bool ensureBackup(const FileWorkspace& ws,const std::string& root,const StoreItem& item,bool package){
+    if(!enableManagement(root)||StoreInstallPath::Folder(root,item).empty())return false;
+    std::string folder=FileWorkspace::Join(root,"UserFiles");
+    for(const auto& name:std::vector<std::string>{"StoreBackups",package?"Packages":StoreInstallPath::Category(item),item.id}){
+        const auto child=FileWorkspace::Join(folder,name);
+        if(!ws.CanWrite(child)&&!ws.Create(folder,name))return false;
+        folder=child;
+    }
+    return true;
+}
+std::string slot(const std::string& root,int index,bool package){
+    char name[32];std::sprintf(name,package?"package-%04d.pkg":"version-%04d",index);
+    return FileWorkspace::Join(root,name);
+}
+bool validXexFolder(const std::string& folder){
+    if(folder.empty())return false;
+    std::ifstream xex(FileWorkspace::Join(folder,"default.xex").c_str(),std::ios::binary);
+    return XexLaunchCheck::Header(xex);
+}
+int newestBackup(const FileWorkspace& ws,const std::string& root,bool package){
+    if(root.empty())return -1;
+    for(int i=31;i>=0;--i){
+        const auto path=slot(root,i,package);
+        if(package?ws.CanReadPersonalFile(path):ws.CanWrite(path))return i;
+    }
+    return -1;
+}
+}
+bool StoreCatalog::InstalledFolder(const StoreItem& item) const{
+    const auto folder=StoreInstallPath::Folder(root_,item);
+    FileWorkspace ws(root_);
+    return !folder.empty()&&ws.CanBrowse(folder)&&validXexFolder(folder);
+}
+bool StoreCatalog::PackagePresent(const StoreItem& item) const{
+    if(StoreInstallPath::Folder(root_,item).empty())return false;
+    FileWorkspace ws(root_);
+    return ws.CanReadPersonalFile(FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg"));
+}
+bool StoreCatalog::BackupAvailable(const StoreItem& item) const{
+    FileWorkspace ws(root_);
+    const auto path=backupRoot(root_,item,false);
+    const int last=newestBackup(ws,path,false);
+    return last>=0&&validXexFolder(slot(path,last,false));
+}
+bool StoreCatalog::ArchiveInstalled(const StoreItem& item,std::string& saved){
+    saved.clear();FileWorkspace ws(root_);
+    const auto active=StoreInstallPath::Folder(root_,item),back=backupRoot(root_,item,false);
+    if(!InstalledFolder(item)||!ensureBackup(ws,root_,item,false))return false;
+    const int next=newestBackup(ws,back,false)+1;
+    if(next>=32)return false;
+    const auto dest=slot(back,next,false);
+    if(!ws.MovePersonalExclusive(active,dest,true))return false;
+    saved=dest;return true;
+}
+bool StoreCatalog::RestoreInstalled(const StoreItem& item,std::string& error){
+    error.clear();FileWorkspace ws(root_);
+    const auto active=StoreInstallPath::Folder(root_,item),back=backupRoot(root_,item,false);
+    if(active.empty()||!enableManagement(root_)||!BackupAvailable(item)){error="Backup valido indisponivel.";return false;}
+    const int last=newestBackup(ws,back,false);
+    const auto previous=slot(back,last,false);
+    std::string displaced;
+    if(InstalledFolder(item)&&!ArchiveInstalled(item,displaced)){error="Nao foi possivel preservar versao ativa.";return false;}
+    if(ws.MovePersonalExclusive(previous,active,true))return true;
+    if(!displaced.empty()&&!ws.MovePersonalExclusive(displaced,active,true))
+        error="Restauracao interrompida. Ambas versoes preservadas em StoreBackups.";
+    else error="Restauracao recusada; destino ocupado ou indisponivel.";
+    return false;
+}
+bool StoreCatalog::ArchivePackage(const StoreItem& item,std::string& saved){
+    saved.clear();FileWorkspace ws(root_);
+    if(!PackagePresent(item)||!ensureBackup(ws,root_,item,true))return false;
+    const auto back=backupRoot(root_,item,true);
+    const int next=newestBackup(ws,back,true)+1;if(next>=32)return false;
+    const auto from=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");
+    const auto dest=slot(back,next,true);
+    if(!ws.MovePersonalExclusive(from,dest,false))return false;
+    saved=dest;return true;
+}
 bool StoreCatalog::Installed(const StoreItem& item) const{
     const std::string folder=StoreInstallPath::Folder(root_,item);
     if(folder.empty())return false;
@@ -208,7 +297,17 @@ bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.
     const std::string path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");
     std::ifstream in(path.c_str(),std::ios::binary|std::ios::ate);
-    return in&&in.tellg()>=0&&static_cast<unsigned long long>(in.tellg())==item.bytes;
+    if(!in||in.tellg()<0||static_cast<unsigned long long>(in.tellg())!=item.bytes)return false;
+    // A receipt for another version must not classify same-size bytes as current.
+    std::string receipt;
+    const auto state=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".state");
+    if(readBound(state,256,receipt)){
+        std::istringstream record(receipt);std::string digest,status;unsigned long long size=0;
+        if(record>>digest>>status>>size){
+            if(hash(digest)&&(status=="native_verified"||status=="verified")&&digest!=item.sha256)return false;
+        }
+    }
+    return true;
 }
 
 bool StoreCatalog::DiscardPartial(const StoreItem& item) {

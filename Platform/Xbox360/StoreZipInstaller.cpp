@@ -226,3 +226,26 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     if(!ws.PublishDiscStage(parent,stage,item.id))return fail("Falha ao publicar sem sobrescrever.");
     return true;
 }
+
+bool StoreInstallManaged(const FileWorkspace& ws,const StoreItem& item,const std::string& root,
+    const Progress& progress,std::string& error){
+    StoreCatalog catalog(root);
+    if(catalog.Installed(item)){error="Versao atual ja instalada.";return false;}
+    std::string saved;
+    if(catalog.InstalledFolder(item)){
+        // Verify the new package before displacing an existing application.
+        const auto source=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"Store"),item.id+".pkg");
+        if(!catalog.Staged(item)||!ws.CanReadPersonalFile(source)||item.bytes>MaxPackage){error="Novo pacote indisponivel.";return false;}
+        Reader r{std::ifstream(source.c_str(),std::ios::binary),item.bytes};
+        if(!r.input||!digest(r,item,progress,0,item.bytes)){error="Novo pacote divergente ou cancelado.";return false;}
+        if(!catalog.ArchiveInstalled(item,saved)){error="Backup da versao anterior recusado.";return false;}
+    }
+    if(StoreInstallPackage(ws,item,root,progress,error))return true;
+    if(!saved.empty()){
+        // Restore precisely the directory displaced by this update.
+        const auto active=StoreInstallPath::Folder(root,item);
+        if(ws.MovePersonalExclusive(saved,active,true))error+=" | Versao anterior restaurada.";
+        else error+=" | Backup preservado em StoreBackups; restauracao manual.";
+    }
+    return false;
+}

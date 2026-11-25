@@ -110,6 +110,9 @@ private:
     bool storeTranslationMatch_;
     bool nativeStorePending_;
     bool storeInstallPending_=false;
+    bool storeManage_=false,storeManageConfirm_=false;
+    int storeManageRow_=0;
+    void DrawStoreManage(HomeCanvas& c,const StoreItem& item) const;
     StoreItem storeInstallItem_;
     bool nativeBatch_=false;
     bool StartNativeStore(const StoreItem& item);

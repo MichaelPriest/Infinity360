@@ -257,6 +257,8 @@ bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const 
     if(!workspace.Create(parent,item.id))return reject("Destino ja existe ou indisponivel; nao sera sobrescrito.");
     const std::string target=FileWorkspace::Join(folder,"default.xex");
     const std::string temp=FileWorkspace::Join(folder,"AXCOPY-INSTALL.part");
+    const std::string receipt=FileWorkspace::Join(folder,"infinity-install.txt");
+    bool receiptCreated=false;
     int flags=O_WRONLY|O_CREAT|O_EXCL;
 #ifndef __XSDK__
     flags|=O_NOFOLLOW;
@@ -265,7 +267,7 @@ bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const 
     if(fd<0){workspace.Remove(parent,item.id);return reject("Falha ao reservar temporario.");}
     auto fail=[&](const char* reason){
         if(fd>=0){close(fd);fd=-1;}
-        unlink(temp.c_str());workspace.Remove(parent,item.id);error=reason;return false;
+        unlink(temp.c_str());if(receiptCreated)unlink(receipt.c_str());workspace.Remove(parent,item.id);error=reason;return false;
     };
     StoreSha256 hash;
     unsigned long long done=0;
@@ -291,6 +293,15 @@ bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const 
     // Validate the staged executable as well, not only its original source.
     {std::ifstream staged(temp.c_str(),std::ios::binary);
      if(!XexLaunchCheck::Header(staged))return fail("XEX2 temporario invalido.");}
+    {
+        const int record=open(receipt.c_str(),flags,0600);
+        if(record<0)return fail("Falha ao reservar registro.");
+        receiptCreated=true;
+        const std::string data=item.sha256+"\t"+std::to_string(item.bytes)+"\n";
+        const bool saved=write(record,data.data(),data.size())==static_cast<ssize_t>(data.size());
+        const bool synced=fsync(record)==0;const bool closed=close(record)==0;
+        if(!saved||!synced||!closed)return fail("Falha ao gravar registro.");
+    }
 #ifdef __XSDK__
     if(!workspace.PublishStaged(temp,target))return fail("Falha ao publicar sem sobrescrever.");
 #else

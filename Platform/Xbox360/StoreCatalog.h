@@ -22,6 +22,12 @@ public:
     bool Requested(const StoreItem& item) const;
     bool Staged(const StoreItem& item) const;
     bool Installed(const StoreItem& item) const;
+    bool InstalledFolder(const StoreItem& item) const;
+    bool PackagePresent(const StoreItem& item) const;
+    bool BackupAvailable(const StoreItem& item) const;
+    bool ArchiveInstalled(const StoreItem& item,std::string& saved);
+    bool RestoreInstalled(const StoreItem& item,std::string& error);
+    bool ArchivePackage(const StoreItem& item,std::string& saved);
     bool ListedDownload(const StoreItem& item) const;
     bool DiscardPartial(const StoreItem& item);
     bool QueueNative(const StoreItem& item);

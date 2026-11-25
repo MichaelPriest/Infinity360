@@ -226,6 +226,27 @@ std::string FileWorkspace::WorkspaceFor(const std::string& root) const {
         if(key(root)==key(roots_[i]))return i<workspaces_.size()?workspaces_[i]:"";
     return "";
 }
+bool FileWorkspace::MovePersonalExclusive(const std::string& from,const std::string& to,bool folder) const{
+#if defined(__XSDK__) || defined(__linux__)
+    const size_t a=from.find_last_of("/\\"),b=to.find_last_of("/\\");
+    if(a==std::string::npos||b==std::string::npos||!ValidName(from.substr(a+1))||!ValidName(to.substr(b+1))||
+       !CanWrite(from.substr(0,a))||!CanWrite(to.substr(0,b))||!Allowed(from,workspaces_)||!Allowed(to,workspaces_)||
+       !exists(from)||exists(to)||inside(to,from)||inside(from,to)||directory(from)!=folder)return false;
+    if(!folder&&!CanReadPersonalFile(from))return false;
+#ifdef __XSDK__
+    const auto x=XsdkPaths::Key(from),y=XsdkPaths::Key(to);
+    if(x.substr(0,x.find(':'))!=y.substr(0,y.find(':')))return false;
+    return renameNoReplace(from,to);
+#else
+#ifdef SYS_renameat2
+    return syscall(SYS_renameat2,AT_FDCWD,from.c_str(),AT_FDCWD,to.c_str(),1)==0;
+#endif
+#endif
+#else
+    (void)from;(void)to;(void)folder;
+#endif
+    return false;
+}
 bool FileWorkspace::BeginDiscStage(const std::string& parent,const std::string& finalName,std::string& stage) const{
     stage.clear();
 #if defined(__XSDK__) || defined(__linux__)

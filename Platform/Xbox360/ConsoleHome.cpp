@@ -799,7 +799,8 @@ void ConsoleHome::RebuildStore() {
 bool ConsoleHome::StartNativeStore(const StoreItem& item){
 #if defined(INFINITY_XSDK_HTTPS) || defined(_XBOX)
     if(TransferRunning()||!TranslationMatches(item)){notice_="Copia ativa ou traducao incompativel.";return false;}
-    if(store_.Staged(item)){notice_="Arquivo local ja existe; nenhum download iniciado.";return false;}
+    if(store_.Staged(item)){notice_="Arquivo local ja existe; RB gerencia pacote na ficha.";return false;}
+    if(store_.PackagePresent(item)){notice_="Pacote anterior presente; RB gerenciar > arquivar pacote.";return false;}
     nativeStoreItem_=item;nativeStorePending_=true;notice_="Preparando download HTTPS nativo.";return true;
 #else
     (void)item;notice_="Provider HTTPS indisponivel.";return false;
@@ -855,6 +856,24 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
     }
     if(storeActive_) {
+        if(storeManage_){
+            if(key==Back){if(storeManageConfirm_)storeManageConfirm_=false;else storeManage_=false;notice_.clear();return "";}
+            if(key==Up||key==Down){storeManageRow_=(storeManageRow_+(key==Down?1:2))%3;storeManageConfirm_=false;return "";}
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Accept&&storeDetails_&&!storeVisible_.empty()){
+                if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+                if(!storeManageConfirm_){storeManageConfirm_=true;notice_="A novamente confirma; arquivos serao preservados.";return "";}
+                storeManageConfirm_=false;StopFtp();
+                const StoreItem item=store_.Items()[storeVisible_[storeRow_]];
+                std::string detail;bool ok=false;
+                if(storeManageRow_==0){ok=store_.ArchiveInstalled(item,detail);notice_=ok?"Aplicativo removido da biblioteca; backup preservado.":"Backup recusado; pasta indisponivel ou limite atingido.";}
+                else if(storeManageRow_==1){ok=store_.RestoreInstalled(item,detail);notice_=ok?"Backup restaurado; versao anterior preservada.":detail;}
+                else{ok=store_.ArchivePackage(item,detail);notice_=ok?"Pacote anterior arquivado. START baixa novo pacote.":"Pacote indisponivel ou limite de backups.";}
+                RecordEvent(ok?"Gerenciamento Store concluido":"Gerenciamento Store recusado");
+            }
+#endif
+            return "";
+        }
         if(key!=Search&&notice_=="R3 novamente: confirmar instalacao?")notice_.clear();
         if(key==Back) {
             if(storeConfirm_)storeConfirm_=false;
@@ -907,6 +926,9 @@ std::string ConsoleHome::Press(Key key) {
                 notice_="Fila nativa disponivel no XSDK HTTPS.";
 #endif
                 storeConfirm_=false;return "";
+            }
+            if(key==PageDown && store_.Progress(item).state!=StoreProgress::NativePaused&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")){
+                storeManage_=true;storeManageConfirm_=false;storeManageRow_=0;storeConfirm_=false;notice_.clear();return "";
             }
             if(key==PageDown && store_.Progress(item).state==StoreProgress::NativePaused){
                 // Explicit two-press discard, separate from removing a PC request.
@@ -1590,6 +1612,19 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(70,417,"Nenhum jogo ou banco Aurora sera alterado.",22,Muted,1130);
     c.Text(48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
 }
+void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
+    c.Text(55,250,item.name+" | Gerenciar",28,White,1150);
+    const char* actions[]={"Desinstalar (arquivar pasta e dados)","Restaurar ultimo backup","Arquivar pacote baixado"};
+    const bool ready[]={store_.InstalledFolder(item),store_.BackupAvailable(item),store_.PackagePresent(item)};
+    for(int i=0;i<3;++i){
+        const int y=305+i*69;
+        panel(c,55,y,1158,58,Panel,i==storeManageRow_);
+        c.Text(70,y+9,actions[i],22,ready[i]?White:Muted,850);
+        c.Text(935,y+9,ready[i]?"Disponivel":"Indisponivel",18,ready[i]?Lime:Muted,265);
+    }
+    c.Text(55,535,"Backups em UserFiles/StoreBackups | nenhum arquivo apagado",19,Muted,1150);
+    c.Text(55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
+}
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     c.Text(44,78,"INFINITY Store",40,White,1175);
     c.Text(48,133,"Catalogos autorizados | Download nativo experimental",21,Muted,1175);
@@ -1604,10 +1639,11 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(48,320,"Configure aurorax-store.tsv com fontes e licencas autorizadas.",20,Muted,1175);
     } else if(storeDetails_) {
         const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
+        if(storeManage_){DrawStoreManage(c,item);return;}
         c.Text(55,260,item.name,32,White,1150);
         c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
-        c.Text(55,415,store_.Installed(item)?"Instalado (presenca local)":store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
+        c.Text(55,415,store_.Installed(item)?"Instalado (presenca local)":store_.InstalledFolder(item)?"Outra versao local | R3 atualiza com backup":store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
             store_.NativeQueued(item)?"Na fila nativa":store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
         if(item.category=="translation") {
             char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
@@ -1617,8 +1653,9 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
                 "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
         } else c.Text(55,470,item.url,18,Muted,1150);
 #if defined(INFINITY_XSDK_HTTPS)
-        c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar XEX/ZIP":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
+        c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar/atualizar XEX/ZIP | RB Gerenciar":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
 #endif
+        c.Text(55,535,"RB Gerenciar (ou descartar parcial) | LB Fila nativa",18,Muted,1150);
         c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover PC | B Voltar",21,Lime,1150);
         return;
     } else {

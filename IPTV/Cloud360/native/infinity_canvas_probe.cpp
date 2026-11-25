@@ -269,7 +269,7 @@ int main(){
                 };
                 std::string error;
 #ifdef INFINITY_STORE_ZIP
-                const bool success=StoreInstallPackage(workspace,pending,dir,progress,error);
+                const bool success=StoreInstallManaged(workspace,pending,dir,progress,error);
 #else
                 const bool success=StoreInstallXex(workspace,pending,dir,progress,error);
 #endif
