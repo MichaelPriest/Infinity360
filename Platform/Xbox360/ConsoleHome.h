@@ -231,6 +231,8 @@ private:
     bool storeInstallPending_=false;
     bool storeProviders_=false,providerPending_=false;
     int providerRow_=0;
+    std::string storeSource_="*";
+    std::string StoreSourceLabel()const;
     StoreProvider providerRequest_;
     void DrawProviders(HomeCanvas& c) const;
     bool storeManage_=false,storeManageConfirm_=false;

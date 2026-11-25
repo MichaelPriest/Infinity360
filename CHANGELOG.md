@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.39 — Central de fontes (sem build)
+
+- Fontes independentes, filtro real por ID, sincronização apenas para TSV configurado.
+- Series360, X-Store e Andromeda visíveis como pendentes, sem endpoints inventados.
+- Catálogo local e XboxUnity preservados.
+
 ## V0.2.38 — Catálogo Homebrew e vídeo (sem build)
 
 - Seis itens oficiais com metadados fixados, fontes e allowlist; empacotamento substitui demo.

@@ -8,3 +8,9 @@ Starship | CC0-1.0 | https://github.com/xenosworks/starship-xenon | Your US 1.0 
 CTR360 | GPL-3.0 | https://github.com/dougieprishpreed/ctr360 | assets\ctr-u.bin from the PC converter
 Homebrew App Store | MIT | https://github.com/xenosworks/homebrew-app-store | Sem dados externos declarados
 Os pacotes nao estao embutidos. A assinatura do catalogo upstream nao foi verificada localmente; os hashes sao do snapshot revisado. ZIPs sem default.xex exigem instalacao manual; dados comerciais nao incluidos.
+
+Fontes de referencia solicitadas (sem API homologada):
+Series360: projeto e distribuicao do dashboard; endpoint de catalogo ainda nao confirmado.
+Freestyle Rev800 / X-Store: referencia funcional; endpoint e direitos de distribuicao ainda nao confirmados.
+Nexus Andromeda: https://github.com/DevIshimura/Nexus (projeto; nao e endpoint TSV).
+IDs reservados para configuracao de catalogos autorizados: series360, xstore, andromeda.

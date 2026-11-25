@@ -33,3 +33,7 @@ Na lista Store, LB alterna entre a área local e workspaces graváveis HDD/USB0/
 ## V0.2.38 — Catálogo inicial
 
 O snapshot oficial Homebrew App Catalogue 88542fda8a098b00fc4c37b9c70a4cb9ba35730e oferece seis itens no catálogo local da próxima instalação. Ver FONTES.txt. Não há download automático; o usuário opta por HTTPS e escrita. Downloads de assets GitHub permitem até dois redirects manuais somente para release-assets.githubusercontent.com ou objects.githubusercontent.com se ambos hosts forem explicitamente autorizados, HTTPS/443 e validação de tamanho e SHA-256 preservadas. Metadados remotos continuam sem redirects. Não é integração dinâmica ou verificação de assinatura do catálogo upstream. O instalador atual exige default.xex na raiz; quatro dos seis pacotes têm outros nomes e requerem instalação manual. Os pacotes não incluem dados comerciais fornecidos pelo usuário. Homologação pendente.
+
+## V0.2.39 — Fontes independentes
+
+R3 abre Central de fontes. A filtra o catálogo por origem (inclusive fonte vazia); START sincroniza apenas uma linha configurada e validada; X volta a todos; Y relê. Use IDs `series360`, `xstore`, `andromeda` em `infinity360-providers.tsv` para associar um catálogo HTTPS TSV autorizado e compatível com o parser, tamanho e SHA-256 exatos. Não é integração das APIs originais: enquanto faltarem os endpoints e autorização, a origem fica vazia. Outros IDs continuam aparecendo como fontes independentes. Nenhuma fonte é consultada automaticamente.

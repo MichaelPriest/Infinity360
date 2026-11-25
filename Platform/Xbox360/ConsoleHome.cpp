@@ -1,6 +1,7 @@
 ﻿#include "ConsoleHome.h"
 #include "DashboardLayout.h"
 #include "GameGrid.h"
+#include "StoreSourceDirectory.h"
 #include "InfinityVersion.h"
 #include "DiscIdentity.h"
 #include "ArtImport.h"
@@ -853,7 +854,7 @@ void ConsoleHome::RebuildStore() {
     static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc","translation"};
     storeVisible_.clear();
     for(size_t i=0;i<store_.Items().size();++i)
-        if(storeTab_==0||store_.Items()[i].category==tabs[storeTab_])storeVisible_.push_back(i);
+        if((storeTab_==0||store_.Items()[i].category==tabs[storeTab_])&&StoreSourceDirectory::Matches(storeSource_,store_.Items()[i]))storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
 }
 bool ConsoleHome::StartNativeStore(const StoreItem& item){
@@ -890,7 +891,7 @@ bool ConsoleHome::TakeProviderRequest(StoreProvider& provider){
     providerPending_=false;provider=providerRequest_;return true;
 }
 void ConsoleHome::ProviderResult(const std::string& message,bool success){
-    store_.Load();storeRow_=0;RebuildStore();clampRow(providerRow_,store_.Providers().size());
+    store_.Load();storeRow_=0;RebuildStore();clampRow(providerRow_,StoreSourceDirectory::Rows(store_.Providers()).size());
     notice_=message;RecordEvent(success?"Catalogo remoto sincronizado":"Sincronizacao recusada");
 }
 bool ConsoleHome::TakeNativeStoreRequest(StoreItem& item) {
@@ -998,14 +999,28 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Back){storeProviders_=false;notice_.clear();return "";}
             if(key==Refresh){store_.Load();providerRow_=0;RebuildStore();notice_="Configuracao e caches recarregados.";return "";}
             const auto& providers=store_.Providers();
+            const auto rows=StoreSourceDirectory::Rows(providers);
+            clampRow(providerRow_,rows.size());
             if(key==Up&&providerRow_>0)--providerRow_;
-            if(key==Down&&static_cast<size_t>(providerRow_+1)<providers.size())++providerRow_;
-#if defined(INFINITY_XSDK_HTTPS)
-            if(key==Accept&&!providers.empty()){
-                if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
-                providerRequest_=providers[providerRow_];providerPending_=true;notice_="Sincronizando catalogo autorizado.";
+            if(key==Down&&static_cast<size_t>(providerRow_+1)<rows.size())++providerRow_;
+            const auto& selected=rows[providerRow_];
+            if(key==Favorite){
+                storeSource_="*";storeRow_=0;RebuildStore();storeProviders_=false;notice_.clear();return "";
             }
+            if(key==Accept){
+                if(!selected.filter){notice_="XboxUnity: abra detalhes de um jogo para capas ou TU.";return "";}
+                storeSource_=selected.id;storeTab_=0;storeRow_=0;RebuildStore();storeProviders_=false;
+                notice_=storeVisible_.empty()?"Fonte sem itens aprovados. Configure um catalogo TSV.":"";return "";
+            }
+            if(key==Guide){
+                if(selected.provider<0){notice_="Fonte sem endpoint TSV aprovado; consulte FONTES.txt.";return "";}
+#if defined(INFINITY_XSDK_HTTPS)
+                if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+                providerRequest_=providers[selected.provider];providerPending_=true;notice_="Sincronizando catalogo autorizado.";
+#else
+                notice_="Sincronizacao nativa indisponivel.";
 #endif
+            }
             return "";
         }
         if(storeManage_){
@@ -2248,38 +2263,30 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
     c.Text(55,535,"Backups no destino Store | nenhum arquivo apagado",19,Muted,1150);
     c.Text(55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
 }
+std::string ConsoleHome::StoreSourceLabel()const{
+    for(const auto& row:StoreSourceDirectory::Rows(store_.Providers()))if(row.id==storeSource_)return row.name;
+    return storeSource_;
+}
 void ConsoleHome::DrawProviders(HomeCanvas& c) const{
-    c.Text(44,78,"INFINITY Store | Provedores",37,White,1175);
-    c.Text(48,136,"Homebrew App Catalogue | XboxUnity | Provedores TSV",21,Muted,1175);
-    const auto& providers=store_.Providers();
-    if(!store_.ProvidersValid())c.Text(48,245,"Configuracao de provedores invalida.",25,White,1170);
-    else if(providers.empty()){
-        panel(c,45,190,1189,110,Panel,false);
-        c.Text(60,201,"Homebrew App Catalogue",26,White,1150);
-        c.Text(60,238,"Catalogo local incluido | github.com/xenosworks/homebrew-app-catalogue",19,Muted,1150);
-        panel(c,45,310,1189,96,Panel,false);
-        c.Text(60,320,"XboxUnity",26,White,1150);
-        c.Text(60,354,"Capas e Title Updates | xboxunity.net",19,Muted,1150);
-        c.Text(48,443,"Provedores adicionais: configure infinity360-providers.tsv e hosts.",20,Muted,1170);
-        c.Text(48,480,"FONTES.txt: links oficiais, licencas e requisitos dos pacotes.",18,Muted,1170);
+    c.Text(44,78,"INFINITY Store | Central de fontes",37,White,1175);
+    c.Text(48,136,"Abertura por fonte | HTTPS autorizado | SHA-256",20,Muted,1175);
+    const auto rows=StoreSourceDirectory::Rows(store_.Providers());
+    const int first=providerRow_/6*6;
+    for(int i=first;i<first+6&&static_cast<size_t>(i)<rows.size();++i){
+        const auto& p=rows[i];const int y=182+(i-first)*65;
+        panel(c,45,y,1189,58,Panel,i==providerRow_);
+        c.Text(60,y+3,p.name,23,White,800);
+        c.Text(60,y+30,p.note,17,Muted,850);
+        c.Text(950,y+12,p.id==storeSource_?"Selecionado":p.provider>=0?"Configurado":p.id=="@unity"?"Integrado":p.id.empty()||p.id=="*"?"Local":"Pendente",17,p.id==storeSource_?Lime:Muted,270);
     }
-    else{
-        const int first=(providerRow_/5)*5;
-        for(int i=first;i<first+5&&static_cast<size_t>(i)<providers.size();++i){
-            const auto& p=providers[i];const int y=190+(i-first)*73;
-            panel(c,45,y,1189,65,Panel,i==providerRow_);
-            c.Text(60,y+6,p.name,24,White,820);
-            c.Text(60,y+35,p.id+" | "+(p.cached?number(p.items)+" itens em cache":"Sem cache aprovado"),18,Muted,820);
-            c.Text(915,y+14,p.cached?"Disponivel offline":"Sincronizar",20,p.cached?Lime:Muted,285);
-        }
-    }
-    c.Text(48,590,"A Sincronizar selecionado | Y Recarregar local | B Voltar",20,Lime,1175);
+    if(!store_.ProvidersValid())c.Text(45,575,"Configuracao externa invalida; sem sincronizacao.",17,Muted,1170);
+    c.Text(45,602,"A Abrir fonte | START Sincronizar | X Todos | Y Recarregar | B Voltar",18,Lime,1175);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
     if(layout_&&!storeManage_){DrawModernStore(c);return;}
     c.Text(44,78,"INFINITY Store",40,White,1175);
-    c.Text(48,133,"Catalogos autorizados | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
+    c.Text(48,133,StoreSourceLabel()+" | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
@@ -3810,7 +3817,7 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
 }
 void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     c.Text(44,78,"INFINITY Store",40,White,1175);
-    c.Text(48,133,std::string(c.Tr("Catalogos autorizados"))+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
+    c.Text(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i){
         const int x=45+i*149;panel(c,x,171,140,42,Panel,i==storeTab_);
