@@ -1,4 +1,5 @@
 #include "XsdkDownload.h"
+#include "UnityStage.h"
 #include "DownloadRange.h"
 #include <cctype>
 #include <curl/curl.h>
@@ -224,4 +225,59 @@ std::string XsdkUnityUpdates(const XboxExecutionInfo& info,const std::string& ro
     if(!fetched)return error;
     success=UnityCatalog::ParseUpdates(data,updates);
     return success?"Lista XboxUnity recebida; compatibilidade ainda nao confirmada.":"Resposta XboxUnity invalida.";
+}
+
+namespace {
+struct TuTransfer {
+    const std::function<bool(const unsigned char*,size_t)>& write;
+    const std::function<bool(unsigned long long,unsigned long long)>& progress;
+    unsigned long long bytes,done=0;
+};
+size_t tuBody(char* bytes,size_t size,size_t count,void* opaque){
+    auto& t=*static_cast<TuTransfer*>(opaque);
+    if(size&&count>std::numeric_limits<size_t>::max()/size)return 0;
+    const size_t n=size*count;
+    if(n>32768||n>t.bytes-t.done||!t.write(reinterpret_cast<unsigned char*>(bytes),n))return 0;
+    t.done+=n;return n;
+}
+int tuStatus(void* opaque,curl_off_t,curl_off_t,curl_off_t,curl_off_t){
+    auto& t=*static_cast<TuTransfer*>(opaque);return t.progress(t.done,t.bytes)?0:1;
+}
+}
+std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& selected,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
+    success=false;
+    std::vector<UnityUpdate> current;bool listed=false;
+    auto message=XsdkUnityUpdates(info,root,progress,current,listed);
+    if(!listed)return message;
+    UnityUpdate item{};
+    for(const auto& candidate:current)if(candidate.id==selected.id)item=candidate;
+    if(!item.id||item.url.empty()||item.url!=selected.url||!item.bytes||item.bytes!=selected.bytes)return "Catalogo mudou; consulte e confirme novamente.";
+    StoreItem source{};source.url=item.url;
+    if(!StoreNativeSource(source,root))return "Host de TU nao autorizado.";
+    std::string response,md5;bool fetched=false;
+    message=fetchMetadata(UnityCatalog::Md5Url(item.id),4096,false,root,progress,response,fetched);
+    if(!fetched||!UnityCatalog::ParseMd5(response,md5))return "MD5 XboxUnity indisponivel.";
+    FileWorkspace ws(root);std::string error;
+    success=UnityStageUpdate(ws,info,item,md5,root,[&](const std::function<bool(const unsigned char*,size_t)>& write){
+        if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;
+        CURL* curl=curl_easy_init();
+        if(!curl){curl_global_cleanup();return false;}
+        bool options=true;TuTransfer t{write,progress,item.bytes};
+        #define SET(k,v) do { if(curl_easy_setopt(curl,k,v)!=CURLE_OK)options=false; } while(0)
+        SET(CURLOPT_URL,item.url.c_str());SET(CURLOPT_PROTOCOLS_STR,"https");
+        SET(CURLOPT_FOLLOWLOCATION,0L);SET(CURLOPT_SSL_VERIFYPEER,1L);SET(CURLOPT_SSL_VERIFYHOST,2L);
+        SET(CURLOPT_SSLVERSION,long(CURL_SSLVERSION_TLSv1_2|CURL_SSLVERSION_MAX_TLSv1_2));
+        SET(CURLOPT_CAINFO,"game:/cacert.pem");SET(CURLOPT_PROXY,"");SET(CURLOPT_NETRC,long(CURL_NETRC_IGNORED));
+        SET(CURLOPT_CONNECTTIMEOUT,15L);SET(CURLOPT_TIMEOUT,600L);SET(CURLOPT_LOW_SPEED_LIMIT,1024L);SET(CURLOPT_LOW_SPEED_TIME,30L);
+        SET(CURLOPT_FAILONERROR,1L);SET(CURLOPT_MAXFILESIZE_LARGE,static_cast<curl_off_t>(item.bytes));
+        SET(CURLOPT_HTTP_VERSION,long(CURL_HTTP_VERSION_1_1));SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.9.1");
+        SET(CURLOPT_WRITEFUNCTION,tuBody);SET(CURLOPT_WRITEDATA,&t);SET(CURLOPT_XFERINFOFUNCTION,tuStatus);SET(CURLOPT_XFERINFODATA,&t);SET(CURLOPT_NOPROGRESS,0L);
+        #undef SET
+        const CURLcode result=options?curl_easy_perform(curl):CURLE_FAILED_INIT;
+        long code=0;curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&code);
+        curl_easy_cleanup(curl);curl_global_cleanup();
+        return result==CURLE_OK&&code==200&&t.done==item.bytes;
+    },progress,error);
+    return success?"TU verificada em UserFiles/TitleUpdates; nao ativada.":error;
 }

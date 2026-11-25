@@ -13,3 +13,6 @@ std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& ro
 
 std::string XsdkUnityUpdates(const XboxExecutionInfo& info,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::vector<UnityUpdate>& updates,bool& success);
+
+std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& selected,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);

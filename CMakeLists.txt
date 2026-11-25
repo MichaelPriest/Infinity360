@@ -109,6 +109,6 @@ if(DEFINED INFINITY_MINIZ_DIR AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3
     add_test(NAME store_zip COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/StoreZipTests.py $<TARGET_FILE:store_zip_probe>)
 endif()
 
-add_executable(unity_catalog_tests Tests/UnityCatalogTests.cpp Platform/Xbox360/UnityCatalog.cpp)
+add_executable(unity_catalog_tests Tests/UnityCatalogTests.cpp Platform/Xbox360/UnityCatalog.cpp Platform/Xbox360/MediaUrl.cpp)
 target_include_directories(unity_catalog_tests PRIVATE Platform/Xbox360 Source)
 add_test(NAME unity_catalog COMMAND unity_catalog_tests)

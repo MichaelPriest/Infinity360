@@ -6,7 +6,15 @@ int main(){
     info.baseVersion=0;assert(UnityCatalog::UpdatesUrl(info).empty());
     std::vector<UnityUpdate> rows;
     assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"version":"2","filesize":"12345","url":"http://untrusted.example/a","other":{"x":[1,2]}}])",rows));
-    assert(rows.size()==1&&rows[0].id==7&&rows[0].version=="2"&&rows[0].bytes==12345);
+    assert(rows.size()==1&&rows[0].id==7&&rows[0].version=="2"&&rows[0].bytes==12345&&rows[0].url.empty());
+    assert(UnityCatalog::FileUrl("http://xboxunity.net/api/file/7")=="https://xboxunity.net/api/file/7");
+    assert(UnityCatalog::FileUrl("https://xboxunity.net.evil.example/file").empty());
+    assert(UnityCatalog::FileUrl("https://xboxunity.net:444/file").empty());
+    assert(UnityCatalog::FileUrl("https://xboxunity.net/file#fragment").empty());
+    std::string md5;
+    assert(UnityCatalog::ParseMd5(R"({"md5":"D41D8CD98F00B204E9800998ECF8427E"})",md5)&&md5=="d41d8cd98f00b204e9800998ecf8427e");
+    assert(!UnityCatalog::ParseMd5(R"({"md5":"invalid"})",md5));
+    assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"filesize":7000,"url":"http://xboxunity.net/api/file/7"}])",rows)&&rows[0].url=="https://xboxunity.net/api/file/7");
     assert(UnityCatalog::ParseUpdates("[]",rows)&&rows.empty());
     assert(!UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7},{"TitleUpdateID":"7"}])",rows));
     assert(!UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"TitleUpdateID":8}])",rows));

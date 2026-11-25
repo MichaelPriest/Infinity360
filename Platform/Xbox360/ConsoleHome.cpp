@@ -695,7 +695,7 @@ void ConsoleHome::RefreshTitleMetadata() {
 
 void ConsoleHome::OpenContent() {
     contentActive_=true;
-    unityActive_=false;unityPending_=false;unityUpdates_.clear();unityRow_=0;
+    unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
     contentItems_.clear();trainers_.clear();trainerConfirm_=false;
@@ -1039,11 +1039,18 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(contentActive_) {
         if(unityActive_){
-            if(key==Back){unityActive_=false;notice_.clear();return "";}
+            if(key==Back){if(unityConfirm_)unityConfirm_=false;else unityActive_=false;notice_.clear();return "";}
+            if(key!=Accept)unityConfirm_=false;
             if(key==Up&&unityRow_>0)--unityRow_;
             if(key==Down&&static_cast<size_t>(unityRow_+1)<unityUpdates_.size())++unityRow_;
 #if defined(INFINITY_XSDK_HTTPS)
             if(key==Refresh&&!TransferRunning()){unityPending_=true;notice_="Consultando XboxUnity.";}
+            if(key==Accept&&!unityUpdates_.empty()&&!TransferRunning()){
+                const auto& selected=unityUpdates_[unityRow_];
+                if(selected.url.empty()||!selected.bytes||!contentInfo_.mediaId){notice_="TU sem fonte, tamanho ou Media ID verificavel.";unityConfirm_=false;return "";}
+                if(!unityConfirm_){unityConfirm_=true;notice_="A novamente confirma download para staging, sem ativacao.";return "";}
+                unityConfirm_=false;unityDownload_=selected;unityDownloadPending_=true;
+            }
 #endif
             return "";
         }
@@ -1832,6 +1839,13 @@ bool ConsoleHome::TakeUnityRequest(XboxExecutionInfo& info){
     if(!unityPending_)return false;
     unityPending_=false;info=contentInfo_;return true;
 }
+bool ConsoleHome::TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update){
+    if(!unityDownloadPending_)return false;
+    unityDownloadPending_=false;info=contentInfo_;update=unityDownload_;return true;
+}
+void ConsoleHome::UnityDownloadResult(const std::string& message,bool success){
+    notice_=message;RecordEvent(success?"TU salva em staging":"Download TU recusado");
+}
 void ConsoleHome::UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success){
     if(success){unityUpdates_=updates;unityRow_=0;}
     notice_=message;RecordEvent(success?"XboxUnity TU consultado":"Consulta XboxUnity falhou");
@@ -1848,7 +1862,7 @@ void ConsoleHome::DrawUnity(HomeCanvas& c) const{
         c.Text(60,y+6,"TU ID "+number(tu.id)+" | "+(tu.version.empty()?"Versao nao informada":tu.version),23,White,840);
         c.Text(905,y+12,tu.bytes?StorageInfo::FormatBytes(tu.bytes):"Tamanho desconhecido",18,Muted,300);
     }
-    c.Text(48,590,"Y Consultar | B Voltar | Somente metadados, sem download/ativacao",19,Lime,1175);
+    c.Text(48,590,unityConfirm_?"A Confirmar download | B Cancelar":"A Baixar TU verificada | Y Consultar | B Voltar | Sem ativacao",19,Lime,1175);
 }
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
     if(unityActive_){DrawUnity(c);return;}

@@ -29,6 +29,8 @@ public:
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
     bool TakeUnityRequest(XboxExecutionInfo& info);
+    bool TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update);
+    void UnityDownloadResult(const std::string& message,bool success);
     void UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success);
     void ProviderResult(const std::string& message,bool success);
     bool TakeStoreInstallRequest(StoreItem& item);
@@ -138,7 +140,8 @@ private:
     std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
     bool contentActive_, contentKnown_;
-    bool unityActive_=false,unityPending_=false;
+    bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;
+    UnityUpdate unityDownload_;
     int unityRow_=0;
     std::vector<UnityUpdate> unityUpdates_;
     void DrawUnity(HomeCanvas& c) const;
