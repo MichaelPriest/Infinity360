@@ -188,3 +188,22 @@ Biblioteca > jogo GOD/XBLA > A > confirmar. Exige enable-xex-launch.txt e enable
 
 ## 0.2.9 — importacao GOD/XBLA
 Sistema > DVD > Importar GOD/XBLA. Coloque pacote original autorizado e pasta .data completa (GOD) em MenuPreview/UserFiles/PackageImport. Manifesto MenuPreview/infinity360-package-import.txt: uma linha com nome hexadecimal original, max 37 caracteres. Habilite enable-package-import.txt (ENABLE-PACKAGE-IMPORT) e escrita. A duas vezes confirma, B cancela. Copia header e fragmentos com SHA-256 e releitura, max 16 GiB, reserva espaco, publica pasta inteira em UserFiles/PackageLibrary/<slot>/<TitleID>/<tipo> sem sobrescrever e atualiza biblioteca. Origem e licencas intactas. Verificacao de copia nao autentica o pacote; montagem depende XAM. Limite 256 slots. Conversao DVD nativa ainda nao implementada: iso2god-rs (MIT, https://github.com/iliazeus/iso2god-rs) serve como referencia desktop, nao e executavel PowerPC XSDK. DVD Extract e retorno NXE permanecem. Testes sinteticos de importacao, ausencia de fragmento, cancelamento e colisao.
+
+## 0.2.10 — DVD para GOD
+
+Em **Sistema → DVD → DVD para GOD**, use cima/baixo para escolher HDD, USB0, USB1 ou USB2. **A** duas vezes confirma o disco e o destino. **B** cancela durante a leitura, gravação ou verificação. A extração e a conversão usam os mesmos dois arquivos de configuração em `MenuPreview`.
+
+| Arquivo | Conteúdo da primeira linha |
+| --- | --- |
+| `enable-file-writes.txt` | `ENABLE-FILE-WRITES` |
+| `enable-dvd-install.txt` | `ENABLE-DVD-INSTALL` |
+
+A dashboard reconstrói o sistema de arquivos XDVDFS a partir de `dvd:/` e grava por blocos. Diretórios vazios, arquivos vazios e a identificação de cada disco são preservados. A saída usa o formato SVOD com fragmentos `Data0000`, `Data0001` e seguintes. A releitura confere os blocos, as tabelas SHA-1, o vínculo entre fragmentos e o cabeçalho. A conversão não precisa de ISO intermediária, computador ou outra dashboard.
+
+A biblioteca lista o pacote do dispositivo escolhido em `Infinity360Files/PackageLibrary/<slot>/<TitleID>/00007000/<MediaID>`. A publicação é exclusiva. Uma segunda tentativa de instalar o mesmo disco informa que ele já existe. O seletor multidisco usa Title ID, versão-base e número do disco tanto para títulos XEX quanto para GOD.
+
+A imagem reconstruída pode ter setores em posições diferentes das do DVD original. Jogos que acessam setores por endereço fixo precisam de teste específico. Os campos de assinatura e licença do novo cabeçalho ficam vazios. O XAM do console decide se aceita a montagem e a execução. Leitura óptica, montagem, execução e retorno à dashboard aguardam teste físico.
+
+O teste `disc_god` recupera o volume por um leitor independente, confere todos os arquivos e cobre a fronteira entre dois fragmentos, dois discos com o mesmo Media ID, falta de permissão, cancelamento, troca de mídia, dano a um bloco e instalação duplicada.
+
+O fluxo de instalação foi comparado com o [script público da Aurora](https://gist.github.com/MobCat/533e9d9de808096886ce7595debbd19e). O layout e a cadeia de hashes foram confrontados com [iso2god-rs](https://github.com/iliazeus/iso2god-rs/tree/76207d7d7f89f551c7a5769560c0073e9ffe50e9/src/god) e com o [leitor SVOD do Xenia](https://github.com/xenia-project/xenia/blob/master/src/xenia/vfs/devices/stfs_container_device.cc).

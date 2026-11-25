@@ -7,6 +7,12 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 > O projeto não inclui exploits, chaves, conteúdo protegido ou meios de contornar segurança. A apresentação Direct3D e o lançamento de títulos usam o projeto XDK. A validação em console e a leitura de temperaturas continuam pendentes.
 
+## Instalar um DVD no Xbox 360
+
+Na Alpha XSDK 0.2.10, abra **Sistema → DVD → DVD para GOD**, selecione o HDD ou USB e confirme com **A** duas vezes. A dashboard lê os arquivos da unidade óptica, gera um pacote SVOD e verifica os fragmentos antes de incluir o jogo na biblioteca do dispositivo. A extração para pasta XEX, a importação de pacotes existentes e a instalação pelo sistema continuam disponíveis nesse menu.
+
+O teste automatizado recupera os arquivos de um pacote gerado e compara o conteúdo com o DVD de teste. A leitura óptica e a aceitação do pacote pelo XAM ainda precisam de confirmação em um Xbox 360. [Versões para download](https://github.com/MichaelPriest/Infinity360/releases) · [Configuração do Xbox 360](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md#0210--dvd-para-god)
+
 ## Compilar e executar
 
 ```sh

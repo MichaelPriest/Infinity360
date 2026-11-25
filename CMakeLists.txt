@@ -30,6 +30,9 @@ add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/Co
     Platform/Xbox360/CloudTv.cpp Platform/Xbox360/MediaUrl.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(console_home_tests PRIVATE INFINITY_DISC_INSTALL=1)
+endif()
 add_test(NAME console_home COMMAND console_home_tests ${CMAKE_SOURCE_DIR}/Platform/Xbox360/Assets/home.tga)
 
 # End-to-end media test. The host supplies bytes over HTTP to the console decoder.
@@ -132,4 +135,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(package_import_tests PRIVATE Platform/Xbox360 Source)
     target_link_libraries(package_import_tests PRIVATE aurorax_core)
     add_test(NAME package_import COMMAND package_import_tests)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
+    find_package(OpenSSL QUIET COMPONENTS Crypto)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND AND TARGET OpenSSL::Crypto)
+    add_executable(disc_god_probe Tests/DiscGodProbe.cpp Platform/Xbox360/DiscGod.cpp
+        Platform/Xbox360/DiscImage.cpp Platform/Xbox360/FileWorkspace.cpp
+        Platform/Xbox360/PackageImport.cpp Platform/Xbox360/StorageInfo.cpp)
+    target_include_directories(disc_god_probe PRIVATE Platform/Xbox360 Source)
+    target_link_libraries(disc_god_probe PRIVATE aurorax_core OpenSSL::Crypto)
+    add_test(NAME disc_god COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/DiscGodTests.py $<TARGET_FILE:disc_god_probe>)
 endif()

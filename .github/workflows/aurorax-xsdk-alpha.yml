@@ -109,9 +109,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.9.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.2.9 - experimental hardware preview ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.2.10 - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "default.xex now opens the full experimental menu; aurorax_alpha_probe.xex remains the GPU diagnostic. No autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -123,6 +123,9 @@ jobs:
               "HTTPS Store opt-in: MenuPreview/enable-https-store.txt containing ENABLE-HTTPS-STORE.\n"
               "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
               "Console clock must be correct. HTTPS only; redirects refused; SHA-256 verified before publication.\n"
+              "Sistema > DVD > DVD para GOD: select HDD/USB, then press A twice.\n"
+              "Requires MenuPreview/enable-dvd-install.txt containing ENABLE-DVD-INSTALL and file writes.\n"
+              "Packages are saved under Infinity360Files/PackageLibrary on that device. XAM acceptance is untested.\n"
               "FTP LAN is opt-in: create MenuPreview/enable-ftp.txt containing ENABLE-FTP-LAN.\n"
               "Upload: enable-ftp-upload.txt containing ENABLE-FTP-UPLOAD, press X in Network. ALLO exact size <=32 MiB.\n"
               "Requires enable-file-writes.txt and private credentials in infinity360-ftp.txt (two lines).\n"
@@ -167,7 +170,7 @@ jobs:
           with ZipFile(dest) as archive:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
-          update = dest.parent / "Infinity360-Update-XSDK-0.2.9.pkg"
+          update = dest.parent / "Infinity360-Update-XSDK-0.2.10.pkg"
           with ZipFile(update, "w", ZIP_DEFLATED) as candidate, ZipFile(dest) as original:
               candidate.write(outputs["infinity_menu_preview.xex"], "default.xex")
               for name in original.namelist():
@@ -180,21 +183,21 @@ jobs:
           raw = update.read_bytes()
           assert 4096 <= len(raw) <= 64*1024*1024
           identity = "infinity-" + os.environ["GITHUB_SHA"][:12]
-          (dest.parent / "infinity360-update.tsv").write_text(f"{identity}\t0.2.9\t{len(raw)}\t{hashlib.sha256(raw).hexdigest()}\n")
+          (dest.parent / "infinity360-update.tsv").write_text(f"{identity}\t0.2.10\t{len(raw)}\t{hashlib.sha256(raw).hexdigest()}\n")
           print("Build XEX2 packaged:", dest)
           PY
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.2.9.zip > Infinity360-Alpha-XSDK-0.2.9.zip.sha256
+          sha256sum Infinity360-Alpha-XSDK-0.2.10.zip > Infinity360-Alpha-XSDK-0.2.10.zip.sha256
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.2.9
+          name: Infinity360-Alpha-XSDK-0.2.10
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.9.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.9.zip.sha256
-            IPTV/Cloud360/Infinity360-Update-XSDK-0.2.9.pkg
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip.sha256
+            IPTV/Cloud360/Infinity360-Update-XSDK-0.2.10.pkg
             IPTV/Cloud360/infinity360-update.tsv
           retention-days: 14
           if-no-files-found: error
@@ -208,12 +211,13 @@ jobs:
       - name: Compile and run portable suite
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg openssl
+          sudo apt-get install -y ffmpeg openssl libssl-dev
           git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
           git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
           cmake --build build --parallel 2
           ctest --test-dir build -N | grep -E "Test +#[0-9]+: store_zip"
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: disc_god"
           ctest --test-dir build --output-on-failure
 
   publish-prerelease:
@@ -230,7 +234,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.2.9
+          name: Infinity360-Alpha-XSDK-0.2.10
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
@@ -240,11 +244,11 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.2.9.zip.sha256
+          sha256sum -c Infinity360-Alpha-XSDK-0.2.10.zip.sha256
           python3 - <<'PY'
           from zipfile import ZipFile
           import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.2.9.zip") as z:
+          with ZipFile("Infinity360-Alpha-XSDK-0.2.10.zip") as z:
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
@@ -255,28 +259,28 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
           import hashlib, os
-          raw=Path("Infinity360-Update-XSDK-0.2.9.pkg").read_bytes()
-          assert Path("infinity360-update.tsv").read_text().strip().split("\t")==["infinity-"+os.environ["GITHUB_SHA"][:12],"0.2.9",str(len(raw)),hashlib.sha256(raw).hexdigest()]
-          with ZipFile("Infinity360-Update-XSDK-0.2.9.pkg") as z, ZipFile("Infinity360-Alpha-XSDK-0.2.9.zip") as full:
+          raw=Path("Infinity360-Update-XSDK-0.2.10.pkg").read_bytes()
+          assert Path("infinity360-update.tsv").read_text().strip().split("\t")==["infinity-"+os.environ["GITHUB_SHA"][:12],"0.2.10",str(len(raw)),hashlib.sha256(raw).hexdigest()]
+          with ZipFile("Infinity360-Update-XSDK-0.2.10.pkg") as z, ZipFile("Infinity360-Alpha-XSDK-0.2.10.zip") as full:
               assert z.testzip() is None
               assert z.read("default.xex")==full.read("infinity_menu_preview.xex")
           PY
-          tag="xsdk-v0.2.9-${GITHUB_SHA:0:12}"
+          tag="xsdk-v0.2.10-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.2.9 — experimental prerelease.
+          INFINITY 360 XSDK Alpha 0.2.10 — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
           Not hardware-homologated; do not replace your installed dashboard or enable autoboot.
           Read LEIA-ME-SEGURANCA.txt before testing. XEX launch and file writes are opt-in.
-          DVD method selector, verified XEX copy with disc identity lock, and explicit normal return to system for manual NXE installation. Authorized XEX/ZIP app installation, reversible uninstall, version backups and manually synced pinned HTTPS provider catalogs and native XboxUnity TU lookup/download, cover import, content backups, staged TU browser and console profile diagnostics. Experimental native MPEG-PS player with reduced GPU uploads, local themes, resident plugin diagnostics, backup recovery to personal staging and orphan queue cleanup. Experimental opt-in GOD/XBLA XAM mount provider; verified native GOD/XBLA package import; DVD-to-GOD conversion and other IPTV codecs remain pending.
+          Sistema > DVD > DVD para GOD converts the mounted DVD directly to a fragmented SVOD package on HDD or USB. The converter reads back and verifies the block hashes before publishing to the game library. DVD Extract, package import and the NXE handoff are available in the same menu. The multidisc selector recognizes both XEX and GOD copies. Tested with synthetic media on the host. Optical-drive operation and XAM mounting and launch still require a console.
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.2.9.zip Infinity360-Alpha-XSDK-0.2.9.zip.sha256 Infinity360-Update-XSDK-0.2.9.pkg infinity360-update.tsv \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.2.9 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" Infinity360-Alpha-XSDK-0.2.10.zip Infinity360-Alpha-XSDK-0.2.10.zip.sha256 Infinity360-Update-XSDK-0.2.10.pkg infinity360-update.tsv \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.2.10 (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

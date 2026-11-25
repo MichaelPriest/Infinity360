@@ -14,6 +14,7 @@
 #include "ContentInstall.h"
 #include "PackageImport.h"
 #include "DiscSet.h"
+#include "DiscInstaller.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
 #include "ResidentPlugins.h"
@@ -52,7 +53,7 @@ public:
     void UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success);
     void ProviderResult(const std::string& message,bool success);
     bool TakeStoreInstallRequest(StoreItem& item);
-    bool TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity);
+    bool TakeDiscInstallRequest(DiscInstallRequest& request);
     bool TakePackageImport(PackageLaunch::Ticket& ticket);
     void PackageImportResult(const std::string& message,bool success);
     bool TakeDiscSystemExit();
@@ -102,7 +103,9 @@ private:
     void DrawDiscInstall(HomeCanvas& c) const;
     bool packageImportPending_=false;
     PackageLaunch::Ticket packageImportTicket_{};
-    int discDestination_=0,discMode_=0;
+    enum DiscMethod { ExtractDvd, ConvertGod, ImportPackage, OpenSystem, DiscMethodCount };
+    int discDestination_=0,discMode_=ExtractDvd;
+    DiscInstallRequest pendingDisc_;
     bool discConfirm_=false,discPending_=false,discSystemExit_=false,discKnown_=false;
     XboxExecutionInfo discIdentity_{};
     StorageVolume discVolume_{};

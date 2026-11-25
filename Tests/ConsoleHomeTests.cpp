@@ -757,6 +757,37 @@ int main(int argc,char** argv) {
     trainerPut(64,0x12345678);trainerPut(68,0x20010002);trainerPut(76,0x4d5307e6);
     {std::ofstream out(trainerGame,std::ios::binary);
      out.write(reinterpret_cast<const char*>(trainerGameHeader.data()),trainerGameHeader.size());}
+#ifdef INFINITY_DISC_INSTALL
+    {
+        // Drive aliases are ordinary directories inside a private host fixture.
+        const auto previous=fs::current_path();
+        const auto drives=root/"DvdMenuFixture";
+        fs::create_directories(drives/"dvd:");fs::create_directory(drives/"hdd:");fs::create_directory(drives/"usb0:");
+        fs::copy_file(trainerGame,drives/"dvd:"/"default.xex");
+        fs::current_path(drives);
+        ConsoleHome dvdMenu(dir,roots);dvdMenu.Load();
+        for(auto key:{ConsoleHome::Right,ConsoleHome::Down,ConsoleHome::Right,ConsoleHome::Accept})dvdMenu.Press(key);
+        for(int i=0;i<6;++i)dvdMenu.Press(ConsoleHome::Right);
+        dvdMenu.Press(ConsoleHome::Accept); // DVD panel, initially Extract
+        dvdMenu.Press(ConsoleHome::Right);dvdMenu.Press(ConsoleHome::Accept); // Confirm GOD on HDD
+        DiscInstallRequest request;
+        assert(!dvdMenu.TakeDiscInstallRequest(request));
+        dvdMenu.Press(ConsoleHome::Down); // Changing destination invalidates the first confirmation
+        dvdMenu.Press(ConsoleHome::Accept);assert(!dvdMenu.TakeDiscInstallRequest(request));
+        dvdMenu.Press(ConsoleHome::Back);dvdMenu.Press(ConsoleHome::Accept);
+        assert(!dvdMenu.TakeDiscInstallRequest(request));
+        dvdMenu.Press(ConsoleHome::Accept);
+        assert(dvdMenu.TakeDiscInstallRequest(request) && request.format==DiscInstallRequest::Format::God);
+        assert(request.mount=="usb0:/" && request.identity.titleId==0x4d5307e6);
+        assert(!dvdMenu.TakeDiscInstallRequest(request));
+        dvdMenu.Press(ConsoleHome::Left);dvdMenu.Press(ConsoleHome::Accept);dvdMenu.Press(ConsoleHome::Accept);
+        assert(dvdMenu.TakeDiscInstallRequest(request) && request.format==DiscInstallRequest::Format::Extracted);
+        dvdMenu.Press(ConsoleHome::Left);dvdMenu.Press(ConsoleHome::Accept);dvdMenu.Press(ConsoleHome::Accept);
+        assert(dvdMenu.TakeDiscSystemExit());
+        fs::current_path(previous);
+    }
+#endif
+
     const fs::path trainerLauncher=trainerFolder/"trainer.xex";
     std::ofstream(trainerLauncher,std::ios::binary)<<"XEX2 fixture";
     const fs::path trainerManifest=trainerFolder/"trainer.axtrainer";

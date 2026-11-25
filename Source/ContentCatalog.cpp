@@ -141,6 +141,8 @@ bool ContentCatalog::ReadHeader(const std::string& path,XboxContentPackage& out)
     out.titleId=titleId;
     out.mediaId=be32(bytes+0x354);
     out.version=be32(bytes+0x358);
+    out.baseVersion=be32(bytes+0x35c);
+    out.discNumber=bytes[0x366];out.discCount=bytes[0x367];
     out.contentType=type;
     out.volumeType=descriptor;
     out.dataFileCount=be32(bytes+0x39d);
@@ -166,6 +168,10 @@ XboxTitleMetadata ContentCatalog::DescribeTitle(const std::string& path,bool pac
         result.titleId=info.titleId;
         result.mediaId=info.mediaId;
         result.version=info.version;
+        result.baseVersion=info.baseVersion;
+        if(info.discNumber && info.discNumber<=info.discCount) {
+            result.discNumber=info.discNumber;result.discCount=info.discCount;
+        }
         result.contentType=info.contentType;
         result.volumeType=info.volumeType;
         result.declaredBytes=info.sizeBytes;
@@ -280,7 +286,7 @@ std::vector<XboxContentPackage> ContentCatalog::Scan() const {
     return packages;
 }
 
-bool ContentCatalog::ReadExecutionInfo(const std::string& path,XboxExecutionInfo& out) {
+bool ContentCatalog::ReadExecutionInfo(const std::string& path,XboxExecutionInfo& out,ExecutionBytes* raw) {
     std::ifstream file(path.c_str(),std::ios::binary);
     if(!file) return false;
     unsigned char header[24];
@@ -306,6 +312,7 @@ bool ContentCatalog::ReadExecutionInfo(const std::string& path,XboxExecutionInfo
         info.titleId=be32(exec+12);
         info.discNumber=exec[18];info.discCount=exec[19];
         if(!info.titleId) return false;
+        if(raw)std::memcpy(*raw,exec,sizeof exec);
         out=info;
         return true;
     }

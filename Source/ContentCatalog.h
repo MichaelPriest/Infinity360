@@ -8,6 +8,7 @@ struct XboxContentPackage {
     std::string path, name;
     unsigned titleId, mediaId, contentType, version;
     unsigned volumeType, dataFileCount;
+    unsigned baseVersion, discNumber, discCount;
     unsigned long long sizeBytes;
 };
 
@@ -43,7 +44,8 @@ public:
     static XboxPackageCheck CheckPackage(const std::string& path);
     static const char* PackageStatus(XboxPackageCheck::Status status);
     // Reads the public XEX2 execution header; does not decrypt the image.
-    static bool ReadExecutionInfo(const std::string& path, XboxExecutionInfo& out);
+    using ExecutionBytes = unsigned char[24];
+    static bool ReadExecutionInfo(const std::string& path, XboxExecutionInfo& out, ExecutionBytes* raw = nullptr);
     std::vector<XboxContentPackage> Scan() const;
     // Extras only, scoped to one title: TU/DLC in common content; saves
     // in profile directories. No license, activation or file changes.

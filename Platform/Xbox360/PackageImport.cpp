@@ -15,20 +15,30 @@ namespace fs=std::filesystem;
 namespace PackageImport {
 namespace {
 std::string area(const std::string& root,const char* name){return FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),name);}
-bool slotName(const std::string& name){return name.size()==16&&name.find_first_not_of("0123456789abcdef")==std::string::npos;}
+bool slotName(const std::string& name){return (name.size()==16||name.size()==18)&&name.find_first_not_of("0123456789abcdef")==std::string::npos;}
 bool enabled(const std::string& root){
     std::ifstream file(FileWorkspace::Join(root,"enable-package-import.txt").c_str());std::string line;
     return bool(std::getline(file,line))&&line=="ENABLE-PACKAGE-IMPORT";
 }
 }
-std::vector<std::string> Roots(const std::string& root){
+std::vector<std::string> Slots(const std::string& personal){
     std::vector<FolderEntry> rows;std::vector<std::string> result;
-    const auto parent=area(root,"PackageLibrary");
+    const auto parent=FileWorkspace::Join(personal,"PackageLibrary");
     if(!ReadFolder(parent,rows))return result;
     for(const auto& row:rows){
         if(result.size()>=256)break;
         if(row.directory&&slotName(row.name))result.push_back(FileWorkspace::Join(parent,row.name));
     }
+    return result;
+}
+std::vector<std::string> Roots(const std::string& root){
+    auto result=Slots(FileWorkspace::Join(root,"UserFiles"));
+#ifdef __XSDK__
+    for(const char* mount:{"hdd:/","usb0:/","usb1:/","usb2:/"}){
+        const auto slots=Slots(FileWorkspace::Join(mount,"Infinity360Files"));
+        result.insert(result.end(),slots.begin(),slots.end());
+    }
+#endif
     return result;
 }
 bool Read(const FileWorkspace& ws,const std::string& root,PackageLaunch::Ticket& ticket,std::string& error){
@@ -56,7 +66,7 @@ bool Install(const FileWorkspace& ws,const std::string& root,const PackageLaunch
     if(!enabled(root)||!ws.CanWrite(area(root,"PackageImport")))return reject("Habilite escrita e enable-package-import.txt.");
     if(!Read(ws,root,current,error))return false;
     if(!PackageLaunch::Same(expected,current))return reject("Pacote mudou; confirme novamente.");
-    if(Roots(root).size()>=256)return reject("Limite de 256 pacotes gerenciados.");
+    if(Slots(FileWorkspace::Join(root,"UserFiles")).size()>=256)return reject("Limite de 256 pacotes gerenciados.");
     const auto source=current.package.path,name=source.substr(source.find_last_of("/\\")+1);
     struct Part{std::string relative;unsigned long long bytes;};std::vector<Part> parts;
     unsigned long long total=0;

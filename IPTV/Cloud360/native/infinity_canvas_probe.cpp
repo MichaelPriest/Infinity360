@@ -447,8 +447,9 @@ int main(){
                 menu.PackageImportResult(success?"Pacote importado; consulte Biblioteca.":error,success);
                 if(videoFailed){ok=false;break;}
             }
-            std::string mount;XboxExecutionInfo identity{};
-            if(menu.TakeDiscInstallRequest(mount,identity)){
+            DiscInstallRequest disc;
+            if(menu.TakeDiscInstallRequest(disc)){
+                const bool god=disc.format==DiscInstallRequest::Format::God;
                 menu.StopFtp();FileWorkspace workspace(dir);
                 bool videoFailed=false;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
@@ -457,20 +458,23 @@ int main(){
                     if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
-                    if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
+                    if(now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
-                    canvas.Text(48,100,"INFINITY 360 | Instalar DVD",36,WHITE,1180);
-                    canvas.Text(48,210,"Destino: "+mount,28,WHITE,1180);
-                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
+                    canvas.Text(48,100,god?"INFINITY 360 | DVD para GOD":"INFINITY 360 | Extrair DVD",36,WHITE,1180);
+                    canvas.Text(48,210,"Destino: "+disc.mount,28,WHITE,1180);
+                    const auto half=total/2;
+                    const std::string phase=half?(done>=half?"Verificando ":"Gravando "):"Lendo estrutura do DVD";
+                    canvas.Text(48,300,half?phase+StorageInfo::FormatBytes(done>=half?done-half:done)+" / "+StorageInfo::FormatBytes(half):phase,24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);
                     if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
-                    canvas.Text(48,560,"B Cancelar | Copia + verificacao de leitura",22,LIME,1180);
+                    canvas.Text(48,560,god?"B Cancelar | Fragmentos GOD e verificacao SHA-1":"B Cancelar | Copia e verificacao de leitura",22,LIME,1180);
                     if(!p.Show(canvas,true)){videoFailed=true;return false;}
                     return true;
                 };
                 std::string installed,error;
-                const bool success=InstallDiscFiles(workspace,dir,"dvd:/",mount,progress,installed,error,&identity);
-                menu.DiscInstallResult(success?"DVD instalado e verificado: "+installed:error,success);
+                const bool success=god?InstallDiscGod(workspace,dir,"dvd:/",disc.mount,progress,installed,error,disc.identity):
+                    InstallDiscFiles(workspace,dir,"dvd:/",disc.mount,progress,installed,error,&disc.identity);
+                menu.DiscInstallResult(success?(god?"GOD verificado na biblioteca de "+disc.mount:"DVD extraido e verificado em "+disc.mount):error,success);
                 if(videoFailed){ok=false;break;}
             }
             const bool dashboardUpdate=menu.TakeDashboardUpdate(pending);
