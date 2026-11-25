@@ -26,7 +26,7 @@ endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
 add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
-    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
+    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/UnityCatalog.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
     Platform/Xbox360/CloudTv.cpp Platform/Xbox360/MediaUrl.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
@@ -108,3 +108,7 @@ if(DEFINED INFINITY_MINIZ_DIR AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3
     target_link_libraries(store_zip_probe PRIVATE infinity_zip_reader aurorax_core)
     add_test(NAME store_zip COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/StoreZipTests.py $<TARGET_FILE:store_zip_probe>)
 endif()
+
+add_executable(unity_catalog_tests Tests/UnityCatalogTests.cpp Platform/Xbox360/UnityCatalog.cpp)
+target_include_directories(unity_catalog_tests PRIVATE Platform/Xbox360 Source)
+add_test(NAME unity_catalog COMMAND unity_catalog_tests)

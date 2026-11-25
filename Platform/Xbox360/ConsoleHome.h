@@ -9,6 +9,7 @@
 #include "NetworkInfo.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
+#include "UnityCatalog.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
 #include <map>
@@ -27,6 +28,8 @@ public:
     void StopFtp() {ftp_.Stop();}
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
+    bool TakeUnityRequest(XboxExecutionInfo& info);
+    void UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success);
     void ProviderResult(const std::string& message,bool success);
     bool TakeStoreInstallRequest(StoreItem& item);
     bool TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity);
@@ -135,6 +138,10 @@ private:
     std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
     bool contentActive_, contentKnown_;
+    bool unityActive_=false,unityPending_=false;
+    int unityRow_=0;
+    std::vector<UnityUpdate> unityUpdates_;
+    void DrawUnity(HomeCanvas& c) const;
     int contentTab_, contentRow_;
     XboxExecutionInfo contentInfo_;
     XboxTitleMetadata detailMetadata_;

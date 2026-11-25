@@ -155,25 +155,23 @@ int catalogProgress(void* opaque,curl_off_t,curl_off_t,curl_off_t,curl_off_t){
     return t.progress(t.data.size(),t.limit)?0:1;
 }
 }
-std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& root,
-    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
-    success=false;
+static std::string fetchMetadata(const std::string& url,unsigned long long limit,bool exact,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& data,bool& success){
+    success=false;data.clear();
     std::ifstream opt((root+"enable-https-store.txt").c_str());std::string marker;
     if(!std::getline(opt,marker)||marker!="ENABLE-HTTPS-STORE")return "HTTPS bloqueado.";
-    StoreItem source{};source.url=provider.url;
-    if(!provider.bytes||provider.bytes>256*1024||!StoreNativeSource(source,root))return "Host ou limite do provedor recusado.";
-    FileWorkspace ws(root);
-    if(!ws.CanWrite(FileWorkspace::Join(root,"UserFiles")))return "Habilite escrita na area pessoal.";
+    StoreItem source{};source.url=url;
+    if(!limit||limit>256*1024||!StoreNativeSource(source,root))return "Host ou limite recusado.";
     const std::string ca="game:/cacert.pem";
     {std::ifstream file(ca.c_str(),std::ios::binary|std::ios::ate);
      if(!file||file.tellg()<1024||file.tellg()>1024*1024)return "CA bundle ausente ou invalido.";}
-    if(!progress(0,provider.bytes))return "Sincronizacao cancelada.";
+    if(!progress(0,limit))return "Sincronizacao cancelada.";
     if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return "Falha ao inicializar HTTPS.";
     CURL* curl=curl_easy_init();
     if(!curl){curl_global_cleanup();return "Falha ao criar sessao HTTPS.";}
-    CatalogTransfer transfer{"",provider.bytes,progress};bool options=true;
+    CatalogTransfer transfer{"",limit,progress};bool options=true;
     #define SET(k,v) do { if(curl_easy_setopt(curl,k,v)!=CURLE_OK)options=false; } while(0)
-    SET(CURLOPT_URL,provider.url.c_str());
+    SET(CURLOPT_URL,url.c_str());
     SET(CURLOPT_PROTOCOLS_STR,"https");
     SET(CURLOPT_FOLLOWLOCATION,0L);
     SET(CURLOPT_SSL_VERIFYPEER,1L);
@@ -187,9 +185,9 @@ std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& ro
     SET(CURLOPT_LOW_SPEED_LIMIT,128L);
     SET(CURLOPT_LOW_SPEED_TIME,20L);
     SET(CURLOPT_FAILONERROR,1L);
-    SET(CURLOPT_MAXFILESIZE_LARGE,static_cast<curl_off_t>(provider.bytes));
+    SET(CURLOPT_MAXFILESIZE_LARGE,static_cast<curl_off_t>(limit));
     SET(CURLOPT_HTTP_VERSION,long(CURL_HTTP_VERSION_1_1));
-    SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.8.9");
+    SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.9.0");
     SET(CURLOPT_WRITEFUNCTION,catalogBody);
     SET(CURLOPT_WRITEDATA,&transfer);
     SET(CURLOPT_XFERINFOFUNCTION,catalogProgress);
@@ -200,9 +198,30 @@ std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& ro
     long status=0;curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&status);
     curl_easy_cleanup(curl);curl_global_cleanup();
     if(!options)return "Configuracao HTTPS indisponivel.";
-    if(result!=CURLE_OK||status!=200||transfer.data.size()!=provider.bytes)return "Sincronizacao incompleta; cache anterior preservado.";
-    if(!progress(provider.bytes,provider.bytes))return "Sincronizacao cancelada.";
-    StoreCatalog catalog(root);std::string error;
-    success=catalog.ImportProvider(provider,transfer.data,error);
+    if(result!=CURLE_OK||status!=200||(exact&&transfer.data.size()!=limit))return "Resposta HTTPS incompleta ou recusada.";
+    if(!progress(transfer.data.size(),limit))return "Consulta cancelada.";
+    data.swap(transfer.data);success=true;return "";
+}
+std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
+    success=false;FileWorkspace ws(root);
+    if(!ws.CanWrite(FileWorkspace::Join(root,"UserFiles")))return "Habilite escrita na area pessoal.";
+    std::string data;bool fetched=false;
+    auto error=fetchMetadata(provider.url,provider.bytes,true,root,progress,data,fetched);
+    if(!fetched)return error+" | Cache anterior preservado.";
+    StoreCatalog catalog(root);success=catalog.ImportProvider(provider,data,error);
     return success?"Catalogo verificado e salvo para uso offline.":error.empty()?"Catalogo recusado.":error;
+}
+std::string XsdkUnityUpdates(const XboxExecutionInfo& info,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::vector<UnityUpdate>& updates,bool& success){
+    success=false;updates.clear();
+    std::ifstream opt((root+"enable-xboxunity.txt").c_str());std::string marker;
+    if(!std::getline(opt,marker)||marker!="ENABLE-XBOXUNITY")return "Habilite enable-xboxunity.txt.";
+    const std::string url=UnityCatalog::UpdatesUrl(info);
+    if(url.empty())return "Title ID ou Base Version desconhecidos.";
+    std::string data;bool fetched=false;
+    const auto error=fetchMetadata(url,256*1024,false,root,progress,data,fetched);
+    if(!fetched)return error;
+    success=UnityCatalog::ParseUpdates(data,updates);
+    return success?"Lista XboxUnity recebida; compatibilidade ainda nao confirmada.":"Resposta XboxUnity invalida.";
 }

@@ -220,6 +220,27 @@ int main(){
             StoreItem pending;
 #ifdef INFINITY_XSDK_HTTPS
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}
+            XboxExecutionInfo unityInfo{};
+            if(menu.TakeUnityRequest(unityInfo)){
+                menu.StopFtp();bool success=false,videoFailed=false;
+                auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                const auto progress=[&](unsigned long long done,unsigned long long total){
+                    INPUT_STATE state{};
+                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    const auto now=std::chrono::steady_clock::now();
+                    if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
+                    last=now;canvas.Background();
+                    canvas.Text(48,100,"XboxUnity | Consultar Title Updates",36,WHITE,1180);
+                    canvas.Text(48,210,"Consultando metadados por HTTPS...",28,WHITE,1180);
+                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" recebidos",24,MUTED,1180);
+                    canvas.Text(48,560,"B Cancelar | Sem download ou ativacao de TU",22,LIME,1180);
+                    if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
+                };
+                std::vector<UnityUpdate> updates;
+                const auto result=XsdkUnityUpdates(unityInfo,dir,progress,updates,success);
+                menu.UnityResult(updates,result,success);
+                if(videoFailed){ok=false;break;}
+            }
             StoreProvider provider;
             if(menu.TakeProviderRequest(provider)){
                 menu.StopFtp();bool success=false,videoFailed=false;

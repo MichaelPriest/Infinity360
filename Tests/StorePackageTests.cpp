@@ -112,6 +112,9 @@ int main(){
     assert(fs::file_size(fs::path(installed)/"data/resource.bin")==12);
     assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
 #endif
+    // Isolate the new provider scenario from the deliberately malformed queue fixture.
+    fs::remove(root/"infinity360-native-queue.tsv");
+    fs::remove(root/"infinity360-native-queue.tsv.bak");
     // Pinned remote snapshots: exact digest, namespace, offline reload, tamper detection.
     const std::string catalogRow="demo\thomebrew\tRemote Demo\t1\t3\t"+digest+"\thttps://example.org/demo\tAuthorized fixture\n";
     StoreSha256 pin;pin.Update(reinterpret_cast<const unsigned char*>(catalogRow.data()),catalogRow.size());
