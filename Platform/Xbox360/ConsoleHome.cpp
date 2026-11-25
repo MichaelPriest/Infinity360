@@ -1288,6 +1288,17 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details && systemTab_==6){
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Up||key==Down){discDestination_=(discDestination_+(key==Down?1:3))%4;discConfirm_=false;}
+            if(key==Accept){
+                if(TransferRunning()){notice_="Conclua ou cancele a copia ativa.";return "";}
+                if(!discConfirm_){discConfirm_=true;notice_="Confirme apenas DVD de uso autorizado.";}
+                else{discConfirm_=false;discPending_=true;notice_="Preparando instalacao DVD.";}
+            }
+#endif
+            return "";
+        }
         if(page_==Details && systemTab_==0 && (key==PageUp||key==PageDown)) {
             const size_t pages=(storageVolumes_.size()+3)/4;
             if(pages)storagePage_=(storagePage_+pages+(key==PageDown?1:pages-1))%pages;
@@ -1334,11 +1345,12 @@ std::string ConsoleHome::Press(Key key) {
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
-            if(key==Right && systemTab_<5) ++systemTab_;
+            if(key==Right && systemTab_<6) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
                 else if(systemTab_==4)RefreshResidentPlugins();
+                else if(systemTab_==6){discConfirm_=false;discDestination_=0;}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -1734,6 +1746,33 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(48,601,"A Caminho | Y Atualizar | B Voltar | Nenhuma ativacao automatica",18,Lime,1175);
 }
 
+bool ConsoleHome::TakeDiscInstallRequest(std::string& mount){
+    if(!discPending_)return false;
+    discPending_=false;
+    static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+    mount=drives[discDestination_];return true;
+}
+void ConsoleHome::DiscInstallResult(const std::string& message,bool success){
+    if(success)ScanLibrary();
+    notice_=message;RecordEvent(success?"DVD copiado e verificado":"Instalacao DVD interrompida");
+}
+void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
+    c.Text(45,349,"Instalar a partir do DVD",28,White,1170);
+#if defined(INFINITY_XSDK_HTTPS)
+    XboxExecutionInfo info{};
+    if(ContentCatalog::ReadExecutionInfo("dvd:/default.xex",info)){
+        char id[80];std::sprintf(id,"Title %08X | Media %08X | Disco %u/%u",info.titleId,info.mediaId,info.discNumber,info.discCount);
+        c.Text(48,390,id,22,Lime,1170);
+    }else c.Text(48,390,"Insira DVD com default.xex acessivel.",22,Muted,1170);
+    static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+    c.Text(48,443,std::string("Destino: < ")+drives[discDestination_]+" > /Infinity360Files/Games",23,White,1170);
+    c.Text(48,488,"Copia os arquivos acessiveis e verifica cada arquivo.",20,Muted,1170);
+    c.Text(48,532,discConfirm_?"A Confirmar instalacao | B Cancelar":"Cima/Baixo Destino | A Preparar | B Voltar",21,Lime,1170);
+    c.Text(48,570,"Sem GOD ou alteracao de licenca. Requer marcador DVD e escrita.",18,Muted,1170);
+#else
+    c.Text(48,400,"Instalador DVD disponivel no XSDK.",22,Muted,1170);
+#endif
+}
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
     for(size_t i=0;i<4 && storagePage_*4+i<storageVolumes_.size();++i) {
@@ -1925,11 +1964,11 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(section_==System) {
         static const char* const titles[]={
-            "Armazenamento","Rede e FTP","Temperaturas","Downloads","Plugins","Historico"
+            "Armazenamento","Rede e FTP","Temperaturas","Downloads","Plugins","Historico","DVD"
         };
-        static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG"};
+        static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG","DVD"};
         static const char* const summaries[]={
-            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais","Residentes","Eventos locais"
+            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais","Residentes","Eventos locais","Instalar disco"
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
@@ -1937,11 +1976,12 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
             "Transferencias locais; downloads de internet pendentes.",
             "Diagnostico somente leitura do launch.ini.",
-            "Historico de operacoes da dashboard."
+            "Historico de operacoes da dashboard.",
+            "Instalacao dos arquivos acessiveis pelo leitor DVD."
         };
-        for(int i=0;i<6;++i) {
-            const int x=42+i*200;
-            panel(c,x,166,190,166,Panel,i==systemTab_);
+        for(int i=0;i<7;++i) {
+            const int x=42+i*171;
+            panel(c,x,166,161,166,Panel,i==systemTab_);
             c.Text(x+10,184,marks[i],20,i==systemTab_?Lime:Muted,96);
             c.Text(x+10,222,titles[i],19,White,172);
             c.Text(x+10,284,summaries[i],16,Muted,172);
@@ -1951,6 +1991,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(page_==Details && systemTab_==3) {DrawTransfers(c);return;}
         if(page_==Details && systemTab_==4) {DrawResidentPlugins(c);return;}
         if(page_==Details && systemTab_==5) {DrawEvents(c);return;}
+        if(page_==Details && systemTab_==6) {DrawDiscInstall(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);

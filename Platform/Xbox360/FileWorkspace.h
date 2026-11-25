@@ -22,6 +22,8 @@ public:
     // Publish an exclusive staging file, never replacing a destination.
     bool PublishStaged(const std::string& temporary,const std::string& destination) const;
 #endif
+    bool BeginDiscStage(const std::string& parent,const std::string& finalName,std::string& stage) const;
+    bool PublishDiscStage(const std::string& parent,const std::string& stage,const std::string& finalName) const;
     bool Create(const std::string& directory,const std::string& name) const;
     bool Rename(const std::string& directory,const std::string& oldName,
                 const std::string& newName) const;

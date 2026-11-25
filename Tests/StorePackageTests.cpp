@@ -1,4 +1,5 @@
 #include "StorePackage.h"
+#include "DiscInstaller.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -88,6 +89,23 @@ int main(){
     assert(!StoreInstallXex(workspace,app,base,go,error));
     assert(fs::file_size(root/"UserFiles/Homebrew/installer/default.xex")==app.bytes);
     assert(fs::exists(root/"UserFiles/Store/installer.pkg"));
+#endif
+#if defined(__linux__) && !defined(__XSDK__)
+    // Host fixture for the exposed DVD filesystem. Never uses a real game.
+    fs::create_directories(root/"disc"/"data");
+    auto put=[&](size_t at,unsigned value){for(int i=3;i>=0;--i){fixture[at+i]=static_cast<char>(value&255);value>>=8;}};
+    put(20,1);put(24,0x00040006);put(28,64);put(64,0x11223344);put(76,0x494E4635);
+    fixture[82]=1;fixture[83]=1;
+    {std::ofstream file(root/"disc/default.xex",std::ios::binary);file.write(fixture.data(),fixture.size());}
+    std::ofstream(root/"disc/data/resource.bin",std::ios::binary)<<"disc fixture";
+    std::string installed;
+    assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
+    {std::ofstream marker(root/"enable-dvd-install.txt");marker<<"ENABLE-DVD-INSTALL\n";}
+    assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,[](unsigned long long,unsigned long long){return false;},installed,error));
+    assert(InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
+    assert(fs::file_size(fs::path(installed)/"default.xex")==fixture.size());
+    assert(fs::file_size(fs::path(installed)/"data/resource.bin")==12);
+    assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
 #endif
     fs::remove_all(root);
 }

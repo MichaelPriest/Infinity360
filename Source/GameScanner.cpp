@@ -125,7 +125,9 @@ std::vector<std::string> GameScanner::DefaultRoots() {
         "hdd:/Games","hdd:/XBOX 360","hdd:/XBLA","hdd:/Xbox Original",
         "usb0:/Games","usb0:/XBOX 360","usb0:/XBLA","usb0:/Xbox Original",
         "usb1:/Games","usb1:/XBOX 360","usb1:/XBLA","usb1:/Xbox Original",
-        "usb2:/Games","usb2:/XBOX 360","usb2:/XBLA","usb2:/Xbox Original"};
+        "usb2:/Games","usb2:/XBOX 360","usb2:/XBLA","usb2:/Xbox Original",
+        "hdd:/Infinity360Files/Games","usb0:/Infinity360Files/Games",
+        "usb1:/Infinity360Files/Games","usb2:/Infinity360Files/Games"};
 #else
     const char* paths[] = {"Games", "USB/Games"};
 #endif
@@ -195,6 +197,9 @@ std::vector<Game> GameScanner::Scan() const {
                 if(ec || fs::is_symlink(status))continue;
 #endif
                 if(entry.directory) {
+                    std::string reserved=entry.name;
+                    for(char& ch:reserved)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+                    if(reserved.compare(0,7,"axcopy-")==0)continue;
                     if(current.depth<MaxDepth && pending.size()+scanned<MaxDirectories) {
                         Pending child={path,current.depth+1};pending.push_back(child);
                     }

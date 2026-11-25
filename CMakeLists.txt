@@ -94,5 +94,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
 endif()
 
 add_executable(store_package_tests Tests/StorePackageTests.cpp Platform/Xbox360/StorePackage.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/MediaUrl.cpp)
-target_include_directories(store_package_tests PRIVATE Platform/Xbox360)
+target_include_directories(store_package_tests PRIVATE Platform/Xbox360 Source)
+target_sources(store_package_tests PRIVATE Platform/Xbox360/DiscInstaller.cpp Platform/Xbox360/StorageInfo.cpp)
+target_link_libraries(store_package_tests PRIVATE aurorax_core)
 add_test(NAME store_package COMMAND store_package_tests)

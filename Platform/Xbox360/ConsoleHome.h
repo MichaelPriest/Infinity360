@@ -27,6 +27,8 @@ public:
     void StopFtp() {ftp_.Stop();}
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeStoreInstallRequest(StoreItem& item);
+    bool TakeDiscInstallRequest(std::string& mount);
+    void DiscInstallResult(const std::string& message,bool success);
     void StoreInstallResult(const std::string& message,bool success);
     void NativeStoreResult(const std::string& message,bool success);
     bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
@@ -68,6 +70,9 @@ private:
     size_t storagePage_;
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
+    void DrawDiscInstall(HomeCanvas& c) const;
+    int discDestination_=0;
+    bool discConfirm_=false,discPending_=false;
     NetworkSnapshot network_;
     void RefreshNetwork();
     void RefreshResidentPlugins();

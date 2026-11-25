@@ -4,6 +4,9 @@
 #include <fstream>
 #include <cerrno>
 #include <set>
+#if defined(__linux__) && !defined(__XSDK__)
+#include <sys/syscall.h>
+#endif
 #ifdef __XSDK__
 #include "XsdkPaths.h"
 #include "xsdk/kernel.h"
@@ -222,6 +225,42 @@ std::string FileWorkspace::WorkspaceFor(const std::string& root) const {
     for(size_t i=0;i<roots_.size();++i)
         if(key(root)==key(roots_[i]))return i<workspaces_.size()?workspaces_[i]:"";
     return "";
+}
+bool FileWorkspace::BeginDiscStage(const std::string& parent,const std::string& finalName,std::string& stage) const{
+    stage.clear();
+#if defined(__XSDK__) || defined(__linux__)
+    if(!CanWrite(parent)||!ValidName(finalName)||exists(Join(parent,finalName)))return false;
+    for(unsigned i=0;i<32;++i){
+        char name[32];std::sprintf(name,"AXCOPY-DISC-%04u",i);
+        const std::string candidate=Join(parent,name);
+        if(!Allowed(candidate,workspaces_))return false;
+        std::error_code ec;
+        if(fs::create_directory(candidate,ec)&&!ec){stage=candidate;return true;}
+    }
+#else
+    (void)parent;(void)finalName;
+#endif
+    return false;
+}
+bool FileWorkspace::PublishDiscStage(const std::string& parent,const std::string& stage,const std::string& finalName) const{
+#if defined(__XSDK__) || defined(__linux__)
+    const size_t at=stage.find_last_of("/\\");
+    if(at==std::string::npos||key(stage.substr(0,at))!=key(parent)||
+       stage.substr(at+1).compare(0,12,"AXCOPY-DISC-")!=0||!ValidName(finalName)||
+       !CanWrite(parent)||!CanWrite(stage))return false;
+    const std::string dest=Join(parent,finalName);
+    if(!Allowed(dest,workspaces_)||exists(dest))return false;
+#ifdef __XSDK__
+    return renameNoReplace(stage,dest);
+#else
+#ifdef SYS_renameat2
+    return syscall(SYS_renameat2,AT_FDCWD,stage.c_str(),AT_FDCWD,dest.c_str(),1)==0;
+#endif
+#endif
+#else
+    (void)parent;(void)stage;(void)finalName;
+#endif
+    return false;
 }
 bool FileWorkspace::Create(const std::string& parent,const std::string& name) const {
     if(!ValidName(name) || !CanBrowse(parent))return false;
