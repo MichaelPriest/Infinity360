@@ -19,6 +19,8 @@ int main(){
     assert(UnityCatalog::ParseMd5(R"({"md5":"D41D8CD98F00B204E9800998ECF8427E"})",md5)&&md5=="d41d8cd98f00b204e9800998ecf8427e");
     assert(!UnityCatalog::ParseMd5(R"({"md5":"invalid"})",md5));
     assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"filesize":7000,"url":"http://xboxunity.net/api/file/7"}])",rows)&&rows[0].url=="https://xboxunity.net/api/file/7");
+    assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":9,"filename":"tu00000002_00000000"}])",rows)&&rows[0].filename=="tu00000002_00000000");
+    assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":9,"filename":"../escape"}])",rows)&&rows[0].filename.empty());
     assert(UnityCatalog::ParseUpdates("[]",rows)&&rows.empty());
     assert(!UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7},{"TitleUpdateID":"7"}])",rows));
     assert(!UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"TitleUpdateID":8}])",rows));

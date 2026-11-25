@@ -90,6 +90,10 @@ bool UnityCatalog::ParseUpdates(const std::string& data,std::vector<UnityUpdate>
                     if(s.size()<=24&&!s.empty()&&s.find_first_not_of("0123456789abcdefABCDEFxX.- ")==std::string::npos)item.version=s;
                 }
             }
+            if(field=="filename"&&value.type==JSMN_STRING){
+                const auto name=raw(data,value);
+                if(!name.empty()&&name.size()<=42&&name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.")==std::string::npos&&name!="."&&name!="..")item.filename=name;
+            }
             if(field=="url"&&value.type==JSMN_STRING){
                 auto address=raw(data,value);
                 // Decode JSON escaped slashes only; other escapes are rejected by URL parser.

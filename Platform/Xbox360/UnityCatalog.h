@@ -4,7 +4,7 @@
 #include <vector>
 struct UnityUpdate {
     unsigned id=0;
-    std::string version,url;
+    std::string version,url,filename;
     unsigned long long bytes=0;
 };
 namespace UnityCatalog {

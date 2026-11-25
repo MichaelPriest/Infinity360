@@ -5,7 +5,7 @@
 namespace ContentInstall {
 struct Request {
     XboxContentPackage package{};
-    std::string filename,sha256;
+    std::string filename,sha256,staged;
     unsigned long long bytes=0;
 };
 inline bool Filename(unsigned type,const std::string& name){
@@ -15,6 +15,8 @@ inline bool Filename(unsigned type,const std::string& name){
     return type==2u&&name.size()>=16&&name.size()<=42&&name.find_first_not_of("0123456789abcdefABCDEF")==std::string::npos;
 }
 bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error);
+// A downloaded TU is eligible only with its locally generated receipt and exact game identity.
+bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error);
 bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error);
 }

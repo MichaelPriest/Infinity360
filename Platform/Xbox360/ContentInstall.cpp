@@ -52,6 +52,30 @@ bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInf
     if(!ContentCatalog::ReadHeader(path,pkg)||pkg.contentType!=code||!compatible(game,pkg))return reject("Title ID, Media ID ou tipo incompativel.");
     out.package=pkg;out.filename=name;out.sha256=sha;out.bytes=bytes;return true;
 }
+bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error){
+    out={};error.clear();auto reject=[&](const char* message){error=message;return false;};
+    char media[10],title[9];std::sprintf(media,"%08X-",game.mediaId);std::sprintf(title,"%08X",game.titleId);
+    if(!game.titleId||!game.mediaId||!game.baseVersion||staged.size()<13||staged.size()>22||
+       staged.compare(0,9,media)!=0||staged.substr(staged.size()-3)!=".tu"||
+       staged.substr(9,staged.size()-12).find_first_not_of("0123456789")!=std::string::npos||
+       !FileWorkspace::ValidName(staged))return reject("TU sem identificacao de download.");
+    const auto folder=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"TitleUpdates"),title);
+    const auto payload=FileWorkspace::Join(folder,staged),receipt=payload+".receipt";
+    if(!ws.CanReadFile(payload)||!ws.CanReadFile(receipt))return reject("TU sem recibo; importe manualmente com nome original.");
+    std::ifstream input(receipt.c_str(),std::ios::binary|std::ios::ate);
+    if(!input||input.tellg()<1||input.tellg()>256)return reject("Recibo invalido.");
+    input.seekg(0);std::string magic,base,name,bytes,sha,extra;
+    if(!std::getline(input,magic)||!std::getline(input,base)||!std::getline(input,name)||!std::getline(input,bytes)||!std::getline(input,sha)||std::getline(input,extra)||
+       magic!="INFINITY-TU-1"||base!=std::to_string(game.baseVersion)||!Filename(0xb0000,name)||!FileWorkspace::ValidName(name)||
+       bytes.empty()||bytes.size()>9||bytes.find_first_not_of("0123456789")!=std::string::npos||
+       sha.size()!=64||sha.find_first_not_of("0123456789abcdef")!=std::string::npos)return reject("Recibo, nome original ou Base Version incompativel.");
+    unsigned long long size=0;for(char c:bytes)size=size*10+c-'0';
+    std::ifstream file(payload.c_str(),std::ios::binary|std::ios::ate);
+    if(size<0x1711||size>128ULL*1024*1024||!file||file.tellg()<0||static_cast<unsigned long long>(file.tellg())!=size)return reject("Tamanho da TU divergente.");
+    XboxContentPackage package{};
+    if(!ContentCatalog::ReadHeader(payload,package)||package.contentType!=0xb0000u||!compatible(game,package))return reject("TU incompativel.");
+    out.package=package;out.filename=name;out.sha256=sha;out.bytes=size;out.staged=staged;return true;
+}
 bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){
     error.clear();
@@ -61,9 +85,9 @@ bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecution
     auto reject=[&](const char* msg){error=msg;return false;};
     Request current;
     if(!enabled(root)||!ws.CanWrite(FileWorkspace::Join(root,"UserFiles")))return reject("Habilite escrita e enable-content-install.txt.");
-    if(!Read(ws,root,game,current,error))return false;
+    if(selected.staged.empty()? !Read(ws,root,game,current,error):!ReadStaged(ws,root,game,selected.staged,current,error))return false;
     if(current.filename!=selected.filename||current.sha256!=selected.sha256||current.bytes!=selected.bytes||
-       !same(current.package,selected.package))return reject("Manifesto ou pacote mudou; confirme novamente.");
+       current.package.path!=selected.package.path||current.staged!=selected.staged||!same(current.package,selected.package))return reject("Manifesto ou pacote mudou; confirme novamente.");
 #ifdef __XSDK__
     const std::string common="hdd:/Content/0000000000000000",volume="hdd:/";
 #else

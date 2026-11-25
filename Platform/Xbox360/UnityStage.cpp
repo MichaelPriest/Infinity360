@@ -1,5 +1,7 @@
 #include "UnityStage.h"
 #include "StorageInfo.h"
+#include "StoreSha256.h"
+#include "ContentInstall.h"
 #include <mbedtls/md5.h>
 #include <cstdio>
 #include <fstream>
@@ -37,6 +39,7 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
     int fd=open(temp.c_str(),flags,0600);
     if(fd<0)return reject("Temporario existente ou indisponivel.");
     auto fail=[&](const char* message){if(fd>=0)close(fd);unlink(temp.c_str());error=message;return false;};
+    StoreSha256 sha;
     mbedtls_md5_context hash;mbedtls_md5_init(&hash);
     unsigned long long done=0;
     bool valid=mbedtls_md5_starts(&hash)==0&&progress(0,item.bytes);
@@ -44,7 +47,7 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
         if(n>32768||n>item.bytes-done)return false;
         size_t pos=0;while(pos<n){const ssize_t wrote=write(fd,bytes+pos,n-pos);if(wrote<0&&errno==EINTR)continue;if(wrote<=0)return false;pos+=static_cast<size_t>(wrote);}
         if(mbedtls_md5_update(&hash,bytes,n)!=0)return false;
-        done+=n;return progress(done,item.bytes);
+        sha.Update(bytes,n);done+=n;return progress(done,item.bytes);
     });
     unsigned char digest[16];const bool hashed=mbedtls_md5_finish(&hash,digest)==0;
     mbedtls_md5_free(&hash);
@@ -61,5 +64,28 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
     if(link(temp.c_str(),dest.c_str())!=0)return fail("Falha ao publicar sem sobrescrever.");
     unlink(temp.c_str());
 #endif
+    // Keep the original filename and SHA-256 for a separate, explicit install.
+    // Missing/legacy filenames still allow staging; never invent a system filename.
+    if(ContentInstall::Filename(0xb0000u,item.filename)){
+        const auto receipt=dest+".receipt",receiptTemp=FileWorkspace::Join(folder,"AXCOPY-TU-RECEIPT.part");
+        const std::string record="INFINITY-TU-1\n"+std::to_string(info.baseVersion)+"\n"+item.filename+"\n"+std::to_string(item.bytes)+"\n"+sha.Finish()+"\n";
+        int out=open(receiptTemp.c_str(),flags,0600);
+        if(out<0){error="TU baixada; recibo indisponivel. Instalacao manual necessaria.";return true;}
+        size_t pos=0;while(pos<record.size()){
+            const ssize_t wrote=write(out,record.data()+pos,record.size()-pos);
+            if(wrote<0&&errno==EINTR)continue;if(wrote<=0)break;pos+=static_cast<size_t>(wrote);
+        }
+        const bool flushed=fsync(out)==0,finished=close(out)==0;
+        bool published=false;
+        if(pos==record.size()&&flushed&&finished){
+#ifdef __XSDK__
+            published=ws.PublishStaged(receiptTemp,receipt);
+#else
+            published=link(receiptTemp.c_str(),receipt.c_str())==0;
+#endif
+        }
+        unlink(receiptTemp.c_str());
+        if(!published)error="TU baixada; recibo nao publicado. Instalacao manual necessaria.";
+    }else error="TU baixada; nome antigo ou desconhecido. Instalacao direta indisponivel.";
     return true;
 }

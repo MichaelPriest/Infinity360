@@ -122,7 +122,13 @@ bool ArchiveStaged(const FileWorkspace& ws,const std::string& root,const XboxCon
     const auto personal=FileWorkspace::Join(root,"UserFiles"),parent=FileWorkspace::Join(personal,"ArchivedTU"),folder=titleFolder(root,"ArchivedTU",selected.titleId);
     if(!ws.CanWrite(personal)||(!ws.CanWrite(parent)&&!ws.Create(personal,"ArchivedTU"))||
        (!ws.CanWrite(folder)&&!ws.Create(parent,folder.substr(folder.find_last_of("/\\")+1)))){error="Pasta arquivo indisponivel.";return false;}
-    if(!ws.MovePersonalExclusive(it->path,FileWorkspace::Join(folder,it->name),false)){error="Conflito ou falha; origem preservada.";return false;}
+    const auto receipt=it->path+".receipt",savedReceipt=FileWorkspace::Join(folder,it->name+".receipt");
+    const bool hasReceipt=ws.CanReadFile(receipt);
+    if(hasReceipt&&!ws.MovePersonalExclusive(receipt,savedReceipt,false)){error="Recibo nao arquivado; TU preservada.";return false;}
+    if(!ws.MovePersonalExclusive(it->path,FileWorkspace::Join(folder,it->name),false)){
+        if(hasReceipt&&!ws.MovePersonalExclusive(savedReceipt,receipt,false))error="TU preservada; recibo em ArchivedTU.";
+        else error="Conflito ou falha; origem preservada.";return false;
+    }
     return true;
 }
 

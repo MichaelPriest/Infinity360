@@ -703,7 +703,7 @@ void ConsoleHome::RefreshTitleMetadata() {
 }
 
 void ConsoleHome::OpenContent() {
-    contentActive_=true;contentInstallActive_=false;contentInstallConfirm_=false;contentInstallPending_=false;
+    contentActive_=true;contentInstallActive_=false;contentInstallConfirm_=false;contentInstallPending_=false;contentInstallStaged_.clear();
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
@@ -1112,7 +1112,7 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(!unityActive_&&key==Search&&(contentTab_==0||contentTab_==1||contentTab_==4)&&contentKnown_&&!detailMetadata_.package){
-            contentInstallActive_=true;RefreshContentInstall();return "";
+            contentInstallStaged_.clear();contentInstallActive_=true;RefreshContentInstall();return "";
         }
         if(unityActive_){
             if(key==Back){if(unityConfirm_)unityConfirm_=false;else unityActive_=false;notice_.clear();return "";}
@@ -1188,6 +1188,9 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Up && contentRow_>0)--contentRow_;
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
 #if defined(INFINITY_XSDK_HTTPS)
+        if(key==Accept&&contentTab_==4&&!TransferRunning()&&!detailMetadata_.package&&static_cast<size_t>(contentRow_)<stagedItems_.size()){
+            contentInstallStaged_=stagedItems_[contentRow_].name;contentInstallActive_=true;RefreshContentInstall();return "";
+        }
         if(key==Accept&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
             recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_="A confirma recuperar para area pessoal, sem ativacao.";return "";
         }
@@ -2071,7 +2074,7 @@ void ConsoleHome::UnityDownloadResult(const std::string& message,bool success){
     notice_=message;RecordEvent(success?"TU salva em staging":"Download TU recusado");
 }
 void ConsoleHome::UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success){
-    if(success){unityUpdates_=updates;unityRow_=0;}
+    if(success){unityUpdates_=updates;unityRow_=0;}else{unityUpdates_.clear();unityRow_=0;}
     unityConfirm_=false;
     notice_=message;RecordEvent(success?"XboxUnity TU consultado":"Consulta XboxUnity falhou");
 }
@@ -2085,13 +2088,14 @@ void ConsoleHome::DrawUnity(HomeCanvas& c) const{
         const auto& tu=unityUpdates_[i];const int y=235+(i-first)*65;
         panel(c,45,y,1189,58,Panel,i==unityRow_);
         c.Text(60,y+6,"TU ID "+number(tu.id)+" | "+(tu.version.empty()?"Versao nao informada":tu.version),23,White,840);
+        c.Text(60,y+33,tu.filename.empty()?"Nome original indisponivel":tu.filename,16,Muted,840);
         c.Text(905,y+12,tu.bytes?StorageInfo::FormatBytes(tu.bytes):"Tamanho desconhecido",18,Muted,300);
     }
     c.Text(48,590,unityConfirm_?"A Confirmar download | B Cancelar":"A Baixar TU verificada | Y Consultar | B Voltar | Sem ativacao",19,Lime,1175);
 }
 void ConsoleHome::RefreshContentInstall(){
     contentInstallConfirm_=false;std::string error;
-    contentInstallKnown_=ContentInstall::Read(fileWorkspace_,dir_,contentInfo_,contentInstallItem_,error);
+    contentInstallKnown_=contentInstallStaged_.empty()?ContentInstall::Read(fileWorkspace_,dir_,contentInfo_,contentInstallItem_,error):ContentInstall::ReadStaged(fileWorkspace_,dir_,contentInfo_,contentInstallStaged_,contentInstallItem_,error);
     notice_=contentInstallKnown_?"Pacote local identificado. Confira origem e SHA-256.":error;
 }
 bool ConsoleHome::TakeContentInstall(ContentInstall::Request& item,XboxExecutionInfo& game){
@@ -2116,7 +2120,7 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
         c.Text(48,251,i.filename+" | "+StorageInfo::FormatBytes(i.bytes),22,White,1170);
         c.Text(48,295,"SHA-256 "+i.sha256,18,Muted,1170);
         c.Text(48,350,"HDD/Content/0000000000000000/"+hexId(i.package.titleId)+"/"+hexId(i.package.contentType),19,Lime,1170);
-    }else c.Text(48,215,"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.",20,White,1170);
+    }else c.Text(48,215,contentInstallStaged_.empty()?"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.":"TU sem recibo valido. Use importacao manual (R3) com nome original.",20,White,1170);
     c.Text(48,425,"Requer enable-content-install.txt e enable-file-writes.txt.",20,Muted,1170);
     c.Text(48,470,"Somente copia verificada. Nao altera licencas, nao remove outras TUs.",20,Muted,1170);
     c.Text(48,515,"Ativacao e reconhecimento pelo Xbox permanecem nao confirmados.",20,Muted,1170);
@@ -2161,7 +2165,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         else status="Save localizado";
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==5?"A Recuperar copia pessoal | Y Atualizar | B Voltar":contentTab_==4?"X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
+    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==5?"A Recuperar copia pessoal | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){

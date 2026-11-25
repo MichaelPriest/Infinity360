@@ -253,7 +253,7 @@ std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& s
     if(!listed)return message;
     UnityUpdate item{};
     for(const auto& candidate:current)if(candidate.id==selected.id)item=candidate;
-    if(!item.id||item.url.empty()||item.url!=selected.url||!item.bytes||item.bytes!=selected.bytes)return "Catalogo mudou; consulte e confirme novamente.";
+    if(!item.id||item.url.empty()||item.url!=selected.url||item.filename!=selected.filename||!item.bytes||item.bytes!=selected.bytes)return "Catalogo mudou; consulte e confirme novamente.";
     StoreItem source{};source.url=item.url;
     if(!StoreNativeSource(source,root))return "Host de TU nao autorizado.";
     std::string response,md5;bool fetched=false;
@@ -280,7 +280,7 @@ std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& s
         curl_easy_cleanup(curl);curl_global_cleanup();
         return result==CURLE_OK&&code==200&&t.done==item.bytes;
     },progress,error);
-    return success?"TU verificada em UserFiles/TitleUpdates; nao ativada.":error;
+    return success&&error.empty()?"TU verificada. Aba TU Baixadas: A instala com confirmacao.":error;
 }
 
 std::string XsdkUnityCover(unsigned title,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){

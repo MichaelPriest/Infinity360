@@ -41,6 +41,25 @@ int main(){
     build(2,dlc,0);assert(ContentInstall::Read(ws,root,game,selected,error));
     assert(ContentInstall::Install(ws,root,game,selected,go,error));
     assert(fs::exists(base/"Content/0000000000000000/494E4650/00000002"/dlc));
+    // Verify the receipt-based path independently of the manual manifest.
+    game.baseVersion=0x10002;
+    const auto stage=base/"UserFiles/TitleUpdates/494E4650";fs::create_directories(stage);
+    const std::string original="tu00000003_00000000",staged="11223344-42.tu";
+    build(0xb0000,original,game.mediaId);
+    fs::copy_file(base/"UserFiles/ContentImport"/original,stage/staged);
+    std::ifstream data(stage/staged,std::ios::binary);std::string raw((std::istreambuf_iterator<char>(data)),{});
+    StoreSha256 sha;sha.Update(reinterpret_cast<const unsigned char*>(raw.data()),raw.size());
+    const auto digest=sha.Finish();
+    assert(!ContentInstall::ReadStaged(ws,root,game,staged,selected,error));
+    {std::ofstream r(stage/(staged+".receipt"));r<<"INFINITY-TU-1\n"<<game.baseVersion<<"\n"<<original<<"\n"<<raw.size()<<"\n"<<digest<<"\n";}
+    assert(ContentInstall::ReadStaged(ws,root,game,staged,selected,error));
+    auto other=game;other.baseVersion++;
+    ContentInstall::Request wrong;assert(!ContentInstall::ReadStaged(ws,root,other,staged,wrong,error));
+    assert(!ContentInstall::ReadStaged(ws,root,game,"../"+staged,wrong,error));
+    assert(ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(fs::exists(base/"Content/0000000000000000/494E4650/000B0000"/original));
+    assert(fs::exists(stage/staged));
+    assert(!ContentInstall::Install(ws,root,game,selected,go,error));
     for(const auto& e:fs::recursive_directory_iterator(base))assert(e.path().filename()!="AXCOPY-CONTENT.part");
     fs::remove_all(base);
 }
