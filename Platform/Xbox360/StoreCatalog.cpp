@@ -129,6 +129,9 @@ bool StoreCatalog::Cancel(const StoreItem& item) {
     if(SaveRequests())return true;
     requests_=old;return false;
 }
+bool StoreCatalog::ListedDownload(const StoreItem& item) const {
+    return Requested(item)||Progress(item).state==StoreProgress::NativeVerified;
+}
 bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.
     const std::string path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");

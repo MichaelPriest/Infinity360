@@ -21,6 +21,7 @@ public:
     bool Cancel(const StoreItem& item);
     bool Requested(const StoreItem& item) const;
     bool Staged(const StoreItem& item) const;
+    bool ListedDownload(const StoreItem& item) const;
     StoreProgress Progress(const StoreItem& item) const;
 private:
     std::string root_;

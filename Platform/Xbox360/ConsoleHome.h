@@ -56,6 +56,8 @@ private:
     bool storeDownloads_;
     int storeDownloadRow_;
     void DrawStoreDownloads(HomeCanvas& c) const;
+    void RebuildStoreDownloads();
+    std::vector<size_t> storeDownloadItems_;
     void RecordEvent(const std::string& message);
     void LoadEvents();
     std::vector<std::string> events_;

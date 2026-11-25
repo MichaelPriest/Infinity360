@@ -25,6 +25,11 @@ int main(){
     assert(out.Begin(item,base));assert(out.Write((const unsigned char*)"abc",3));assert(out.Finish());
     assert(fs::file_size(root/"UserFiles/Store/demo.pkg")==3);
     StoreCatalog cat(base);assert(cat.Progress(item).state==StoreProgress::NativeVerified);
+    assert(!cat.Requested(item));assert(cat.ListedDownload(item));
+    StoreItem unknown=item;unknown.id="unknown";assert(!cat.ListedDownload(unknown));
+    assert(cat.Load()==false); // missing catalog, but requests storage is initialized
+    assert(cat.Request(unknown));assert(cat.ListedDownload(unknown));
+    assert(cat.Cancel(unknown));assert(!cat.ListedDownload(unknown));
     assert(!out.Begin(item,base));
     item.id="cancel";assert(out.Begin(item,base));assert(out.Write((const unsigned char*)"a",1));out.Cancel();
     assert(!fs::exists(root/"UserFiles/Store/cancel.pkg"));

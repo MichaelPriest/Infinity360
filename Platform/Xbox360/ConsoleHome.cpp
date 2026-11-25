@@ -1197,7 +1197,7 @@ std::string ConsoleHome::Press(Key key) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
             else if(systemTab_==3) {
-                if(storeDownloads_) {store_.Load();storeDownloadRow_=0;notice_="Ultimos estados do PC consultados.";}
+                if(storeDownloads_) {store_.Load();RebuildStoreDownloads();notice_="Registros de downloads atualizados.";}
                 else notice_="Transferencias locais atualizadas automaticamente.";
             }
             else if(systemTab_==4) {RefreshResidentPlugins();notice_="Configuracao de plugins consultada.";}
@@ -1214,13 +1214,11 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details && systemTab_==3 && key==PageDown) {
             storeDownloads_=!storeDownloads_;storeDownloadRow_=0;
-            if(storeDownloads_)store_.Load();
+            if(storeDownloads_) {store_.Load();RebuildStoreDownloads();}
             return "";
         }
         if(page_==Details && systemTab_==3 && storeDownloads_) {
-            size_t count=0;
-            for(size_t i=0;i<store_.Items().size();++i)
-                if(store_.Requested(store_.Items()[i]))++count;
+            const size_t count=storeDownloadItems_.size();
             if(key==Up&&storeDownloadRow_>0)--storeDownloadRow_;
             if(key==Down&&static_cast<size_t>(storeDownloadRow_+1)<count)++storeDownloadRow_;
             return "";
@@ -1681,14 +1679,17 @@ void ConsoleHome::DrawEvents(HomeCanvas& c) const {
         c.Text(48,390+static_cast<int>(i)*32,events_[events_.size()-1-i],19,White,1160);
     c.Text(48,610,"6 mais recentes na tela | Arquivo infinity360-events.log | B Voltar",18,Muted,1180);
 }
-void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
-    c.Text(45,349,"INFINITY Store | pedidos ao PC",25,White,1170);
-    std::vector<const StoreItem*> requested;
+void ConsoleHome::RebuildStoreDownloads() {
+    storeDownloadItems_.clear();
     for(size_t i=0;i<store_.Items().size();++i)
-        if(store_.Requested(store_.Items()[i]))requested.push_back(&store_.Items()[i]);
+        if(store_.ListedDownload(store_.Items()[i]))storeDownloadItems_.push_back(i);
+    storeDownloadRow_=0;
+}
+void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
+    c.Text(45,349,"INFINITY Store | Downloads",25,White,1170);
     const int first=(storeDownloadRow_/4)*4;
-    for(int i=first;i<first+4&&static_cast<size_t>(i)<requested.size();++i) {
-        const StoreItem& item=*requested[i];
+    for(int i=first;i<first+4&&static_cast<size_t>(i)<storeDownloadItems_.size();++i) {
+        const StoreItem& item=store_.Items()[storeDownloadItems_[i]];
         const StoreProgress status=store_.Progress(item);
         const int y=390+(i-first)*48;
         panel(c,45,y,1189,43,Panel,i==storeDownloadRow_);
@@ -1699,13 +1700,13 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
             "Pedido pendente / sem estado";
         c.Text(745,y+8,label,18,Muted,465);
     }
-    if(requested.empty())c.Text(48,415,"Nenhum pedido no catalogo atual.",22,Muted,1160);
-    c.Text(48,590,"Estados registrados pelo PC; nao indicam conexao ativa.",18,Muted,1170);
+    if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
+    c.Text(48,590,"Registros locais do Xbox e PC; nao indicam conexao ativa.",18,Muted,1170);
     c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
     if(storeDownloads_) {DrawStoreDownloads(c);return;}
-    c.Text(45,349,"Transferencias locais | RB Pedidos da loja",27,White,1170);
+    c.Text(45,349,"Transferencias locais | RB Downloads da loja",27,White,1170);
     c.Box(42,391,1196,202,Panel,10);
     const FileTransfer::State state=transfer_.Status();
     if(state==FileTransfer::Idle) {
