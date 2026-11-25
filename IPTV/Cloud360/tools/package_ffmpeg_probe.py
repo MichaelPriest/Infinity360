@@ -125,7 +125,7 @@ def main():
         "No public distribution authorized by this packaging step; review all applicable license terms.\n"
         "Test clips are synthetic; no live IPTV providers or credentials are included.\n",encoding="utf-8")
     (stage/"SHA256SUMS.txt").write_text("".join(f"{digest(path)}  {path.relative_to(stage)}\n" for path in sorted(stage.rglob("*")) if path.is_file()))
-    archive=stage.with_suffix(".zip")
+    archive=stage.parent / (stage.name+".zip")
     with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
         for path in sorted(stage.rglob("*")):
             if path.is_file():z.write(path,path.relative_to(stage))

@@ -53,9 +53,19 @@ void moveRow(size_t& row,size_t size,MenuKey key) {
 }
 std::string movieTarget(const std::string& playlist,const std::string& uri) {
     MediaUrl url;
-    if(url.Parse(uri)) return url.NeedsConverter() ? "" : uri;
+    if(url.Parse(uri)) {
+#ifdef INFINITY_MENU_FFMPEG
+        const auto target=url.target.substr(0,url.target.find('?'));
+        if(uri.find('#')==std::string::npos&&(tvEndsWith(target,".ts")||tvEndsWith(target,".m3u8")))return uri;
+#endif
+        return url.NeedsConverter() ? "" : uri;
+    }
 #ifdef __XSDK__
-    if(tvEndsWith(uri,".mpg")||tvEndsWith(uri,".mpeg")||tvEndsWith(uri,".ps")){
+    if(tvEndsWith(uri,".mpg")||tvEndsWith(uri,".mpeg")||tvEndsWith(uri,".ps")
+#ifdef INFINITY_MENU_FFMPEG
+       ||tvEndsWith(uri,".mp4")||tvEndsWith(uri,".ts")
+#endif
+    ){
         std::string path=uri;
         if(path.find(':')==std::string::npos){
             const auto slash=playlist.find_last_of("/\\");

@@ -118,3 +118,7 @@ Run 45686402200 compilou as três bibliotecas estáticas. Link XEX falhou por ti
 ### P1 — Dois XEX FFmpeg compilados
 
 Run 45687637748 aprovado. Empacotamento candidato isolado com fonte, configuração, objetos e relink verificado no CI em implementação; distribuição pública e homologação física pendentes. Alpha principal permanece independente.
+
+### P1 — Integração experimental do player
+
+Relink dos probes aprovado no CI 45689057229; correção do nome do ZIP. Player compartilhado com a dashboard experimental, ID distinto e opção de build explícita, MPEG-PS preservado. CI dedicado verifica terceiro XEX, sem publicação da variante integrada. Homologação física e ABR pendentes.

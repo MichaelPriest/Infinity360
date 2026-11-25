@@ -71,10 +71,10 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
-            -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" \
+            -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" -DINFINITY_EXPERIMENTAL_MENU_FFMPEG=ON \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF -DCMAKE_BUILD_TYPE=Release \
             2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/cmake.log"
-          cmake --build "$RUNNER_TEMP/av-native" --parallel 2 --target cloud360_container_probe cloud360_av_probe \
+          cmake --build "$RUNNER_TEMP/av-native" --parallel 2 --target cloud360_container_probe cloud360_av_probe infinity_menu_preview \
             2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/xex-link.log"
       - name: Verify XEX2 headers and record hashes
         run: |
@@ -83,7 +83,7 @@ jobs:
           from pathlib import Path
           root=Path(os.environ["RUNNER_TEMP"])
           with (root/"ffmpeg-diagnostics"/"XEX-SHA256.txt").open("w") as out:
-              for name in ("cloud360_container_probe.xex","cloud360_av_probe.xex"):
+              for name in ("cloud360_container_probe.xex","cloud360_av_probe.xex","infinity_menu_preview.xex"):
                   data=(root/"av-native"/name).read_bytes()
                   assert len(data)>4096 and data[:4]==b"XEX2", name
                   out.write(f"{hashlib.sha256(data).hexdigest()}  {name}\n")

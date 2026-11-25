@@ -95,3 +95,7 @@ Run 45686402200 confirmou configuração newlib big-endian, compilação e insta
 ### Cross-build aprovado e pacote candidato
 
 Run 45687637748 concluiu o link e verificação XEX2 dos dois probes. O pipeline agora prepara candidato com fontes FFmpeg exatas, configuração, objetos, arquivos de link, licenças, fonte dos componentes, clips sintéticos e script de relink com biblioteca FFmpeg substituível. Exige um relink real antes de disponibilizar o candidato como artefato de CI. Não equivale a aprovação jurídica de distribuição: a publicação pública em Releases depende de revisar termos LGPL e demais componentes. Nenhum teste físico realizado.
+
+### Integração à dashboard experimental
+
+O CI 45689057229 compilou ambos os XEX e passou no relink, mas o upload falhou porque Path.with_suffix substituía parte da versão no nome do ZIP. Corrigido para acrescentar .zip. XsdkAvPlayer reutiliza a fila/decoder no Presenter existente, sem assumir a GPU ou lançar outro título. INFINITY_EXPERIMENTAL_MENU_FFMPEG=ON compila uma variante separada com ID 0x494E4635, roteando MP4/TS locais e TS/M3U8 remotos pelo FFmpeg, exigindo enable-iptv-playback.txt e política de host. A Alpha padrão mantém MPEG-PS e não linka FFmpeg. CI dedicado compila e verifica também a variante da dashboard, mas seu binário não integra o pacote dos dois probes nem Releases. Ainda sem teste físico.
