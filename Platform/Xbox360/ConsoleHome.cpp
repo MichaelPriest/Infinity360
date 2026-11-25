@@ -539,8 +539,8 @@ void ConsoleHome::RefreshStorage() {
     if(storagePage_*4>=storageVolumes_.size())storagePage_=0;
 }
 void ConsoleHome::RefreshResidentPlugins() {
-    residentConfig_.clear();residentPlugins_.clear();
-    // Show only the first readable candidate, not a claim about active boot source.
+    const std::string previous=residentSource_<residentConfigs_.size()?residentConfigs_[residentSource_].path:"";
+    // Inventory every accessible candidate; no claim about active boot source.
     std::vector<std::string> paths;
     paths.push_back(dir_+"launch.ini");
 #ifdef __XSDK__
@@ -550,12 +550,8 @@ void ConsoleHome::RefreshResidentPlugins() {
     paths.push_back("USB0:\\launch.ini");
     paths.push_back("USB1:\\launch.ini");
 #endif
-    for(size_t i=0;i<paths.size();++i) {
-        if(readResidentPlugins(paths[i],residentPlugins_)) {
-            residentConfig_=paths[i];return;
-        }
-    }
-    residentPlugins_.clear();
+    residentConfigs_=residentInventory(paths);residentSource_=0;
+    for(size_t i=0;i<residentConfigs_.size();++i)if(residentConfigs_[i].path==previous){residentSource_=i;break;}
 }
 void ConsoleHome::ToggleFtp(bool allowUpload) {
     if(ftp_.Running()){ftp_.Stop();notice_="FTP encerrado.";RecordEvent("FTP encerrado");return;}
@@ -1635,6 +1631,11 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
+        if(page_==Details && systemTab_==4 && (key==PageUp||key==PageDown)){
+            const size_t count=residentConfigs_.size();
+            if(count)residentSource_=(residentSource_+count+(key==PageDown?1:count-1))%count;
+            return "";
+        }
         if(page_==Details && systemTab_==3 && key==PageDown) {
             storeDownloads_=!storeDownloads_;storeDownloadRow_=0;
             if(storeDownloads_) {store_.Load();RebuildStoreDownloads();}
@@ -1892,25 +1893,31 @@ void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned 
 
 void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
     c.Text(47,349,"Plugins residentes / DashLaunch",27,White,1170);
-    c.Text(47,385,residentConfig_.empty()?"Nenhum launch.ini legivel":residentConfig_,18,Muted,1170);
-    for(size_t i=0;i<residentPlugins_.size();++i) {
-        const ResidentPluginSlot& slot=residentPlugins_[i];
-        const int y=415+static_cast<int>(i)*32;
-        c.Text(51,y,"Slot "+number(i+1),18,White,110);
-        c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,840);
-        std::string state=slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"";
+    if(residentSource_>=residentConfigs_.size()){
+        c.Text(47,385,"Nenhum launch.ini legivel",18,Muted,1170);
+    }else{
+        const auto& config=residentConfigs_[residentSource_];
+        c.Text(47,385,"Fonte "+number(residentSource_+1)+"/"+number(residentConfigs_.size())+" | "+config.path,18,Muted,1170);
+        if(!config.valid)c.Text(51,430,"Configuracao invalida ou acima do limite de leitura.",20,White,1160);
+        for(size_t i=0;i<config.slots.size();++i){
+            const auto& slot=config.slots[i];const int y=415+static_cast<int>(i)*32;
+            c.Text(51,y,"Slot "+number(i+1),18,White,110);
+            c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,670);
+            std::string state=slot.duplicate?"Ambiguo":slot.repeated?"Repetido":isLiveEmulationReference(slot.path)?"LiveEmulation":"";
 #ifdef __XSDK__
-        if(!slot.path.empty()&&!slot.duplicate){
-            const auto normalized=XsdkPaths::Normalize(slot.path);
-            std::ifstream file(normalized.c_str(),std::ios::binary);char magic[4]{};
-            const bool valid=!normalized.empty()&&file.read(magic,4)&&std::string(magic,4)=="XEX2";
-            state=valid?(isLiveEmulationReference(slot.path)?"LE: XEX2":"XEX2 local"):"Ausente/invalido";
-        }
+            if(!slot.path.empty()&&!slot.duplicate&&!slot.repeated){
+                const auto normalized=XsdkPaths::Normalize(slot.path);
+                std::ifstream file(normalized.c_str(),std::ios::binary);char magic[4]{};
+                const bool valid=!normalized.empty()&&file.read(magic,4)&&std::string(magic,4)=="XEX2";
+                state=valid?(isLiveEmulationReference(slot.path)?"LE: XEX2":"XEX2 local"):"Ausente/invalido";
+            }
 #endif
-        c.Text(1025,y,state,17,Lime,195);
+            if(residentConflict(residentConfigs_,residentSource_,i))state+=(state.empty()?"":" | ")+std::string("Divergente");
+            c.Text(850,y,state,17,Lime,375);
+        }
     }
     c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
-    c.Text(47,610,"Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(47,610,"LB/RB Fonte | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     c.Text(44,82,"Personalizar inicio",40,White,1190);

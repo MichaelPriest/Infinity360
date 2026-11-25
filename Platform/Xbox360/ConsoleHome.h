@@ -116,8 +116,8 @@ private:
     void RefreshNetwork();
     void RefreshResidentPlugins();
     void DrawResidentPlugins(HomeCanvas& c) const;
-    std::vector<ResidentPluginSlot> residentPlugins_;
-    std::string residentConfig_;
+    std::vector<ResidentConfig> residentConfigs_;
+    size_t residentSource_=0;
     void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
     bool pasteConfirm_, scanPathConfirm_, fileAction_, deleteConfirm_, cutMode_;

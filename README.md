@@ -148,3 +148,7 @@ Cliente PC para FTP passivo, transferência de arquivos e backups verificáveis:
 ## Portabilidade nativa com XSDK aberto
 
 O GitHub Actions também cruza o código C++ de produção (HomeCanvas, MediaUrl, TvCatalog e GameScanner) para PowerPC no alvo isolado `infinity_core_probe.xex`, junto da alpha gráfica. O alvo não assume a GPU nem inicia jogos, e deve ser testado separadamente. O XDK proprietário permanece opcional via runner licenciado enquanto os adapters XSDK são desenvolvidos. [Instruções](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md).
+
+### Plugins residentes / DashLaunch
+
+A aba Sistema > Plugins inventaria configurações legíveis da pasta da dashboard, HDD e USB, com navegação LB/RB entre fontes, identificação de referências LiveEmulation, slots repetidos/ambíguos e divergências de configuração. Diagnóstico somente leitura: não identifica qual launch.ini foi aplicado, não carrega módulos e não comprova conexão Xbox Live. Captura nativa atualizada pelo workflow.

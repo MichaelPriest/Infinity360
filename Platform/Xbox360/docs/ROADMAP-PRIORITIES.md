@@ -134,3 +134,7 @@ Dashboard FFmpeg integrada aprovada no CI 45691019530. Seek por quadro-chave, D-
 ### P1 — Seleção HLS compatível
 
 Filtro de variantes por resolução/codecs/rendições, limite configurável 100 kbps–4 Mbps, fallback inicial até três playlists elegíveis, painel de bitrate declarado e teste determinístico. ABR dinâmico e homologação física pendentes.
+
+### P1 — Inventário de plugins residentes
+
+Leitura de até oito fontes distintas, seleção LB/RB, identificação de INI inválido, slots duplicados/repetidos e divergências entre arquivos. Normalização de case, separador e alias HDD1/HDD para comparação; sem alteração de boot, carregamento de módulos ou confirmação de estado ativo. Testes de inventário e preservação do INI; CI e hardware pendentes. HLS qualidade e seek passaram no host; build PPC do seek aprovada.

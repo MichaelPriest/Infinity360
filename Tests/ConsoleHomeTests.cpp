@@ -1055,11 +1055,21 @@ int main(int argc,char** argv) {
     assert(readResidentPlugins(ini.string(),slots));
     assert(slots.size()==5 && isLiveEmulationReference(slots[0].path));
     assert(slots[1].path.empty() && slots[2].duplicate && slots[4].path.empty());
+    const auto secondIni=residentRoot/"other.ini",badIni=residentRoot/"bad.ini";
+    {std::ofstream out(secondIni);out<<"[Plugins]\nplugin1=hdd:/liveemulation.xex\nplugin2=HDD1:\\LIVEEMULATION.XEX\n";}
+    {std::ofstream out(badIni);out<<std::string(65537,'x');}
+    const auto configs=residentInventory({ini.string(),secondIni.string(),badIni.string(),ini.string(),(residentRoot/"missing.ini").string()});
+    assert(configs.size()==3&&configs[0].valid&&configs[1].valid&&!configs[2].valid);
+    assert(configs[1].slots[0].repeated&&configs[1].slots[1].repeated);
+    assert(!residentConflict(configs,0,0)&&residentConflict(configs,0,1)&&residentConflict(configs,0,2));
+    assert(!residentConflict(configs,2,0));
+    
     ConsoleHome residentMenu(residentRoot.string()+"/",noRoots);residentMenu.Load();
     residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Down);
     residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Accept);
     for(int i=0;i<4;++i)residentMenu.Press(ConsoleHome::Right);
     residentMenu.Press(ConsoleHome::Accept);residentMenu.Draw(canvas,"21:00");
+    residentMenu.Press(ConsoleHome::PageDown);residentMenu.Draw(canvas,"21:00");
     residentMenu.Press(ConsoleHome::Refresh);
     {std::ifstream in(ini);std::string contents((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());assert(contents==iniText);}
     // Receipts are snapshots bound to the selected catalog hash and size.
