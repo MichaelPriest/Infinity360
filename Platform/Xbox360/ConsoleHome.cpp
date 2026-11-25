@@ -1716,6 +1716,12 @@ std::string ConsoleHome::Press(Key key) {
                 if(isContentPackage(*visible_[row_])) {
                     const XboxPackageCheck check=ContentCatalog::CheckPackage(path);
                     notice_=ContentCatalog::PackageStatus(check.status);
+#ifdef __XSDK__
+                    if(!TransferRunning()&&check.status==XboxPackageCheck::StructurePresent){
+                        XboxContentPackage package{};
+                        if(ContentCatalog::ReadHeader(path,package)&&(package.contentType==0x7000u||package.contentType==0xd0000u))return path;
+                    }
+#endif
                 } else notice_="Formato de executavel nao suportado.";
                 return "";
             }
@@ -2496,7 +2502,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             title=visible_[row_]->name; sub=visible_[row_]->executable;
             hint=(isXexPath(sub) && !isContentPackage(*visible_[row_]))?
                 "Pressione A para iniciar este título.":
-                "Pacote identificado. Execucao nativa ainda nao homologada.";
+                "Pacote identificado. A solicita montagem XAM experimental (GOD/XBLA).";
         }
         const std::string backFile=section_==Files?"":ArtPath(*visible_[row_],false);
         const std::string coverFile=section_==Files?"":ArtPath(*visible_[row_],true);

@@ -212,7 +212,7 @@ XboxPackageCheck ContentCatalog::CheckPackage(const std::string& path) {
     // Common multi-file SVOD: a sibling .data directory with Data0000...
     // Do not guess other layouts or pass the package to XLaunchNewImage.
     check.expectedFragments=package.dataFileCount;
-    if(package.dataFileCount<=1 || package.dataFileCount>1024) {
+    if(package.dataFileCount==0 || package.dataFileCount>1024) {
         check.status=XboxPackageCheck::UnsupportedLayout;return check;
     }
     const std::string folder=path+".data";

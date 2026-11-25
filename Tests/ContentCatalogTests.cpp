@@ -1,4 +1,5 @@
 #include "ContentCatalog.h"
+#include "PackageLaunch.h"
 
 #include <cassert>
 #include <chrono>
@@ -102,7 +103,16 @@ int main() {
     std::ofstream(fragments/"Data0001",std::ios::trunc).close();
     assert(ContentCatalog::CheckPackage(god.string()).status==XboxPackageCheck::InconsistentFragments);
     std::ofstream(fragments/"Data0001")<<"second";
-
+    PackageLaunch::Ticket first{},next{};
+    assert(PackageLaunch::Capture(god.string(),first));
+    assert(PackageLaunch::Capture(xbla.string(),next));
+    assert(!PackageLaunch::Same(first,next));
+    std::ofstream(fragments/"Data0001",std::ios::app)<<"changed";
+    assert(PackageLaunch::Capture(god.string(),next)&&!PackageLaunch::Same(first,next));
+    fs::remove(fragments/"Data0001");
+    assert(!PackageLaunch::Capture(god.string(),next));
+    {std::fstream file(god,std::ios::binary|std::ios::in|std::ios::out);const char one[]={0,0,0,1};file.seekp(0x39d);file.write(one,4);}
+    assert(PackageLaunch::Capture(god.string(),next));
     // Read only the XEX2 execution header (no encrypted image is opened).
     const fs::path xex=root/"test.xex";
     std::vector<unsigned char> executable(128,0);

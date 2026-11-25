@@ -6,6 +6,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "XexLaunchCheck.h"
+#include "XsdkPackageMount.h"
 #ifdef INFINITY_XSDK_HTTPS
 #include "XsdkDownload.h"
 #ifdef INFINITY_STORE_ZIP
@@ -185,6 +186,9 @@ int main(){
     launchMarker.close();
     std::string pendingLaunch,launchNotice;
     XexLaunchCheck::Ticket launchTicket{};
+    PackageLaunch::Ticket packageTicket{};bool pendingPackage=false;
+    std::ifstream packageMarker((dir+"enable-package-launch.txt").c_str());std::string packageSignature;
+    const bool packageEnabled=bool(std::getline(packageMarker,packageSignature))&&packageSignature=="ENABLE-PACKAGE-LAUNCH";packageMarker.close();
     std::ifstream sessionMarker((dir+"enable-continuous-session.txt").c_str());std::string sessionSignature;
     const bool continuous=bool(std::getline(sessionMarker,sessionSignature))&&sessionSignature=="ENABLE-CONTINUOUS-SESSION";sessionMarker.close();
     auto captureLaunch=[](const std::string& path,XexLaunchCheck::Ticket& ticket){
@@ -216,6 +220,22 @@ int main(){
             if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
             else if(edge&INPUT_GAMEPAD_A){
                 const auto path=pendingLaunch;pendingLaunch.clear();
+                if(pendingPackage){
+                    pendingPackage=false;XsdkPackageMount mount;std::string error;
+                    menu.StopFtp();
+                    if(menu.TransferRunning()||!mount.Open(path,packageTicket,error)){launchNotice=error.empty()?"Transferencia ativa.":error;dirty=true;}
+                    else{
+                        if(!p.Close()){mount.Close();ok=false;break;}
+                        PackageLaunch::Ticket last{};
+                        if(PackageLaunch::Capture(path,last)&&PackageLaunch::Same(packageTicket,last)){
+                            menu.RecordLaunchAttempt(path);
+                            // Successful xsdk_launch terminates the title; on early failure close the mount.
+                            (void)xsdk_launch(XsdkPackageMount::Executable,nullptr,0);
+                            launchNotice="Loader retornou erro; montagem encerrada.";
+                        }else launchNotice="Pacote mudou antes do lancamento.";
+                        mount.Close();p=Presenter{};if(!p.Open()){p.Close();ok=false;break;}dirty=true;
+                    }
+                }else{
                 XexLaunchCheck::Ticket current{};
                 if(menu.TransferRunning()||!captureLaunch(path,current)||!XexLaunchCheck::Same(launchTicket,current)){
                     launchNotice="Executavel mudou ou copia ativa. Selecione novamente.";dirty=true;
@@ -234,15 +254,24 @@ int main(){
                     if(!p.Open()){p.Close();ok=false;break;}
                     dirty=true;
                 }
+                }
             }
         }else for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
             launchNotice.clear();
             const std::string launch=menu.Press(static_cast<ConsoleHome::Key>(i));
             if(!launch.empty()){
                 const std::string path=XexLaunchCheck::Path(launch);
-                if(!launchEnabled)launchNotice="XEX bloqueado: habilite o teste em MenuPreview.";
-                else if(!captureLaunch(path,launchTicket))launchNotice="XEX invalido, indisponivel ou da propria dashboard.";
-                else pendingLaunch=path;
+                pendingPackage=false;
+                if(!path.empty()){
+                    if(!launchEnabled)launchNotice="XEX bloqueado: habilite o teste em MenuPreview.";
+                    else if(!captureLaunch(path,launchTicket))launchNotice="XEX invalido, indisponivel ou da propria dashboard.";
+                    else pendingLaunch=path;
+                }else{
+                    const auto pkg=XsdkPaths::Normalize(launch);
+                    if(!packageEnabled||!launchEnabled)launchNotice="Habilite XEX e montagem de pacotes em MenuPreview.";
+                    else if(pkg.empty()||!PackageLaunch::Capture(pkg,packageTicket))launchNotice="GOD/XBLA invalido, incompleto ou layout nao suportado.";
+                    else {pendingPackage=true;pendingLaunch=pkg;}
+                }
             }
             const auto movie=menu.TakeMovie();
             if(!movie.empty()){
@@ -510,7 +539,7 @@ int main(){
             if(!pendingLaunch.empty()){
                 canvas.Box(180,220,920,260,LIME,12);
                 canvas.Box(184,224,912,252,0xff102923u,10);
-                canvas.Text(210,242,"Executar XEX selecionado?",32,WHITE,850);
+                canvas.Text(210,242,pendingPackage?"Montar e executar GOD/XBLA?":"Executar XEX selecionado?",32,WHITE,850);
                 canvas.Text(210,310,pendingLaunch,20,MUTED,850);
                 canvas.Text(210,392,"A Confirmar | B Cancelar | retorna pela dashboard do console",20,LIME,850);
             }
