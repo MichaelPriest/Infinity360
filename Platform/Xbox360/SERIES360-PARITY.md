@@ -369,3 +369,8 @@ Novo transporte não bloqueante passivo somente leitura (`FtpServer`) integrado 
 ## FTP bidirecional experimental (prioridade console)
 
 CI do transporte anterior 45523560632 aprovada. A inicia somente leitura, X inicia leitura/upload com ALLO exato, 32 MiB máximo por arquivo, temporário exclusivo e publicação sem substituir destino; testes de tamanho, colisão, traversal, links, limpeza. Sem escrita fora de UserFiles, sem REST/retomada nesta revisão. Windows/GUI/companion adicionais adiados até finalizar recursos Xbox. XDK e hardware pendentes.
+
+
+## FTP: retomada de downloads
+
+REST + RETR em modo binário, offset verificado contra tamanho de arquivo e limite de 64 bits, estado de retomada por sessão e consumo único. Upload com REST rejeitado. Testes de reconstrução, limites e regressão de upload. Windows adiado; validação física pendente.

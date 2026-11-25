@@ -19,3 +19,7 @@ Sistema > Rede e FTP > A inicia/para manualmente o novo adapter FTP passivo some
 ## Upload nativo experimental
 
 A continua iniciando FTP somente leitura. X, no painel Rede e FTP, inicia modo leitura/upload explícito; A ou X encerra o servidor. O modo upload exige TYPE I, ALLO de tamanho exato (0–32 MiB) e STOR passivo, restrito a UserFiles. Arquivos temporários exclusivos e ocultos do FTP, publicação sem substituir destino e limpeza em falha/encerramento. Não permite DELE, APPE, PORT ou alterações de diretórios. O limite reduz impacto inicial antes da homologação FATX; não é ainda adequado para jogos completos. Testes Linux usam o mesmo adapter em ambos os modos. XDK e teste físico pendentes. Desenvolvimento Windows adiado a pedido do usuário.
+
+## Retomada de downloads FTP
+
+O servidor aceita REST em modo binário antes de RETR. Valida offset decimal não negativo, limitado a 64 bits assinados e ao tamanho real do arquivo. O marcador é consumido pela operação, descartado ao trocar de sessão/diretório e rejeitado para upload. RETR na posição EOF produz transferência vazia. O cliente deve verificar a identidade do arquivo antes de combinar partes (REST não autentica conteúdo nem detecta alterações entre sessões). Sem retomada de upload, sem sobrescrita. Testes Linux de reconstrução byte a byte, EOF, offset inválido e rejeição de STOR com REST. XDK/hardware pendentes.

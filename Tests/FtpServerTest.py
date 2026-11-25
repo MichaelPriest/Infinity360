@@ -32,6 +32,20 @@ with tempfile.TemporaryDirectory() as directory:
             buf=io.BytesIO()
             ftp.retrbinary("RETR sample.bin",buf.write)
             assert buf.getvalue()==payload
+            partial=io.BytesIO(payload[:12345])
+            partial.seek(0,2)
+            ftp.retrbinary("RETR sample.bin",partial.write,rest=12345)
+            assert partial.getvalue()==payload
+            end=io.BytesIO()
+            ftp.retrbinary("RETR sample.bin",end.write,rest=len(payload))
+            assert not end.getvalue()
+            reject(lambda:ftp.retrbinary("RETR sample.bin",lambda _:None,rest=len(payload)+1))
+            reject(lambda:ftp.sendcmd("REST -1"))
+            reject(lambda:ftp.sendcmd("REST 9223372036854775808"))
+            reject(lambda:ftp.sendcmd("REST abc"))
+            buf=io.BytesIO()
+            ftp.retrbinary("RETR sample.bin",buf.write)
+            assert buf.getvalue()==payload
             reject(lambda:ftp.sendcmd("STOR new.bin"))
             reject(lambda:ftp.sendcmd("DELE sample.bin"))
             reject(lambda:ftp.sendcmd("PORT 127,0,0,1,1,1"))
@@ -54,6 +68,9 @@ with tempfile.TemporaryDirectory() as directory:
             ftp.voidcmd("ALLO "+str(len(payload)))
             ftp.storbinary("STOR new.bin",io.BytesIO(payload))
             assert (personal/"new.bin").read_bytes()==payload
+            ftp.voidcmd("ALLO 3")
+            reject(lambda:ftp.storbinary("STOR resumed.bin",io.BytesIO(b"abc"),rest=1))
+            assert not (personal/"resumed.bin").exists()
             ftp.voidcmd("ALLO 3")
             reject(lambda:ftp.storbinary("STOR new.bin",io.BytesIO(b"bad")))
             assert (personal/"new.bin").read_bytes()==payload

@@ -240,7 +240,8 @@ struct FtpServer::Impl {
     unsigned long address,peer;
     unsigned port,last,disconnected;
     bool network,sockets,binary,closing,transferring,listing,uploadEnabled,uploading,allocated;
-    unsigned long long uploadSize;
+    unsigned long long uploadSize,restartOffset;
+    bool restartPending;
     Upload upload;
     FtpSession* session;
     std::string root,user,password,input,reply,payload;
@@ -248,14 +249,14 @@ struct FtpServer::Impl {
     size_t offset;
     Impl():server(Invalid),control(Invalid),passive(Invalid),data(Invalid),address(0),peer(0),
         port(0),last(0),disconnected(0),network(false),sockets(false),binary(false),closing(false),
-        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),session(0),offset(0){}
+        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),restartOffset(0),restartPending(false),session(0),offset(0){}
     void clearData() {
         closeSock(passive);closeSock(data);file.close();file.clear();
         payload.clear();offset=0;transferring=false;listing=false;uploading=false;upload.Cancel();
     }
     void clearClient() {
         clearData();closeSock(control);delete session;session=0;input.clear();reply.clear();
-        closing=false;binary=false;allocated=false;disconnected=ticks();
+        closing=false;binary=false;allocated=false;restartPending=false;restartOffset=0;disconnected=ticks();
     }
     ~Impl() {
         clearClient();closeSock(server);
@@ -275,10 +276,10 @@ struct FtpServer::Impl {
         for(size_t i=0;i<line.size();++i)if((unsigned char)line[i]<32||(unsigned char)line[i]>126)valid=false;
         if(!valid){respond("500 Invalid command");return;}
         if(!session->Authenticated()||verb=="USER"||verb=="PASS"||verb=="QUIT") {
-            clearData();binary=false;allocated=false;respond(session->Command(line));closing=session->Closed();return;
+            clearData();binary=false;allocated=false;restartPending=false;restartOffset=0;respond(session->Command(line));closing=session->Closed();return;
         }
         if(verb=="TYPE") {
-            if(arg=="A"||arg=="I"){binary=arg=="I";respond("200 Type set");}
+            if(arg=="A"||arg=="I"){binary=arg=="I";if(!binary){restartPending=false;restartOffset=0;}respond("200 Type set");}
             else respond("504 Unsupported type");
             return;
         }
@@ -291,12 +292,28 @@ struct FtpServer::Impl {
                 num((a>>8)&255)+","+num(a&255)+","+num(p/256)+","+num(p%256)+")");
             return;
         }
+        if(verb=="REST") {
+            restartPending=false;restartOffset=0;allocated=false;
+            // Bound at the signed 64-bit file offset limit without overflow.
+            unsigned long long n=0;
+            bool ok=binary&&!arg.empty()&&arg.size()<=19;
+            for(size_t i=0;ok&&i<arg.size();++i) {
+                if(arg[i]<'0'||arg[i]>'9'){ok=false;break;}
+                const unsigned digit=arg[i]-'0';
+                if(n>(9223372036854775807ULL-digit)/10){ok=false;break;}
+                n=n*10+digit;
+            }
+            if(!ok){respond("501 Invalid binary restart offset");return;}
+            restartOffset=n;restartPending=true;
+            respond("350 Restart position accepted for next RETR");return;
+        }
         if(verb=="ALLO"&&uploadEnabled) {
             allocated=parseUploadSize(arg,uploadSize);
             respond(allocated?"200 Exact size reserved":"552 Invalid size or limit exceeded");return;
         }
         if(verb=="STOR"&&uploadEnabled) {
-            const bool valid=allocated&&binary;allocated=false;
+            const bool valid=allocated&&binary&&!restartPending;allocated=false;
+            restartPending=false;restartOffset=0;
             if(!valid||passive==Invalid) {
                 clearData();respond("550 Binary upload requires ALLO and passive mode");return;
             }
@@ -313,15 +330,28 @@ struct FtpServer::Impl {
             respond("213 "+num(static_cast<unsigned long long>(in.tellg())));return;
         }
         if(verb=="LIST"||verb=="NLST"||verb=="RETR") {
+            const unsigned long long start=restartPending?restartOffset:0;
+            restartPending=false;restartOffset=0;
             if(passive==Invalid){respond("425 Use passive mode first");return;}
             std::string path;
             listing=verb!="RETR";
             bool ok=listing?(arg.empty()&&session->DataDirectory("",path)&&
                               directoryListing(*session,path,verb=="NLST",payload)):
                              (binary&&session->DataFile(arg,path));
-            if(ok&&!listing) {file.open(path.c_str(),std::ios::binary);ok=!!file;}
+            if(ok&&!listing) {
+                file.open(path.c_str(),std::ios::binary|std::ios::ate);
+                if(file) {
+                    const std::streamoff size=file.tellg();
+                    ok=size>=0&&start<=static_cast<unsigned long long>(size);
+                    if(ok){file.seekg(static_cast<std::streamoff>(start),std::ios::beg);ok=!!file;}
+                } else ok=false;
+            }
             if(!ok){clearData();respond("550 Path unavailable or listing limit");return;}
             transferring=true;offset=0;respond("150 Opening data connection");return;
+        }
+        // Clear stale restart state on directory changes or unsupported commands.
+        if(verb!="NOOP"&&verb!="PWD"&&verb!="XPWD"&&verb!="FEAT") {
+            restartPending=false;restartOffset=0;
         }
         respond(session->Command(line));closing=session->Closed();
     }
