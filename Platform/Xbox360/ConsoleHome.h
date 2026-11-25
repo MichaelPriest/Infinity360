@@ -26,6 +26,8 @@ public:
     bool Tick();
     void StopFtp() {ftp_.Stop();}
     bool TakeNativeStoreRequest(StoreItem& item);
+    bool TakeProviderRequest(StoreProvider& provider);
+    void ProviderResult(const std::string& message,bool success);
     bool TakeStoreInstallRequest(StoreItem& item);
     bool TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity);
     bool TakeDiscSystemExit();
@@ -110,6 +112,10 @@ private:
     bool storeTranslationMatch_;
     bool nativeStorePending_;
     bool storeInstallPending_=false;
+    bool storeProviders_=false,providerPending_=false;
+    int providerRow_=0;
+    StoreProvider providerRequest_;
+    void DrawProviders(HomeCanvas& c) const;
     bool storeManage_=false,storeManageConfirm_=false;
     int storeManageRow_=0;
     void DrawStoreManage(HomeCanvas& c,const StoreItem& item) const;

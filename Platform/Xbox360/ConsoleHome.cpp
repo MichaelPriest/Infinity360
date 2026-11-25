@@ -825,6 +825,14 @@ bool ConsoleHome::TakeStoreInstallRequest(StoreItem& item){
 void ConsoleHome::StoreInstallResult(const std::string& message,bool success){
     notice_=message;RecordEvent(success?"XEX autorizado instalado":"Instalacao interrompida");
 }
+bool ConsoleHome::TakeProviderRequest(StoreProvider& provider){
+    if(!providerPending_)return false;
+    providerPending_=false;provider=providerRequest_;return true;
+}
+void ConsoleHome::ProviderResult(const std::string& message,bool success){
+    store_.Load();storeRow_=0;RebuildStore();clampRow(providerRow_,store_.Providers().size());
+    notice_=message;RecordEvent(success?"Catalogo remoto sincronizado":"Sincronizacao recusada");
+}
 bool ConsoleHome::TakeNativeStoreRequest(StoreItem& item) {
     if(!nativeStorePending_)return false;
     nativeStorePending_=false;item=nativeStoreItem_;return true;
@@ -856,6 +864,20 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
     }
     if(storeActive_) {
+        if(storeProviders_){
+            if(key==Back){storeProviders_=false;notice_.clear();return "";}
+            if(key==Refresh){store_.Load();providerRow_=0;RebuildStore();notice_="Configuracao e caches recarregados.";return "";}
+            const auto& providers=store_.Providers();
+            if(key==Up&&providerRow_>0)--providerRow_;
+            if(key==Down&&static_cast<size_t>(providerRow_+1)<providers.size())++providerRow_;
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Accept&&!providers.empty()){
+                if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+                providerRequest_=providers[providerRow_];providerPending_=true;notice_="Sincronizando catalogo autorizado.";
+            }
+#endif
+            return "";
+        }
         if(storeManage_){
             if(key==Back){if(storeManageConfirm_)storeManageConfirm_=false;else storeManage_=false;notice_.clear();return "";}
             if(key==Up||key==Down){storeManageRow_=(storeManageRow_+(key==Down?1:2))%3;storeManageConfirm_=false;return "";}
@@ -887,6 +909,7 @@ std::string ConsoleHome::Press(Key key) {
             RebuildStore();return "";
         }
         if(!storeDetails_) {
+            if(key==Search){storeProviders_=true;providerRow_=0;notice_.clear();return "";}
             if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
             if(key==Right&&storeTab_<7) {++storeTab_;storeRow_=0;RebuildStore();}
             if(key==Up&&storeRow_>0)--storeRow_;
@@ -943,6 +966,7 @@ std::string ConsoleHome::Press(Key key) {
                 RecordEvent(cancelled?"Pedido da loja removido":"Falha ao remover pedido");
             }
             if(key==Accept) {
+                if(!item.provider.empty()){storeConfirm_=false;notice_="Catalogo remoto: use START para baixar no Xbox.";return "";}
                 if(!TranslationMatches(item)) {
                     storeConfirm_=false;storeTranslationMatch_=false;
                     notice_="Traducao: nenhum XEX local com Title ID, Media ID e versao iguais.";return "";
@@ -1625,7 +1649,26 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
     c.Text(55,535,"Backups em UserFiles/StoreBackups | nenhum arquivo apagado",19,Muted,1150);
     c.Text(55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
 }
+void ConsoleHome::DrawProviders(HomeCanvas& c) const{
+    c.Text(44,78,"INFINITY Store | Provedores",37,White,1175);
+    c.Text(48,136,"HTTPS autorizado | SHA-256 aprovado | Cache local",21,Muted,1175);
+    const auto& providers=store_.Providers();
+    if(!store_.ProvidersValid())c.Text(48,245,"Configuracao de provedores invalida.",25,White,1170);
+    else if(providers.empty())c.Text(48,245,"Configure infinity360-providers.tsv e a lista de hosts.",22,Muted,1170);
+    else{
+        const int first=(providerRow_/5)*5;
+        for(int i=first;i<first+5&&static_cast<size_t>(i)<providers.size();++i){
+            const auto& p=providers[i];const int y=190+(i-first)*73;
+            panel(c,45,y,1189,65,Panel,i==providerRow_);
+            c.Text(60,y+6,p.name,24,White,820);
+            c.Text(60,y+35,p.id+" | "+(p.cached?number(p.items)+" itens em cache":"Sem cache aprovado"),18,Muted,820);
+            c.Text(915,y+14,p.cached?"Disponivel offline":"Sincronizar",20,p.cached?Lime:Muted,285);
+        }
+    }
+    c.Text(48,590,"A Sincronizar selecionado | Y Recarregar local | B Voltar",20,Lime,1175);
+}
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
+    if(storeProviders_){DrawProviders(c);return;}
     c.Text(44,78,"INFINITY Store",40,White,1175);
     c.Text(48,133,"Catalogos autorizados | Download nativo experimental",21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
@@ -1651,7 +1694,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(55,467,ids,20,Muted,1150);
             c.Text(55,505,storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":
                 "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
-        } else c.Text(55,470,item.url,18,Muted,1150);
+        } else c.Text(55,470,item.provider.empty()?item.url:"Provedor: "+item.provider+" | "+item.url,18,Muted,1150);
 #if defined(INFINITY_XSDK_HTTPS)
         c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar/atualizar XEX/ZIP | RB Gerenciar":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
 #endif
@@ -1669,7 +1712,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(835,y+15,store_.Staged(item)?"Arquivo local":store_.Requested(item)?"Na fila PC":"Disponivel",20,Lime,360);
         }
     }
-    c.Text(48,590,"A Detalhes | Y Atualizar catalogo | B Voltar",21,Lime,1175);
+    c.Text(48,590,"A Detalhes | R3 Provedores | Y Atualizar local | B Voltar",21,Lime,1175);
 }
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(storeActive_) {DrawStore(c);return;}

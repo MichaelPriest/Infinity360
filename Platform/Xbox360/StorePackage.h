@@ -3,18 +3,7 @@
 #include "FileWorkspace.h"
 #include <stdint.h>
 #include <functional>
-class StoreSha256 {
-public:
-    StoreSha256();
-    void Update(const unsigned char* data,size_t size);
-    std::string Finish(); // consumes the state
-private:
-    uint32_t state_[8];
-    unsigned char block_[64];
-    unsigned used_;
-    uint64_t bytes_;
-    void Compress();
-};
+#include "StoreSha256.h"
 class StorePackage {
 public:
     explicit StorePackage(const FileWorkspace& workspace);

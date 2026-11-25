@@ -1,5 +1,7 @@
 #include "StoreCatalog.h"
 #include "StorePartial.h"
+#include "StoreSha256.h"
+#include "MediaUrl.h"
 #include "StoreInstallPath.h"
 #include "XexLaunchCheck.h"
 #include "SavedFile.h"
@@ -77,9 +79,62 @@ bool parse(const std::string& line,StoreItem& item) {
     item.bytes=size;item.sha256=fields[5];item.url=fields[6];item.rights=fields[7];return true;
 }
 std::string key(const StoreItem& item){return item.id+"\t"+item.sha256;}
+constexpr size_t MaxProviderBytes=256*1024;
+bool secureUrl(const std::string& value){
+    MediaUrl parsed;
+    return value.compare(0,8,"https://")==0&&value.size()<=1024&&value.find('#')==std::string::npos&&
+        parsed.Parse(value)&&parsed.secure&&parsed.port==443;
+}
+bool readProviders(const std::string& root,std::vector<StoreProvider>& providers){
+    providers.clear();const std::string path=root+"infinity360-providers.tsv";
+    if(!fileExists(path))return true;
+    std::string data,line;if(!readBound(path,16384,data))return false;
+    std::set<std::string> ids;std::istringstream rows(data);
+    while(std::getline(rows,line)){
+        if(!line.empty()&&line.back()=='\r')line.pop_back();
+        if(line.empty()||line[0]=='#')continue;
+        std::vector<std::string> fields;size_t at=0;
+        for(size_t i=0;i<=line.size();++i)if(i==line.size()||line[i]=='\t'){fields.push_back(line.substr(at,i-at));at=i+1;}
+        if(fields.size()!=5||providers.size()>=8||!token(fields[0],12)||!display(fields[1],64)||
+           !secureUrl(fields[2])||!hash(fields[4])||!ids.insert(fields[0]).second||
+           fields[3].empty()||fields[3].size()>6)return false;
+        unsigned long long bytes=0;
+        for(char ch:fields[3]){if(ch<'0'||ch>'9')return false;bytes=bytes*10+ch-'0';}
+        if(!bytes||bytes>MaxProviderBytes)return false;
+        StoreProvider provider;provider.id=fields[0];provider.name=fields[1];provider.url=fields[2];provider.bytes=bytes;provider.sha256=fields[4];
+        providers.push_back(provider);
+    }
+    return true;
+}
+std::string providerFolder(const std::string& root){
+    return FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"StoreCatalogs");
+}
+std::string providerFile(const std::string& root,const StoreProvider& provider){
+    return FileWorkspace::Join(providerFolder(root),provider.id+".tsv");
+}
+bool providerItems(const StoreProvider& provider,const std::string& data,const std::vector<StoreItem>& existing,std::vector<StoreItem>& out){
+    out.clear();if(data.size()!=provider.bytes||data.size()>MaxProviderBytes||data.find('\0')!=std::string::npos)return false;
+    StoreSha256 sha;sha.Update(reinterpret_cast<const unsigned char*>(data.data()),data.size());
+    if(sha.Finish()!=provider.sha256)return false;
+    std::set<std::string> ids;size_t retained=0;
+    for(const auto& item:existing)if(item.provider!=provider.id){ids.insert(item.id);++retained;}
+    std::istringstream rows(data);std::string line;
+    while(std::getline(rows,line)){
+        if(!line.empty()&&line.back()=='\r')line.pop_back();
+        if(line.empty()||line[0]=='#')continue;
+        StoreItem item;
+        if(out.size()>=256||retained+out.size()>=1024||line.size()>1400||!parse(line,item)||
+           !secureUrl(item.url)||item.bytes>512ULL*1024*1024)return false;
+        item.id=provider.id+"-"+item.id;item.provider=provider.id;
+        if(!token(item.id,32)||!ids.insert(item.id).second)return false;
+        out.push_back(item);
+    }
+    return true;
+}
 }
 bool StoreCatalog::Load() {
     items_.clear();requests_.clear();validRequests_=true;
+    providers_.clear();providersValid_=true;
     native_.clear();validNative_=true;
     const std::string nativePath=savedFile(root_+"infinity360-native-queue.tsv");
     if(fileExists(nativePath)){
@@ -115,18 +170,56 @@ bool StoreCatalog::Load() {
             }
         }
     }
-    if(!readBound(root_+"aurorax-store.tsv",1024*1024,data))return false;
-    std::istringstream in(data);std::set<std::string> ids;
-    while(std::getline(in,line)) {
-        if(!line.empty()&&line[line.size()-1]=='\r')line.erase(line.size()-1);
-        if(line.empty()||line[0]=='#')continue;
-        StoreItem item;
-        if(items_.size()>=1024||line.size()>1400||!parse(line,item)||!ids.insert(item.id).second) {
-            items_.clear();return false;
+    const bool localPresent=fileExists(root_+"aurorax-store.tsv");
+    if(localPresent){
+        if(!readBound(root_+"aurorax-store.tsv",1024*1024,data))return false;
+        std::istringstream in(data);std::set<std::string> ids;
+        while(std::getline(in,line)){
+            if(!line.empty()&&line.back()=='\r')line.pop_back();
+            if(line.empty()||line[0]=='#')continue;
+            StoreItem item;
+            if(items_.size()>=1024||line.size()>1400||!parse(line,item)||!ids.insert(item.id).second){
+                items_.clear();return false;
+            }
+            items_.push_back(item);
         }
-        items_.push_back(item);
     }
-    return true;
+    providersValid_=readProviders(root_,providers_);
+    if(!providersValid_){providers_.clear();return localPresent;}
+    FileWorkspace ws(root_);
+    for(auto& provider:providers_){
+        const auto path=savedFile(providerFile(root_,provider));
+        std::vector<StoreItem> entries;
+        if(ws.CanReadPersonalFile(path)&&readBound(path,MaxProviderBytes,data)&&providerItems(provider,data,items_,entries)){
+            provider.cached=true;provider.items=entries.size();
+            items_.insert(items_.end(),entries.begin(),entries.end());
+        }
+    }
+    return localPresent||!providers_.empty();
+}
+bool StoreCatalog::ImportProvider(const StoreProvider& provider,const std::string& data,std::string& error){
+    error.clear();
+    // Re-read local authorization: a stale UI request cannot import a revoked pin.
+    StoreCatalog current(root_);current.Load();
+    if(!current.ProvidersValid()){error="Configuracao de provedores invalida.";return false;}
+    const auto it=std::find_if(current.providers_.begin(),current.providers_.end(),[&](const StoreProvider& p){
+        return p.id==provider.id&&p.url==provider.url&&p.sha256==provider.sha256&&p.bytes==provider.bytes;
+    });
+    if(it==current.providers_.end()){error="Provedor removido ou pin alterado.";return false;}
+    std::vector<StoreItem> entries;
+    if(!providerItems(*it,data,current.items_,entries)){error="Catalogo recusado: hash, tamanho, formato ou IDs.";return false;}
+    FileWorkspace ws(root_);
+    const auto personal=FileWorkspace::Join(root_,"UserFiles");
+    const auto folder=providerFolder(root_);
+    if(!ws.CanWrite(personal)||(!ws.CanWrite(folder)&&!ws.Create(personal,"StoreCatalogs"))){
+        error="Area pessoal indisponivel; habilite escrita.";return false;
+    }
+    const auto path=providerFile(root_,*it);
+    // No replacement of local catalog or packages; only this provider's cache.
+    std::ofstream output((path+".tmp").c_str(),std::ios::binary|std::ios::trunc);
+    output.write(data.data(),static_cast<std::streamsize>(data.size()));output.close();
+    if(!output||!replaceSavedFile(path)){error="Falha ao salvar cache.";return false;}
+    return Load();
 }
 bool StoreCatalog::Requested(const StoreItem& item) const {
     return std::find(requests_.begin(),requests_.end(),key(item))!=requests_.end();
@@ -139,7 +232,7 @@ bool StoreCatalog::SaveRequests() {
     out.close();return out&&replaceSavedFile(file);
 }
 bool StoreCatalog::Request(const StoreItem& item) {
-    if(!validRequests_)return false;
+    if(!validRequests_||!item.provider.empty())return false;
     if(Requested(item))return true;
     if(requests_.size()>=64)return false;
     requests_.push_back(key(item));

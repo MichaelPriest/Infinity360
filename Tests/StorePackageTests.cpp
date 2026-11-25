@@ -112,5 +112,26 @@ int main(){
     assert(fs::file_size(fs::path(installed)/"data/resource.bin")==12);
     assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
 #endif
+    // Pinned remote snapshots: exact digest, namespace, offline reload, tamper detection.
+    const std::string catalogRow="demo\thomebrew\tRemote Demo\t1\t3\t"+digest+"\thttps://example.org/demo\tAuthorized fixture\n";
+    StoreSha256 pin;pin.Update(reinterpret_cast<const unsigned char*>(catalogRow.data()),catalogRow.size());
+    const std::string pinned=pin.Finish();
+    {std::ofstream config(root/"infinity360-providers.tsv");
+     config<<"test\tTest provider\thttps://example.org/catalog.tsv\t"<<catalogRow.size()<<"\t"<<pinned<<"\n";}
+    StoreCatalog remote(base);assert(remote.Load());assert(remote.Providers().size()==1);
+    StoreProvider provider=remote.Providers()[0];assert(!provider.cached);
+    std::string providerError;
+    assert(!remote.ImportProvider(provider,catalogRow+"x",providerError));
+    assert(remote.ImportProvider(provider,catalogRow,providerError));
+    assert(remote.Providers()[0].cached&&remote.Providers()[0].items==1);
+    StoreItem entry=remote.Items().back();assert(entry.id=="test-demo"&&entry.provider=="test");
+    assert(!remote.Request(entry));assert(remote.QueueNative(entry));
+    StoreCatalog offline(base);assert(offline.Load());assert(offline.Providers()[0].cached);
+    {std::ofstream corrupt(root/"UserFiles/StoreCatalogs/test.tsv");corrupt<<catalogRow<<"x";}
+    assert(offline.Load());assert(!offline.Providers()[0].cached);
+    assert(offline.ImportProvider(provider,catalogRow,providerError));
+    {std::ofstream revoke(root/"infinity360-providers.tsv");revoke<<"# removed\n";}
+    assert(!offline.ImportProvider(provider,catalogRow,providerError));
+    assert(offline.Load());assert(offline.Providers().empty());
     fs::remove_all(root);
 }

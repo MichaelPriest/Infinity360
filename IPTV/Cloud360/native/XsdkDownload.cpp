@@ -136,3 +136,73 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
     success=output.Finish();
     return success?(output.Error().empty()?"Pacote verificado por SHA-256 e salvo.":output.Error()):output.Error();
 }
+
+namespace {
+struct CatalogTransfer {
+    std::string data;
+    unsigned long long limit;
+    const std::function<bool(unsigned long long,unsigned long long)>& progress;
+};
+size_t catalogBody(char* bytes,size_t size,size_t count,void* opaque){
+    auto& t=*static_cast<CatalogTransfer*>(opaque);
+    if(size&&count>std::numeric_limits<size_t>::max()/size)return 0;
+    const size_t n=size*count;
+    if(n>32768||n>t.limit-t.data.size())return 0;
+    t.data.append(bytes,n);return n;
+}
+int catalogProgress(void* opaque,curl_off_t,curl_off_t,curl_off_t,curl_off_t){
+    auto& t=*static_cast<CatalogTransfer*>(opaque);
+    return t.progress(t.data.size(),t.limit)?0:1;
+}
+}
+std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
+    success=false;
+    std::ifstream opt((root+"enable-https-store.txt").c_str());std::string marker;
+    if(!std::getline(opt,marker)||marker!="ENABLE-HTTPS-STORE")return "HTTPS bloqueado.";
+    StoreItem source{};source.url=provider.url;
+    if(!provider.bytes||provider.bytes>256*1024||!StoreNativeSource(source,root))return "Host ou limite do provedor recusado.";
+    FileWorkspace ws(root);
+    if(!ws.CanWrite(FileWorkspace::Join(root,"UserFiles")))return "Habilite escrita na area pessoal.";
+    const std::string ca="game:/cacert.pem";
+    {std::ifstream file(ca.c_str(),std::ios::binary|std::ios::ate);
+     if(!file||file.tellg()<1024||file.tellg()>1024*1024)return "CA bundle ausente ou invalido.";}
+    if(!progress(0,provider.bytes))return "Sincronizacao cancelada.";
+    if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return "Falha ao inicializar HTTPS.";
+    CURL* curl=curl_easy_init();
+    if(!curl){curl_global_cleanup();return "Falha ao criar sessao HTTPS.";}
+    CatalogTransfer transfer{"",provider.bytes,progress};bool options=true;
+    #define SET(k,v) do { if(curl_easy_setopt(curl,k,v)!=CURLE_OK)options=false; } while(0)
+    SET(CURLOPT_URL,provider.url.c_str());
+    SET(CURLOPT_PROTOCOLS_STR,"https");
+    SET(CURLOPT_FOLLOWLOCATION,0L);
+    SET(CURLOPT_SSL_VERIFYPEER,1L);
+    SET(CURLOPT_SSL_VERIFYHOST,2L);
+    SET(CURLOPT_SSLVERSION,long(CURL_SSLVERSION_TLSv1_2|CURL_SSLVERSION_MAX_TLSv1_2));
+    SET(CURLOPT_CAINFO,ca.c_str());
+    SET(CURLOPT_PROXY,"");
+    SET(CURLOPT_NETRC,long(CURL_NETRC_IGNORED));
+    SET(CURLOPT_CONNECTTIMEOUT,15L);
+    SET(CURLOPT_TIMEOUT,90L);
+    SET(CURLOPT_LOW_SPEED_LIMIT,128L);
+    SET(CURLOPT_LOW_SPEED_TIME,20L);
+    SET(CURLOPT_FAILONERROR,1L);
+    SET(CURLOPT_MAXFILESIZE_LARGE,static_cast<curl_off_t>(provider.bytes));
+    SET(CURLOPT_HTTP_VERSION,long(CURL_HTTP_VERSION_1_1));
+    SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.8.9");
+    SET(CURLOPT_WRITEFUNCTION,catalogBody);
+    SET(CURLOPT_WRITEDATA,&transfer);
+    SET(CURLOPT_XFERINFOFUNCTION,catalogProgress);
+    SET(CURLOPT_XFERINFODATA,&transfer);
+    SET(CURLOPT_NOPROGRESS,0L);
+    #undef SET
+    const CURLcode result=options?curl_easy_perform(curl):CURLE_FAILED_INIT;
+    long status=0;curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&status);
+    curl_easy_cleanup(curl);curl_global_cleanup();
+    if(!options)return "Configuracao HTTPS indisponivel.";
+    if(result!=CURLE_OK||status!=200||transfer.data.size()!=provider.bytes)return "Sincronizacao incompleta; cache anterior preservado.";
+    if(!progress(provider.bytes,provider.bytes))return "Sincronizacao cancelada.";
+    StoreCatalog catalog(root);std::string error;
+    success=catalog.ImportProvider(provider,transfer.data,error);
+    return success?"Catalogo verificado e salvo para uso offline.":error.empty()?"Catalogo recusado.":error;
+}

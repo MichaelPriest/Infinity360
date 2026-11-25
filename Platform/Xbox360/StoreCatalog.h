@@ -5,6 +5,13 @@ struct StoreItem {
     std::string id, category, name, version, sha256, url, rights;
     unsigned long long bytes;
     unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
+    std::string provider; // empty = legacy local catalog
+};
+struct StoreProvider {
+    std::string id,name,url,sha256;
+    unsigned long long bytes=0;
+    size_t items=0;
+    bool cached=false;
 };
 struct StoreProgress {
     enum State { Unknown, Receiving, Verified, Failed, NativeVerified, NativePaused };
@@ -16,6 +23,9 @@ class StoreCatalog {
 public:
     explicit StoreCatalog(const std::string& root):root_(root){}
     bool Load();
+    const std::vector<StoreProvider>& Providers() const{return providers_;}
+    bool ProvidersValid() const{return providersValid_;}
+    bool ImportProvider(const StoreProvider& provider,const std::string& data,std::string& error);
     const std::vector<StoreItem>& Items() const {return items_;}
     bool Request(const StoreItem& item);
     bool Cancel(const StoreItem& item);
@@ -39,6 +49,8 @@ public:
 private:
     std::string root_;
     std::vector<StoreItem> items_;
+    std::vector<StoreProvider> providers_;
+    bool providersValid_=true;
     std::vector<std::string> requests_;
     bool validRequests_=true,validNative_=true;
     std::vector<std::string> native_;

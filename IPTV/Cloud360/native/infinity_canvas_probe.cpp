@@ -220,6 +220,28 @@ int main(){
             StoreItem pending;
 #ifdef INFINITY_XSDK_HTTPS
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}
+            StoreProvider provider;
+            if(menu.TakeProviderRequest(provider)){
+                menu.StopFtp();bool success=false,videoFailed=false;
+                auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                const auto progress=[&](unsigned long long done,unsigned long long total){
+                    INPUT_STATE state{};
+                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    const auto now=std::chrono::steady_clock::now();
+                    if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
+                    last=now;canvas.Background();
+                    canvas.Text(48,100,"INFINITY Store | Sincronizar catalogo",36,WHITE,1180);
+                    canvas.Text(48,210,provider.name,28,WHITE,1180);
+                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
+                    canvas.Box(48,370,1180,22,0xff28413au,5);
+                    if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
+                    canvas.Text(48,560,"B Cancelar | TLS e SHA-256 | Nenhum pacote iniciado",22,LIME,1180);
+                    if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
+                };
+                const auto result=XsdkSyncProvider(provider,dir,progress,success);
+                menu.ProviderResult(result,success);
+                if(videoFailed){ok=false;break;}
+            }
             std::string mount;XboxExecutionInfo identity{};
             if(menu.TakeDiscInstallRequest(mount,identity)){
                 menu.StopFtp();FileWorkspace workspace(dir);
