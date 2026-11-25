@@ -86,3 +86,7 @@ API de sessão local open/step/report/close implementada, com modo estendido lim
 ### P1 — Fila incremental audiovisual
 
 Fila RGB/PCM com limite de memória e liberação após consumo, leitura antecipada por PTS, blocos de áudio contínuos, integração no diagnóstico opcional XSDK e testes de 12 segundos MP4/TS. Cross-build, sincronização física, rebuffering e HLS pendentes.
+
+### P1 — Transporte MPEG-TS incremental
+
+Entrada por callback não-seekable com demux forçado TS, erro terminal e testes de fragmentação/interrupção. Leitor curl reutilizado no alvo XSDK opcional com autorização e buffer limitado. HLS, reconexão, rebuffering, cross-build FFmpeg e integração à dashboard pendentes.

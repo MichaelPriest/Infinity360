@@ -31,6 +31,10 @@
 #include "frame_output.h"
 #include "av_timeline.h"
 #include "av_stream_queue.h"
+#ifdef INFINITY_CONTAINER_NETWORK_PROBE
+#include "XsdkRemoteReader.h"
+#include <fstream>
+#endif
 #include <chrono>
 #include "xsdk/audio.h"
 #include "xsdk/xam.h"
@@ -148,7 +152,23 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 #ifdef INFINITY_CONTAINER_OUTPUT_PROBE
 int main(){
     CloudAvStreamQueue timeline;
-    auto* session=cloud_container_open("game:/test.mp4",CloudAvStreamQueue::Capture,&timeline,1);
+    CloudContainerSession* session=nullptr;
+#ifdef INFINITY_CONTAINER_NETWORK_PROBE
+    // Optional explicitly authorized TS URL; never silently fall back.
+    XsdkMpeg::RemoteReader remote;
+    std::ifstream config("game:/cloud360-test-ts-url.txt",std::ios::binary);
+    if(config){
+        char raw[4098]{};config.getline(raw,sizeof raw);
+        if(config.fail()||config.peek()!=std::char_traits<char>::eof())return 1;
+        std::string address=raw;if(!address.empty()&&address.back()=='\r')address.pop_back();
+        std::ifstream enabled("game:/enable-iptv-playback.txt");std::string marker;
+        if(!std::getline(enabled,marker)||marker!="ENABLE-IPTV-PLAYBACK"||!remote.Open(address,"game:/",true))return 1;
+        session=cloud_container_open_ts([](void* user,uint8_t* bytes,unsigned cap){
+            return static_cast<XsdkMpeg::RemoteReader*>(user)->Read(bytes,cap);
+        },&remote,CloudAvStreamQueue::Capture,&timeline);
+    }else
+#endif
+    session=cloud_container_open("game:/test.mp4",CloudAvStreamQueue::Capture,&timeline,1);
     if(!session)return 1;
     int rc=1;unsigned prefill=0;
     while(rc>0&&timeline.WantsInput(0)&&prefill++<4096)rc=cloud_container_step(session,1);

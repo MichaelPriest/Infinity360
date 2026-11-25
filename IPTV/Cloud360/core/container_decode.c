@@ -9,12 +9,19 @@
 #include <libavutil/error.h>
 #include <libavutil/dict.h>
 enum { MAX_BYTES=8*1024*1024, MAX_PACKETS=4096, MAX_FRAMES=1200, EXTENDED_BYTES=256*1024*1024, EXTENDED_PACKETS=250000, EXTENDED_FRAMES=180000 };
-typedef struct { FILE* file; int64_t length; int64_t budget; } Input;
+typedef struct { FILE* file; int64_t length; int64_t budget; CloudContainerRead read; void* user; int failed; } Input;
 static int read_input(void* opaque,uint8_t* buf,int n){
     Input* in=opaque;
-    if(n<=0||in->budget<=0)return AVERROR(EIO);
+    if(n<=0||in->budget<=0||in->failed){in->failed=1;return AVERROR(EIO);}
     if(n>in->budget)n=(int)in->budget;
+    if(in->read){
+        int got=in->read(in->user,buf,(unsigned)n);
+        if(got<0||got>n){in->failed=1;return AVERROR(EIO);}
+        in->budget-=got;
+        return got?got:AVERROR_EOF;
+    }
     size_t got=fread(buf,1,(size_t)n,in->file);
+    if(ferror(in->file))in->failed=1;
     in->budget-=got;
     return got?(int)got:ferror(in->file)?AVERROR(EIO):AVERROR_EOF;
 }
@@ -94,27 +101,29 @@ void cloud_container_close(CloudContainerSession* s){
     if(s->input.file)fclose(s->input.file);
     free(s);
 }
-CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){
-    if(!path||strstr(path,"://"))return NULL;
+static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended){
+    if(!read&&(!path||strstr(path,"://")))return NULL;
     CloudContainerSession* s=calloc(1,sizeof *s);if(!s)return NULL;
     const int64_t max_bytes=extended?EXTENDED_BYTES:MAX_BYTES;
     s->input.budget=max_bytes*4;
     s->max_packets=extended?EXTENDED_PACKETS:MAX_PACKETS;
-    s->input.file=fopen(path,"rb");
+    s->input.read=read;s->input.user=reader;
+    if(!read)s->input.file=fopen(path,"rb");
     AVDictionary* options=NULL;
     uint8_t* buffer=NULL;
-    if(!s->input.file||fseek(s->input.file,0,SEEK_END)||
+    if(!read&&(!s->input.file||fseek(s->input.file,0,SEEK_END)||
        ((s->input.length=ftell(s->input.file))<=0)||s->input.length>max_bytes||
-       fseek(s->input.file,0,SEEK_SET))goto fail;
+       fseek(s->input.file,0,SEEK_SET)))goto fail;
     buffer=av_malloc(32768);if(!buffer)goto fail;
-    s->io=avio_alloc_context(buffer,32768,0,&s->input,read_input,NULL,seek_input);
+    s->io=avio_alloc_context(buffer,32768,0,&s->input,read_input,NULL,read?NULL:seek_input);
     if(!s->io)goto fail;buffer=NULL;
     s->fmt=avformat_alloc_context();if(!s->fmt)goto fail;
     s->fmt->pb=s->io;s->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;s->fmt->io_open=deny_open;
     s->fmt->probesize=256*1024;s->fmt->max_analyze_duration=2000000;s->fmt->max_streams=8;
-    av_dict_set(&options,"format_whitelist","mov,mp4,m4a,3gp,3g2,mj2,mpegts",0);
+    av_dict_set(&options,"format_whitelist",read?"mpegts":"mov,mp4,m4a,3gp,3g2,mj2,mpegts",0);
     av_dict_set(&options,"protocol_whitelist","file",0);
-    if(avformat_open_input(&s->fmt,NULL,NULL,&options)<0||avformat_find_stream_info(s->fmt,NULL)<0)goto fail;
+    const AVInputFormat* forced=read?av_find_input_format("mpegts"):NULL;
+    if((read&&!forced)||avformat_open_input(&s->fmt,NULL,forced,&options)<0||avformat_find_stream_info(s->fmt,NULL)<0||s->input.failed)goto fail;
     s->vi=av_find_best_stream(s->fmt,AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0);
     s->ai=av_find_best_stream(s->fmt,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
     if(s->vi<0||s->ai<0)goto fail;
@@ -128,12 +137,15 @@ CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame
 fail:
     av_free(buffer);av_dict_free(&options);cloud_container_close(s);return NULL;
 }
+CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended);}
+CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
 int cloud_container_step(CloudContainerSession* s,unsigned packet_budget){
     if(!s||!packet_budget||packet_budget>64)return AVERROR(EINVAL);
     if(s->state<=0)return s->state;
     for(unsigned i=0;i<packet_budget;++i){
         int read=av_read_frame(s->fmt,s->pkt);
+        if(s->input.failed){av_packet_unref(s->pkt);s->state=AVERROR(EIO);return s->state;}
         if(read==AVERROR_EOF){
             int rc=submit(s->video,NULL,s->frame,&s->report,1,s->vs);
             if(rc>=0)rc=submit(s->audio,NULL,s->frame,&s->report,0,s->as);
