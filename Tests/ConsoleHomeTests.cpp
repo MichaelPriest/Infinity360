@@ -907,5 +907,22 @@ int main(int argc,char** argv) {
     nexusMeta.Load();nexusMeta.Press(ConsoleHome::Accept);nexusMeta.Press(ConsoleHome::Accept);
     nexusMeta.Draw(canvas,"20:50");
     assert(nexusMeta.Press(ConsoleHome::Accept)==nexusGame.string());
+    // Read-only INI inventory; duplicate slots are ambiguous, not loaded state.
+    const fs::path residentRoot=root/"ResidentFixture";
+    fs::create_directories(residentRoot);
+    const fs::path ini=residentRoot/"launch.ini";
+    const std::string iniText="[Paths]\nplugin1=ignored.xex\n[Plugins]\nplugin1 = Hdd1:\\LiveEmulation.xex\nplugin2=\nplugin3=one.xex\nplugin3=two.xex\n[Settings]\nplugin5=ignored.xex\n";
+    {std::ofstream out(ini);out<<iniText;}
+    std::vector<ResidentPluginSlot> slots;
+    assert(readResidentPlugins(ini.string(),slots));
+    assert(slots.size()==5 && isLiveEmulationReference(slots[0].path));
+    assert(slots[1].path.empty() && slots[2].duplicate && slots[4].path.empty());
+    ConsoleHome residentMenu(residentRoot.string()+"/",noRoots);residentMenu.Load();
+    residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Down);
+    residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Accept);
+    for(int i=0;i<4;++i)residentMenu.Press(ConsoleHome::Right);
+    residentMenu.Press(ConsoleHome::Accept);residentMenu.Draw(canvas,"21:00");
+    residentMenu.Press(ConsoleHome::Refresh);
+    {std::ifstream in(ini);std::string contents((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());assert(contents==iniText);}
     fs::remove_all(root);
 }

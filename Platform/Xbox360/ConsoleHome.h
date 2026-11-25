@@ -9,6 +9,7 @@
 #include "NetworkInfo.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
+#include "ResidentPlugins.h"
 #include <map>
 #include <set>
 
@@ -51,6 +52,10 @@ private:
     void DrawStorage(HomeCanvas& c) const;
     NetworkSnapshot network_;
     void RefreshNetwork();
+    void RefreshResidentPlugins();
+    void DrawResidentPlugins(HomeCanvas& c) const;
+    std::vector<ResidentPluginSlot> residentPlugins_;
+    std::string residentConfig_;
     void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
     bool pasteConfirm_, scanPathConfirm_, fileAction_, deleteConfirm_, cutMode_;

@@ -486,6 +486,36 @@ std::string ConsoleHome::TakeMovie() {
 void ConsoleHome::RefreshStorage() {
     storageVolumes_=StorageInfo::ReadAll(fileWorkspace_.Roots());
 }
+void ConsoleHome::RefreshResidentPlugins() {
+    residentConfig_.clear();residentPlugins_.clear();
+    // Show only the first readable candidate, not a claim about active boot source.
+    std::vector<std::string> paths;
+    paths.push_back(dir_+"launch.ini");
+#ifdef _XBOX
+    paths.push_back("HDD1:\\launch.ini");
+    paths.push_back("USB0:\\launch.ini");
+    paths.push_back("USB1:\\launch.ini");
+#endif
+    for(size_t i=0;i<paths.size();++i) {
+        if(readResidentPlugins(paths[i],residentPlugins_)) {
+            residentConfig_=paths[i];return;
+        }
+    }
+    residentPlugins_.clear();
+}
+void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
+    c.Text(47,349,"Plugins residentes / DashLaunch",27,White,1170);
+    c.Text(47,385,residentConfig_.empty()?"Nenhum launch.ini legivel":residentConfig_,18,Muted,1170);
+    for(size_t i=0;i<residentPlugins_.size();++i) {
+        const ResidentPluginSlot& slot=residentPlugins_[i];
+        const int y=415+static_cast<int>(i)*32;
+        c.Text(51,y,"Slot "+number(i+1),18,White,110);
+        c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,840);
+        c.Text(1025,y,slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"",17,Lime,195);
+    }
+    c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
+    c.Text(47,610,"Y Atualizar | B Voltar",18,Lime,1170);
+}
 void ConsoleHome::RefreshNetwork() {
     network_=NetworkInfo::Read();
 }
@@ -1098,6 +1128,7 @@ std::string ConsoleHome::Press(Key key) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
             else if(systemTab_==3)notice_="Transferencias locais atualizadas automaticamente.";
+            else if(systemTab_==4) {RefreshResidentPlugins();notice_="Configuracao de plugins consultada.";}
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
@@ -1119,10 +1150,11 @@ std::string ConsoleHome::Press(Key key) {
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
-            if(key==Right && systemTab_<3) ++systemTab_;
+            if(key==Right && systemTab_<4) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
+                else if(systemTab_==4)RefreshResidentPlugins();
                 page_=Details;
             }
         }
@@ -1651,28 +1683,30 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(section_==System) {
         static const char* const titles[]={
-            "Armazenamento","Rede e FTP","Temperaturas","Downloads"
+            "Armazenamento","Rede e FTP","Temperaturas","Downloads","Plugins"
         };
-        static const char* const marks[]={"HDD","NET","SMC","DL"};
+        static const char* const marks[]={"HDD","NET","SMC","DL","PLG"};
         static const char* const summaries[]={
-            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais"
+            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais","Residentes"
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
             "FTP: autenticacao local implementada; transporte de rede pendente.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
-            "Transferencias locais; downloads de internet pendentes."
+            "Transferencias locais; downloads de internet pendentes.",
+            "Diagnostico somente leitura do launch.ini."
         };
-        for(int i=0;i<4;++i) {
-            const int x=42+i*302;
-            panel(c,x,166,290,166,Panel,i==systemTab_);
-            c.Text(x+17,184,marks[i],20,i==systemTab_?Lime:Muted,96);
-            c.Text(x+17,222,titles[i],28,White,264);
-            c.Text(x+17,284,summaries[i],18,Muted,252);
+        for(int i=0;i<5;++i) {
+            const int x=42+i*240;
+            panel(c,x,166,230,166,Panel,i==systemTab_);
+            c.Text(x+13,184,marks[i],20,i==systemTab_?Lime:Muted,96);
+            c.Text(x+13,222,titles[i],23,White,207);
+            c.Text(x+13,284,summaries[i],17,Muted,207);
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
         if(page_==Details && systemTab_==3) {DrawTransfers(c);return;}
+        if(page_==Details && systemTab_==4) {DrawResidentPlugins(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);
