@@ -153,16 +153,33 @@ int main() {
         "WRONGID",0x58410901u,0xb0000u,"Wrong title");
     makePackage(userRoot,"4D5307E6","00000002",
         "IGNORED",0x4d5307e6u,2u,"Not shared");
+    // Legacy TU in a sibling Cache directory, with a valid matching STFS header.
+    fs::create_directories(root/"Cache");
+    const auto legacy=root/"Cache"/"TU_16L61V6_0000008000000.00000000000O2";
+    fs::copy_file(tu,legacy);
+    {std::fstream file(legacy,std::ios::binary|std::ios::in|std::ios::out);
+     const char version[]={0,0,0,3};file.seekp(0x358);file.write(version,4);}
+    fs::copy_file(dlc,root/"Cache"/"TU_wrong_type");
+    fs::copy_file(tu,root/"Cache"/"unrelated");
+    fs::copy_file(tu,root/"Cache"/"AXCOPY-part");
+    std::ofstream(root/"Cache"/"TU_broken")<<"not STFS";
+    fs::copy_file(contentRoot/"4D5307E6"/"000B0000"/"WRONGID",root/"Cache"/"TU_wrong_title");
+#ifndef _WIN32
+    fs::create_symlink(legacy,root/"Cache"/"TU_link");
+#endif
     const auto extras=ContentCatalog(roots).ScanExtras(0x4d5307e6u);
-    assert(extras.size()==3);
+    assert(extras.size()==4);
+    bool haveLegacy=false;
     bool haveTu=false,haveDlc=false,haveSave=false;
     for(const auto& item:extras) {
         assert(item.titleId==0x4d5307e6u);
-        if(item.path==tu.string() && item.contentType==0xb0000u)haveTu=true;
+        if(item.path==tu.string() && item.contentType==0xb0000u){haveTu=true;assert(!item.legacyCache);}
+        if(item.path==legacy.string()){haveLegacy=true;assert(item.legacyCache&&item.version==3);}
         if(item.path==dlc.string() && item.contentType==2u)haveDlc=true;
         if(item.path==save.string() && item.contentType==1u)haveSave=true;
     }
-    assert(haveTu && haveDlc && haveSave);
+    assert(haveTu && haveDlc && haveSave && haveLegacy);
+    assert(extras.back().path==tu.string()); // TU versions descending
     assert(ContentCatalog(roots).Scan().size()==2);
     assert(ContentCatalog(roots).ScanExtras(0).empty());
 

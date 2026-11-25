@@ -1,7 +1,11 @@
 #include "ContentCatalog.h"
 #include "GameScanner.h"
 
+#include <algorithm>
 #include <cctype>
+#if !defined(_XBOX) && !defined(__XSDK__)
+#include <filesystem>
+#endif
 #include <cstring>
 #include <cstdio>
 #include <fstream>
@@ -44,6 +48,28 @@ bool safeFile(const std::string& name) {
         if(!(std::isalnum(ch) || ch=='.' || ch=='_' || ch=='-')) return false;
     }
     return true;
+}
+// Derive Cache only from canonical Content/common-profile roots.
+std::string cacheRoot(const std::string& root){
+    const size_t last=root.find_last_of("/\\");
+    if(last==std::string::npos||root.substr(last+1)!="0000000000000000")return "";
+    const auto parent=root.substr(0,last);
+    const size_t slash=parent.find_last_of("/\\");
+    std::string name=parent.substr(slash==std::string::npos?0:slash+1);
+    for(char& c:name)c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if(name!="content"||slash==std::string::npos)return "";
+    return join(parent.substr(0,slash+1),"Cache");
+}
+bool cacheFile(const std::string& name){
+    return safeFile(name)&&name.size()>3&&name.compare(0,3,"TU_")==0;
+}
+bool cachePathSafe(const std::string& path,bool folder){
+#if !defined(_XBOX) && !defined(__XSDK__)
+    std::error_code ec;const auto st=std::filesystem::symlink_status(path,ec);
+    return !ec&&!std::filesystem::is_symlink(st)&&(folder?std::filesystem::is_directory(st):std::filesystem::is_regular_file(st));
+#else
+    (void)path;(void)folder;return true;
+#endif
 }
 unsigned be32(const unsigned char* p) {
     return (unsigned(p[0])<<24)|(unsigned(p[1])<<16)|
@@ -368,5 +394,29 @@ std::vector<XboxContentPackage> ContentCatalog::ScanExtras(unsigned titleId) con
             }
         }
     }
+    // Cache TU names differ from modern Content filenames. Only include
+    // recognized STFS TU headers for this exact title; do not infer activation.
+    std::set<std::string> caches;
+    for(const auto& root:roots_){
+        const auto cache=cacheRoot(root);
+        if(cache.empty()||!caches.insert(cache).second||!cachePathSafe(cache,true))continue;
+        std::vector<FolderEntry> files;
+        if(!ReadFolder(cache,files))continue;
+        for(size_t i=0;i<files.size()&&i<4096&&result.size()<MaxPackages;++i){
+            if(files[i].directory||!cacheFile(files[i].name))continue;
+            const auto path=join(cache,files[i].name);
+            if(!cachePathSafe(path,false))continue;
+            XboxContentPackage item{};
+            if(ReadHeader(path,item)&&item.titleId==titleId&&item.contentType==0xb0000u&&
+               item.volumeType==0&&seen.insert(item.path).second){
+                item.legacyCache=true;result.push_back(item);
+            }
+        }
+    }
+    std::stable_sort(result.begin(),result.end(),[](const XboxContentPackage& a,const XboxContentPackage& b){
+        if(a.contentType!=b.contentType)return a.contentType<b.contentType;
+        if(a.contentType==0xb0000u&&a.version!=b.version)return a.version>b.version;
+        return false;
+    });
     return result;
 }

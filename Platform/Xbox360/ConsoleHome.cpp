@@ -2174,7 +2174,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         c.Text(x+8,191,tabs[i],18,i==contentTab_?Lime:White,144);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
-    c.Text(48,241,number(ContentCount())+" pacotes encontrados"+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
+    c.Text(48,241,number(ContentCount())+(contentTab_==0?" TUs locais | Ativacao desconhecida":" pacotes encontrados")+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
     if(ContentCount()==0)c.Text(48,305,"Nenhum pacote encontrado neste local.",24,White,1170);
     const int first=(contentRow_/5)*5;
     for(int i=first;i<first+5;++i) {
@@ -2189,7 +2189,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
             else if(contentInfo_.baseVersion&&item->baseVersion&&item->baseVersion!=contentInfo_.baseVersion)status="Base Version diferente";
             else if(!contentInfo_.mediaId||!item->mediaId||!contentInfo_.baseVersion||!item->baseVersion)status="Compatibilidade inconclusiva";
             else status="Identidade compativel";
-            c.Text(62,y+31,"Versao: "+hexId(item->version)+" | Base: "+hexId(item->baseVersion)+(contentTab_==0?"":" | NAO ATIVADA"),17,Muted,690);
+            c.Text(62,y+31,"Versao: "+hexId(item->version)+" | Base: "+hexId(item->baseVersion)+(contentTab_==0?(item->legacyCache?" | CACHE LEGADO":" | CONTENT"):" | NAO ATIVADA"),17,Muted,690);
         } else if(contentTab_==5)status="Backup | "+StorageInfo::FormatBytes(backups_[i].bytes);
         else if(contentTab_==1)status="Marketplace / DLC";
         else status="Save localizado";

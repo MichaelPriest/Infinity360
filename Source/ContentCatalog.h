@@ -10,6 +10,7 @@ struct XboxContentPackage {
     unsigned volumeType, dataFileCount;
     unsigned baseVersion, discNumber, discCount;
     unsigned long long sizeBytes;
+    bool legacyCache=false; // Inventory origin only; does not imply activation.
 };
 
 struct XboxExecutionInfo {
@@ -48,7 +49,8 @@ public:
     static bool ReadExecutionInfo(const std::string& path, XboxExecutionInfo& out, ExecutionBytes* raw = nullptr);
     std::vector<XboxContentPackage> Scan() const;
     // Extras only, scoped to one title: TU/DLC in common content; saves
-    // in profile directories. No license, activation or file changes.
+    // in profile directories; legacy TU packages in sibling Cache folders.
+    // No license, activation or file changes.
     std::vector<XboxContentPackage> ScanExtras(unsigned titleId) const;
 private:
     std::vector<std::string> roots_;

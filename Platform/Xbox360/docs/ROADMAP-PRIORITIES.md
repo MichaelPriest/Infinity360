@@ -34,3 +34,7 @@ A aba TU Arquivadas lista os pacotes pessoais e permite recuperá-los para Title
 ### P1 — Reinstalação de backup TU/DLC
 
 Na aba Backups, R3 abre a reinstalação do pacote autorizado quando o recibo conserva um nome original válido e os metadados correspondem ao jogo. A instalação reutiliza a validação de SHA-256, releitura, espaço disponível, confirmação e publicação sem sobrescrita. A continua recuperando cópia pessoal. Saves e nomes não reconhecidos permanecem somente para recuperação pessoal. Não há ativação nem alteração de licenças. Testes de cancelamento, colisão, corrupção e compatibilidade adicionados; CI e console devem confirmar.
+
+### P1 — Inventário de cache legado
+
+O catálogo consulta pastas Cache irmãs de Content, em modo somente leitura. Reconhece arquivos TU_ com cabeçalho STFS de Title Update válido para o Title ID selecionado, distingue a origem CACHE LEGADO/CONTENT e ordena TUs por versão decrescente. Ignora tipos divergentes, títulos diferentes, arquivos inválidos, temporários e symlinks no host. Referências de formato: https://consolemods.org/wiki/Xbox_360:Manually_Installing_Title_Updates e https://github.com/XboxUnity/AuroraScripts/blob/master/UtilityScripts/TUDownloader/Main.lua. A gravação no Cache, variantes sem cabeçalho reconhecido e confirmação de ativação permanecem pendentes. Novos testes portáteis adicionados.
