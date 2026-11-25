@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.31 — em desenvolvimento (sem build XEX)
+
+- Leitor offline GPD/XDBF, resumo de conquistas e Gamerscore por título, detalhes e ocultação de conquistas secretas bloqueadas.
+- Validação de limites e teste sintético; sem alteração de perfis ou sincronização online.
+- Captura 52 preparada; nenhuma build executada.
+
 ## V0.2.30 — em desenvolvimento (sem build XEX)
 
 - Inventário de perfis por dispositivo e saves por Title ID, independente de jogos instalados.

@@ -921,7 +921,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
+            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;achievementsPage_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1594,6 +1594,7 @@ std::string ConsoleHome::Press(Key key) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
     }
+    if(achievementsPage_&&section_==System&&systemTab_==7&&page_==Details){PressAchievements(key);return "";}
     if(saveCenter_&&section_==System&&systemTab_==7&&page_==Details){PressSaveCenter(key);return "";}
     // Modal power panel consumes every input; Back cancels before leaving.
     if(section_==System&&systemTab_==7&&page_==Details&&powerPage_){
@@ -1699,7 +1700,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}return "";}
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -1914,7 +1915,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
-                else if(systemTab_==7){localMilestones_=false;saveCenter_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
+                else if(systemTab_==7){localMilestones_=false;saveCenter_=false;achievementsPage_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -2717,6 +2718,7 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
     c.Text(48,607,"Esq/Dir Selecionar | A Confirmar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    if(achievementsPage_){DrawAchievements(c);return;}
     if(saveCenter_){DrawSaveCenter(c);return;}
     if(powerPage_){DrawPower(c);return;}
     if(localMilestones_){DrawLocalMilestones(c);return;}
@@ -2752,7 +2754,7 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
         c.Text(x+10,y+28,std::to_string(values[i]),26,Lime,365);
     }
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
-    c.Text(48,579,c.Tr("Conquistas Xbox: provider indisponivel."),19,Muted,1170);
+    c.Text(48,579,"A Conquistas GPD offline | Sem sincronizacao Xbox Live",19,Muted,1170);
     c.Text(48,606,"START Central de saves | Cima/Baixo Perfis | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
@@ -3521,4 +3523,60 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
     if(!count)c.Text(48,410,"Nenhum registro reconhecido.",22,Muted,1170);
     c.Text(48,555,notice_.empty()?(saveBackups_?"Backups por Title ID, podem pertencer a outros perfis.":"Inventario por pasta, nao comprova titularidade. "+std::string(saveLimited_?"Limite atingido.":"")):notice_,17,Muted,1170);
     c.Text(48,607,saveConfirm_?"A Confirmar | B Cancelar":saveBackups_?"A Recuperar copia | X Verificar | Y Atualizar | B Voltar":saveList_?"A Backup | START Backups do jogo | Y Atualizar | B Voltar":"A Saves | Y Atualizar | LB/RB Pagina | B Voltar",18,Lime,1170);
+}
+
+void ConsoleHome::RefreshAchievements(){
+    achievementSummary_={};achievementItems_.clear();achievementRow_=achievementDetailRow_=0;
+    achievementDetails_=false;achievementLoaded_=false;notice_.clear();
+    const auto path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Achievements"),"FFFE07D1.gpd");
+    std::vector<uint8_t> data;
+    if(fileWorkspace_.CanReadFile(path)&&GpdAchievements::Read(path,data)&&GpdAchievements::Dashboard(data,achievementSummary_)){
+        achievementLoaded_=true;
+        notice_="Copia GPD local; dados nao autenticados nem sincronizados.";
+    }else notice_="Importe FFFE07D1.gpd em UserFiles/Achievements.";
+}
+void ConsoleHome::PressAchievements(Key key){
+    if(key==Back){
+        if(achievementDetails_){achievementDetails_=false;achievementItems_.clear();notice_.clear();}
+        else{achievementsPage_=false;achievementSummary_={};achievementItems_.clear();notice_.clear();}
+        return;
+    }
+    if(key==Refresh){RefreshAchievements();return;}
+    auto& row=achievementDetails_?achievementDetailRow_:achievementRow_;
+    const size_t count=achievementDetails_?achievementItems_.size():achievementSummary_.titles.size();
+    if(key==Up&&row>0)--row;
+    if(key==Down&&row+1<count)++row;
+    if(key==PageUp)row=row>=4?row-4:0;
+    if(key==PageDown&&count)row=std::min(count-1,row+4);
+    if(key==Accept&&!achievementDetails_&&row<count){
+        const auto title=achievementSummary_.titles[row].id;
+        const auto path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Achievements"),hexId(title)+".gpd");
+        std::vector<uint8_t> data;
+        achievementItems_.clear();
+        if(!fileWorkspace_.CanReadFile(path)||!GpdAchievements::Read(path,data)||!GpdAchievements::Game(data,achievementItems_)){
+            notice_="GPD do titulo ausente ou invalido: "+hexId(title)+".gpd";return;
+        }
+        achievementDetails_=true;achievementDetailRow_=0;
+        notice_="GPD associado pelo nome do arquivo; perfil nao autenticado.";
+    }
+}
+void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
+    c.Text(45,349,achievementDetails_?"Conquistas | "+achievementSummary_.titles[achievementRow_].name:"Conquistas Xbox | GPD offline",26,White,1170);
+    if(achievementLoaded_&&!achievementDetails_){
+        const auto& s=achievementSummary_;
+        c.Text(48,382,"G "+number(s.earnedScore)+"/"+number(s.score)+" | Conquistas "+number(s.earned)+"/"+number(s.total)+" | Titulos "+number(s.titles.size()),19,Lime,1170);
+    }
+    const size_t row=achievementDetails_?achievementDetailRow_:achievementRow_;
+    const size_t count=achievementDetails_?achievementItems_.size():achievementSummary_.titles.size();
+    const size_t first=(row/4)*4;
+    for(size_t i=first;i<count&&i<first+4;++i){
+        const int y=412+int(i-first)*32;panel(c,48,y,1184,30,Panel,i==row);
+        std::string label;
+        if(achievementDetails_){const auto& a=achievementItems_[i];label=std::string(a.earned?"[OK] ":"[--] ")+a.name+" | "+number(a.score)+" G";}
+        else{const auto& t=achievementSummary_.titles[i];label=hexId(t.id)+" | "+t.name+" | "+number(t.earned)+"/"+number(t.total)+" | "+number(t.earnedScore)+"/"+number(t.score)+" G";}
+        c.Text(58,y+4,label,18,White,1150);
+    }
+    if(achievementLoaded_&&!count)c.Text(48,432,"Nenhuma entrada de conquista reconhecida.",21,Muted,1170);
+    c.Text(48,555,notice_.empty()?"Dados locais, nao verificados pela Xbox Live.":notice_,17,Muted,1170);
+    c.Text(48,607,achievementDetails_?"LB/RB Pagina | Y Recarregar resumo | B Voltar":"A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar",18,Lime,1170);
 }

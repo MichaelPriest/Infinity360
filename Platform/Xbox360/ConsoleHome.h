@@ -26,6 +26,7 @@
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
 #include "LaunchStatistics.h"
+#include "GpdAchievements.h"
 #include "NotificationCenter.h"
 #include "QuickGuide.h"
 #include "SystemTelemetry.h"
@@ -284,6 +285,13 @@ private:
     void DrawConsoleStatus(HomeCanvas& c) const;
     void DrawLocalMilestones(HomeCanvas& c)const;
     bool localMilestones_=false;
+    bool achievementsPage_=false,achievementDetails_=false,achievementLoaded_=false;
+    size_t achievementRow_=0,achievementDetailRow_=0;
+    GpdAchievements::Summary achievementSummary_;
+    std::vector<GpdAchievements::Achievement> achievementItems_;
+    void RefreshAchievements();
+    void PressAchievements(Key key);
+    void DrawAchievements(HomeCanvas& c)const;
     bool saveCenter_=false,saveList_=false,saveBackups_=false,saveConfirm_=false,saveLimited_=false;
     size_t saveProfileRow_=0,saveRow_=0,saveBackupRow_=0;
     unsigned saveTitle_=0;

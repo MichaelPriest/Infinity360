@@ -122,7 +122,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
             {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
-            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);
@@ -1164,6 +1164,16 @@ int main(int argc,char** argv) {
         assert(buffer[360*1280+640]==0xff123456u&&buffer.back()==0xff000000u);
     }
     {
+        // Minimal big-endian XDBF with a title record; malformed counts rejected.
+        std::vector<uint8_t> data(84,0);
+        auto put=[&](size_t p,uint32_t n){for(unsigned i=0;i<4;++i)data[p+i]=uint8_t(n>>(24-i*8));};
+        std::memcpy(data.data(),"XDBF",4);put(4,0x10000);put(8,1);put(12,1);
+        data[25]=4;put(30,0x4d5307e6);put(38,42);
+        put(42,0x4d5307e6);put(46,10);put(50,3);put(54,1000);put(58,200);
+        GpdAchievements::Summary summary;
+        assert(GpdAchievements::Dashboard(data,summary)&&summary.titles.size()==1&&summary.earnedScore==200&&summary.earned==3);
+        put(50,11);assert(!GpdAchievements::Dashboard(data,summary)&&summary.titles.empty());
+        put(50,3);put(38,43);assert(!GpdAchievements::Dashboard(data,summary));
         LaunchStatistics stats;
         assert(stats.Attempt("game:/Games/Test/default.xex",1795570920));
         assert(!stats.Failed("other")&&stats.Failed("game:/Games/Test/default.xex"));

@@ -254,3 +254,7 @@ Papéis anfitrião/cliente/bidirecional e janela 15/30/60 s, contadores, média 
 ### V0.2.30 — P2 Central de perfis e saves
 
 Inventário de pastas e saves STFS por perfil/dispositivo, backup e recuperação pessoal, consulta por Title ID. Não exporta credenciais/perfis XAM nem instala ou reassina saves. Provider e homologação pendentes. Sem build/CI. Galeria 51 preparada.
+
+### V0.2.31 — P3 Conquistas offline
+
+Leitura de cópias GPD exportadas, resumo e detalhes, sem modificar perfil ou sincronizar. Não há extração STFS automática, autenticação de dados ou provider de consulta online; testes sintéticos e captura 52 preparados. Nenhuma build/CI.
