@@ -9,6 +9,7 @@
 #include "TransferRate.h"
 #include "NetworkInfo.h"
 #include "LanPeerProbe.h"
+#include "LanPeerConfig.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
@@ -140,7 +141,9 @@ private:
     void RefreshDiscInstall();
     NetworkSnapshot network_;
     LanPeerProbe peerProbe_;
-    bool networkPeer_=false;
+    bool networkPeer_=false,peerEditing_=false;
+    unsigned peerOctet_=0;
+    LanPeerConfig::Octets peerDraft_{{192,168,1,2}};
     void RefreshNetwork();
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;

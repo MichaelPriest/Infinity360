@@ -1,5 +1,6 @@
 #include "NetworkInfo.h"
 #include "../Platform/Xbox360/LanPeerProbe.h"
+#include "../Platform/Xbox360/LanPeerConfig.h"
 #include <cassert>
 #include <string>
 
@@ -23,6 +24,13 @@ int main() {
     assert(!flags.linkMbps&&flags.duplex.empty());
     assert(LanPeerProbe::Private("192.168.1.20")&&LanPeerProbe::Private("172.16.0.20"));
     assert(!LanPeerProbe::Private("8.8.8.8")&&!LanPeerProbe::Private("192.168.01.20")&&!LanPeerProbe::Private("192.168.1.255"));
+    LanPeerConfig::Octets ip{};
+    assert(LanPeerConfig::Parse("192.168.1.254",ip));
+    assert(!LanPeerConfig::Parse("192.168.1.255",ip));
+    assert(LanPeerConfig::Format(ip)=="192.168.1.254");
+    assert(LanPeerConfig::Change(ip,3,1)&&LanPeerConfig::Change(ip,3,1)&&ip[3]==0);
+    assert(!LanPeerConfig::Change(ip,4,1));
+    assert(LanPeerConfig::Change(ip,3,-1)&&ip[3]==255);
     unsigned char packet[12];bool reply=false;uint32_t nonce=0;
     LanPeerProbe::Packet(packet,true,0x12345678);
     assert(LanPeerProbe::Decode(packet,sizeof packet,reply,nonce)&&reply&&nonce==0x12345678);

@@ -198,3 +198,7 @@ R3 na home, oito atalhos sem lançamento direto, ordem persistente Q com rascunh
 ### V0.2.16 — Perfis e indicadores locais
 
 Status XAM por controle, fallback explícito, painel de métricas da biblioteca visível e tentativas registradas. Sem leitura de conquistas oficiais, Gamerscore ou troca de perfil. Galeria 42 solicitada pelo responsável; trigger somente arquivo de pedido e manual. Nenhuma build XEX.
+
+### V0.2.17 — Rede LAN
+
+Editor de IPv4 privado com quatro octetos, validação e persistência com backup. Estatística RTT min/media/max e percentual sem resposta após encerramento. Proteção contra relógio monotônico regressivo. Testes preparados e captura 43. SMB/System Link real pendentes. Sem build/CI nesta revisão.

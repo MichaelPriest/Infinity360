@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.17 — em desenvolvimento (sem build XEX)
+
+- Editor de IPv4 privado do par UDP pelo controle, com persistência e cancelamento.
+- RTT mínimo/médio/máximo e percentual de sondas sem resposta após encerramento.
+- Galeria preparada para 43 telas; última execução não recebeu runner.
+
 ## V0.2.16 — em desenvolvimento (sem build XEX)
 
 - Estados de sessão dos perfis e painel de marcos locais, separados das conquistas Xbox.

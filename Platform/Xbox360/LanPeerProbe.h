@@ -43,7 +43,7 @@ public:
         response=b[5]==2;nonce=0;for(unsigned i=8;i<12;++i)nonce=(nonce<<8)|b[i];return nonce!=0;
     }
     bool Start(const std::string& local,const std::string& peer){
-        Stop();sent_=received_=attempts_=0;rtt_=0;outstanding_=0;peerText_=peer;
+        Stop();sent_=received_=attempts_=0;rtt_=minRtt_=maxRtt_=sumRtt_=0;outstanding_=0;peerText_=peer;
         bool permitted=Private(local)&&Private(peer);
 #if defined(INFINITY_LAN_LOOPBACK_TEST) && defined(__linux__) && !defined(__XSDK__)
         permitted=permitted||((local=="127.0.0.1"&&peer=="127.0.0.2")||(local=="127.0.0.2"&&peer=="127.0.0.1"));
@@ -71,6 +71,7 @@ public:
 #if defined(__XSDK__) || defined(__linux__)
         if(fd_<0)return false;
         const auto now=Now();bool changed=false;
+        if(now<start_){Stop();label_="Relogio monotono invalido.";return true;}
         if(now-start_>=15000){Stop();label_=received_?"UDP bidirecional confirmado.":"Sem resposta UDP no intervalo.";return true;}
         if(attempts_<5&&now-lastSend_>=2000){
             ++attempts_;outstanding_=0;
@@ -89,7 +90,10 @@ public:
             if(!reply&&now-lastReply_>=500){
                 Packet(b,true,nonce);sendto(fd_,b,12,0,reinterpret_cast<sockaddr*>(&peer_),sizeof peer_);lastReply_=now;
             }else if(reply&&nonce==outstanding_&&outstanding_!=0){
-                outstanding_=0;++received_;rtt_=now-lastSend_;changed=true;
+                outstanding_=0;rtt_=now-lastSend_;
+                if(!received_||rtt_<minRtt_)minRtt_=rtt_;
+                if(rtt_>maxRtt_)maxRtt_=rtt_;
+                sumRtt_+=rtt_;++received_;changed=true;
             }
         }
         return changed;
@@ -107,12 +111,16 @@ public:
     unsigned Sent()const{return sent_;}
     unsigned Received()const{return received_;}
     uint64_t Rtt()const{return rtt_;}
+    uint64_t MinRtt()const{return minRtt_;}
+    uint64_t MaxRtt()const{return maxRtt_;}
+    uint64_t MeanRtt()const{return received_?sumRtt_/received_:0;}
+    unsigned LossPercent()const{return sent_?100u*(sent_-received_)/sent_:0;}
     const std::string& Label()const{return label_;}
     const std::string& Peer()const{return peerText_;}
 private:
     static uint64_t Now(){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());}
     int fd_=-1;unsigned sent_=0,received_=0,attempts_=0;uint32_t nonce_=0,outstanding_=0;
-    uint64_t start_=0,lastSend_=0,lastReply_=0,rtt_=0;
+    uint64_t start_=0,lastSend_=0,lastReply_=0,rtt_=0,minRtt_=0,maxRtt_=0,sumRtt_=0;
     std::string label_="Teste nao iniciado.",peerText_;
 #if defined(__XSDK__) || defined(__linux__)
     sockaddr_in peer_{};
