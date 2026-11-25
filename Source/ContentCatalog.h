@@ -37,6 +37,8 @@ struct XboxPackageCheck {
     XboxPackageCheck():status(InvalidHeader),expectedFragments(0),presentFragments(0) {}
 };
 
+struct XboxSaveProfile { std::string owner,device,path; };
+struct XboxSaveInventory { std::vector<XboxContentPackage> saves; bool truncated=false; };
 class ContentCatalog {
 public:
     explicit ContentCatalog(const std::vector<std::string>& roots);
@@ -53,6 +55,8 @@ public:
     // in profile directories; legacy TU packages in sibling Cache folders.
     // No license, activation or file changes.
     std::vector<XboxContentPackage> ScanExtras(unsigned titleId) const;
+    std::vector<XboxSaveProfile> SaveProfiles(bool& truncated) const;
+    XboxSaveInventory ScanProfileSaves(const XboxSaveProfile& selected) const;
 private:
     std::vector<std::string> roots_;
 };

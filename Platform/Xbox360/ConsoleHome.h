@@ -284,6 +284,17 @@ private:
     void DrawConsoleStatus(HomeCanvas& c) const;
     void DrawLocalMilestones(HomeCanvas& c)const;
     bool localMilestones_=false;
+    bool saveCenter_=false,saveList_=false,saveBackups_=false,saveConfirm_=false,saveLimited_=false;
+    size_t saveProfileRow_=0,saveRow_=0,saveBackupRow_=0;
+    unsigned saveTitle_=0;
+    std::vector<XboxSaveProfile> saveProfiles_;
+    std::vector<XboxContentPackage> saveItems_;
+    std::vector<ContentBackup::Record> saveRecords_;
+    void RefreshSaveProfiles();
+    void RefreshSaveItems();
+    void RefreshSaveRecords();
+    void PressSaveCenter(Key key);
+    void DrawSaveCenter(HomeCanvas& c)const;
     bool powerPage_=false;
     ConsolePower::Confirmation powerConfirm_;
     bool PowerBusy()const;

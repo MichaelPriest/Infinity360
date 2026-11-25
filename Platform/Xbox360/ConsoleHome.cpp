@@ -921,7 +921,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;localMilestones_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
+            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1594,6 +1594,7 @@ std::string ConsoleHome::Press(Key key) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
     }
+    if(saveCenter_&&section_==System&&systemTab_==7&&page_==Details){PressSaveCenter(key);return "";}
     // Modal power panel consumes every input; Back cancels before leaving.
     if(section_==System&&systemTab_==7&&page_==Details&&powerPage_){
         if(key==Back){
@@ -1698,7 +1699,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_)return "";
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -1913,7 +1914,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
-                else if(systemTab_==7){localMilestones_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
+                else if(systemTab_==7){localMilestones_=false;saveCenter_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -2430,14 +2431,14 @@ bool ConsoleHome::TakeBackupRequest(XboxContentPackage& selected){
     if(!backupPending_)return false;backupPending_=false;selected=backupItem_;return true;
 }
 void ConsoleHome::BackupResult(const std::string& message,bool success){
-    if(success)backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
+    if(success){if(saveCenter_)RefreshSaveRecords();else backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);}
     notice_=message;RecordEvent(success?"Backup de conteudo verificado":"Backup recusado");
 }
 bool ConsoleHome::TakeRecoverRequest(ContentBackup::Record& selected,bool& verifyOnly){
     if(!recoverPending_)return false;recoverPending_=false;selected=recoverItem_;verifyOnly=verifyOnly_;return true;
 }
 void ConsoleHome::RecoverResult(const std::string& message,bool success){
-    if(success)stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
+    if(success){if(saveCenter_)RefreshSaveRecords();else stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);}
     notice_=message;RecordEvent(verifyOnly_?(success?"Backup de conteudo verificado":"Verificacao de backup recusada"):(success?"Copia de conteudo recuperada":"Recuperacao recusada"));
 }
 bool ConsoleHome::TakeUnityRequest(XboxExecutionInfo& info){
@@ -2716,6 +2717,7 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
     c.Text(48,607,"Esq/Dir Selecionar | A Confirmar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    if(saveCenter_){DrawSaveCenter(c);return;}
     if(powerPage_){DrawPower(c);return;}
     if(localMilestones_){DrawLocalMilestones(c);return;}
     c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
@@ -3441,3 +3443,82 @@ void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
     c.Text(48,607,"B Voltar",18,Lime,1170);
 }
 #endif
+
+void ConsoleHome::RefreshSaveProfiles(){
+    saveProfiles_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).SaveProfiles(saveLimited_);
+    saveProfileRow_=saveRow_=saveBackupRow_=0;saveList_=saveBackups_=saveConfirm_=false;
+    saveItems_.clear();saveRecords_.clear();saveTitle_=0;
+}
+void ConsoleHome::RefreshSaveItems(){
+    saveItems_.clear();saveRow_=0;saveLimited_=false;saveConfirm_=false;saveBackups_=false;
+    if(saveProfileRow_>=saveProfiles_.size())return;
+    const auto index=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanProfileSaves(saveProfiles_[saveProfileRow_]);
+    saveItems_=index.saves;saveLimited_=index.truncated;
+}
+void ConsoleHome::RefreshSaveRecords(){
+    saveRecords_.clear();
+    for(const auto& rec:ContentBackup::List(fileWorkspace_,dir_,saveTitle_))
+        if(rec.package.contentType==1)saveRecords_.push_back(rec);
+    if(saveBackupRow_>=saveRecords_.size())saveBackupRow_=0;
+}
+void ConsoleHome::PressSaveCenter(Key key){
+    if(backupPending_||recoverPending_)return;
+    if(saveConfirm_){
+        saveConfirm_=false;
+        if(key!=Accept){notice_="Operacao cancelada.";return;}
+#if defined(INFINITY_XSDK_HTTPS)
+        if(PowerBusy()){notice_="Encerre FTP e demais operacoes.";return;}
+        if(saveBackups_)recoverPending_=true;else backupPending_=true;
+        notice_="Operacao solicitada.";
+#else
+        notice_="Provider de backup indisponivel nesta build.";
+#endif
+        return;
+    }
+    if(key==Back){
+        if(saveBackups_){saveBackups_=false;saveRecords_.clear();}
+        else if(saveList_){saveList_=false;saveItems_.clear();}
+        else saveCenter_=false;
+        notice_.clear();return;
+    }
+    if(key==Refresh){
+        if(saveBackups_)RefreshSaveRecords();
+        else if(saveList_)RefreshSaveItems();
+        else RefreshSaveProfiles();
+        notice_.clear();return;
+    }
+    auto& row=saveBackups_?saveBackupRow_:saveList_?saveRow_:saveProfileRow_;
+    const size_t count=saveBackups_?saveRecords_.size():saveList_?saveItems_.size():saveProfiles_.size();
+    if(key==Up&&row>0)--row;
+    if(key==Down&&row+1<count)++row;
+    if(key==PageUp)row=row>=4?row-4:0;
+    if(key==PageDown&&count)row=std::min(count-1,row+4);
+    if(row>=count)return;
+    if(!saveList_&&key==Accept){saveList_=true;RefreshSaveItems();notice_.clear();return;}
+    if(saveList_&&!saveBackups_&&key==Guide){
+        saveTitle_=saveItems_[row].titleId;saveBackupRow_=0;saveBackups_=true;RefreshSaveRecords();notice_.clear();return;
+    }
+    if(saveList_&&(key==Accept||(saveBackups_&&key==Favorite))){
+        if(saveBackups_){recoverItem_=saveRecords_[row];verifyOnly_=key==Favorite;}
+        else {backupItem_=saveItems_[row];saveTitle_=backupItem_.titleId;}
+        saveConfirm_=true;
+        notice_=saveBackups_?(verifyOnly_?"A confirma verificar SHA-256.":"A confirma recuperar em UserFiles, sem alterar save ativo."):"A confirma backup do save selecionado.";
+    }
+}
+void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
+    c.Text(45,349,saveBackups_?"Saves | Backups do Title ID "+hexId(saveTitle_):saveList_?"Saves | "+saveProfiles_[saveProfileRow_].owner+" / "+saveProfiles_[saveProfileRow_].device:"Perfis e saves | Inventario de armazenamento",25,White,1170);
+    const size_t row=saveBackups_?saveBackupRow_:saveList_?saveRow_:saveProfileRow_;
+    const size_t count=saveBackups_?saveRecords_.size():saveList_?saveItems_.size():saveProfiles_.size();
+    const size_t first=(row/4)*4;
+    for(size_t i=first;i<count&&i<first+4;++i){
+        const int y=389+int(i-first)*40;panel(c,48,y,1184,36,Panel,i==row);
+        std::string label;
+        if(saveBackups_)label=saveRecords_[i].slot+" | "+saveRecords_[i].package.name+" | "+number(saveRecords_[i].bytes)+" B";
+        else if(saveList_)label=hexId(saveItems_[i].titleId)+" | "+saveItems_[i].name+" | "+saveItems_[i].path.substr(saveItems_[i].path.find_last_of("/\\")+1);
+        else label=saveProfiles_[i].owner+" | "+saveProfiles_[i].device+(saveProfiles_[i].owner=="0000000000000000"?" | Compartilhado":" | Pasta de perfil");
+        c.Text(58,y+6,label,19,White,1150);
+    }
+    if(!count)c.Text(48,410,"Nenhum registro reconhecido.",22,Muted,1170);
+    c.Text(48,555,notice_.empty()?(saveBackups_?"Backups por Title ID, podem pertencer a outros perfis.":"Inventario por pasta, nao comprova titularidade. "+std::string(saveLimited_?"Limite atingido.":"")):notice_,17,Muted,1170);
+    c.Text(48,607,saveConfirm_?"A Confirmar | B Cancelar":saveBackups_?"A Recuperar copia | X Verificar | Y Atualizar | B Voltar":saveList_?"A Backup | START Backups do jogo | Y Atualizar | B Voltar":"A Saves | Y Atualizar | LB/RB Pagina | B Voltar",18,Lime,1170);
+}

@@ -122,7 +122,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
             {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
-            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);

@@ -250,3 +250,7 @@ Menu autenticado opt-in, credenciais temporárias, navegador de compartilhamento
 ### V0.2.29 — P2 Diagnóstico pré-System Link
 
 Papéis anfitrião/cliente/bidirecional e janela 15/30/60 s, contadores, média de variação RTT, perda após término e reset ao trocar IP. Teste proprietário INFL, não XSession nem túnel. System Link real e integração de plugins permanecem pendentes de provider e hardware. Galeria 50 preparada; sem build/CI.
+
+### V0.2.30 — P2 Central de perfis e saves
+
+Inventário de pastas e saves STFS por perfil/dispositivo, backup e recuperação pessoal, consulta por Title ID. Não exporta credenciais/perfis XAM nem instala ou reassina saves. Provider e homologação pendentes. Sem build/CI. Galeria 51 preparada.

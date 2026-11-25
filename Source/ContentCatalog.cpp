@@ -428,3 +428,65 @@ std::vector<XboxContentPackage> ContentCatalog::ScanExtras(unsigned titleId) con
     });
     return result;
 }
+
+std::vector<XboxSaveProfile> ContentCatalog::SaveProfiles(bool& truncated) const {
+    truncated=false;std::vector<XboxSaveProfile> out;std::set<std::string> seen;
+    for(const auto& root:roots_){
+        const auto slash=root.find_last_of("/\\");
+        if(slash==std::string::npos||root.substr(slash+1)!="0000000000000000")continue;
+        const auto parent=root.substr(0,slash);
+        if(!cachePathSafe(parent,true))continue;
+        std::vector<FolderEntry> dirs;
+        if(!ReadFolder(parent,dirs))continue;
+        for(const auto& row:dirs){
+            if(!row.directory||(!profileName(row.name)&&row.name!="0000000000000000"))continue;
+            const auto path=join(parent,row.name);
+            if(!cachePathSafe(path,true)||!seen.insert(path).second)continue;
+            if(out.size()>=128){truncated=true;return out;}
+            const auto colon=path.find(':');
+            out.push_back({row.name,colon==std::string::npos?"Local":path.substr(0,colon),path});
+        }
+    }
+    std::sort(out.begin(),out.end(),[](const XboxSaveProfile& a,const XboxSaveProfile& b){
+        return a.owner==b.owner?a.path<b.path:a.owner<b.owner;
+    });
+    return out;
+}
+XboxSaveInventory ContentCatalog::ScanProfileSaves(const XboxSaveProfile& selected) const {
+    XboxSaveInventory out;bool limited=false;
+    const auto profiles=SaveProfiles(limited);
+    const auto match=std::find_if(profiles.begin(),profiles.end(),[&](const XboxSaveProfile& p){
+        return p.path==selected.path&&p.owner==selected.owner&&p.device==selected.device;
+    });
+    if(match==profiles.end())return out;
+    std::vector<FolderEntry> titles;
+    if(!ReadFolder(match->path,titles))return out;
+    unsigned examined=0,filesExamined=0;
+    for(const auto& title:titles){
+        if(!title.directory||!hex8(title.name)||!hexValue(title.name))continue;
+        if(++examined>MaxTitles){out.truncated=true;break;}
+        const auto dir=join(match->path,title.name);
+        if(!cachePathSafe(dir,true))continue;
+        const auto folder=join(dir,"00000001");
+        if(!cachePathSafe(folder,true))continue;
+        std::vector<FolderEntry> files;if(!ReadFolder(folder,files))continue;
+        unsigned count=0;
+        for(const auto& file:files){
+            if(file.directory||!safeFile(file.name))continue;
+            if(++count>MaxFilesPerTitle){out.truncated=true;break;}
+            if(++filesExamined>4096||out.saves.size()>=MaxPackages){out.truncated=true;break;}
+            const auto path=join(folder,file.name);
+            if(!cachePathSafe(path,false))continue;
+            XboxContentPackage p{};
+            if(!ReadHeader(path,p)||p.titleId!=hexValue(title.name)||p.contentType!=1||p.volumeType!=0)continue;
+            p.saveOwner=match->owner;p.saveDevice=match->device;out.saves.push_back(p);
+        }
+        if(filesExamined>4096||out.saves.size()>=MaxPackages){out.truncated=true;break;}
+    }
+    std::sort(out.saves.begin(),out.saves.end(),[](const XboxContentPackage& a,const XboxContentPackage& b){
+        if(a.titleId!=b.titleId)return a.titleId<b.titleId;
+        if(a.name!=b.name)return a.name<b.name;
+        return a.path<b.path;
+    });
+    return out;
+}

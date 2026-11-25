@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.30 — em desenvolvimento (sem build XEX)
+
+- Inventário de perfis por dispositivo e saves por Title ID, independente de jogos instalados.
+- Central de backup, verificação SHA-256 e recuperação em área pessoal via mecanismo existente.
+- Sem alteração de arquivos ativos ou titularidade; nenhuma build executada.
+
 ## V0.2.29 — em desenvolvimento (sem build XEX)
 
 - Diagnóstico LAN com modos anfitrião/cliente/bidirecional, duração selecionável e variação de RTT.
