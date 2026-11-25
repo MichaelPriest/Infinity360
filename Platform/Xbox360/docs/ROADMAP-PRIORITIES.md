@@ -214,3 +214,7 @@ Provider opcional com importação 0x029 confirmada em referências públicas, c
 ### V0.2.20 — P2 Histórico térmico manual
 
 Mínimo e máximo por sensor em RAM, última consulta preservada entre telas, contadores de respostas e reset por X. Amostras inválidas não alteram extremos; respostas parciais afetam somente sensores válidos. Sem polling automático, persistência, controle de ventoinha ou energia. Testes preparados; sem build/CI. Galeria permanece com 45 telas preparadas.
+
+### V0.2.21 — P2 Energia experimental
+
+Painel de energia com dupla confirmação e cancelamento, bloqueio de transferências, FTP, LAN e solicitações pendentes. Provider kernel opt-in independente, rotinas power down/reboot quiesce; sem reset forçado. Nenhuma confirmação de comportamento físico. CI de teste e XEX experimental pendentes; Release padrão exclui power_control. Galeria 46 preparada.

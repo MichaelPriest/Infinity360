@@ -917,7 +917,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;localMilestones_=false;status_=ConsoleStatus::Read();break;
+            section_=System;systemTab_=7;page_=Details;localMilestones_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1587,6 +1587,29 @@ std::string ConsoleHome::Press(Key key) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
     }
+    // Modal power panel consumes every input; Back cancels before leaving.
+    if(section_==System&&systemTab_==7&&page_==Details&&powerPage_){
+        if(key==Back){
+            if(powerConfirm_.armed)powerConfirm_.Cancel();
+            else powerPage_=false;
+            notice_.clear();return "";
+        }
+        if(key==Left||key==Right){
+            powerConfirm_.Select(key==Left?ConsolePower::Shutdown:ConsolePower::Reboot);
+            notice_.clear();return "";
+        }
+        if(key==Accept){
+            const auto step=powerConfirm_.Accept(ConsolePower::Supported(),PowerBusy());
+            if(step==ConsolePower::Unavailable)notice_="Provider experimental nao incluido.";
+            else if(step==ConsolePower::Busy)notice_="Encerre FTP, testes de rede e transferencias primeiro.";
+            else if(step==ConsolePower::Armed)notice_="A novamente confirma | B cancela.";
+            else if(step==ConsolePower::Requested){
+                const auto result=ConsolePower::Invoke(powerConfirm_.action);
+                notice_=result==ConsolePower::Busy?"Falha ao descarregar buffers; operacao cancelada.":"Comando retornou ou indisponivel; energia nao confirmada.";
+            }
+        }else powerConfirm_.Cancel();
+        return "";
+    }
     if (key==Back) {
         if(section_==System&&systemTab_==1&&page_==Details){
             if(peerEditing_){peerEditing_=false;notice_.clear();return "";}
@@ -1636,6 +1659,7 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
             if(localMilestones_)return "";
+            if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
                 if(!SaveProfile()){language_=previous;notice_="Falha ao salvar idioma.";}
@@ -1827,7 +1851,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
-                else if(systemTab_==7){localMilestones_=false;status_=ConsoleStatus::Read();}
+                else if(systemTab_==7){localMilestones_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -2584,7 +2608,29 @@ void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     c.Text(48,580,"Min/max apenas de leituras manuais; sem controle de ventoinha ou energia.",17,Muted,1170);
     c.Text(48,607,"A Consultar | X Limpar historico | START Telemetria | B Voltar",18,Lime,1170);
 }
+bool ConsoleHome::PowerBusy()const{
+    return TransferRunning()||ftp_.Running()||peerProbe_.Running()||
+        nativeStorePending_||nativeBatch_||storeInstallPending_||providerPending_||
+        discPending_||discSystemExit_||packageImportPending_||backupPending_||
+        recoverPending_||contentInstallPending_||artPending_||coverBatchPending_||
+        updatePending_||unityPending_||unityDownloadPending_;
+}
+void ConsoleHome::DrawPower(HomeCanvas& c)const{
+    c.Text(45,349,"Console | Energia experimental",27,White,1170);
+    const char* names[]={"Desligar console","Reiniciar console"};
+    for(int i=0;i<2;++i){
+        const int x=45+i*600;
+        const bool selected=int(powerConfirm_.action)==i;
+        panel(c,x,400,585,96,Panel,selected);
+        c.Text(x+16,426,names[i],26,selected?Lime:White,550);
+    }
+    const bool supported=ConsolePower::Supported(),busy=PowerBusy();
+    c.Text(48,520,!supported?"Provider nao incluido nesta build.":busy?"Bloqueado: encerre operacoes e FTP.":"Provider experimental: nao homologado no console.",20,White,1170);
+    c.Text(48,556,powerConfirm_.armed?"CONFIRMACAO: A executa a acao selecionada; B cancela.":"Nenhuma acao automatica; exige dupla confirmacao.",19,Muted,1170);
+    c.Text(48,607,"Esq/Dir Selecionar | A Confirmar | B Voltar",18,Lime,1170);
+}
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    if(powerPage_){DrawPower(c);return;}
     if(localMilestones_){DrawLocalMilestones(c);return;}
     c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
     c.Text(48,389,std::string(c.Tr("Hora local: "))+status_.clock+std::string(c.Tr(" | Idioma: "))+status_.language+" | Locale: "+status_.country,21,Muted,1170);
@@ -2595,7 +2641,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
         c.Text(x+12,y+30,c.Tr(ConsoleStatus::StateLabel(status_.profileProvider,status_.signin[i])),16,Muted,550);
     }
     c.Text(48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
-    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_)+" | "+c.Tr("Cima/Baixo Marcos locais"),18,Lime,1170);
+    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_)+" | "+c.Tr("Cima/Baixo Marcos locais")+" | A Energia",18,Lime,1170);
     c.Text(48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
 }
 void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{

@@ -29,6 +29,7 @@
 #include "IdleScreen.h"
 #include "ResidentPlugins.h"
 #include "ThermalTelemetry.h"
+#include "ConsolePower.h"
 #include "PluginRegistry.h"
 #include "FtpServer.h"
 #include <map>
@@ -250,6 +251,10 @@ private:
     void DrawConsoleStatus(HomeCanvas& c) const;
     void DrawLocalMilestones(HomeCanvas& c)const;
     bool localMilestones_=false;
+    bool powerPage_=false;
+    ConsolePower::Confirmation powerConfirm_;
+    bool PowerBusy()const;
+    void DrawPower(HomeCanvas& c)const;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;
     UnityUpdate unityDownload_;
     int unityRow_=0;

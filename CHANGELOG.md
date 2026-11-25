@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.21 — em desenvolvimento (sem build XEX)
+
+- Painel de desligamento/reinício experimental, dupla confirmação e bloqueio de operações ativas.
+- Provider kernel opt-in separado, sem publicação em Release; testes de estado preparados.
+- Galeria preparada para 46 capturas; nenhuma build ou captura executada.
+
 ## V0.2.20 — em desenvolvimento (sem build XEX)
 
 - Histórico térmico em RAM por sessão, mínimos e máximos de amostras manuais válidas por sensor.

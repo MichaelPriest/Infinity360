@@ -122,7 +122,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
             {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
-            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);
@@ -1215,6 +1215,20 @@ int main(int argc,char** argv) {
       history.Clear();assert(history.attempts==0&&history.Min(0)=="--"&&history.Max(2)=="--");
       smc[0]=0x07;history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
       assert(history.Min(1)=="--"&&history.Min(0)=="55.0 C");}
+    {ConsolePower::Confirmation power;
+     assert(!ConsolePower::Supported());
+     assert(power.Accept(false,false)==ConsolePower::Unavailable&&!power.armed);
+     assert(power.Accept(true,true)==ConsolePower::Busy&&!power.armed);
+     assert(power.Accept(true,false)==ConsolePower::Armed&&power.armed);
+     power.Select(ConsolePower::Reboot);assert(!power.armed);
+     assert(power.Accept(true,false)==ConsolePower::Armed);
+     assert(power.Accept(true,true)==ConsolePower::Busy&&!power.armed);
+     assert(power.Accept(true,false)==ConsolePower::Armed);
+     power.Cancel();assert(!power.armed);
+     assert(power.Accept(true,false)==ConsolePower::Armed);
+     assert(power.Accept(true,false)==ConsolePower::Requested&&!power.armed);
+     assert(ConsolePower::Routine(ConsolePower::Shutdown)==5&&ConsolePower::Routine(ConsolePower::Reboot)==6);
+     assert(ConsolePower::Invoke(ConsolePower::Shutdown)==ConsolePower::Unavailable);}
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

@@ -7,6 +7,10 @@ on:
         description: "Experimental SMC read only (artifact, no Release)"
         type: boolean
         default: false
+      power_control:
+        description: "Experimental console power control (artifact, no Release)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -52,6 +56,12 @@ jobs:
         if: inputs.smc_read
         run: |
           printf '\nxboxkrnl.exe  0x029  HalSendSMCMessage\n' >> "$HOME/xsdk/imports/imports.txt"
+      - name: Add experimental kernel power import
+        if: inputs.power_control
+        run: |
+          if ! grep -q 'HalReturnToFirmware' "$HOME/xsdk/imports/imports.txt"; then
+            printf '\nxboxkrnl.exe  0x028  HalReturnToFirmware\n' >> "$HOME/xsdk/imports/imports.txt"
+          fi
       - name: Compile XSDK support library
         run: |
           cd "$HOME/xsdk"
@@ -78,6 +88,7 @@ jobs:
             -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DINFINITY_EXPERIMENTAL_SMC_READ=${{ inputs.smc_read }} \
+            -DINFINITY_EXPERIMENTAL_POWER=${{ inputs.power_control }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
       - name: Verify real XEX2 and publish separate test package
@@ -188,7 +199,7 @@ jobs:
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}${{ inputs.smc_read && '-SMC-EXP' || '' }}
+          name: Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}${{ inputs.smc_read && '-SMC-EXP' || '' }}${{ inputs.power_control && '-POWER-EXP' || '' }}
           path: |
             IPTV/Cloud360/Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}.zip
             IPTV/Cloud360/Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}.zip.sha256
@@ -218,7 +229,7 @@ jobs:
   publish-prerelease:
     name: Publish verified XEX package to GitHub Releases
     needs: [xsdk-xex, portable-gate]
-    if: ${{ !inputs.smc_read && github.ref == 'refs/heads/main' && needs.xsdk-xex.result == 'success' && needs.portable-gate.result == 'success' }}
+    if: ${{ !inputs.smc_read && !inputs.power_control && github.ref == 'refs/heads/main' && needs.xsdk-xex.result == 'success' && needs.portable-gate.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -91,6 +91,10 @@ option(INFINITY_EXPERIMENTAL_SMC_READ "Enable experimental read-only SMC import 
 if(INFINITY_EXPERIMENTAL_SMC_READ)
   target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_EXPERIMENTAL_SMC_READ=1)
 endif()
+option(INFINITY_EXPERIMENTAL_POWER "Enable experimental kernel power control (requires patched XSDK)" OFF)
+if(INFINITY_EXPERIMENTAL_POWER)
+  target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_EXPERIMENTAL_POWER=1)
+endif()
 target_include_directories(infinity_menu_preview PRIVATE
   ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
 set_target_properties(infinity_menu_preview PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
