@@ -138,3 +138,7 @@ Filtro de variantes por resolução/codecs/rendições, limite configurável 100
 ### P1 — Inventário de plugins residentes
 
 Leitura de até oito fontes distintas, seleção LB/RB, identificação de INI inválido, slots duplicados/repetidos e divergências entre arquivos. Normalização de case, separador e alias HDD1/HDD para comparação; sem alteração de boot, carregamento de módulos ou confirmação de estado ativo. Testes de inventário e preservação do INI; CI e hardware pendentes. HLS qualidade e seek passaram no host; build PPC do seek aprovada.
+
+### P2 — Telemetria de memória do kernel
+
+Novo painel com MmQueryStatistics, conversão de páginas de 4 KiB, validação de limites e atualização manual. Contadores de título/sistema distintos, sem inferir RAM livre global. Host mostra indisponibilidade; SMC e controle de ventoinha ainda pendentes. Testes de conversão e falha fechada, captura nativa pelo CI. Bloqueio de relançamento dos novos IDs FFmpeg. P1 HLS e plugins: CI anterior aprovado.

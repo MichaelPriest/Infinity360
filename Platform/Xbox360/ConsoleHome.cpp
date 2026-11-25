@@ -1554,6 +1554,7 @@ std::string ConsoleHome::Press(Key key) {
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
+            else if(systemTab_==2) {telemetry_=SystemTelemetry::Read();notice_="Telemetria de memoria atualizada.";}
             else if(systemTab_==3) {
                 if(storeDownloads_) {store_.Load();RebuildStoreDownloads();notice_="Registros de downloads atualizados.";}
                 else notice_="Transferencias locais atualizadas automaticamente.";
@@ -1699,6 +1700,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
+                else if(systemTab_==2)telemetry_=SystemTelemetry::Read();
                 else if(systemTab_==4)RefreshResidentPlugins();
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
                 else if(systemTab_==7)status_=ConsoleStatus::Read();
@@ -2348,6 +2350,26 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
     c.Text(48,400,"Instalador DVD disponivel no XSDK.",22,Muted,1170);
 #endif
 }
+void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
+    c.Text(45,349,"Telemetria | Memoria e sensores",27,White,1170);
+    if(telemetry_.available){
+        const uint64_t bytes[]={telemetry_.physical,telemetry_.kernel,telemetry_.titlePhysical,
+            telemetry_.titleAvailable,telemetry_.systemPhysical,telemetry_.titleHeap,telemetry_.titleStack,telemetry_.titleImage};
+        const char* labels[]={"RAM fisica","Kernel","Titulo: fisica","Titulo: disponivel","Sistema: fisica","Titulo: heap","Titulo: stack","Titulo: imagem"};
+        for(int i=0;i<8;++i){
+            const int x=45+(i%4)*300,y=390+(i/4)*78;
+            panel(c,x,y,289,70,Panel,false);
+            c.Text(x+9,y+5,labels[i],17,Muted,270);
+            c.Text(x+9,y+30,StorageInfo::FormatBytes(bytes[i]),22,White,270);
+        }
+    }else{
+        c.Box(45,391,1190,150,Panel,10);
+        c.Text(65,420,"Memoria: provider indisponivel ou consulta recusada.",23,White,1145);
+        c.Text(65,467,"Nenhuma medida simulada e exibida.",19,Muted,1145);
+    }
+    c.Text(48,559,"CPU / GPU / EDRAM / placa: sensores SMC ainda indisponiveis.",18,Muted,1170);
+    c.Text(48,585,"Ventoinha: controle nao implementado. Y Atualizar | B Voltar",18,Lime,1170);
+}
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     c.Text(45,349,"Console | Perfis conectados",27,White,1170);
     c.Text(48,389,"Hora local: "+status_.clock+" | Idioma: "+status_.language+" | Locale: "+status_.country,21,Muted,1170);
@@ -2572,7 +2594,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(section_==System) {
         static const char* const titles[]={
-            "Discos","Rede/FTP","Temperaturas","Downloads","Plugins","Historico","DVD","Console"
+            "Discos","Rede/FTP","Telemetria","Downloads","Plugins","Historico","DVD","Console"
         };
         static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG","DVD","SYS"};
         static const char* const summaries[]={
@@ -2581,7 +2603,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
             "FTP LAN: leitura e upload opcional; ativacao manual.",
-            "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
+            "Memoria do kernel; sensores e ventoinha pendentes.",
             "Transferencias locais; downloads de internet pendentes.",
             "Diagnostico somente leitura do launch.ini.",
             "Historico de operacoes da dashboard.",
@@ -2597,6 +2619,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
+        if(page_==Details && systemTab_==2) {DrawTelemetry(c);return;}
         if(page_==Details && systemTab_==3) {DrawTransfers(c);return;}
         if(page_==Details && systemTab_==4) {DrawResidentPlugins(c);return;}
         if(page_==Details && systemTab_==5) {DrawEvents(c);return;}

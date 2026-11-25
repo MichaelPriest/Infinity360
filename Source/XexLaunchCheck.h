@@ -40,13 +40,13 @@ inline bool Capture(std::istream& file,Ticket& out){
     out.bytes=static_cast<uint64_t>(size);out.fingerprint=hash;return true;
 }
 inline bool Same(const Ticket& a,const Ticket& b){return a.bytes>=4096&&a.bytes==b.bytes&&a.fingerprint==b.fingerprint;}
-inline bool OwnTitle(unsigned title){return (title>=0x494E4631u&&title<=0x494E4633u)||title==0x41555831u||title==0x43333630u||title==0x43333631u;}
+inline bool OwnTitle(unsigned title){return (title>=0x494E4631u&&title<=0x494E4633u)||title==0x41555831u||title==0x43333630u||title==0x43333631u||title==0x43333632u||title==0x43333633u||title==0x494E4635u;}
 inline std::string Path(const std::string& raw) {
     const std::string path=XsdkPaths::Normalize(raw);
     const std::string key=XsdkPaths::Key(path);
     if(key.size()<5||key.substr(key.size()-4)!=".xex")return "";
     const std::string name=key.substr(key.find_last_of('/')+1);
-    if(name=="infinity_menu_preview.xex"||name=="infinity_canvas_probe.xex"||name=="infinity_core_probe.xex"||name=="aurorax_gpu_probe.xex")return "";
+    if(name=="infinity_menu_preview.xex"||name=="infinity_canvas_probe.xex"||name=="infinity_core_probe.xex"||name=="aurorax_gpu_probe.xex"||name=="cloud360_container_probe.xex"||name=="cloud360_av_probe.xex")return "";
     return path;
 }
 }

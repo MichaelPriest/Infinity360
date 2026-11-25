@@ -1045,6 +1045,13 @@ int main(int argc,char** argv) {
     nexusMeta.Load();nexusMeta.Press(ConsoleHome::Accept);nexusMeta.Press(ConsoleHome::Accept);
     nexusMeta.Draw(canvas,"20:50");
     assert(nexusMeta.Press(ConsoleHome::Accept)==nexusGame.string());
+    // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
+    const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
+    assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);
+    assert(mem.titleHeap==4ULL*1024*1024&&mem.titleStack==512ULL*1024);
+    assert(!SystemTelemetry::FromPages(0,0,0,0,0,0,0,0).available);
+    assert(!SystemTelemetry::FromPages(100,101,0,0,0,0,0,0).available);
+    assert(!SystemTelemetry::Read().available);
     // Read-only INI inventory; duplicate slots are ambiguous, not loaded state.
     const fs::path residentRoot=root/"ResidentFixture";
     fs::create_directories(residentRoot);

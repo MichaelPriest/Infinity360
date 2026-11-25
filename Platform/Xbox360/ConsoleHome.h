@@ -18,6 +18,7 @@
 #include "DiscInstaller.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
+#include "SystemTelemetry.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
 #include <map>
@@ -114,6 +115,8 @@ private:
     void RefreshDiscInstall();
     NetworkSnapshot network_;
     void RefreshNetwork();
+    SystemTelemetry telemetry_;
+    void DrawTelemetry(HomeCanvas& c) const;
     void RefreshResidentPlugins();
     void DrawResidentPlugins(HomeCanvas& c) const;
     std::vector<ResidentConfig> residentConfigs_;
