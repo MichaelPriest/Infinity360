@@ -2753,7 +2753,7 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
     }
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
     c.Text(48,579,c.Tr("Conquistas Xbox: provider indisponivel."),19,Muted,1170);
-    c.Text(48,606,c.Tr("Cima/Baixo Perfis | B Voltar"),18,Lime,1170);
+    c.Text(48,606,"START Central de saves | Cima/Baixo Perfis | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
