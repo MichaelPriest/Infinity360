@@ -102,7 +102,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     const char* pages[]={"20-armazenamento","08-rede","21-sensores","22-downloads","09-plugins","23-eventos","24-dvd","25-configuracoes"};
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
-        if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("43-configurar-rede",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::PageUp);}
+        if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("43-configurar-rede",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);ok=save("48-smb",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("49-smb-config",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);}
         if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);ok=save("45-temperaturas",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("47-refrigeracao",system)&&ok;system.Press(ConsoleHome::PageUp);system.Press(ConsoleHome::Guide);}
         if(i==4){system.Press(ConsoleHome::Guide);ok=save("44-plugins-locais",system)&&ok;system.Press(ConsoleHome::Guide);}
         if(i==5){system.Press(ConsoleHome::PageDown);ok=save("38-notificacoes-pendentes",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("39-notificacoes-alertas",system)&&ok;system.Press(ConsoleHome::Favorite);assert(system.UnreadNotifications()==0);}
@@ -1245,6 +1245,19 @@ int main(int argc,char** argv) {
      assert(power.Accept(true,false)==ConsolePower::Requested&&!power.armed);
      assert(ConsolePower::Routine(ConsolePower::Shutdown)==5&&ConsolePower::Routine(ConsolePower::Reboot)==6);
      assert(ConsolePower::Invoke(ConsolePower::Shutdown)==ConsolePower::Unavailable);}
+    {const auto req=SmbProbe::Request();
+     assert(req.size()==112&&req[3]==108&&req[4]==0xfe&&SmbProbe::U16(req.data()+68)==36);
+     assert(SmbProbe::U16(req.data()+70)==4&&SmbProbe::U16(req.data()+110)==0x0302);
+     unsigned char response[132]={0xfe,'S','M','B',64};
+     response[16]=1;response[64]=65;response[66]=3;response[68]=2;response[69]=3;
+     SmbProbe::Put16(response+120,128);SmbProbe::Put16(response+122,4);
+     SmbProbe::Result result;
+     assert(SmbProbe::Parse(response,sizeof response,result)==SmbProbe::Negotiated&&result.dialect==0x0302&&result.signingRequired);
+     assert(SmbProbe::Parse(response,131,result)==SmbProbe::Failed);
+     response[68]=0x11;assert(SmbProbe::Parse(response,sizeof response,result)==SmbProbe::Failed);
+     response[8]=0xbb;assert(SmbProbe::Parse(response,64,result)==SmbProbe::Rejected&&result.status==0xbb);
+     response[24]=1;assert(SmbProbe::Parse(response,64,result)==SmbProbe::Failed);
+     SmbProbe probe;assert(!probe.Start("192.168.1.1","8.8.8.8")&&!probe.Running());}
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

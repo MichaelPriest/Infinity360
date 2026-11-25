@@ -222,3 +222,7 @@ Painel de energia com dupla confirmação e cancelamento, bloqueio de transferê
 ### V0.2.22 — P2 Refrigeração e aviso térmico
 
 Leitura do alvo percentual SMC pela resposta 0x07, validação de faixa, aviso de sessão configurável, estados parcial/inválido e captura 47. Sem alterar controle térmico, sem medir RPM, sem proteção automática. Controle real de ventoinha permanece pendente de provider e homologação por revisão de placa. Nenhuma build/CI.
+
+### V0.2.23 — P2 SMB fase 1
+
+Diagnóstico TCP 445 e negociação SMB2-only de quatro dialetos, interface de configuração por controle, timeout e cancelamento, leitura explícita do wire format. Autenticação com assinatura, SMB 3.1.1, enumeração, leitura/cópia e integração com explorador permanecem pendentes. Sem CI/hardware. Galeria 49 preparada.

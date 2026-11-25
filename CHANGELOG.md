@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.23 — em desenvolvimento (sem build XEX)
+
+- Diagnóstico TCP/SMB2 NEGOTIATE para servidor privado escolhido, editor IPv4 e prazo/cancelamento.
+- Dialetos 2.0.2 a 3.0.2, status e requisito de assinatura; sem autenticação ou acesso a compartilhamentos.
+- Testes de parsing e duas capturas preparadas; nenhuma build ou captura executada.
+
 ## V0.2.22 — em desenvolvimento (sem build XEX)
 
 - Diagnóstico de refrigeração com alvo calculado pelo SMC, sem inferir RPM ou override.

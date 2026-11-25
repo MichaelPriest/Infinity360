@@ -513,7 +513,8 @@ void ConsoleHome::MovePin(int direction) {
 }
 bool ConsoleHome::Tick() {
     const bool peerChanged=peerProbe_.Tick();
-    const bool ftpChanged=ftp_.Tick()||peerChanged;
+    const bool smbChanged=smbProbe_.Tick();
+    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -1610,6 +1611,33 @@ std::string ConsoleHome::Press(Key key) {
         }else powerConfirm_.Cancel();
         return "";
     }
+    if(section_==System&&systemTab_==1&&page_==Details&&smbPage_){
+        if(key==Back){if(smbEditing_)smbEditing_=false;else{smbProbe_.Stop();smbPage_=false;}notice_.clear();return "";}
+        if(smbEditing_){
+            if(key==Left&&smbOctet_>0)--smbOctet_;
+            if(key==Right&&smbOctet_<3)++smbOctet_;
+            if(key==Up||key==Down)LanPeerConfig::Change(smbDraft_,smbOctet_,key==Up?1:-1);
+            if(key==Accept){
+                RefreshNetwork();
+                if(LanPeerConfig::Format(smbDraft_)==network_.ipv4||!LanPeerConfig::Save(dir_+"infinity360-smb-peer.txt",smbDraft_))notice_="IPv4 privado distinto ou gravacao invalida.";
+                else{smbEditing_=false;notice_="Servidor SMB salvo.";}
+            }
+            return "";
+        }
+        if(key==Favorite){smbProbe_.Stop();return "";}
+        if(key==Guide&&!smbProbe_.Running()){
+            if(TransferRunning()||ftp_.Running()){notice_="Encerre FTP e transferencias antes de editar.";return "";}
+            smbDraft_={{192,168,1,2}};LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",smbDraft_);
+            smbOctet_=0;smbEditing_=true;notice_.clear();return "";
+        }
+        if(key==Accept&&!smbProbe_.Running()){
+            if(PowerBusy()){notice_="Encerre operacoes e FTP antes do teste SMB.";return "";}
+            LanPeerConfig::Octets configured{};
+            if(!LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",configured)){notice_="START configura IPv4 do servidor.";return "";}
+            RefreshNetwork();smbProbe_.Start(network_.ipv4,LanPeerConfig::Format(configured));notice_.clear();
+        }
+        return "";
+    }
     if (key==Back) {
         if(section_==System&&systemTab_==1&&page_==Details){
             if(peerEditing_){peerEditing_=false;notice_.clear();return "";}
@@ -1725,6 +1753,9 @@ std::string ConsoleHome::Press(Key key) {
             const size_t pages=(storageVolumes_.size()+3)/4;
             if(pages)storagePage_=(storagePage_+pages+(key==PageDown?1:pages-1))%pages;
             return "";
+        }
+        if(page_==Details&&systemTab_==1&&!networkPeer_&&key==Guide){
+            smbPage_=true;smbEditing_=false;notice_.clear();return "";
         }
         if(page_==Details&&systemTab_==1&&networkPeer_&&peerEditing_){
             if(key==Left&&peerOctet_>0)--peerOctet_;
@@ -1852,7 +1883,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Right && systemTab_<7) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
-                else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();}
+                else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();smbPage_=false;smbEditing_=false;smbProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;coolingPage_=false;}
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
@@ -2636,7 +2667,7 @@ void ConsoleHome::DrawCooling(HomeCanvas& c)const{
     c.Text(48,607,"A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria",18,Lime,1170);
 }
 bool ConsoleHome::PowerBusy()const{
-    return TransferRunning()||ftp_.Running()||peerProbe_.Running()||
+    return TransferRunning()||ftp_.Running()||peerProbe_.Running()||smbProbe_.Running()||
         nativeStorePending_||nativeBatch_||storeInstallPending_||providerPending_||
         discPending_||discSystemExit_||packageImportPending_||backupPending_||
         recoverPending_||contentInstallPending_||artPending_||coverBatchPending_||
@@ -2717,7 +2748,30 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     }
     c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
+void ConsoleHome::DrawSmb(HomeCanvas& c)const{
+    c.Text(45,349,"Rede | SMB2/3 experimental",27,White,1170);
+    if(smbEditing_){
+        c.Text(48,392,"IPv4 privado do servidor SMB",23,White,1170);
+        for(unsigned i=0;i<4;++i){
+            const int x=48+int(i)*175;
+            panel(c,x,438,155,67,Panel,i==smbOctet_);
+            c.Text(x+14,451,number(smbDraft_[i]),30,i==smbOctet_?Lime:White,130);
+        }
+        c.Text(48,535,"Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar",19,Lime,1170);return;
+    }
+    LanPeerConfig::Octets configured{};
+    const bool known=LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",configured);
+    c.Text(48,392,"Servidor: "+(known?LanPeerConfig::Format(configured):std::string("Nao configurado"))+" | TCP 445",22,White,1170);
+    c.Text(48,435,smbProbe_.Label(),22,smbProbe_.Status()==SmbProbe::Negotiated?Lime:White,1170);
+    const auto& result=smbProbe_.Info();
+    c.Text(48,480,std::string("Dialeto: ")+SmbProbe::Dialect(result.dialect)+(smbProbe_.Status()==SmbProbe::Negotiated?(result.signingRequired?" | Assinatura exigida":" | Assinatura suportada"):""),21,Muted,1170);
+    if(smbProbe_.Status()==SmbProbe::Rejected)c.Text(48,510,"Status NT: "+number(result.status),18,Muted,1170);
+    c.Text(48,550,"Somente negociacao; sem login, montagem ou acesso a arquivos.",19,Muted,1170);
+    c.Text(48,579,"Sem SMB1 ou SMB 3.1.1 nesta etapa.",17,Muted,1170);
+    c.Text(48,607,"A Testar | X Cancelar | START Configurar | B Voltar",18,Lime,1170);
+}
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
+    if(smbPage_){DrawSmb(c);return;}
     if(networkPeer_){
         c.Text(45,349,c.Tr("Rede 2/2 | Diagnostico UDP entre consoles"),27,White,1170);
         if(peerEditing_){
@@ -2751,7 +2805,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado",21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?"Leitura/upload":"Somente leitura"):"A Leitura | X Leitura/upload (ALLO)",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
-    c.Text(45,607,"A Leitura | X Upload | A/X Parar | LB/RB Teste UDP | Y Atualizar | B Voltar",18,Muted,1180);
+    c.Text(45,607,"A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     const auto rows=notifications_.Visible(eventFilter_);

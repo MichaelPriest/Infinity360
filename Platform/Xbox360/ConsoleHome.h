@@ -10,6 +10,7 @@
 #include "NetworkInfo.h"
 #include "LanPeerProbe.h"
 #include "LanPeerConfig.h"
+#include "SmbProbe.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
@@ -148,6 +149,11 @@ private:
     unsigned peerOctet_=0;
     LanPeerConfig::Octets peerDraft_{{192,168,1,2}};
     void RefreshNetwork();
+    SmbProbe smbProbe_;
+    bool smbPage_=false,smbEditing_=false;
+    unsigned smbOctet_=0;
+    LanPeerConfig::Octets smbDraft_{{192,168,1,2}};
+    void DrawSmb(HomeCanvas& c)const;
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;
     bool telemetryVideo_=false,thermalPage_=false;
