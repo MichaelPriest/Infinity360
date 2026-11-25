@@ -37,8 +37,16 @@ jobs:
     name: Cross-compile real PowerPC XEX2 (XSDK)
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - name: Read dashboard version
+        id: version
+        run: |
+          version="$(python3 Platform/Xbox360/tools/package_alpha.py --version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "INFINITY_VERSION=$version" >> "$GITHUB_ENV"
       - name: Install XSDK dependencies
         run: |
           sudo apt-get update -qq
@@ -109,9 +117,10 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip")
+          version = os.environ["INFINITY_VERSION"]
+          dest = Path(f"IPTV/Cloud360/Infinity360-Alpha-XSDK-{version}.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.2.10 - experimental hardware preview ONLY\n"
+              f"INFINITY 360 XSDK Alpha {version} - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "default.xex now opens the full experimental menu; aurorax_alpha_probe.xex remains the GPU diagnostic. No autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -163,6 +172,8 @@ jobs:
               archive.writestr("MenuPreview/UserFiles/ContentImport/", "")
               archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo\nhttps://example.invalid/test.ts\n")
               archive.writestr("MenuPreview/aurorax-store.tsv", "demo\thomebrew\tDemo Homebrew\t1.0\t1024\t" + "a"*64 + "\thttps://example.invalid/demo.zip\tDemonstracao\n")
+              archive.writestr("VERSION.txt", version+"\n")
+              archive.writestr("BUILD-COMMIT.txt", os.environ["GITHUB_SHA"]+"\n")
               archive.writestr("LEIA-ME-SEGURANCA.txt", note)
               archive.writestr("SHA256SUMS.txt", "".join(
                   f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {title}\n"
@@ -170,11 +181,11 @@ jobs:
           with ZipFile(dest) as archive:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
-          update = dest.parent / "Infinity360-Update-XSDK-0.2.10.pkg"
+          update = dest.parent / f"Infinity360-Update-XSDK-{version}.pkg"
           with ZipFile(update, "w", ZIP_DEFLATED) as candidate, ZipFile(dest) as original:
               candidate.write(outputs["infinity_menu_preview.xex"], "default.xex")
               for name in original.namelist():
-                  if name in ("home.tga", "cacert.pem", "MenuPreview/infinity-preview.txt", "MenuPreview/UserFiles/") or name.startswith("Licenses/"):
+                  if name in ("VERSION.txt", "BUILD-COMMIT.txt", "home.tga", "cacert.pem", "MenuPreview/infinity-preview.txt", "MenuPreview/UserFiles/") or name.startswith("Licenses/"):
                       candidate.writestr(name, original.read(name))
               candidate.writestr("LEIA-ME.txt", "Candidate only. Install separately; do not replace the running dashboard. Boot default.xex from a trusted external file manager. No auto boot.\n")
           with ZipFile(update) as candidate:
@@ -183,21 +194,21 @@ jobs:
           raw = update.read_bytes()
           assert 4096 <= len(raw) <= 64*1024*1024
           identity = "infinity-" + os.environ["GITHUB_SHA"][:12]
-          (dest.parent / "infinity360-update.tsv").write_text(f"{identity}\t0.2.10\t{len(raw)}\t{hashlib.sha256(raw).hexdigest()}\n")
+          (dest.parent / "infinity360-update.tsv").write_text(f"{identity}\t{version}\t{len(raw)}\t{hashlib.sha256(raw).hexdigest()}\n")
           print("Build XEX2 packaged:", dest)
           PY
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.2.10.zip > Infinity360-Alpha-XSDK-0.2.10.zip.sha256
+          sha256sum "Infinity360-Alpha-XSDK-$INFINITY_VERSION.zip" > "Infinity360-Alpha-XSDK-$INFINITY_VERSION.zip.sha256"
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.2.10
+          name: Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.2.10.zip.sha256
-            IPTV/Cloud360/Infinity360-Update-XSDK-0.2.10.pkg
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-${{ steps.version.outputs.version }}.zip.sha256
+            IPTV/Cloud360/Infinity360-Update-XSDK-${{ steps.version.outputs.version }}.pkg
             IPTV/Cloud360/infinity360-update.tsv
           retention-days: 14
           if-no-files-found: error
@@ -234,21 +245,25 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.2.10
+          name: Infinity360-Alpha-XSDK-${{ needs.xsdk-xex.outputs.version }}
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          INFINITY_VERSION: ${{ needs.xsdk-xex.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.2.10.zip.sha256
+          sha256sum -c "Infinity360-Alpha-XSDK-$INFINITY_VERSION.zip.sha256"
           python3 - <<'PY'
           from zipfile import ZipFile
-          import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.2.10.zip") as z:
+          import hashlib, os
+          version=os.environ["INFINITY_VERSION"]
+          with ZipFile(f"Infinity360-Alpha-XSDK-{version}.zip") as z:
+              assert z.read("VERSION.txt").decode().strip()==version
+              assert z.read("BUILD-COMMIT.txt").decode().strip()==os.environ["GITHUB_SHA"]
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
@@ -259,19 +274,22 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
           import hashlib, os
-          raw=Path("Infinity360-Update-XSDK-0.2.10.pkg").read_bytes()
-          assert Path("infinity360-update.tsv").read_text().strip().split("\t")==["infinity-"+os.environ["GITHUB_SHA"][:12],"0.2.10",str(len(raw)),hashlib.sha256(raw).hexdigest()]
-          with ZipFile("Infinity360-Update-XSDK-0.2.10.pkg") as z, ZipFile("Infinity360-Alpha-XSDK-0.2.10.zip") as full:
+          version=os.environ["INFINITY_VERSION"]
+          raw=Path(f"Infinity360-Update-XSDK-{version}.pkg").read_bytes()
+          assert Path("infinity360-update.tsv").read_text().strip().split("\t")==["infinity-"+os.environ["GITHUB_SHA"][:12],version,str(len(raw)),hashlib.sha256(raw).hexdigest()]
+          with ZipFile(f"Infinity360-Update-XSDK-{version}.pkg") as z, ZipFile(f"Infinity360-Alpha-XSDK-{version}.zip") as full:
+              assert z.read("VERSION.txt")==full.read("VERSION.txt")
+              assert z.read("BUILD-COMMIT.txt")==full.read("BUILD-COMMIT.txt")
               assert z.testzip() is None
               assert z.read("default.xex")==full.read("infinity_menu_preview.xex")
           PY
-          tag="xsdk-v0.2.10-${GITHUB_SHA:0:12}"
+          tag="xsdk-v${INFINITY_VERSION}-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.2.10 — experimental prerelease.
+          INFINITY 360 XSDK Alpha V${INFINITY_VERSION} — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
@@ -281,6 +299,6 @@ jobs:
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.2.10.zip Infinity360-Alpha-XSDK-0.2.10.zip.sha256 Infinity360-Update-XSDK-0.2.10.pkg infinity360-update.tsv \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.2.10 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" "Infinity360-Alpha-XSDK-$INFINITY_VERSION.zip" "Infinity360-Alpha-XSDK-$INFINITY_VERSION.zip.sha256" "Infinity360-Update-XSDK-$INFINITY_VERSION.pkg" infinity360-update.tsv \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha V${INFINITY_VERSION} (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

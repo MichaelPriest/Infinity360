@@ -28,6 +28,14 @@ xsdk_add_xex(aurorax_alpha TITLE_ID 0x41555831 NAME "INFINITY 360 Alpha GPU Test
 # Compile and link production C++ code on the open PowerPC toolchain before
 # touching the GPU. This is not the full dashboard or an XDK replacement.
 set(INFINITY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+set(INFINITY_VERSION_HEADER "${INFINITY_ROOT}/Platform/Xbox360/InfinityVersion.h")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${INFINITY_VERSION_HEADER}")
+file(STRINGS "${INFINITY_VERSION_HEADER}" INFINITY_VERSION_LINE REGEX "^#define INFINITY360_VERSION ")
+if(NOT INFINITY_VERSION_LINE MATCHES "^#define INFINITY360_VERSION \"([0-9]+[.][0-9]+[.][0-9]+)\"$")
+  message(FATAL_ERROR "Invalid INFINITY 360 version header")
+endif()
+set(INFINITY_VERSION "${CMAKE_MATCH_1}")
+message(STATUS "INFINITY 360 dashboard version: ${INFINITY_VERSION}")
 add_executable(infinity_core_probe infinity_core_probe.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/HomeCanvas.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/MediaUrl.cpp
@@ -115,9 +123,9 @@ if(INFINITY_EXPERIMENTAL_MENU_FFMPEG)
   target_sources(infinity_menu_preview PRIVATE xsdk_ffmpeg_compat.c ../core/container_decode.c ../core/frame_output.c)
   target_include_directories(infinity_menu_preview PRIVATE "${CLOUD360_CONTAINER_FFMPEG_ROOT}/include")
   target_link_libraries(infinity_menu_preview PRIVATE "${CLOUD360_CONTAINER_FFMPEG_ROOT}/lib/libavformat.a" "${CLOUD360_CONTAINER_FFMPEG_ROOT}/lib/libavcodec.a" "${CLOUD360_CONTAINER_FFMPEG_ROOT}/lib/libavutil.a" m)
-  xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4635 NAME "INFINITY 360 FFmpeg EXP" VERSION 0.2.10.0)
+  xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4635 NAME "INFINITY 360 FFmpeg EXP" VERSION ${INFINITY_VERSION}.0)
 else()
-  xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.2.10.0)
+  xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION ${INFINITY_VERSION}.0)
 endif()
 
 add_executable(infinity_launch_target infinity_launch_target.c)

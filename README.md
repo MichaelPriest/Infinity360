@@ -189,3 +189,7 @@ Detalhes dos jogos mostram tentativas encaminhadas ao loader XSDK, falhas imedia
 ### Protetor de tela
 
 Sistema > Console: X alterna desativado, 1, 3, 5 e 10 minutos. Preferência I no perfil local. Na sessão contínua XSDK, apenas na home sem FTP, teste UDP, cópias ou menus de edição ativos, um logotipo discreto se move sobre fundo preto. O primeiro comando desperta sem acionar navegação. Não desliga o console nem altera brilho do televisor. Testes determinísticos de inatividade, atividade, bloqueio e regressão do relógio monotônico. CI ainda sem runner.
+
+## Versionamento das builds — V0.2.11
+
+A versão da dashboard é definida exclusivamente em [`InfinityVersion.h`](Platform/Xbox360/InfinityVersion.h). A revisão V0.2.11 inicia a sequência V0.2.12, V0.2.13 etc. Cada novo lote de desenvolvimento deve incrementar a versão; uma reexecução do mesmo commit mantém o número. Pacotes XSDK, manifesto de atualização, versão XEX, pacote XDK, interface nativa e Releases usam a mesma versão. Tags incluem o SHA curto para preservar builds imutáveis. Os diagnósticos Cloud360 mantêm versões independentes. Consulte o [changelog](CHANGELOG.md). V0.2.11 publicada no código-fonte; binário pendente de CI.

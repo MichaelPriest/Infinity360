@@ -96,6 +96,13 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Read dashboard version
+        id: version
+        shell: powershell
+        run: |
+          $version = (py -3 Platform\Xbox360\tools\package_alpha.py --version).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch "^\d+\.\d+\.\d+$") { throw "Invalid dashboard version" }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - name: Build integrated INFINITY 360 with XDK
         shell: cmd
         run: |
@@ -107,11 +114,11 @@ jobs:
       - name: Package genuine XEX and approved INFINITY 360 art
         shell: cmd
         run: |
-          py -3 Platform\Xbox360\tools\package_alpha.py --xex dist\Xbox360\default.xex --art dist\Xbox360\home.tga --out dist\Xbox360\Infinity360-Alpha-0.1.0-Xbox360.zip
+          py -3 Platform\Xbox360\tools\package_alpha.py --xex dist\Xbox360\default.xex --art dist\Xbox360\home.tga --out dist\Xbox360\Infinity360-Alpha-${{ steps.version.outputs.version }}-Xbox360.zip
       - name: Upload package to GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-0.1.0-Xbox360
-          path: dist/Xbox360/Infinity360-Alpha-0.1.0-Xbox360.zip
+          name: Infinity360-Alpha-${{ steps.version.outputs.version }}-Xbox360
+          path: dist/Xbox360/Infinity360-Alpha-${{ steps.version.outputs.version }}-Xbox360.zip
           retention-days: 14
           if-no-files-found: error

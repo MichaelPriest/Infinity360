@@ -31,9 +31,12 @@ class PackageAlphaTests(unittest.TestCase):
         PACKER.package(self.xex, self.art, self.out)
         with ZipFile(self.out) as archive:
             self.assertEqual(set(archive.namelist()), {
-                "default.xex", "home.tga", "LEIA-ME-ALPHA.txt", "MANIFEST.sha256"
+                "default.xex", "home.tga", "LEIA-ME-ALPHA.txt", "MANIFEST.sha256", "VERSION.txt"
             })
             self.assertIsNone(archive.testzip())
+            self.assertEqual(archive.read("VERSION.txt").decode().strip(), PACKER.VERSION)
+            self.assertIn(PACKER.VERSION, archive.read("LEIA-ME-ALPHA.txt").decode())
+            self.assertIn(PACKER.VERSION, PACKER.ARCHIVE_NAME)
             self.assertIn(PACKER.sha256(self.xex), archive.read("MANIFEST.sha256").decode())
             self.assertIn(PACKER.sha256(self.art), archive.read("MANIFEST.sha256").decode())
 

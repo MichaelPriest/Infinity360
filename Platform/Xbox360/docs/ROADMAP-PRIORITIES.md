@@ -174,3 +174,7 @@ Contagem persistente de tentativas e falhas imediatas por caminho, data/hora da 
 ### P3 — Protetor de tela configurável
 
 Preferência persistente 0/1/3/5/10 min, padrão off; animação de baixo contraste com atualização por segundo, apenas na home da sessão contínua, sem transferências/FTP/UDP, consumo do primeiro comando ao despertar. Testes de máquina de estados e limites. Sem controle de energia ou brilho físico. CI anterior sem runner; nova revisão aguarda validação.
+
+### V0.2.11 — Versionamento centralizado
+
+Versão única em InfinityVersion.h, metadado XEX da dashboard XSDK, identificação visível, nomes de ZIP/PKG/artefato, checksums, manifesto e tags de prerelease. Inclui VERSION.txt e BUILD-COMMIT.txt no pacote XSDK, validados antes da release. XDK empacotado com mesma versão; diagnósticos independentes mantêm seus números. Cada novo lote incrementa patch; reexecuções não incrementam. CI sem runner; nenhuma nova build comprovada.

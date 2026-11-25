@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "InfinityVersion.h"
 #include "DiscIdentity.h"
 #include "ArtImport.h"
 #include "StoreStorage.h"
@@ -2822,6 +2823,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
     c.Text(105,16,"INFINITY",32,White,220);
     c.Text(282,16,"360",32,Lime,84);
+    c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
     c.Text(1088,19,clock,26,White,90);
     c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
     c.Text(1197,26,"360",16,White,37);
