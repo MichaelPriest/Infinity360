@@ -10,6 +10,7 @@
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include <map>
+#include <set>
 
 class ConsoleHome {
 public:
@@ -30,6 +31,7 @@ private:
     std::string dir_, notice_;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
+    std::set<unsigned> translationReferences_;
     std::vector<int> toolKinds_; // 1 = installed, 2 = plugin, 3 = homebrew
     std::vector<const Game*> visible_;
     std::vector<FolderEntry> files_;

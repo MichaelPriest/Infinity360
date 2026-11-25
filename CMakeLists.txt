@@ -21,6 +21,7 @@ if(Python3_Interpreter_FOUND)
     add_test(NAME web_smoke COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/WebSmokeTest.py)
     add_test(NAME aurora_import COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/AuroraImportTests.py)
     add_test(NAME store_download COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/StoreDownloadTests.py)
+    add_test(NAME nexus_import COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/NexusImportTests.py)
 endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.

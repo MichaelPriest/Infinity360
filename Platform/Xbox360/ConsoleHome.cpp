@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <fstream>
 #include <sstream>
+#include <set>
 
 namespace {
 const size_t HistoryLimit=24;
@@ -25,7 +26,7 @@ std::map<unsigned,std::string> importedNames(const std::string& file) {
     if(in.bad() || in.gcount()>static_cast<std::streamsize>(limit))return names;
     std::istringstream lines(std::string(&data[0],static_cast<size_t>(in.gcount())));
     std::string line;
-    while(names.size()<4096 && std::getline(lines,line)) {
+    while(names.size()<8192 && std::getline(lines,line)) {
         if(!line.empty() && line[line.size()-1]=='\r')line.erase(line.size()-1);
         if(line.size()<10 || line.size()>249 || line[8]!='\t')continue;
         unsigned id=0;bool valid=true;
@@ -40,6 +41,31 @@ std::map<unsigned,std::string> importedNames(const std::string& file) {
         if(valid && id && !names.count(id))names[id]=line.substr(9);
     }
     return names;
+}
+std::set<unsigned> importedTranslationIds(const std::string& file) {
+    std::set<unsigned> ids;
+    std::ifstream in(file.c_str(),std::ios::binary);
+    if(!in)return ids;
+    const size_t cap=128*1024;
+    std::vector<char> raw(cap+1);
+    in.read(&raw[0],static_cast<std::streamsize>(raw.size()));
+    if(in.bad()||in.gcount()>static_cast<std::streamsize>(cap))return ids;
+    std::istringstream lines(std::string(&raw[0],static_cast<size_t>(in.gcount())));
+    std::string line;
+    while(std::getline(lines,line)) {
+        if(!line.empty()&&line[line.size()-1]=='\r')line.erase(line.size()-1);
+        if(line.size()!=8)continue;
+        unsigned id=0;bool valid=true;
+        for(size_t i=0;i<line.size();++i) {
+            const char ch=line[i];
+            if(ch>='0'&&ch<='9')id=(id<<4)|(ch-'0');
+            else if(ch>='A'&&ch<='F')id=(id<<4)|(ch-'A'+10);
+            else {valid=false;break;}
+        }
+        if(valid&&id)ids.insert(id);
+        if(ids.size()>=8192)break;
+    }
+    return ids;
 }
 bool validArtChoice(const std::string& value) {
     return value.size()==2 && value[0]>='0' && value[0]<='2' &&
@@ -196,7 +222,11 @@ void ConsoleHome::ScanLibrary() {
         Game item={pkg.name,pkg.path,kind,false};
         games_.push_back(item);
     }
-    const std::map<unsigned,std::string> names=importedNames(dir_+"aurorax-aurora-names.tsv");
+    std::map<unsigned,std::string> names=importedNames(dir_+"aurorax-nexus-names.tsv");
+    const std::map<unsigned,std::string> aurora=importedNames(dir_+"aurorax-aurora-names.tsv");
+    for(std::map<unsigned,std::string>::const_iterator it=aurora.begin();it!=aurora.end();++it)
+        names[it->first]=it->second;
+    translationReferences_=importedTranslationIds(dir_+"aurorax-nexus-translation-ids.txt");
     if(!names.empty()) {
         for(size_t i=0;i<games_.size();++i) {
             const XboxTitleMetadata info=ContentCatalog::DescribeTitle(games_[i].executable,isContentPackage(games_[i]));
@@ -1688,6 +1718,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                     m.discCount?"Disco "+number(m.discNumber)+" de "+number(m.discCount):
                        "Disco: informacao indisponivel";
                 c.Text(77,407,extra,21,Muted,textWidth);
+                if(translationReferences_.count(m.titleId))
+                    c.Text(77,439,"PT-BR: titulo referenciado; versao/download nao confirmados",18,Muted,textWidth);
             } else c.Text(77,351,"Metadados indisponiveis para este item.",22,Muted,1100);
         }
         c.Text(77,469,hint,21,Lime,textWidth);

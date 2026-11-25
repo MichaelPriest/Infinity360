@@ -894,5 +894,18 @@ int main(int argc,char** argv) {
     ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);
     {std::ifstream in(ptbrRoot/"aurorax-store-requests.tsv");std::string line;
      std::getline(in,line);assert(line=="ptbr\t"+storeHash);assert(!std::getline(in,line));}
+    // Nexus metadata only maps locally verified Title IDs; Aurora has precedence.
+    const fs::path nexusRoot=root/"NexusMetadataFixture";
+    const fs::path nexusGame=nexusRoot/"Games"/"Demo"/"default.xex";
+    fs::create_directories(nexusGame.parent_path());
+    {std::ofstream out(nexusGame,std::ios::binary);
+     out.write(reinterpret_cast<const char*>(trainerGameHeader.data()),trainerGameHeader.size());}
+    {std::ofstream out(nexusRoot/"aurorax-nexus-names.tsv");out<<"4D5307E6\tNexus title\n";}
+    {std::ofstream out(nexusRoot/"aurorax-aurora-names.tsv");out<<"4D5307E6\tAurora title\n";}
+    {std::ofstream out(nexusRoot/"aurorax-nexus-translation-ids.txt");out<<"4D5307E6\n";}
+    ConsoleHome nexusMeta(nexusRoot.string()+"/",std::vector<std::string>(1,(nexusRoot/"Games").string()));
+    nexusMeta.Load();nexusMeta.Press(ConsoleHome::Accept);nexusMeta.Press(ConsoleHome::Accept);
+    nexusMeta.Draw(canvas,"20:50");
+    assert(nexusMeta.Press(ConsoleHome::Accept)==nexusGame.string());
     fs::remove_all(root);
 }

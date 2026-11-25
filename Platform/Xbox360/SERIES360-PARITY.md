@@ -349,3 +349,8 @@ RB no início abre loja nativa com filtros Todos/Jogos/XBLA/Homebrew/Apps/Emulad
 ## Referência complementar Nexus Andromeda / Horizon
 
 Repositório oficial https://github.com/DevIshimura/Nexus : árvore pública contém README.md e update.json, sem fonte do runtime ou licença identificada. Releases v1.3 (24/10/2026) e v1.4 (18/11/2026) descrevem loja, downloads HTTPS paralelos, traduções PT-BR, gerenciamento de jogos/TU/trainers, emuladores, Xbox Classic, AutoSwap, FTP, FATX/FAT32, temperaturas, DashLaunch, capas/ícones, IPTV e xCloud experimental. Descrições não demonstram implementação interna nem fornecem APIs autorizadas. Recriar por código próprio, sem copiar binários. Nova entrega: aba PT-BR vinculada a Title/Media/versão XEX, staging autorizado e até quatro downloads PC de arquivos distintos em paralelo, SHA-256 por arquivo. Pendentes: transporte HTTPS nativo/segmentação, servidor original Nexus, instalação validada e rollback de traduções, TU ativo, AutoSwap, Xbox Classic, xCloud e demais providers. Cloud360 mantido. CI anterior 45513285584 aprovada; testes novos adicionados.
+
+
+## Inspeção do pacote Nexus fornecido pelo usuário
+
+Ver `Platform/Xbox360/docs/NEXUS-INTEROP.md`. Importador de metadados local e opt-in para TitleID.json e TranslationCatalog.txt, referência PT-BR nas fichas, precedência dos nomes Aurora. Dados do pacote não distribuídos, nenhuma API privada, torrent ou binário reutilizado. CI 45515312127 anterior aprovada; nova revisão pendente.
