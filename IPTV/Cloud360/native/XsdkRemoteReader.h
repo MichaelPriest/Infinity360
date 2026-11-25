@@ -32,12 +32,12 @@ public:
         if(multi_)curl_multi_cleanup(multi_);
         if(global_)curl_global_cleanup();
     }
-    bool Open(const std::string& address,const std::string& root,bool transportStream=false){
+    bool Open(const std::string& address,const std::string& root,bool transportStream=false,bool playlist=false){
         MediaUrl url;
         if(!url.Parse(address)||address.find('#')!=std::string::npos)return false;
         if(url.NeedsConverter()){
             const auto path=StoreHostPolicy::lower(url.target.substr(0,url.target.find('?')));
-            if(!transportStream||path.size()<3||path.substr(path.size()-3)!=".ts")return false;
+            if(!(transportStream&&path.size()>=3&&path.substr(path.size()-3)==".ts")&&!(playlist&&path.size()>=5&&path.substr(path.size()-5)==".m3u8"))return false;
         }
         // HTTP only to an explicitly configured LAN relay address. HTTPS uses the existing exact host allowlist.
         if(!url.secure){

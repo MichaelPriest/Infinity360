@@ -33,6 +33,7 @@
 #include "av_stream_queue.h"
 #ifdef INFINITY_CONTAINER_NETWORK_PROBE
 #include "XsdkRemoteReader.h"
+#include "hls_vod.h"
 #include <fstream>
 #endif
 #include <chrono>
@@ -156,16 +157,29 @@ int main(){
 #ifdef INFINITY_CONTAINER_NETWORK_PROBE
     // Optional explicitly authorized TS URL; never silently fall back.
     XsdkMpeg::RemoteReader remote;
+    CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([](const std::string& url,bool playlist){
+        auto r=std::make_unique<XsdkMpeg::RemoteReader>();
+        if(!r->Open(url,"game:/",!playlist,playlist))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
+        return r;
+    });
     std::ifstream config("game:/cloud360-test-ts-url.txt",std::ios::binary);
     if(config){
         char raw[4098]{};config.getline(raw,sizeof raw);
         if(config.fail()||config.peek()!=std::char_traits<char>::eof())return 1;
         std::string address=raw;if(!address.empty()&&address.back()=='\r')address.pop_back();
         std::ifstream enabled("game:/enable-iptv-playback.txt");std::string marker;
-        if(!std::getline(enabled,marker)||marker!="ENABLE-IPTV-PLAYBACK"||!remote.Open(address,"game:/",true))return 1;
+        if(!std::getline(enabled,marker)||marker!="ENABLE-IPTV-PLAYBACK")return 1;
+        if(CloudHls::Extension(address,".m3u8")){
+            if(!hls.Start(address,2000000))return 1;
+            session=cloud_container_open_ts([](void* user,uint8_t* bytes,unsigned cap){
+                return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(user)->Read(bytes,cap);
+            },&hls,CloudAvStreamQueue::Capture,&timeline);
+        }else{
+        if(!remote.Open(address,"game:/",true))return 1;
         session=cloud_container_open_ts([](void* user,uint8_t* bytes,unsigned cap){
             return static_cast<XsdkMpeg::RemoteReader*>(user)->Read(bytes,cap);
         },&remote,CloudAvStreamQueue::Capture,&timeline);
+        }
     }else
 #endif
     session=cloud_container_open("game:/test.mp4",CloudAvStreamQueue::Capture,&timeline,1);

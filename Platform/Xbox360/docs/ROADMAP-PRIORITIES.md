@@ -90,3 +90,7 @@ Fila RGB/PCM com limite de memória e liberação após consumo, leitura antecip
 ### P1 — Transporte MPEG-TS incremental
 
 Entrada por callback não-seekable com demux forçado TS, erro terminal e testes de fragmentação/interrupção. Leitor curl reutilizado no alvo XSDK opcional com autorização e buffer limitado. HLS, reconexão, rebuffering, cross-build FFmpeg e integração à dashboard pendentes.
+
+### P1 — HLS VOD restrito
+
+Parser de master/media, seleção inicial por bitrate, leitor sequencial TS de mesma origem, limites e teste de demux via fonte simulada. Probe opcional aceita .m3u8 sem criptografia; live, ABR dinâmico, recuperação, fMP4, build PowerPC e integração principal pendentes.
