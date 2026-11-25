@@ -1,6 +1,7 @@
 ﻿#include "ConsoleHome.h"
 #include "DiscIdentity.h"
 #include "ArtImport.h"
+#include "StoreStorage.h"
 #include "XsdkPaths.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
@@ -366,6 +367,9 @@ void ConsoleHome::Reload() {
             roots.push_back(roots_[i].substr(0,sep+1)+(section_==Apps?"Apps":"Emulators"));
         }
         roots.push_back(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),section_==Apps?"Apps":"Emulators"));
+        for(const char* id:{"hdd","usb0","usb1","usb2"}){
+            const auto folder=StoreStorage::Personal(dir_,id);if(!folder.empty())roots.push_back(FileWorkspace::Join(folder,section_==Apps?"Apps":"Emulators"));
+        }
         tools_=GameScanner(roots).Scan();
         toolKinds_.assign(tools_.size(),1);
         // Installed homebrew plugins are opt-in local XEX applications.
@@ -389,6 +393,9 @@ void ConsoleHome::Reload() {
                 homeRoots.push_back(roots_[i].substr(0,split==std::string::npos?0:split+1)+"Homebrew");
             }
             homeRoots.push_back(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Homebrew"));
+            for(const char* id:{"hdd","usb0","usb1","usb2"}){
+                const auto folder=StoreStorage::Personal(dir_,id);if(!folder.empty())homeRoots.push_back(FileWorkspace::Join(folder,"Homebrew"));
+            }
             const std::vector<Game> homebrew=GameScanner(homeRoots).Scan();
             for(size_t i=0;i<homebrew.size();++i) {
                 bool duplicate=false;
@@ -972,6 +979,19 @@ std::string ConsoleHome::Press(Key key) {
             RebuildStore();return "";
         }
         if(!storeDetails_) {
+            if(key==PageUp){
+                if(TransferRunning()||nativeStorePending_||nativeBatch_){notice_="Conclua a transferencia ativa.";return "";}
+                const std::vector<std::string> ids={"","hdd","usb0","usb1","usb2"};
+                const auto it=std::find(ids.begin(),ids.end(),store_.Storage());
+                const size_t start=it==ids.end()?0:static_cast<size_t>(it-ids.begin()+1);
+                for(size_t offset=0;offset<ids.size();++offset){
+                    const auto& id=ids[(start+offset)%ids.size()];
+                    const auto folder=StoreStorage::Personal(dir_,id);
+                    if(id==store_.Storage()||folder.empty()||!fileWorkspace_.CanWrite(folder))continue;
+                    if(store_.SelectStorage(id)){storeRow_=0;RebuildStore();notice_="Destino Store: "+StoreStorage::Label(id)+"; fila independente.";return "";}
+                }
+                notice_="Nenhum outro workspace gravavel. Prepare Infinity360Files no dispositivo.";return "";
+            }
             if(key==Search){storeProviders_=true;providerRow_=0;notice_.clear();return "";}
             if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
             if(key==Right&&storeTab_<7) {++storeTab_;storeRow_=0;RebuildStore();}
@@ -1926,7 +1946,7 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
         c.Text(70,y+9,actions[i],22,ready[i]?White:Muted,850);
         c.Text(935,y+9,ready[i]?"Disponivel":"Indisponivel",18,ready[i]?Lime:Muted,265);
     }
-    c.Text(55,535,"Backups em UserFiles/StoreBackups | nenhum arquivo apagado",19,Muted,1150);
+    c.Text(55,535,"Backups no destino Store | nenhum arquivo apagado",19,Muted,1150);
     c.Text(55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
 }
 void ConsoleHome::DrawProviders(HomeCanvas& c) const{
@@ -1950,7 +1970,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
     c.Text(44,78,"INFINITY Store",40,White,1175);
-    c.Text(48,133,"Catalogos autorizados | Download nativo experimental",21,Muted,1175);
+    c.Text(48,133,"Catalogos autorizados | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
@@ -1992,7 +2012,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(835,y+15,store_.Staged(item)?"Arquivo local":store_.Requested(item)?"Na fila PC":"Disponivel",20,Lime,360);
         }
     }
-    c.Text(48,590,"A Detalhes | R3 Provedores | Y Atualizar local | B Voltar",21,Lime,1175);
+    c.Text(48,590,"A Detalhes | LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar",21,Lime,1175);
 }
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(storeActive_) {DrawStore(c);return;}
@@ -2389,7 +2409,7 @@ void ConsoleHome::RebuildStoreDownloads() {
 }
 void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
     const auto summary=store_.QueueSummary();
-    c.Text(45,346,"INFINITY Store | Downloads",25,White,590);
+    c.Text(45,346,"Downloads | "+StoreStorage::Label(store_.Storage()),25,White,540);
     c.Text(590,346,store_.NativeQueueValid()?number(summary.queued)+" na fila | "+number(summary.paused)+" parciais | "+StorageInfo::FormatBytes(summary.remaining)+" restantes":"Fila invalida; arquivo preservado",18,Muted,640);
     c.Text(590,370,number(summary.verified)+" verificados | "+number(summary.unavailable)+" referencias ausentes",15,Muted,640);
     const int first=(storeDownloadRow_/4)*4;

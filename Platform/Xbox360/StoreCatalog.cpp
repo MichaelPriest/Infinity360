@@ -1,4 +1,5 @@
 #include "StoreCatalog.h"
+#include "StoreStorage.h"
 #include "StorePartial.h"
 #include "StoreSha256.h"
 #include "MediaUrl.h"
@@ -135,8 +136,9 @@ bool providerItems(const StoreProvider& provider,const std::string& data,const s
 bool StoreCatalog::Load() {
     items_.clear();requests_.clear();validRequests_=true;
     providers_.clear();providersValid_=true;
-    native_.clear();validNative_=true;
-    const std::string nativePath=savedFile(root_+"infinity360-native-queue.tsv");
+    storage_=StoreStorage::Read(root_);
+    native_.clear();validNative_=StoreStorage::Valid(storage_)&&!StoreStorage::Personal(root_,storage_).empty();
+    const std::string nativePath=validNative_?savedFile(StoreStorage::Queue(root_,storage_)):"";
     if(fileExists(nativePath)){
         std::string data,line;
         if(!readBound(nativePath,8192,data))validNative_=false;
@@ -181,7 +183,7 @@ bool StoreCatalog::Load() {
             if(items_.size()>=1024||line.size()>1400||!parse(line,item)||!ids.insert(item.id).second){
                 items_.clear();return false;
             }
-            items_.push_back(item);
+            item.storage=storage_;items_.push_back(item);
         }
     }
     providersValid_=readProviders(root_,providers_);
@@ -192,10 +194,15 @@ bool StoreCatalog::Load() {
         std::vector<StoreItem> entries;
         if(ws.CanReadPersonalFile(path)&&readBound(path,MaxProviderBytes,data)&&providerItems(provider,data,items_,entries)){
             provider.cached=true;provider.items=entries.size();
+            for(auto& item:entries)item.storage=storage_;
             items_.insert(items_.end(),entries.begin(),entries.end());
         }
     }
     return localPresent||!providers_.empty();
+}
+bool StoreCatalog::SelectStorage(const std::string& id){
+    FileWorkspace ws(root_);if(!StoreStorage::Save(ws,root_,id))return false;
+    Load();return true;
 }
 bool StoreCatalog::ImportProvider(const StoreProvider& provider,const std::string& data,std::string& error){
     error.clear();
@@ -222,7 +229,7 @@ bool StoreCatalog::ImportProvider(const StoreProvider& provider,const std::strin
     return Load();
 }
 bool StoreCatalog::Requested(const StoreItem& item) const {
-    return std::find(requests_.begin(),requests_.end(),key(item))!=requests_.end();
+    return item.storage.empty()&&std::find(requests_.begin(),requests_.end(),key(item))!=requests_.end();
 }
 bool StoreCatalog::SaveRequests() {
     if(!validRequests_)return false;
@@ -232,7 +239,7 @@ bool StoreCatalog::SaveRequests() {
     out.close();return out&&replaceSavedFile(file);
 }
 bool StoreCatalog::Request(const StoreItem& item) {
-    if(!validRequests_||!item.provider.empty())return false;
+    if(!validRequests_||!item.provider.empty()||!item.storage.empty())return false;
     if(Requested(item))return true;
     if(requests_.size()>=64)return false;
     requests_.push_back(key(item));
@@ -240,23 +247,25 @@ bool StoreCatalog::Request(const StoreItem& item) {
     requests_.pop_back();return false;
 }
 bool StoreCatalog::Cancel(const StoreItem& item) {
+    if(!item.storage.empty())return false;
     const std::vector<std::string> old=requests_;
     requests_.erase(std::remove(requests_.begin(),requests_.end(),key(item)),requests_.end());
     if(SaveRequests())return true;
     requests_=old;return false;
 }
 bool StoreCatalog::NativeQueued(const StoreItem& item) const {
-    return validNative_&&std::find(native_.begin(),native_.end(),key(item))!=native_.end();
+    return validNative_&&item.storage==storage_&&std::find(native_.begin(),native_.end(),key(item))!=native_.end();
 }
 bool StoreCatalog::SaveNative(){
     if(!validNative_)return false;
-    const std::string path=root_+"infinity360-native-queue.tsv";
+    const std::string path=StoreStorage::Queue(root_,storage_);
+    if(path.empty())return false;
     std::ofstream out((path+".tmp").c_str(),std::ios::binary|std::ios::trunc);
     for(const auto& entry:native_)out<<entry<<"\n";
     out.close();return out&&replaceSavedFile(path);
 }
 bool StoreCatalog::QueueNative(const StoreItem& item){
-    if(!validNative_||!token(item.id,32)||!hash(item.sha256)||!item.bytes||item.bytes>512ULL*1024*1024)return false;
+    if(!validNative_||item.storage!=storage_||!token(item.id,32)||!hash(item.sha256)||!item.bytes||item.bytes>512ULL*1024*1024)return false;
     if(NativeQueued(item))return true;
     if(native_.size()>=64)return false;
     native_.push_back(key(item));
@@ -264,7 +273,7 @@ bool StoreCatalog::QueueNative(const StoreItem& item){
     native_.pop_back();return false;
 }
 bool StoreCatalog::RemoveNative(const StoreItem& item){
-    if(!validNative_)return false;
+    if(!validNative_||item.storage!=storage_)return false;
     if(!NativeQueued(item))return true;
     const auto old=native_;
     native_.erase(std::remove(native_.begin(),native_.end(),key(item)),native_.end());
@@ -330,7 +339,7 @@ namespace {
 std::string backupRoot(const std::string& root,const StoreItem& item,bool package){
     if(StoreInstallPath::Folder(root,item).empty())return "";
     return FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(
-        FileWorkspace::Join(root,"UserFiles"),"StoreBackups"),package?"Packages":StoreInstallPath::Category(item)),item.id);
+        StoreStorage::Personal(root,item.storage),"StoreBackups"),package?"Packages":StoreInstallPath::Category(item)),item.id);
 }
 bool enableManagement(const std::string& root){
     std::ifstream f(FileWorkspace::Join(root,"enable-store-install.txt").c_str());
@@ -338,7 +347,8 @@ bool enableManagement(const std::string& root){
 }
 bool ensureBackup(const FileWorkspace& ws,const std::string& root,const StoreItem& item,bool package){
     if(!enableManagement(root)||StoreInstallPath::Folder(root,item).empty())return false;
-    std::string folder=FileWorkspace::Join(root,"UserFiles");
+    std::string folder=StoreStorage::Personal(root,item.storage);
+    if(folder.empty())return false;
     for(const auto& name:std::vector<std::string>{"StoreBackups",package?"Packages":StoreInstallPath::Category(item),item.id}){
         const auto child=FileWorkspace::Join(folder,name);
         if(!ws.CanWrite(child)&&!ws.Create(folder,name))return false;
@@ -372,7 +382,7 @@ bool StoreCatalog::InstalledFolder(const StoreItem& item) const{
 bool StoreCatalog::PackagePresent(const StoreItem& item) const{
     if(StoreInstallPath::Folder(root_,item).empty())return false;
     FileWorkspace ws(root_);
-    return ws.CanReadPersonalFile(FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg"));
+    return ws.CanReadPersonalFile(FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store"),item.id+".pkg"));
 }
 bool StoreCatalog::BackupAvailable(const StoreItem& item) const{
     FileWorkspace ws(root_);
@@ -409,9 +419,9 @@ bool StoreCatalog::ArchivePackage(const StoreItem& item,std::string& saved){
     if(!PackagePresent(item)||!ensureBackup(ws,root_,item,true))return false;
     const auto back=backupRoot(root_,item,true);
     const int next=newestBackup(ws,back,true)+1;if(next>=32)return false;
-    const auto from=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");
+    const auto from=FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store"),item.id+".pkg");
     const auto dest=slot(back,next,true);
-    const auto state=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".state");
+    const auto state=FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store"),item.id+".state");
     const auto receipt=FileWorkspace::Join(back,"package-"+std::string(next<10?"000":"00")+std::to_string(next)+".state");
     bool movedState=false;
     if(fileExists(state)){
@@ -441,13 +451,14 @@ bool StoreCatalog::Installed(const StoreItem& item) const{
     return size==item.bytes;
 }
 bool StoreCatalog::Staged(const StoreItem& item) const {
+    if(StoreStorage::Personal(root_,item.storage).empty())return false;
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.
-    const std::string path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");
+    const std::string path=FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store"),item.id+".pkg");
     std::ifstream in(path.c_str(),std::ios::binary|std::ios::ate);
     if(!in||in.tellg()<0||static_cast<unsigned long long>(in.tellg())!=item.bytes)return false;
     // A receipt for another version must not classify same-size bytes as current.
     std::string receipt;
-    const auto state=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".state");
+    const auto state=FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store"),item.id+".state");
     if(readBound(state,256,receipt)){
         std::istringstream record(receipt);std::string digest,status;unsigned long long size=0;
         if(record>>digest>>status>>size){
@@ -458,14 +469,16 @@ bool StoreCatalog::Staged(const StoreItem& item) const {
 }
 
 bool StoreCatalog::DiscardPartial(const StoreItem& item) {
-    const std::string folder=FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store");
+    if(StoreStorage::Personal(root_,item.storage).empty())return false;
+    const std::string folder=FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store");
     const std::string path=StorePartial::Path(folder,item);
     FileWorkspace workspace(root_);
     return !path.empty()&&workspace.CanReadPersonalFile(path)&&std::remove(path.c_str())==0;
 }
 StoreProgress StoreCatalog::Progress(const StoreItem& item) const {
     StoreProgress result;
-    const std::string folder=FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store");
+    if(StoreStorage::Personal(root_,item.storage).empty())return result;
+    const std::string folder=FileWorkspace::Join(StoreStorage::Personal(root_,item.storage),"Store");
     const std::string partial=StorePartial::Path(folder,item);
     if(!partial.empty()&&!Staged(item)){
         std::ifstream in(partial.c_str(),std::ios::binary|std::ios::ate);

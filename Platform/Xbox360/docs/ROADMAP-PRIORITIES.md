@@ -58,3 +58,7 @@ Fila nativa persistente e retomada de parciais já existentes. Nesta revisão: R
 ### P1 — Velocidade e ETA
 
 Downloads HTTPS da Store e cópias locais apresentam velocidade recente e tempo restante estimado, com relógio monotônico e tratamento de retomada/pausa. Não mede downloads em segundo plano nem confirma integridade antes da verificação final. CI e medição em hardware pendentes.
+
+### P1 — Destino Store
+
+Seleção local/HDD/USB na Store, preferência persistente e filas por dispositivo. Downloads, parciais, instalação XEX/ZIP e backups usam o workspace selecionado, bibliotecas consultam os dispositivos. Testes de validação e isolamento adicionados; CI e hardware pendentes.

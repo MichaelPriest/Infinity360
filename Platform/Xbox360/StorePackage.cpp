@@ -73,9 +73,10 @@ bool StorePackage::Begin(const StoreItem& item,const std::string& root,bool resu
     if(item.id.empty()||item.id.size()>32||item.id.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_-")!=std::string::npos||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos||
        !item.bytes||item.bytes>512ULL*1024*1024)return Fail("Pacote invalido ou acima de 512 MiB.");
-    const std::string personal=FileWorkspace::Join(root,"UserFiles");
+    const std::string personal=StoreStorage::Personal(root,item.storage);
+    if(personal.empty()||(item.category=="dashboard"&&!item.storage.empty()))return Fail("Dispositivo Store invalido.");
     folder_=FileWorkspace::Join(personal,"Store");
-    if(!workspace_.CanWrite(personal)&&!workspace_.Create(root,"UserFiles"))return Fail("UserFiles indisponivel.");
+    if(!workspace_.CanWrite(personal)&&(!item.storage.empty()||!workspace_.Create(root,"UserFiles")))return Fail("UserFiles indisponivel.");
     if(!workspace_.CanWrite(folder_)&&!workspace_.Create(personal,"Store"))return Fail("Pasta Store indisponivel.");
     if(!workspace_.CanWrite(folder_))return Fail("Destino invalido.");
     target_=FileWorkspace::Join(folder_,item.id+".pkg");
@@ -193,7 +194,7 @@ bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const 
     if(folder.empty()||item.bytes<4096||item.bytes>512ULL*1024*1024||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos||item.rights.empty())
         return reject("Somente XEX independente de homebrew/app/emulador autorizado.");
-    const std::string personal=FileWorkspace::Join(root,"UserFiles");
+    const std::string personal=StoreStorage::Personal(root,item.storage);
     const std::string store=FileWorkspace::Join(personal,"Store");
     const std::string source=FileWorkspace::Join(store,item.id+".pkg");
     if(!workspace.CanWrite(personal)||!workspace.CanReadPersonalFile(source))return reject("Pacote ou area pessoal indisponivel.");

@@ -175,7 +175,7 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     if(folder.empty()||item.bytes<4||item.bytes>MaxPackage||item.rights.empty()||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos)
         return reject("Pacote autorizado invalido.");
-    const auto personal=FileWorkspace::Join(root,"UserFiles");
+    const auto personal=StoreStorage::Personal(root,item.storage);
     const auto source=FileWorkspace::Join(FileWorkspace::Join(personal,"Store"),item.id+".pkg");
     if(!ws.CanReadPersonalFile(source))return reject("Pacote local indisponivel.");
     Reader r{std::ifstream(source.c_str(),std::ios::binary|std::ios::ate),item.bytes};
@@ -259,7 +259,7 @@ bool StoreInstallManaged(const FileWorkspace& ws,const StoreItem& item,const std
     std::string saved;
     if(catalog.InstalledFolder(item)){
         // Verify the new package before displacing an existing application.
-        const auto source=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"Store"),item.id+".pkg");
+        const auto source=FileWorkspace::Join(FileWorkspace::Join(StoreStorage::Personal(root,item.storage),"Store"),item.id+".pkg");
         if(!catalog.Staged(item)||!ws.CanReadPersonalFile(source)||item.bytes>MaxPackage){error="Novo pacote indisponivel.";return false;}
         Reader r{std::ifstream(source.c_str(),std::ios::binary),item.bytes};
         if(!r.input||!digest(r,item,progress,0,item.bytes)){error="Novo pacote divergente ou cancelado.";return false;}

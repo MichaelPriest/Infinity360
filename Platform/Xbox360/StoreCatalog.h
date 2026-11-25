@@ -6,6 +6,7 @@ struct StoreItem {
     unsigned long long bytes;
     unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
     std::string provider; // empty = legacy local catalog
+    std::string storage;
 };
 struct StoreProvider {
     std::string id,name,url,sha256;
@@ -27,6 +28,8 @@ class StoreCatalog {
 public:
     explicit StoreCatalog(const std::string& root):root_(root){}
     bool Load();
+    const std::string& Storage() const{return storage_;}
+    bool SelectStorage(const std::string& id);
     const std::vector<StoreProvider>& Providers() const{return providers_;}
     bool ProvidersValid() const{return providersValid_;}
     bool ImportProvider(const StoreProvider& provider,const std::string& data,std::string& error);
@@ -55,7 +58,7 @@ public:
     bool NativeQueueValid() const{return validNative_;}
     StoreProgress Progress(const StoreItem& item) const;
 private:
-    std::string root_;
+    std::string root_,storage_;
     std::vector<StoreItem> items_;
     std::vector<StoreProvider> providers_;
     bool providersValid_=true;

@@ -1,4 +1,5 @@
 #include "StorePackage.h"
+#include "StoreStorage.h"
 #include "TransferRate.h"
 #include "DiscInstaller.h"
 #include <cassert>
@@ -75,6 +76,9 @@ int main(){
     assert(cat.Load());assert(cat.QueueNative(two));assert(cat.QueueNative(one));assert(cat.QueueNative(two));
     assert(!cat.Requested(two));assert(cat.ListedDownload(two));
     StoreCatalog reloaded(base);assert(reloaded.Load());
+    assert(reloaded.Storage().empty());assert(!reloaded.SelectStorage("../escape"));assert(!reloaded.SelectStorage("usb0"));
+    assert(StoreStorage::Queue(base,"usb0")!=StoreStorage::Queue(base,"hdd"));
+    StoreItem wrongVolume=one;wrongVolume.storage="usb0";assert(!reloaded.QueueNative(wrongVolume)&&!reloaded.NativeQueued(wrongVolume));assert(!reloaded.Staged(wrongVolume));
     auto ordered=reloaded.NativeQueue();assert(ordered.size()==2);
     assert(reloaded.Items()[ordered[0]].id=="second");
     assert(reloaded.Items()[ordered[1]].id=="first");

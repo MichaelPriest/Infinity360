@@ -25,3 +25,7 @@ A fila nativa guarda até 64 identidades exatas de catálogo (ID + SHA-256), sem
 ## Indicadores de transferência
 
 O download HTTPS nativo apresenta velocidade estimada por deltas de bytes observados e tempo monotônico, com ETA quando há total e taxa positivos. Bytes anteriores à retomada não entram na medição. Reinício, mudança de total, pausa e intervalos sem progresso invalidam a taxa anterior. A mesma estimativa aparece nas cópias locais. A conclusão dos bytes não comprova a validação final SHA-256. Não há promessa de velocidade do servidor; testes determinísticos cobrem retomada, stall e reinício.
+
+## Destino de armazenamento
+
+Na lista Store, LB alterna entre a área local e workspaces graváveis HDD/USB0/USB1/USB2. Prepare Infinity360Files no volume e habilite enable-file-writes.txt. A preferência persiste e cada volume tem fila independente. Catálogo, allowlist e permissões continuam na dashboard principal. Pacotes, parciais, estados, backups e instalações XEX/ZIP usam o destino vinculado ao item. Bibliotecas Apps/Homebrew/Emuladores consultam os dispositivos. Sem migração ou fallback automático; atualização da dashboard e pedidos PC permanecem locais. Homologação física pendente.
