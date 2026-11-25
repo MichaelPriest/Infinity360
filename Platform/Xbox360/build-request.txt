@@ -1,0 +1,4 @@
+INFINITY 360 V0.2.33
+Requested: 2026-11-25
+Source baseline: 77901bf07b1dcfe689fc9cf8f93f12cb6dcc4085
+Standard alpha; experimental SMC, power, SMB and FFmpeg disabled.

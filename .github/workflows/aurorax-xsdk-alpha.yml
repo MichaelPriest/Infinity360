@@ -1,6 +1,10 @@
 name: INFINITY 360 first XEX - XSDK visual alpha
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Platform/Xbox360/build-request.txt'
   workflow_dispatch:
     inputs:
       smc_read:
@@ -87,8 +91,8 @@ jobs:
             -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
             -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
-            -DINFINITY_EXPERIMENTAL_SMC_READ=${{ inputs.smc_read }} \
-            -DINFINITY_EXPERIMENTAL_POWER=${{ inputs.power_control }} \
+            -DINFINITY_EXPERIMENTAL_SMC_READ=${{ inputs.smc_read && 'ON' || 'OFF' }} \
+            -DINFINITY_EXPERIMENTAL_POWER=${{ inputs.power_control && 'ON' || 'OFF' }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
       - name: Verify real XEX2 and publish separate test package
