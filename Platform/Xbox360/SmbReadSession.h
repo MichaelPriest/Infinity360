@@ -79,7 +79,7 @@ public:
         return true;
     }
     bool Tick(){
-        if(state_==Failed&&ctx_){Close();return true;}
+        if(state_==Failed&&ctx_){const auto error=label_;Fail(error.c_str());return true;}
         if(!Busy())return false;
         const auto now=Now();
         if(now<start_||now-start_>=15000){Fail("Prazo da operacao SMB excedido.");return true;}
@@ -107,7 +107,7 @@ public:
         const auto before=state_;
         // Service the library's timeout bookkeeping even without an event.
         if(smb2_service(ctx_,rc?p.revents:0)<0){Fail("Sessao SMB recusada ou interrompida.");return true;}
-        if(state_==Failed)Close();
+        if(state_==Failed){const auto error=label_;Fail(error.c_str());return true;}
         return state_!=before;
     }
 private:

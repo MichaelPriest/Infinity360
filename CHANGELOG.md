@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.26 — em desenvolvimento (sem build XEX)
+
+- Preparação reproducível do upstream libsmb2 para alvo estático XSDK, adaptador de I/O vetorial e listener síncrono desativado.
+- Recusa guest/null antes de TREE_CONNECT no host e port; correção de estado após falha assíncrona.
+- Cross-build e homologação ainda pendentes; nenhuma build executada.
+
 ## V0.2.25 — em desenvolvimento (sem build XEX)
 
 - Adaptador de sessão SMB autenticada e listagem somente leitura com libsmb2 fixada, exigindo SMB 3.1.1 e proteção de sessão.

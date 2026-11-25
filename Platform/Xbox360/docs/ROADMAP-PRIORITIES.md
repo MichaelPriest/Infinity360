@@ -234,3 +234,7 @@ NEGOTIATE diagnóstico com contexto SHA-512, validação de contexto e token de 
 ### V0.2.25 — P2 Adaptador SMB autenticado
 
 Integração opcional de libsmb2 fixada, sessão assíncrona e listagem de diretório, ferramenta Linux com senha transitória e teste de validação. Alvo XSDK link-only depende de biblioteca PowerPC portada, não integra a dashboard nem acessa rede. Portabilidade de headers/sockets/entropia, validação criptográfica, política de sessão, credenciais por controle, cópia e homologação ainda pendentes. Sem CI/build.
+
+### V0.2.26 — P2 Port SMB XSDK
+
+Preparação do upstream por git archive/revisão fixada, CMake estático, I/O vetorial sem buffer integral, ausência de conta local tratada com ENXIO, listener síncrono recusado e guest/null rejeitado. Link probe isolado agora compila a dependência a partir do código quando autorizado. Não compilado; faltam validação de port, entropia real, integração no console e cópia. Sem CI/build; galeria 49 preparada.
