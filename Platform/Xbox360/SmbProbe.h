@@ -56,9 +56,11 @@ public:
     State Status()const{return state_;}
     const Result& Info()const{return info_;}
     const std::string& Label()const{return label_;}
+    const std::string& Peer()const{return peer_;}
+    void Reset(){Close();state_=Idle;info_=Result{};peer_.clear();label_="Teste nao iniciado.";}
     void Stop(){if(Running())Finish(Cancelled,"Teste SMB cancelado.");}
     bool Start(const std::string& local,const std::string& server){
-        Close();info_=Result{};sent_=received_=0;expected_=4;
+        Reset();peer_=server;sent_=received_=0;expected_=4;
         if(!LanPeerProbe::Private(local)||!LanPeerProbe::Private(server)||local==server){
             Finish(Failed,"IPv4 privado distinto obrigatorio.");return false;
         }
@@ -138,7 +140,7 @@ private:
 #endif
     }
     void Finish(State s,const char* label){Close();state_=s;label_=label;}
-    int fd_=-1;State state_=Idle;Result info_;std::string label_="Teste nao iniciado.";
+    int fd_=-1;State state_=Idle;Result info_;std::string label_="Teste nao iniciado.",peer_;
     uint64_t start_=0;size_t sent_=0,received_=0,expected_=4;
     std::array<unsigned char,112> request_{};
     std::array<unsigned char,65540> response_{};

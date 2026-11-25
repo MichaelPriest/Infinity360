@@ -1620,7 +1620,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept){
                 RefreshNetwork();
                 if(LanPeerConfig::Format(smbDraft_)==network_.ipv4||!LanPeerConfig::Save(dir_+"infinity360-smb-peer.txt",smbDraft_))notice_="IPv4 privado distinto ou gravacao invalida.";
-                else{smbEditing_=false;notice_="Servidor SMB salvo.";}
+                else{smbEditing_=false;smbProbe_.Reset();notice_="Servidor SMB salvo.";}
             }
             return "";
         }
@@ -2762,7 +2762,7 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
     LanPeerConfig::Octets configured{};
     const bool known=LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",configured);
     c.Text(48,392,"Servidor: "+(known?LanPeerConfig::Format(configured):std::string("Nao configurado"))+" | TCP 445",22,White,1170);
-    c.Text(48,435,smbProbe_.Label(),22,smbProbe_.Status()==SmbProbe::Negotiated?Lime:White,1170);
+    c.Text(48,435,(smbProbe_.Peer().empty()?std::string(""):smbProbe_.Peer()+" | ")+smbProbe_.Label(),22,smbProbe_.Status()==SmbProbe::Negotiated?Lime:White,1170);
     const auto& result=smbProbe_.Info();
     c.Text(48,480,std::string("Dialeto: ")+SmbProbe::Dialect(result.dialect)+(smbProbe_.Status()==SmbProbe::Negotiated?(result.signingRequired?" | Assinatura exigida":" | Assinatura suportada"):""),21,Muted,1170);
     if(smbProbe_.Status()==SmbProbe::Rejected)c.Text(48,510,"Status NT: "+number(result.status),18,Muted,1170);
