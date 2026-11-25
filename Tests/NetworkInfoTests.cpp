@@ -31,6 +31,7 @@ int main() {
     assert(LanPeerConfig::Change(ip,3,1)&&LanPeerConfig::Change(ip,3,1)&&ip[3]==0);
     assert(!LanPeerConfig::Change(ip,4,1));
     assert(LanPeerConfig::Change(ip,3,-1)&&ip[3]==255);
+    assert(LanPeerProbe::ValidDuration(15)&&LanPeerProbe::ValidDuration(30)&&LanPeerProbe::ValidDuration(60)&&!LanPeerProbe::ValidDuration(45));
     unsigned char packet[12];bool reply=false;uint32_t nonce=0;
     LanPeerProbe::Packet(packet,true,0x12345678);
     assert(LanPeerProbe::Decode(packet,sizeof packet,reply,nonce)&&reply&&nonce==0x12345678);

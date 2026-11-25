@@ -18,5 +18,12 @@ int main(){
     assert(a.Sent()<=a.Attempts()&&b.Sent()<=b.Attempts());
     assert(a.Attempts()<=5&&b.Attempts()<=5);
     a.Stop();b.Stop();assert(!a.Running()&&!b.Running());
-    assert(a.Start("127.0.0.1","127.0.0.2"));a.Stop();
+    assert(a.Start("127.0.0.1","127.0.0.2",LanPeerProbe::Host,30));
+    assert(b.Start("127.0.0.2","127.0.0.1",LanPeerProbe::Client,30));
+    const auto end=steady_clock::now()+seconds(5);
+    while(steady_clock::now()<end&&b.Received()<2){a.Tick();b.Tick();std::this_thread::sleep_for(milliseconds(5));}
+    assert(b.Received()>=2&&a.Replies()>=2&&a.Attempts()==0&&b.Requests()==0);
+    a.Stop();b.Stop();assert(a.Outcome()==LanPeerProbe::Stopped);
+    b.Reset();assert(b.Outcome()==LanPeerProbe::NotStarted&&b.Received()==0);
+    assert(!a.Start("127.0.0.1","127.0.0.2",LanPeerProbe::Client,45));
 }

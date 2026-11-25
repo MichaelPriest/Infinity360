@@ -149,7 +149,8 @@ private:
     void RefreshDiscInstall();
     NetworkSnapshot network_;
     LanPeerProbe peerProbe_;
-    bool networkPeer_=false,peerEditing_=false;
+    bool networkPeer_=false,peerEditing_=false,peerOptions_=false;
+    unsigned peerMode_=0,peerDuration_=0;
     unsigned peerOctet_=0;
     LanPeerConfig::Octets peerDraft_{{192,168,1,2}};
     void RefreshNetwork();

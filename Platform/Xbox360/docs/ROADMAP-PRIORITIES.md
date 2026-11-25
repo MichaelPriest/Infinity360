@@ -246,3 +246,7 @@ Modelo de navegação portátil, seleção e plano de cópia FATX, leitura assí
 ### V0.2.28 — P2 Integração SMB experimental
 
 Menu autenticado opt-in, credenciais temporárias, navegador de compartilhamento conhecido, seleção de workspace HDD/USB, cópia em staging exclusivo e progresso. Sem montagem de share como unidade, enumeração, integração à fila geral ou SMB write. Cross-build e testes de segurança/compatibilidade ainda pendentes; nenhuma build/CI/captura.
+
+### V0.2.29 — P2 Diagnóstico pré-System Link
+
+Papéis anfitrião/cliente/bidirecional e janela 15/30/60 s, contadores, média de variação RTT, perda após término e reset ao trocar IP. Teste proprietário INFL, não XSession nem túnel. System Link real e integração de plugins permanecem pendentes de provider e hardware. Galeria 50 preparada; sem build/CI.

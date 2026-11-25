@@ -1652,7 +1652,7 @@ std::string ConsoleHome::Press(Key key) {
     }
     if (key==Back) {
         if(section_==System&&systemTab_==1&&page_==Details){
-            if(peerEditing_){peerEditing_=false;notice_.clear();return "";}
+            if(peerEditing_||peerOptions_){peerEditing_=false;peerOptions_=false;notice_.clear();return "";}
             peerProbe_.Stop();
         }
         notice_.clear();
@@ -1776,11 +1776,23 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept){
                 if(LanPeerConfig::Format(peerDraft_)==network_.ipv4)notice_="Escolha o IP do outro console.";
                 else if(!LanPeerConfig::Save(dir_+"infinity360-lan-peer.txt",peerDraft_))notice_="IP privado invalido ou falha ao salvar.";
-                else{peerEditing_=false;notice_="Endereco do par salvo.";}
+                else{peerEditing_=false;peerProbe_.Reset();notice_="Endereco do par salvo.";}
             }
             return "";
         }
-        if(page_==Details&&systemTab_==1&&(key==PageUp||key==PageDown)){peerProbe_.Stop();peerEditing_=false;networkPeer_=!networkPeer_;return "";}
+        if(page_==Details&&systemTab_==1&&networkPeer_&&peerOptions_){
+            if(key==Left)peerMode_=(peerMode_+2)%3;
+            if(key==Right)peerMode_=(peerMode_+1)%3;
+            if(key==Up)peerDuration_=(peerDuration_+2)%3;
+            if(key==Down)peerDuration_=(peerDuration_+1)%3;
+            if(key==Accept){peerOptions_=false;peerProbe_.Reset();notice_="Opcoes aplicadas nesta sessao.";}
+            return "";
+        }
+        if(page_==Details&&systemTab_==1&&(key==PageUp||key==PageDown)){peerProbe_.Stop();peerEditing_=false;peerOptions_=false;networkPeer_=!networkPeer_;return "";}
+        if(page_==Details&&systemTab_==1&&networkPeer_&&key==Search){
+            if(peerProbe_.Running()){notice_="Encerre o teste antes de mudar opcoes.";return "";}
+            peerOptions_=true;notice_.clear();return "";
+        }
         if(page_==Details&&systemTab_==1&&networkPeer_&&key==Guide){
             if(peerProbe_.Running()||TransferRunning()){notice_="Encerre o teste e as transferencias antes de editar.";return "";}
             peerDraft_={{192,168,1,2}};LanPeerConfig::Read(dir_+"infinity360-lan-peer.txt",peerDraft_);
@@ -1793,7 +1805,8 @@ std::string ConsoleHome::Press(Key key) {
             if(!LanPeerConfig::Read(dir_+"infinity360-lan-peer.txt",configured)){notice_="START configura o IPv4 privado do outro console.";return "";}
             RefreshNetwork();
             if(!LanPeerProbe::Private(network_.ipv4)||network_.ipv4==LanPeerConfig::Format(configured)){notice_="IPv4 local ou par invalido.";return "";}
-            StopFtp();peerProbe_.Start(network_.ipv4,LanPeerConfig::Format(configured));return "";
+            const unsigned durations[]={15,30,60};
+            StopFtp();peerProbe_.Start(network_.ipv4,LanPeerConfig::Format(configured),static_cast<LanPeerProbe::Mode>(peerMode_),durations[peerDuration_]);notice_.clear();return "";
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details&&systemTab_==2&&key==Guide){thermalPage_=!thermalPage_;coolingPage_=false;return "";}
@@ -1895,7 +1908,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Right && systemTab_<7) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
-                else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();smbPage_=false;smbEditing_=false;smbProbe_.Stop();}
+                else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerOptions_=false;peerProbe_.Stop();smbPage_=false;smbEditing_=false;smbProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;coolingPage_=false;}
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
@@ -2798,6 +2811,14 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     if(smbPage_){DrawSmb(c);return;}
     if(networkPeer_){
         c.Text(45,349,c.Tr("Rede 2/2 | Diagnostico UDP entre consoles"),27,White,1170);
+        if(peerOptions_){
+            const unsigned durations[]={15,30,60};
+            c.Text(48,397,"Modo: "+std::string(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))),25,Lime,1170);
+            c.Text(48,445,"Duracao: "+number(durations[peerDuration_])+" segundos",25,White,1170);
+            c.Text(48,492,"Anfitriao responde | Cliente envia | Bidirecional envia e responde",19,Muted,1170);
+            c.Text(48,550,"Protocolo de diagnostico INFL; nao cria sala de jogo.",18,Muted,1170);
+            c.Text(48,607,"Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar",18,Lime,1170);return;
+        }
         if(peerEditing_){
             c.Text(48,392,"IPv4 privado do outro console",23,White,1170);
             for(unsigned i=0;i<4;++i){
@@ -2810,10 +2831,11 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.Text(48,392,"Local: "+(network_.ipv4.empty()?"-":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
         c.Text(48,433,peerProbe_.Label(),23,Lime,1170);
         c.Text(48,475,"Tentativas: "+number(peerProbe_.Attempts())+" | Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
-        c.Text(48,513,peerProbe_.Received()?"RTT min/media/max: "+number(peerProbe_.MinRtt())+"/"+number(peerProbe_.MeanRtt())+"/"+number(peerProbe_.MaxRtt())+" ms":"RTT min/media/max: indisponivel",19,Muted,1170);
-        c.Text(48,540,peerProbe_.Sent()&&!peerProbe_.Running()?"Sem resposta: "+number(peerProbe_.LossPercent())+"% dos envios":"START Configurar IP | Perda final apos encerrar teste",18,Muted,1170);
+        c.Text(48,513,peerProbe_.Received()?"RTT min/media/max: "+number(peerProbe_.MinRtt())+"/"+number(peerProbe_.MeanRtt())+"/"+number(peerProbe_.MaxRtt())+" ms | Variacao: "+(peerProbe_.Received()>1?number(peerProbe_.Jitter())+" ms":"--"):"RTT indisponivel | Pedidos: "+number(peerProbe_.Requests())+" | Respostas enviadas: "+number(peerProbe_.Replies()),19,Muted,1170);
+        const unsigned durations[]={15,30,60};
+        c.Text(48,540,std::string(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_)))+" | "+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s"+(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished?" | Sem resposta: "+number(peerProbe_.LossPercent())+"%":""),18,Muted,1170);
         c.Text(48,560,"Inicie nos dois consoles. Nao confirma System Link de jogos.",18,Muted,1170);
-        c.Text(48,607,"A Iniciar | X Parar | LB/RB Pagina | B Voltar",18,Lime,1170);return;
+        c.Text(48,607,"A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina",18,Lime,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
     c.Box(42,391,589,190,Panel,10);

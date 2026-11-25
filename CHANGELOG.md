@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.29 — em desenvolvimento (sem build XEX)
+
+- Diagnóstico LAN com modos anfitrião/cliente/bidirecional, duração selecionável e variação de RTT.
+- Contadores de solicitações/respostas e distinção de conclusão/cancelamento, testes loopback e tela de opções preparados.
+- Não implementa sala System Link de jogos; nenhuma build executada.
+
 ## V0.2.28 — em desenvolvimento (sem build XEX)
 
 - Variante SMB experimental de menu com credenciais temporárias, navegador, destino HDD/USB, dupla confirmação, progresso e cancelamento.
