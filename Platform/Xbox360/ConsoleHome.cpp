@@ -163,7 +163,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),ftp_(fileWorkspace_),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
-      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),storeTranslationMatch_(false),importPreview_(false),
+      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),storeTranslationMatch_(false),nativeStorePending_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
@@ -778,6 +778,13 @@ void ConsoleHome::RebuildStore() {
         if(storeTab_==0||store_.Items()[i].category==tabs[storeTab_])storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
 }
+bool ConsoleHome::TakeNativeStoreRequest(StoreItem& item) {
+    if(!nativeStorePending_)return false;
+    nativeStorePending_=false;item=nativeStoreItem_;return true;
+}
+void ConsoleHome::NativeStoreResult(const std::string& message,bool success) {
+    notice_=message;RecordEvent(success?"Download nativo verificado":"Download nativo interrompido");
+}
 bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     if(item.category!="translation")return true;
     for(size_t i=0;i<games_.size();++i) {
@@ -813,6 +820,18 @@ std::string ConsoleHome::Press(Key key) {
             }
         } else if(!storeVisible_.empty()) {
             const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
+            if(key==Guide) {
+#ifdef _XBOX
+                if(TransferRunning()||!TranslationMatches(item)) {
+                    notice_="Copia ativa ou traducao incompativel.";return "";
+                }
+                storeConfirm_=false;nativeStoreItem_=item;nativeStorePending_=true;
+                notice_="Preparando download HTTPS nativo.";
+#else
+                notice_="Download nativo disponivel no Xbox; testes usam o gravador comum.";
+#endif
+                return "";
+            }
             if(key==Favorite) {
                 storeConfirm_=false;
                 const bool cancelled=store_.Cancel(item);
@@ -1443,7 +1462,7 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     c.Text(44,78,"INFINITY Store",40,White,1175);
-    c.Text(48,133,"Catalogos autorizados | Downloads pelo PC nesta versao",21,Muted,1175);
+    c.Text(48,133,"Catalogos autorizados | Download nativo experimental",21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
@@ -1458,7 +1477,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,260,item.name,32,White,1150);
         c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
-        c.Text(55,415,store_.Staged(item)?"Arquivo local encontrado (tamanho; SHA pelo PC)":
+        c.Text(55,415,store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
             store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
         if(item.category=="translation") {
             char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
@@ -1467,7 +1486,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(55,505,storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":
                 "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
         } else c.Text(55,470,item.url,18,Muted,1150);
-        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"A Solicitar download | X Remover pedido | B Voltar",21,Lime,1150);
+        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover | B Voltar",21,Lime,1150);
         return;
     } else {
         const int first=(storeRow_/5)*5;
@@ -1674,7 +1693,7 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
         const int y=390+(i-first)*48;
         panel(c,45,y,1189,43,Panel,i==storeDownloadRow_);
         c.Text(60,y+8,item.name,20,White,650);
-        const std::string label=status.state==StoreProgress::Verified?"Verificado pelo PC":
+        const std::string label=status.state==StoreProgress::NativeVerified?"Verificado no Xbox (registro)":status.state==StoreProgress::Verified?"Verificado pelo PC":
             status.state==StoreProgress::Failed?"Ultima tentativa falhou":
             status.state==StoreProgress::Receiving?"Ultimo progresso "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
             "Pedido pendente / sem estado";

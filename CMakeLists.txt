@@ -92,3 +92,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
     add_test(NAME ftp_server COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/FtpServerTest.py $<TARGET_FILE:ftp_server_probe>)
     set_tests_properties(ftp_server PROPERTIES TIMEOUT 30)
 endif()
+
+add_executable(store_package_tests Tests/StorePackageTests.cpp Platform/Xbox360/StorePackage.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/MediaUrl.cpp)
+target_include_directories(store_package_tests PRIVATE Platform/Xbox360)
+add_test(NAME store_package COMMAND store_package_tests)

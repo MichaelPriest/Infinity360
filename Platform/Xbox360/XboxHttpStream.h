@@ -9,7 +9,7 @@ class XboxHttpStream : public MediaReader {
 public:
     explicit XboxHttpStream(bool (*cancel)());
     ~XboxHttpStream();
-    bool Open(const MediaUrl& url);
+    bool Open(const MediaUrl& url,bool storeMode=false);
     int Read(unsigned char* data,unsigned capacity);
     bool Cancelled() const { return cancelled_; }
     const std::string& Error() const { return error_; }

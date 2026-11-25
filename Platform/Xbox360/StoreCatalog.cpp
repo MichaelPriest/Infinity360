@@ -152,6 +152,7 @@ StoreProgress StoreCatalog::Progress(const StoreItem& item) const {
     if(state=="receiving")result.state=StoreProgress::Receiving;
     else if(state=="failed")result.state=StoreProgress::Failed;
     else if(state=="verified" && size==item.bytes && Staged(item))result.state=StoreProgress::Verified;
+    else if(state=="native_verified" && size==item.bytes && Staged(item))result.state=StoreProgress::NativeVerified;
     else return result;
     result.received=size;
     return result;

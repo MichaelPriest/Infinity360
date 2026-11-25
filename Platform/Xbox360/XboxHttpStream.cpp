@@ -42,11 +42,12 @@ bool XboxHttpStream::Wait(DWORD wanted) {
     }
     return true;
 }
-bool XboxHttpStream::Open(const MediaUrl& url) {
+bool XboxHttpStream::Open(const MediaUrl& url,bool storeMode) {
+    if(storeMode&&(!url.secure||url.port!=443)){error_="HTTPS obrigatorio.";return false;}
     error_="Não foi possível iniciar a rede.";
     XNetStartupParams params;
     ZeroMemory(&params,sizeof params);params.cfgSizeOfStruct=sizeof params;
-    params.cfgFlags=XNET_STARTUP_BYPASS_SECURITY; // include ordinary LAN peers
+    if(!storeMode)params.cfgFlags=XNET_STARTUP_BYPASS_SECURITY; // existing IPTV behavior only
     if(XNetStartup(&params)!=0) return false;
     net_=true;
     WSADATA wsa;
@@ -60,13 +61,24 @@ bool XboxHttpStream::Open(const MediaUrl& url) {
     }
     if(!XHttpStartup(0,0)) return false;
     http_=true;
-    session_=XHttpOpen("Cloud360/1",XHTTP_ACCESS_TYPE_DEFAULT_PROXY,0,0,XHTTP_FLAG_ASYNC);
+    session_=XHttpOpen(storeMode?"Infinity360Store/1":"Cloud360/1",XHTTP_ACCESS_TYPE_DEFAULT_PROXY,0,0,XHTTP_FLAG_ASYNC);
     if(!session_) return false;
     error_="Não foi possível abrir a transmissão.";
     connection_=XHttpConnect(session_,url.host.c_str(),url.port,url.secure?XHTTP_FLAG_SECURE:0);
     if(!connection_) return false;
     request_=XHttpOpenRequest(connection_,"GET",url.target.c_str(),0,0,0,0);
     if(!request_) return false;
+    if(storeMode) {
+        // Fail closed if the licensed SDK lacks the redirect-control API.
+#if defined(XHTTP_OPTION_DISABLE_FEATURE) && defined(XHTTP_DISABLE_REDIRECTS)
+        DWORD flags=XHTTP_DISABLE_REDIRECTS;
+        if(!XHttpSetOption(request_,XHTTP_OPTION_DISABLE_FEATURE,&flags,sizeof flags)) {
+            error_="Nao foi possivel bloquear redirecionamentos.";return false;
+        }
+#else
+        error_="SDK sem controle de redirecionamentos HTTPS homologado.";return false;
+#endif
+    }
     XHttpSetStatusCallback(request_,OnStatus,XHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS,0);
     if(!XHttpSendRequest(request_,0,0,0,0,0,reinterpret_cast<DWORD_PTR>(this)) ||
        !Wait(XHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE)) return false;

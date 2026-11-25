@@ -25,6 +25,8 @@ public:
     std::string TakeMovie();
     bool Tick();
     void StopFtp() {ftp_.Stop();}
+    bool TakeNativeStoreRequest(StoreItem& item);
+    void NativeStoreResult(const std::string& message,bool success);
     bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
@@ -92,6 +94,8 @@ private:
     void RebuildStore();
     bool TranslationMatches(const StoreItem& item) const;
     bool storeTranslationMatch_;
+    bool nativeStorePending_;
+    StoreItem nativeStoreItem_;
     void DrawStore(HomeCanvas& c) const;
     bool importPreview_;
     std::vector<std::string> importFavorites_, importHistory_;

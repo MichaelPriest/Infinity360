@@ -7,7 +7,7 @@ struct StoreItem {
     unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
 };
 struct StoreProgress {
-    enum State { Unknown, Receiving, Verified, Failed };
+    enum State { Unknown, Receiving, Verified, Failed, NativeVerified };
     State state;
     unsigned long long received;
     StoreProgress():state(Unknown),received(0){}

@@ -8,6 +8,7 @@
 #include <cstring>
 #include "ConsoleHome.h"
 #include "XboxHttpStream.h"
+#include "StorePackage.h"
 
 namespace {
 template<class T> void drop(T*& object) { if(object) object->Release(); object=0; }
@@ -250,6 +251,41 @@ std::string Presenter::Play(const std::string& path) {
     return status;
 }
 
+std::string DownloadNative(const StoreItem& item,HomeCanvas& canvas,Presenter& video,bool& success) {
+    success=false;
+    const std::string root="game:\\";
+    if(!StoreNativeSource(item,root))return "Servidor HTTPS nao autorizado. Configure infinity360-store-hosts.txt.";
+    FileWorkspace workspace(root);StorePackage output(workspace);
+    if(!output.Begin(item,root))return output.Error();
+    MediaUrl url;if(!url.Parse(item.url))return "URL invalida.";
+    XboxHttpStream stream(stopMovie);
+    canvas.Background();canvas.Text(48,100,"INFINITY Store",38,0xfff2f7f3u,1180);
+    canvas.Text(48,210,"Conectando ao servidor HTTPS... B cancela",24,0xffb7c9c1u,1180);
+    if(!video.Show(canvas))return "Falha de video.";
+    if(!stream.Open(url,true))return stream.Cancelled()?"Download cancelado.":stream.Error();
+    unsigned char buffer[32768];DWORD redraw=0;
+    while(!stopMovie()) {
+        const int got=stream.Read(buffer,sizeof buffer);
+        if(got<0)return stream.Cancelled()?"Download cancelado.":"Falha de leitura HTTPS.";
+        if(!got) {
+            success=output.Finish();
+            return success?(output.Error().empty()?"Pacote verificado por SHA-256 e salvo.":output.Error()):output.Error();
+        }
+        if(!output.Write(buffer,static_cast<unsigned>(got)))return output.Error();
+        const DWORD now=GetTickCount();
+        if(now-redraw>=250) {
+            redraw=now;canvas.Background();
+            canvas.Text(48,100,"INFINITY Store | Download nativo",36,0xfff2f7f3u,1180);
+            canvas.Text(48,210,item.name,28,0xfff2f7f3u,1180);
+            canvas.Text(48,300,StorageInfo::FormatBytes(output.Done())+" / "+StorageInfo::FormatBytes(item.bytes),24,0xffb7c9c1u,1180);
+            canvas.Box(48,370,1180,22,0xff28413au,5);
+            canvas.Box(48,370,static_cast<int>(1180.0*output.Done()/item.bytes),22,0xff9dec31u,5);
+            canvas.Text(48,560,"B Cancelar | Publicacao apos SHA-256",23,0xff9dec31u,1180);
+            if(!video.Show(canvas))return "Falha de video.";
+        }
+    }
+    return "Download cancelado.";
+}
 WORD buttons() {
     XINPUT_STATE s;
     if(XInputGetState(0,&s)!=ERROR_SUCCESS) return 0;
@@ -286,6 +322,13 @@ int main() {
         for(size_t i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(edge&keys[i]) {
             std::string path=menu.Press(static_cast<ConsoleHome::Key>(i));
             if(!path.empty()) { menu.StopFtp(); XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
+            StoreItem download;
+            if(menu.TakeNativeStoreRequest(download)) {
+                menu.StopFtp();bool success=false;
+                const std::string result=DownloadNative(download,canvas,video,success);
+                menu.NativeStoreResult(result,success);
+                previous=buttons();heldSince=lastRepeat=GetTickCount();minute=-1;
+            }
             const std::string movie=menu.TakeMovie();
             if(!movie.empty()) {
                 menu.StopFtp();
