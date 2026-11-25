@@ -21,8 +21,10 @@ with tempfile.TemporaryDirectory() as tmp:
     else:raise AssertionError("bad digest accepted")
     target=root/"UserFiles/Store/demo.pkg"
     assert not target.exists()
+    assert (target.parent/"demo.state").read_text().split()==[digest,"failed","3"]
     store.process(root,{"example.org"},lambda u,h:io.BytesIO(data))
     assert target.read_bytes()==data
+    assert (target.parent/"demo.state").read_text().split()==[digest,"verified",str(len(data))]
     store.process(root,{"example.org"},lambda u,h:None)
     assert target.read_bytes()==data
     assert not list(target.parent.glob("*.part"))

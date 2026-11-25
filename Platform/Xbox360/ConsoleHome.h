@@ -47,6 +47,13 @@ private:
     bool EnqueueCopy();
     void MovePin(int direction);
     void DrawTransfers(HomeCanvas& c) const;
+    bool storeDownloads_;
+    int storeDownloadRow_;
+    void DrawStoreDownloads(HomeCanvas& c) const;
+    void RecordEvent(const std::string& message);
+    void LoadEvents();
+    std::vector<std::string> events_;
+    void DrawEvents(HomeCanvas& c) const;
     std::vector<StorageVolume> storageVolumes_;
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;

@@ -135,3 +135,24 @@ bool StoreCatalog::Staged(const StoreItem& item) const {
     std::ifstream in(path.c_str(),std::ios::binary|std::ios::ate);
     return in&&in.tellg()>=0&&static_cast<unsigned long long>(in.tellg())==item.bytes;
 }
+
+StoreProgress StoreCatalog::Progress(const StoreItem& item) const {
+    StoreProgress result;
+    const std::string folder=FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store");
+    std::string data;
+    if(!readBound(FileWorkspace::Join(folder,item.id+".state"),256,data))return result;
+    std::istringstream in(data);std::string digest,state,bytes,extra;
+    if(!(in>>digest>>state>>bytes)||in>>extra||digest!=item.sha256||bytes.empty()||bytes.size()>12)return result;
+    unsigned long long size=0;
+    for(size_t i=0;i<bytes.size();++i) {
+        if(bytes[i]<'0'||bytes[i]>'9')return result;
+        size=size*10+(bytes[i]-'0');
+    }
+    if(size>item.bytes)return result;
+    if(state=="receiving")result.state=StoreProgress::Receiving;
+    else if(state=="failed")result.state=StoreProgress::Failed;
+    else if(state=="verified" && size==item.bytes && Staged(item))result.state=StoreProgress::Verified;
+    else return result;
+    result.received=size;
+    return result;
+}

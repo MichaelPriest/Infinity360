@@ -6,6 +6,7 @@ import hashlib
 import os
 import re
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -46,7 +47,7 @@ def open_download(url,hosts):
         def redirect_request(self,req,fp,code,msg,headers,newurl):
             return super().redirect_request(req,fp,code,msg,headers,check_url(newurl,hosts))
     return urllib.request.build_opener(Redirect()).open(
-        urllib.request.Request(check_url(url,hosts),headers={"User-Agent":"AuroraXStore/1"}),timeout=30)
+        urllib.request.Request(check_url(url,hosts),headers={"User-Agent":"Infinity360Store/1"}),timeout=30)
 
 def verify_file(path,size,digest):
     if path.is_symlink() or not path.is_file() or path.stat().st_size!=size:
@@ -71,39 +72,64 @@ def process(root,hosts,opener=open_download,workers=1):
     if any(p.is_symlink() for p in (dest,dest.parent)):
         raise ValueError("Linked destination not supported")
     dest.mkdir(parents=True,exist_ok=True)
+    def receipt(id,digest,state,received):
+        target=dest/(id+".state")
+        fd,temp=tempfile.mkstemp(prefix="status-",suffix=".part",dir=dest)
+        try:
+            with os.fdopen(fd,"w",encoding="ascii",newline="\n") as out:
+                out.write(f"{digest}\t{state}\t{received}\n")
+                out.flush();os.fsync(out.fileno())
+            os.replace(temp,target)
+        finally:
+            if os.path.exists(temp):os.unlink(temp)
     def download(line):
         id,digest=line.split("\t")
         if id not in items or items[id][1]!=digest:
             print(f"{id}: stale request skipped")
             return
         size,digest,url=items[id]
-        check_url(url,hosts)
+        try:
+            check_url(url,hosts)
+        except ValueError:
+            receipt(id,digest,"failed",0)
+            raise
         target=dest/(id+".pkg")
         if target.exists() or target.is_symlink():
             if not verify_file(target,size,digest):
+                receipt(id,digest,"failed",0)
                 raise ValueError(f"{id}: existing package differs; preserved")
+            receipt(id,digest,"verified",size)
             print(f"{id}: already verified")
             return
         fd,tmp=tempfile.mkstemp(prefix="store-",suffix=".part",dir=dest)
+        total=0
         try:
-            total=0
             h=hashlib.sha256()
-            with os.fdopen(fd,"wb") as out, opener(url,hosts) as response:
-                while True:
-                    chunk=response.read(1024*1024)
-                    if not chunk:break
-                    total+=len(chunk)
-                    if total>size:raise ValueError("Package exceeds declared size")
-                    h.update(chunk);out.write(chunk)
+            last=time.monotonic()
+            with os.fdopen(fd,"wb") as out:
+                receipt(id,digest,"receiving",0)
+                with opener(url,hosts) as response:
+                    while True:
+                        chunk=response.read(1024*1024)
+                        if not chunk:break
+                        if total+len(chunk)>size:raise ValueError("Package exceeds declared size")
+                        total+=len(chunk)
+                        h.update(chunk);out.write(chunk)
+                        if time.monotonic()-last>=1:
+                            receipt(id,digest,"receiving",total)
+                            last=time.monotonic()
                 out.flush();os.fsync(out.fileno())
             if total!=size or h.hexdigest()!=digest:
                 raise ValueError("Package size or SHA-256 mismatch")
-            # Publish exclusively: never replace a prior package.
             if os.name=="nt":
                 os.rename(tmp,target)
             else:
                 os.link(tmp,target)
+            receipt(id,digest,"verified",size)
             print(f"{id}: verified and staged")
+        except (ValueError,OSError):
+            receipt(id,digest,"failed",total)
+            raise
         finally:
             if os.path.exists(tmp):os.unlink(tmp)
 

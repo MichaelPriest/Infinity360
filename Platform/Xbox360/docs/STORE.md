@@ -16,3 +16,8 @@ O domínio é ilustrativo; substitua por um repositório HTTPS autorizado. O dow
 ## Traduções PT-BR e downloads simultâneos
 
 Categoria `translation` exige 11 colunas: as oito anteriores mais Title ID, Media ID e versão XEX (8 dígitos hexadecimais maiúsculos, não zero). A aba PT-BR mostra os pacotes e bloqueia pedidos sem XEX extraído local correspondente. Não confirma TU ativa nem instala tradução. O PC aceita `--workers 1..4` para baixar arquivos independentes em paralelo, com verificação por pacote. Não é download segmentado de um único arquivo; não altera nem executa o jogo.
+
+
+## Central de downloads e histórico
+
+O downloader PC grava `UserFiles/Store/<id>.state` atomicamente com SHA-256 esperado, estado receiving/verified/failed e bytes recebidos. A dashboard lê o último snapshot vinculado ao hash; verified exige também tamanho local correspondente, não recalcula SHA no Xbox. Em Sistema > Downloads, RB alterna cópias locais/pedidos da loja e Y atualiza. Não representa conexão ativa e não cancela transferências PC em execução. Sistema > Histórico mostra os seis eventos operacionais mais recentes; `infinity360-events.log` guarda até 64 eventos, sem URLs, nomes de arquivos ou credenciais. Sem transporte nativo nesta revisão.

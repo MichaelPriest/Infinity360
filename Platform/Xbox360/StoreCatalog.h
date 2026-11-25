@@ -6,6 +6,12 @@ struct StoreItem {
     unsigned long long bytes;
     unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
 };
+struct StoreProgress {
+    enum State { Unknown, Receiving, Verified, Failed };
+    State state;
+    unsigned long long received;
+    StoreProgress():state(Unknown),received(0){}
+};
 class StoreCatalog {
 public:
     explicit StoreCatalog(const std::string& root):root_(root){}
@@ -15,6 +21,7 @@ public:
     bool Cancel(const StoreItem& item);
     bool Requested(const StoreItem& item) const;
     bool Staged(const StoreItem& item) const;
+    StoreProgress Progress(const StoreItem& item) const;
 private:
     std::string root_;
     std::vector<StoreItem> items_;

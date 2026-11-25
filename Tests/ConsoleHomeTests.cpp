@@ -924,5 +924,22 @@ int main(int argc,char** argv) {
     residentMenu.Press(ConsoleHome::Accept);residentMenu.Draw(canvas,"21:00");
     residentMenu.Press(ConsoleHome::Refresh);
     {std::ifstream in(ini);std::string contents((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());assert(contents==iniText);}
+    // Receipts are snapshots bound to the selected catalog hash and size.
+    fs::create_directories(storeRoot/"UserFiles"/"Store");
+    StoreCatalog receiptCatalog(storeRoot.string()+"/");
+    assert(receiptCatalog.Load());
+    const StoreItem receiptItem=receiptCatalog.Items()[0];
+    const fs::path receiptPath=storeRoot/"UserFiles"/"Store"/"demo.state";
+    {std::ofstream out(receiptPath);out<<storeHash<<"\treceiving\t2\n";}
+    assert(receiptCatalog.Progress(receiptItem).state==StoreProgress::Receiving);
+    assert(receiptCatalog.Progress(receiptItem).received==2);
+    {std::ofstream out(receiptPath);out<<storeHash<<"\tverified\t4\n";}
+    assert(receiptCatalog.Progress(receiptItem).state==StoreProgress::Unknown);
+    {std::ofstream out(storeRoot/"UserFiles"/"Store"/"demo.pkg");out<<"data";}
+    assert(receiptCatalog.Progress(receiptItem).state==StoreProgress::Verified);
+    {std::ofstream out(receiptPath);out<<std::string(64,'b')<<"\tverified\t4\n";}
+    assert(receiptCatalog.Progress(receiptItem).state==StoreProgress::Unknown);
+    assert(fs::exists(storeRoot/"infinity360-events.log"));
+    {std::ifstream in(storeRoot/"infinity360-events.log");std::string log((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());assert(log.find("Pedido da loja salvo")!=std::string::npos);}
     fs::remove_all(root);
 }
