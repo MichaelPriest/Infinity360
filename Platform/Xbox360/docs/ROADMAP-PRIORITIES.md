@@ -122,3 +122,7 @@ Run 45687637748 aprovado. Empacotamento candidato isolado com fonte, configuraç
 ### P1 — Integração experimental do player
 
 Relink dos probes aprovado no CI 45689057229; correção do nome do ZIP. Player compartilhado com a dashboard experimental, ID distinto e opção de build explícita, MPEG-PS preservado. CI dedicado verifica terceiro XEX, sem publicação da variante integrada. Homologação física e ABR pendentes.
+
+### P1 — Controles FFmpeg compartilhados
+
+Pausa local com relógio congelado, mute, volume LB/RB, painel de comandos e testes determinísticos. Sem seek/pausa remota; áudio previamente enfileirado pode continuar brevemente. Cross-build e homologação física pendentes.

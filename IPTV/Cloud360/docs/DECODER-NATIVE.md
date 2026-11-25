@@ -99,3 +99,7 @@ Run 45687637748 concluiu o link e verificação XEX2 dos dois probes. O pipeline
 ### Integração à dashboard experimental
 
 O CI 45689057229 compilou ambos os XEX e passou no relink, mas o upload falhou porque Path.with_suffix substituía parte da versão no nome do ZIP. Corrigido para acrescentar .zip. XsdkAvPlayer reutiliza a fila/decoder no Presenter existente, sem assumir a GPU ou lançar outro título. INFINITY_EXPERIMENTAL_MENU_FFMPEG=ON compila uma variante separada com ID 0x494E4635, roteando MP4/TS locais e TS/M3U8 remotos pelo FFmpeg, exigindo enable-iptv-playback.txt e política de host. A Alpha padrão mantém MPEG-PS e não linka FFmpeg. CI dedicado compila e verifica também a variante da dashboard, mas seu binário não integra o pacote dos dois probes nem Releases. Ainda sem teste físico.
+
+### Controles de reprodução FFmpeg
+
+CloudPlaybackControls desacopla bordas de botões e relógio de pausa do XSDK. A alterna pausa/retomada apenas em arquivo local; X alterna mute; LB/RB ajustam ganho em passos de 10%, B/Back cancelam. Painel sobreposto indica estado e volume. O relógio exclui o tempo pausado antes de compensar bloqueios de leitura, sem consumir novos pacotes ou quadros durante a pausa. Áudio já enfileirado no hardware ainda pode tocar brevemente; não há seek nem pausa de HLS live. Teste determinístico cobre botão já pressionado, limites, mute, relógio e recusa de pausa remota. CI e hardware precisam validar o player.

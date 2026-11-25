@@ -5,6 +5,7 @@
 #include "container_decode.h"
 #include "av_stream_queue.h"
 #include "read_clock.h"
+#include "playback_controls.h"
 #include "xsdk/audio.h"
 #include "xsdk/xam.h"
 #include "xsdk/log.h"
@@ -41,6 +42,12 @@ inline bool Supports(const std::string& path){
 inline bool Enabled(const std::string& root){
     std::ifstream file((root+"enable-iptv-playback.txt").c_str());std::string marker;
     return std::getline(file,marker)&&marker=="ENABLE-IPTV-PLAYBACK";
+}
+inline unsigned ControlKeys(unsigned buttons){
+    return ((buttons&INPUT_GAMEPAD_A)?CloudPlaybackControls::Pause:0u)|
+           ((buttons&INPUT_GAMEPAD_X)?CloudPlaybackControls::Mute:0u)|
+           ((buttons&INPUT_GAMEPAD_LEFT_SHOULDER)?CloudPlaybackControls::Quieter:0u)|
+           ((buttons&INPUT_GAMEPAD_RIGHT_SHOULDER)?CloudPlaybackControls::Louder:0u);
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
                         const std::function<bool(bool)>& present,bool diagnostic=false){
@@ -94,28 +101,41 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     const auto start=Clock::now();
     CloudReadClock playbackClock;
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
+    INPUT_STATE initial{};
+    CloudPlaybackControls controls(!remoteSource,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
+    auto overlay=[&](){
+        canvas.Box(30,620,1220,72,0xff172c28u,6);
+        const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
+        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":""),22,0xfff2f7f3u,1160);
+        canvas.Text(46,657,remoteSource?"X Mudo | LB/RB Volume | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
+    };
     auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
-        ++shown;return present(true);
+        ++shown;overlay();return present(true);
     };
     auto audio=[&](const float* pcm,unsigned count){
         float* out=nullptr;
         if(!NT_SUCCESS(xsdk_audio_next_frame(250,&out))||!out)return false;
         std::fill(out,out+XSDK_AUDIO_FRAME_FLOATS,0.0f);
-        for(unsigned j=0;j<count;++j){out[j]=pcm[2*j];out[256+j]=pcm[2*j+1];}
+        const float gain=controls.Gain();
+        for(unsigned j=0;j<count;++j){out[j]=pcm[2*j]*gain;out[256+j]=pcm[2*j+1]*gain;}
         xsdk_audio_queue_frame();submitted+=count;return true;
     };
     while(ok){
         INPUT_STATE state{};
-        if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
-        auto elapsed=playbackClock.Elapsed(wall());
+        const bool inputOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
+        if(inputOk&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
+        const bool changed=inputOk&&controls.Update(ControlKeys(state.gamepad.buttons),wall());
+        if(changed){overlay();if(!present(true)){ok=false;break;}}
+        if(controls.Paused()){if(!present(false)){ok=false;break;}continue;}
+        auto elapsed=playbackClock.Elapsed(controls.Clock(wall()));
         if(timeline.Finished(elapsed))break;
         if(elapsed>CloudAvStreamQueue::MaxDuration+1000000){ok=false;break;}
         unsigned budget=4;
         while(rc>0&&timeline.WantsInput(elapsed,playbackClock.Ahead())&&budget--){
-            const auto beforeRead=wall();
+            const auto beforeRead=controls.Clock(wall());
             rc=cloud_container_step(session,1);
-            const auto afterRead=wall();
+            const auto afterRead=controls.Clock(wall());
             if(remoteSource&&!playbackClock.Observe(beforeRead,afterRead)){ok=false;break;}
             elapsed=playbackClock.Elapsed(afterRead);
         }
