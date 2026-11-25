@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.18 — em desenvolvimento (sem build XEX)
+
+- Gerenciador de plugins locais com preferência persistente e validação de manifesto/XEX.
+- Identificação de conflitos de IDs sem diferenciar maiúsculas/minúsculas; revalidação antes do lançamento.
+- Inventário residente permanece somente leitura. Galeria preparada para 44 capturas.
+
 ## V0.2.17 — em desenvolvimento (sem build XEX)
 
 - Editor de IPv4 privado do par UDP pelo controle, com persistência e cancelamento.

@@ -185,6 +185,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
+    disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -196,6 +197,7 @@ void ConsoleHome::Load() {
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='L')UiLanguage::Parse(file,language_);
         if(line[0]=='Q'&&QuickGuide::Valid(file))quickGuideOrder_=file;
+        if(line[0]=='D'&&disabledPluginIds_.size()<256){const auto id=PluginRegistry::Key(file);if(!id.empty())disabledPluginIds_.insert(id);}
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -258,6 +260,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"I\t"<<idleMinutes_<<"\n";
     out<<"L\t"<<language_<<"\n";
     out<<"Q\t"<<quickGuideOrder_<<"\n";
+    for(const auto& id:disabledPluginIds_)out<<"D\t"<<id<<"\n";
     launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
@@ -388,7 +391,7 @@ void ConsoleHome::Reload() {
         const std::vector<PluginDescriptor> plugins=
             PluginRegistry(PluginRegistry::DefaultRoots(dir_)).Scan();
         const std::string category=section_==Apps?"app":"emulator";
-        for(size_t i=0;i<plugins.size();++i) if(plugins[i].category==category) {
+        for(size_t i=0;i<plugins.size();++i) if(plugins[i].category==category&&PluginAllowed(plugins[i])) {
             Game app={plugins[i].name,plugins[i].executable,
                       "Plugin "+plugins[i].version,false};
             tools_.push_back(app);
@@ -1609,7 +1612,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(storeDownloads_) {store_.Load();RebuildStoreDownloads();notice_="Registros de downloads atualizados.";}
                 else notice_="Transferencias locais atualizadas automaticamente.";
             }
-            else if(systemTab_==4) {RefreshResidentPlugins();notice_="Configuracao de plugins consultada.";}
+            else if(systemTab_==4) {RefreshResidentPlugins();RefreshLocalPlugins();notice_="Configuracao de plugins consultada.";}
             else if(systemTab_==5){clampRow(eventRow_,notifications_.Visible(eventFilter_).size());notice_="Historico local dos ultimos 64 eventos.";}
             else if(systemTab_==7){status_=ConsoleStatus::Read();notice_="Perfis e configuracoes consultados.";}
             else notice_="Este servico ainda nao possui provider nativo.";
@@ -1735,6 +1738,11 @@ std::string ConsoleHome::Press(Key key) {
             if(safeArea_!=old&&!SaveProfile()){safeArea_=old;notice_="Falha ao salvar margem.";}else notice_="Margem de tela: "+number(safeArea_)+"% por lado.";
             return "";
         }
+        if(page_==Details&&systemTab_==4&&key==Guide){localPlugins_=!localPlugins_;if(localPlugins_)RefreshLocalPlugins();return "";}
+        if(page_==Details&&systemTab_==4&&localPlugins_){
+            if(key==Up||key==Down){localPluginRow_=std::max(0,localPluginRow_+(key==Down?1:-1));clampRow(localPluginRow_,localPluginItems_.size());}
+            if(key==Favorite)ToggleLocalPlugin();return "";
+        }
         if(page_==Details && systemTab_==4 && (key==PageUp||key==PageDown)){
             const size_t count=residentConfigs_.size();
             if(count)residentSource_=(residentSource_+count+(key==PageDown?1:count-1))%count;
@@ -1804,7 +1812,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;}
-                else if(systemTab_==4)RefreshResidentPlugins();
+                else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
                 else if(systemTab_==7){localMilestones_=false;status_=ConsoleStatus::Read();}
@@ -1927,6 +1935,15 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(key==Accept && section_!=Files && !visible_.empty()) {
             const std::string path=visible_[row_]->executable;
+            if(section_==Apps||section_==Emulators){
+                const size_t index=static_cast<size_t>(visible_[row_]-tools_.data());
+                if(index<toolKinds_.size()&&toolKinds_[index]==2){
+                    bool eligible=false;
+                    for(const auto& item:PluginRegistry(PluginRegistry::DefaultRoots(dir_)).Scan())
+                        if(item.executable==path&&PluginAllowed(item)){eligible=true;break;}
+                    if(!eligible){notice_="Plugin alterado ou desativado. Y atualiza.";return "";}
+                }
+            }
             if(!isXexPath(path) || isContentPackage(*visible_[row_])) {
                 if(isContentPackage(*visible_[row_])) {
                     const XboxPackageCheck check=ContentCatalog::CheckPackage(path);
@@ -2000,6 +2017,7 @@ void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned 
 }
 
 void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
+    if(localPlugins_){DrawLocalPlugins(c);return;}
     c.Text(47,349,c.Tr("Plugins residentes / DashLaunch"),27,White,1170);
     if(residentSource_>=residentConfigs_.size()){
         c.Text(47,385,"Nenhum launch.ini legivel",18,Muted,1170);
@@ -2025,7 +2043,43 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
         }
     }
     c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
-    c.Text(47,610,"LB/RB Fonte | Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(47,610,"LB/RB Fonte | START Plugins locais | Y Atualizar | B Voltar",18,Lime,1170);
+}
+bool ConsoleHome::PluginAllowed(const PluginDescriptor& item)const{
+    return item.manifestEnabled&&item.headerValid&&!item.conflict&&!disabledPluginIds_.count(PluginRegistry::Key(item.id));
+}
+void ConsoleHome::RefreshLocalPlugins(){
+    localPluginItems_=PluginRegistry(PluginRegistry::DefaultRoots(dir_)).Inventory();
+    clampRow(localPluginRow_,localPluginItems_.size());
+}
+void ConsoleHome::ToggleLocalPlugin(){
+    if(localPluginRow_<0||static_cast<size_t>(localPluginRow_)>=localPluginItems_.size())return;
+    const auto& item=localPluginItems_[localPluginRow_];
+    const auto key=PluginRegistry::Key(item.id);
+    if(key.empty()||!item.manifestEnabled||!item.headerValid||item.conflict){notice_="Plugin indisponivel; manifesto, XEX ou ID conflitante.";return;}
+    auto old=disabledPluginIds_;
+    const bool enable=disabledPluginIds_.count(key)!=0;
+    if(enable)disabledPluginIds_.erase(key);
+    else if(disabledPluginIds_.size()<256)disabledPluginIds_.insert(key);
+    else{notice_="Limite de preferencias de plugins.";return;}
+    if(!SaveProfile()){disabledPluginIds_=old;notice_="Falha ao salvar preferencia.";return;}
+    notice_=enable?"Atalho local habilitado.":"Atalho local desabilitado.";
+    RecordEvent(enable?"Plugin local habilitado":"Plugin local desabilitado");
+}
+void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
+    c.Text(47,349,"Plugins locais | "+number(localPluginItems_.size()),27,White,1170);
+    if(localPluginItems_.empty())c.Text(48,422,"Nenhum manifesto plugin.axplugin reconhecido.",21,Muted,1170);
+    const int first=(localPluginRow_/4)*4;
+    for(int i=first;i<first+4&&static_cast<size_t>(i)<localPluginItems_.size();++i){
+        const auto& item=localPluginItems_[i];const int y=390+(i-first)*47;
+        panel(c,48,y,1184,43,Panel,i==localPluginRow_);
+        c.Text(62,y+2,item.name+" | "+item.version,19,White,690);
+        c.Text(64,y+23,item.id+" | "+item.category,14,Muted,690);
+        const char* state=item.conflict?"ID conflitante":!item.headerValid?"XEX ausente/invalido":!item.manifestEnabled?"Manifesto desativado":PluginAllowed(item)?"Habilitado":"Desabilitado localmente";
+        c.Text(806,y+9,state,19,PluginAllowed(item)?Lime:Muted,400);
+    }
+    c.Text(48,585,"Preferencia local; nao altera launch.ini, nao carrega modulos residentes.",18,Muted,1170);
+    c.Text(48,610,"X Alternar | START DashLaunch | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     c.Text(44,82,c.Tr("Personalizar inicio"),40,White,1190);

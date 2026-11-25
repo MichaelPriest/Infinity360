@@ -5,6 +5,8 @@
 #include <cctype>
 #include <fstream>
 #include <set>
+#include <sstream>
+#include <map>
 
 #ifndef _XBOX
 #include <filesystem>
@@ -53,7 +55,7 @@ bool isXex(const std::string& entry) {
 bool normalFile(const std::string& path) {
 #ifndef _XBOX
     std::error_code ec;
-    if(std::filesystem::is_symlink(std::filesystem::symlink_status(path,ec))) return false;
+    if(!std::filesystem::is_regular_file(std::filesystem::symlink_status(path,ec))||ec) return false;
 #endif
     std::ifstream file(path.c_str(),std::ios::binary);
     return file.good();
@@ -61,7 +63,7 @@ bool normalFile(const std::string& path) {
 bool normalFolder(const std::string& path) {
 #ifndef _XBOX
     std::error_code ec;
-    if(std::filesystem::is_symlink(std::filesystem::symlink_status(path,ec))) return false;
+    if(!std::filesystem::is_directory(std::filesystem::symlink_status(path,ec))||ec) return false;
 #endif
     return true;
 }
@@ -72,17 +74,21 @@ bool readManifest(const std::string& path, PluginDescriptor& plugin,
     plugin=PluginDescriptor();
     enabled=true;
     bool schemaFound=false;
-    size_t bytes=0;
+    std::set<std::string> fields;
+    char raw[MaxManifestBytes+1];
+    file.read(raw,sizeof raw);
+    if(file.bad()||file.gcount()>static_cast<std::streamsize>(MaxManifestBytes))return false;
+    std::istringstream lines(std::string(raw,static_cast<size_t>(file.gcount())));
     std::string line;
-    while(std::getline(file,line)) {
-        bytes+=line.size()+1;
-        if(bytes>MaxManifestBytes || line.size()>256) return false;
+    while(std::getline(lines,line)) {
+        if(line.size()>256) return false;
         line=trim(line);
         if(line.empty() || line[0]=='#') continue;
         const size_t equal=line.find('=');
         if(equal==std::string::npos) return false;
         const std::string key=trim(line.substr(0,equal));
         const std::string value=trim(line.substr(equal+1));
+        if(!fields.insert(key).second)return false;
         if(key=="schema") { if(value!="1") return false; schemaFound=true; }
         else if(key=="id") plugin.id=value;
         else if(key=="name") plugin.name=value;
@@ -95,8 +101,8 @@ bool readManifest(const std::string& path, PluginDescriptor& plugin,
             else return false;
         } else return false;
     }
-    return !file.bad() && schemaFound && safeId(plugin.id) && displayName(plugin.name) &&
-        plugin.version.size()<=24 &&
+    return !lines.bad() && schemaFound && safeId(plugin.id) && displayName(plugin.name) &&
+        plugin.version.size()<=24 && (plugin.version.empty()||displayName(plugin.version)) &&
         (plugin.category=="app" || plugin.category=="emulator") &&
         isXex(entry);
 }
@@ -122,9 +128,13 @@ std::vector<std::string> PluginRegistry::DefaultRoots(const std::string& appDire
     return roots;
 }
 
-std::vector<PluginDescriptor> PluginRegistry::Scan() const {
+std::string PluginRegistry::Key(const std::string& id){
+    if(!safeId(id))return "";
+    std::string key=id;for(char& c:key)c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));return key;
+}
+std::vector<PluginDescriptor> PluginRegistry::Inventory() const {
     std::vector<PluginDescriptor> found;
-    std::set<std::string> seen;
+    std::map<std::string,size_t> seen;
     for(size_t root=0;root<roots_.size() && found.size()<MaxPlugins;++root) {
         if(!normalFolder(roots_[root])) continue;
         std::vector<FolderEntry> folders;
@@ -139,13 +149,27 @@ std::vector<PluginDescriptor> PluginRegistry::Scan() const {
             PluginDescriptor plugin;
             std::string entry;
             bool enabled=true;
-            if(!readManifest(manifest,plugin,entry,enabled) || !enabled) continue;
-            if(seen.find(plugin.id)!=seen.end()) continue;
-            plugin.executable=join(directory,entry);
-            if(!normalFile(plugin.executable)) continue;
-            seen.insert(plugin.id);
-            found.push_back(plugin);
+            if(!readManifest(manifest,plugin,entry,enabled)) continue;
+            plugin.executable=join(directory,entry);plugin.manifestEnabled=enabled;
+            const auto key=Key(plugin.id);
+            const auto previous=seen.find(key);
+            if(previous!=seen.end()){
+                if(found[previous->second].executable!=plugin.executable)found[previous->second].conflict=true;
+                continue;
+            }
+            if(normalFile(plugin.executable)){
+                std::ifstream binary(plugin.executable.c_str(),std::ios::binary);
+                char header[24]{};
+                plugin.headerValid=bool(binary.read(header,sizeof header))&&std::string(header,4)=="XEX2";
+            }
+            seen[key]=found.size();found.push_back(plugin);
         }
     }
     return found;
+}
+
+std::vector<PluginDescriptor> PluginRegistry::Scan() const {
+    auto items=Inventory();
+    items.erase(std::remove_if(items.begin(),items.end(),[](const PluginDescriptor& p){return !p.manifestEnabled||!p.headerValid||p.conflict;}),items.end());
+    return items;
 }

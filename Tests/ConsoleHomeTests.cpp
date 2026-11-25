@@ -54,6 +54,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     {std::ofstream out(root/"playlist.m3u");
      out<<"#EXTM3U\n";
      for(int i=1;i<=5;++i)out<<"#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo "<<i<<"\nhttps://example.invalid/stream"<<i<<".ts\n";}
+    {const auto p=root/"Plugins"/"Demo";fs::create_directories(p);std::ofstream(p/"plugin.axplugin")<<"schema=1\nid=demo.local\nname=Demo local plugin\nversion=1.0\ncategory=app\nentry=default.xex\nenabled=true\n";std::ofstream x(p/"default.xex",std::ios::binary);char header[24]={'X','E','X','2'};x.write(header,sizeof header);}
     {std::ofstream out(root/"launch.ini");
      out<<"[Plugins]\nplugin1=Hdd1:\\LiveEmulation.xex\nplugin2=\nplugin3=\nplugin4=\nplugin5=\n";}
     {std::ofstream out(root/"infinity360-events.log");out<<"N1 U 2026-11-25 21:41Z | Download nativo verificado\nN1 U 2026-11-25 21:40Z | Backup recusado\n2026-11-25 21:30Z | FTP iniciado\n";}
@@ -103,6 +104,7 @@ static int captureScreens(const char* atlas,const char* destination) {
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
         if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::Guide);ok=save("43-configurar-rede",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::PageUp);}
         if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);}
+        if(i==4){system.Press(ConsoleHome::Guide);ok=save("44-plugins-locais",system)&&ok;system.Press(ConsoleHome::Guide);}
         if(i==5){system.Press(ConsoleHome::PageDown);ok=save("38-notificacoes-pendentes",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("39-notificacoes-alertas",system)&&ok;system.Press(ConsoleHome::Favorite);assert(system.UnreadNotifications()==0);}
         if(i==3){
             system.Press(ConsoleHome::PageDown);ok=save("27-fila-store",system)&&ok;
@@ -279,14 +281,14 @@ int main(int argc,char** argv) {
     // Optional local XEX plugins extend Apps and Emulators without changing Home.
     const fs::path music=root/"Plugins"/"Music";
     fs::create_directories(music);
-    std::ofstream(music/"default.xex")<<"test plugin";
+    {std::ofstream out(music/"default.xex",std::ios::binary);char header[24]={'X','E','X','2'};out.write(header,sizeof header);}
     std::ofstream(music/"plugin.axplugin")
         <<"schema=1\n"<<"id=aurorax.music\n"<<"name=Music Player\n"
         <<"version=0.1\n"<<"category=app\n"
         <<"entry=default.xex\n"<<"enabled=true\n";
     const fs::path emulator=root/"Plugins"/"Retro";
     fs::create_directories(emulator);
-    std::ofstream(emulator/"default.xex")<<"test plugin";
+    {std::ofstream out(emulator/"default.xex",std::ios::binary);char header[24]={'X','E','X','2'};out.write(header,sizeof header);}
     std::ofstream(emulator/"plugin.axplugin")
         <<"schema=1\n"<<"id=aurorax.retro\n"<<"name=Retro Plugin\n"
         <<"version=0.1\n"<<"category=emulator\n"

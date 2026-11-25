@@ -11,6 +11,7 @@ struct PluginDescriptor {
     std::string version;
     std::string category; // "app" or "emulator"
     std::string executable;
+    bool manifestEnabled=true,headerValid=false,conflict=false;
 };
 
 class PluginRegistry {
@@ -18,6 +19,8 @@ public:
     explicit PluginRegistry(const std::vector<std::string>& roots);
     static std::vector<std::string> DefaultRoots(const std::string& appDirectory);
     std::vector<PluginDescriptor> Scan() const;
+    std::vector<PluginDescriptor> Inventory() const;
+    static std::string Key(const std::string& id);
 
 private:
     std::vector<std::string> roots_;

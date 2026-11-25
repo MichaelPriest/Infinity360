@@ -20,7 +20,7 @@ void install(const fs::path& root,const std::string& directory,
         << "category=" << category << "\n"
         << "entry=" << entry << "\n"
         << "enabled=" << (enabled?"true":"false") << "\n";
-    std::ofstream(folder/"default.xex")<<"fixture - not executable on console";
+    {std::ofstream out(folder/"default.xex",std::ios::binary);char header[24]={'X','E','X','2'};out.write(header,sizeof header);}
 }
 
 int main() {
@@ -34,7 +34,6 @@ int main() {
     install(p1,"Disabled","aurorax.disabled","app",false);
     install(p1,"Traversal","aurorax.badpath","app",true,"../default.xex");
     install(p1,"NoBinary","aurorax.missing","app",true,"missing.xex");
-    install(p2,"Duplicate","aurorax.tools","app");
     PluginRegistry registry({p1.string(),p2.string()});
     const auto plugins=registry.Scan();
     assert(plugins.size()==2);
@@ -71,5 +70,20 @@ int main() {
     assert(registry.Scan().size()==2);
 #endif
 
+    install(p2,"Duplicate","AURORAX.TOOLS","app");
+    assert(registry.Scan().size()==1);
+    const auto inventory=registry.Inventory();
+    bool conflict=false,disabled=false,missing=false;
+    for(const auto& item:inventory){
+        if(item.id=="aurorax.tools")conflict=item.conflict;
+        if(item.id=="aurorax.disabled")disabled=!item.manifestEnabled;
+        if(item.id=="aurorax.missing")missing=!item.headerValid;
+    }
+    assert(conflict&&disabled&&missing);
+    install(p1,"DuplicateField","duplicate.field","app");
+    {std::ofstream out(p1/"DuplicateField"/"plugin.axplugin",std::ios::app);out<<"id=second\n";}
+    install(p1,"InvalidXex","invalid.xex","app");
+    std::ofstream(p1/"InvalidXex"/"default.xex")<<"not XEX";
+    assert(registry.Scan().size()==1);
     fs::remove_all(root);
 }

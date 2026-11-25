@@ -202,3 +202,7 @@ Status XAM por controle, fallback explícito, painel de métricas da biblioteca 
 ### V0.2.17 — Rede LAN
 
 Editor de IPv4 privado com quatro octetos, validação e persistência com backup. Estatística RTT min/media/max e percentual sem resposta após encerramento. Proteção contra relógio monotônico regressivo. Testes preparados e captura 43. SMB/System Link real pendentes. Sem build/CI nesta revisão.
+
+### V0.2.18 — Gerenciamento de plugins locais
+
+Inventário de manifestos habilitados/desabilitados e XEX ausentes, conflitos de ID, parsing limitado/chaves únicas, preferência local persistente por ID e revalidação no handoff pelo catálogo Plugins. Não modifica launch.ini nem carrega módulos residentes. Cabeçalho XEX2 não comprova compatibilidade. Galeria 44 preparada. Sem build/CI.

@@ -28,6 +28,7 @@
 #include "DisplaySafeArea.h"
 #include "IdleScreen.h"
 #include "ResidentPlugins.h"
+#include "PluginRegistry.h"
 #include "FtpServer.h"
 #include <map>
 #include <set>
@@ -153,6 +154,14 @@ private:
     void DrawResidentPlugins(HomeCanvas& c) const;
     std::vector<ResidentConfig> residentConfigs_;
     size_t residentSource_=0;
+    bool localPlugins_=false;
+    int localPluginRow_=0;
+    std::vector<PluginDescriptor> localPluginItems_;
+    std::set<std::string> disabledPluginIds_;
+    void RefreshLocalPlugins();
+    void DrawLocalPlugins(HomeCanvas& c)const;
+    bool PluginAllowed(const PluginDescriptor& item)const;
+    void ToggleLocalPlugin();
     void DrawNetwork(HomeCanvas& c) const;
     size_t fileRoot_;
     bool pasteConfirm_, scanPathConfirm_, fileAction_, deleteConfirm_, cutMode_;
