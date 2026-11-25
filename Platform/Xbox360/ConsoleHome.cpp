@@ -2250,10 +2250,19 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
 }
 void ConsoleHome::DrawProviders(HomeCanvas& c) const{
     c.Text(44,78,"INFINITY Store | Provedores",37,White,1175);
-    c.Text(48,136,"HTTPS autorizado | SHA-256 aprovado | Cache local",21,Muted,1175);
+    c.Text(48,136,"Homebrew App Catalogue | XboxUnity | Provedores TSV",21,Muted,1175);
     const auto& providers=store_.Providers();
     if(!store_.ProvidersValid())c.Text(48,245,"Configuracao de provedores invalida.",25,White,1170);
-    else if(providers.empty())c.Text(48,245,"Configure infinity360-providers.tsv e a lista de hosts.",22,Muted,1170);
+    else if(providers.empty()){
+        panel(c,45,190,1189,110,Panel,false);
+        c.Text(60,201,"Homebrew App Catalogue",26,White,1150);
+        c.Text(60,238,"Catalogo local incluido | github.com/xenosworks/homebrew-app-catalogue",19,Muted,1150);
+        panel(c,45,310,1189,96,Panel,false);
+        c.Text(60,320,"XboxUnity",26,White,1150);
+        c.Text(60,354,"Capas e Title Updates | xboxunity.net",19,Muted,1150);
+        c.Text(48,443,"Provedores adicionais: configure infinity360-providers.tsv e hosts.",20,Muted,1170);
+        c.Text(48,480,"FONTES.txt: links oficiais, licencas e requisitos dos pacotes.",18,Muted,1170);
+    }
     else{
         const int first=(providerRow_/5)*5;
         for(int i=first;i<first+5&&static_cast<size_t>(i)<providers.size();++i){
@@ -2665,7 +2674,8 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
             c.Text(x+9,y+30,values[i],22,White,270);
         }
         c.Text(48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
-        c.Text(48,580,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar | Modo fisico inalterado")),18,Muted,1170);
+        c.Text(48,580,v.available&&v.width==1920&&v.height==1080&&!v.interlaced?"Saida 1080p detectada | UI 720p escalonada pelo console":"UI 720p | Para 1080p, configure a saida no menu oficial Xbox",18,Muted,1170);
+        c.Text(48,606,c.Tr("LB/RB Pagina | Y Atualizar | B Voltar"),17,Lime,1170);
         return;
     }
     c.Text(45,349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);

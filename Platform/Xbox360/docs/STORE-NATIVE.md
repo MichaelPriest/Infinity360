@@ -29,3 +29,7 @@ O download HTTPS nativo apresenta velocidade estimada por deltas de bytes observ
 ## Destino de armazenamento
 
 Na lista Store, LB alterna entre a área local e workspaces graváveis HDD/USB0/USB1/USB2. Prepare Infinity360Files no volume e habilite enable-file-writes.txt. A preferência persiste e cada volume tem fila independente. Catálogo, allowlist e permissões continuam na dashboard principal. Pacotes, parciais, estados, backups e instalações XEX/ZIP usam o destino vinculado ao item. Bibliotecas Apps/Homebrew/Emuladores consultam os dispositivos. Sem migração ou fallback automático; atualização da dashboard e pedidos PC permanecem locais. Homologação física pendente.
+
+## V0.2.38 — Catálogo inicial
+
+O snapshot oficial Homebrew App Catalogue 88542fda8a098b00fc4c37b9c70a4cb9ba35730e oferece seis itens no catálogo local da próxima instalação. Ver FONTES.txt. Não há download automático; o usuário opta por HTTPS e escrita. Downloads de assets GitHub permitem até dois redirects manuais somente para release-assets.githubusercontent.com ou objects.githubusercontent.com se ambos hosts forem explicitamente autorizados, HTTPS/443 e validação de tamanho e SHA-256 preservadas. Metadados remotos continuam sem redirects. Não é integração dinâmica ou verificação de assinatura do catálogo upstream. O instalador atual exige default.xex na raiz; quatro dos seis pacotes têm outros nomes e requerem instalação manual. Os pacotes não incluem dados comerciais fornecidos pelo usuário. Homologação pendente.

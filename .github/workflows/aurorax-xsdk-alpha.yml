@@ -130,7 +130,9 @@ jobs:
               "Optional XEX launch and experimental MPEG-PS playback only after GPU checks pass.\n"
               "HTTPS Store opt-in: MenuPreview/enable-https-store.txt containing ENABLE-HTTPS-STORE.\n"
               "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
-              "Console clock must be correct. HTTPS only; redirects refused; SHA-256 verified before publication.\n"
+              "Console clock must be correct. HTTPS only; only allowlisted GitHub release asset redirects for packages; SHA-256 verified.\n"
+              "Homebrew catalogue: see MenuPreview/FONTES.txt. Some packages need manual installation and owned data.\n"
+              "For 1080p output select it in the official Xbox dashboard; the UI framebuffer is 720p scaled by the console.\n"
               "Sistema > DVD > DVD para GOD: select HDD/USB, then press A twice.\n"
               "Requires MenuPreview/enable-dvd-install.txt containing ENABLE-DVD-INSTALL and file writes.\n"
               "Packages are saved under Infinity360Files/PackageLibrary on that device. XAM acceptance is untested.\n"
@@ -166,11 +168,12 @@ jobs:
               archive.writestr("Licenses/miniz-SOURCE.txt", "https://github.com/richgel999/miniz/tree/77d0dce8627735138c51770d1799a1ef48f2117d\n")
               archive.writestr("Licenses/SOURCES.txt", "Mbed TLS: https://github.com/xenosworks/mbedtls-xenon/tree/591b04adbec4bc5582649601f4407506a610162b\nlibcurl: https://github.com/xenosworks/curl-xenon/tree/a6b70bd06820e1c625f47fe0e592e08c5daaa6b4\nCA bundle: Mozilla roots, MPL-2.0; source https://curl.se/docs/caextract.html\n")
               archive.writestr("MenuPreview/infinity-preview.txt", "INFINITY360-XSDK-PREVIEW\n")
-              archive.writestr("MenuPreview/infinity360-providers.tsv", "# id\\tname\\thttps_url\\tbytes\\tsha256\n# Configure only approved authorized catalogs. No live servers preinstalled.\n")
+              for filename in ("aurorax-store.tsv", "infinity360-providers.tsv", "infinity360-store-hosts.txt", "FONTES.txt"):
+                  archive.write("Platform/Xbox360/StoreDefaults/"+filename, "MenuPreview/"+filename)
               archive.writestr("MenuPreview/UserFiles/", "")
               archive.writestr("MenuPreview/UserFiles/ContentImport/", "")
               archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo\nhttps://example.invalid/test.ts\n")
-              archive.writestr("MenuPreview/aurorax-store.tsv", "demo\thomebrew\tDemo Homebrew\t1.0\t1024\t" + "a"*64 + "\thttps://example.invalid/demo.zip\tDemonstracao\n")
+              # Store defaults are reviewed real homebrew metadata; no demo item.
               archive.writestr("VERSION.txt", version+"\n")
               archive.writestr("BUILD-COMMIT.txt", os.environ["GITHUB_SHA"]+"\n")
               archive.writestr("LEIA-ME-SEGURANCA.txt", note)

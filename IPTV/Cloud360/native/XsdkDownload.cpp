@@ -2,6 +2,7 @@
 #include "UnityStage.h"
 #include "ArtImport.h"
 #include "DownloadRange.h"
+#include "StoreHostPolicy.h"
 #include <cctype>
 #include <curl/curl.h>
 #include <fstream>
@@ -113,13 +114,25 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
     #undef SET
     CURLcode result=CURLE_FAILED_INIT;
     long code=0;
+    std::string currentUrl=item.url;
     // At most two retries, within the current session. Preserve the existing
     // hash and temporary file; never append a response that ignores Range.
     for(unsigned attempt=0;options&&attempt<3;++attempt){
         t.offset=output.Done();t.headersReady=false;t.invalidResponse=false;t.rangeSeen=false;t.response=0;
         if(curl_easy_setopt(curl,CURLOPT_RESUME_FROM_LARGE,static_cast<curl_off_t>(t.offset))!=CURLE_OK){options=false;break;}
-        result=curl_easy_perform(curl);
-        curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&code);
+        currentUrl=item.url;
+        for(unsigned hop=0;hop<3;++hop){
+            t.headersReady=false;t.invalidResponse=false;t.rangeSeen=false;t.response=0;
+            if(curl_easy_setopt(curl,CURLOPT_URL,currentUrl.c_str())!=CURLE_OK){options=false;break;}
+            result=curl_easy_perform(curl);
+            curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&code);
+            if(t.cancelled||code<300||code>=400||output.Done()!=t.offset||hop==2)break;
+            char* destination=nullptr;
+            if(curl_easy_getinfo(curl,CURLINFO_REDIRECT_URL,&destination)!=CURLE_OK||!destination)break;
+            const std::string next(destination);
+            if(!StoreHostPolicy::ReleaseRedirect(item.url,next,root))break;
+            currentUrl=next;
+        }
         if(result==CURLE_OK||t.cancelled||t.invalidResponse||!output.Error().empty()||output.Done()>=item.bytes)break;
         if(result!=CURLE_PARTIAL_FILE&&result!=CURLE_RECV_ERROR&&result!=CURLE_OPERATION_TIMEDOUT&&result!=CURLE_SEND_ERROR)break;
         if(!progress(output.Done(),item.bytes)){t.cancelled=true;break;}

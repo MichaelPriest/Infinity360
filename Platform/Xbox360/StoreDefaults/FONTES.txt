@@ -1,0 +1,10 @@
+INFINITY Store - fontes de distribuicao autorizada
+Homebrew App Catalogue: https://github.com/xenosworks/homebrew-app-catalogue/tree/88542fda8a098b00fc4c37b9c70a4cb9ba35730e
+XboxUnity: https://xboxunity.net/
+SwanStation | GPL-3.0 | https://github.com/xenosworks/swanstation-xenon | A PS1 BIOS beside it, disc images in games\
+Balatro360 | MIT | https://github.com/dougieprishpreed/balatro360 | Your Balatro.exe from Steam beside it
+Dusklight | CC0-1.0 | https://github.com/xenosworks/dusklight-xenon | Your GZ2E01 disc as dusklight.iso beside it
+Starship | CC0-1.0 | https://github.com/xenosworks/starship-xenon | Your US 1.0 or 1.1 ROM beside it, once
+CTR360 | GPL-3.0 | https://github.com/dougieprishpreed/ctr360 | assets\ctr-u.bin from the PC converter
+Homebrew App Store | MIT | https://github.com/xenosworks/homebrew-app-store | Sem dados externos declarados
+Os pacotes nao estao embutidos. A assinatura do catalogo upstream nao foi verificada localmente; os hashes sao do snapshot revisado. ZIPs sem default.xex exigem instalacao manual; dados comerciais nao incluidos.

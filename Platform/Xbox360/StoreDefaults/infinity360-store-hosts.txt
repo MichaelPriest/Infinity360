@@ -1,0 +1,4 @@
+# Exact hosts for reviewed GitHub release downloads
+github.com
+release-assets.githubusercontent.com
+objects.githubusercontent.com

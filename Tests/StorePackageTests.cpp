@@ -1,3 +1,4 @@
+#include "StoreHostPolicy.h"
 #include "StorePackage.h"
 #include "StoreStorage.h"
 #include "TransferRate.h"
@@ -34,6 +35,12 @@ int main(){
     assert(!StoreNativeSource(item,base));
     {std::ofstream f(root/"infinity360-store-hosts.txt");f<<"example.org\n";}
     assert(StoreNativeSource(item,base));
+    {std::ofstream hosts(root/"infinity360-store-hosts.txt",std::ios::app);hosts<<"github.com\nrelease-assets.githubusercontent.com\nobjects.githubusercontent.com\n";}
+    const std::string release="https://github.com/owner/app/releases/download/v1/app.zip";
+    assert(StoreHostPolicy::ReleaseRedirect(release,"https://release-assets.githubusercontent.com/a?sig=1",base));
+    assert(!StoreHostPolicy::ReleaseRedirect(release,"https://example.org/a",base));
+    assert(!StoreHostPolicy::ReleaseRedirect(release,"http://release-assets.githubusercontent.com/a",base));
+    assert(!StoreHostPolicy::ReleaseRedirect("https://github.com/owner/app","https://release-assets.githubusercontent.com/a",base));
     item.url="https://other.example/demo";assert(!StoreNativeSource(item,base));
     assert(out.Begin(item,base));assert(out.Write((const unsigned char*)"bad",3));assert(!out.Finish());
     assert(!fs::exists(root/"UserFiles/Store/demo.pkg"));

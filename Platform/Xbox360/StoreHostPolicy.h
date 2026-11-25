@@ -21,4 +21,12 @@ inline bool Allowed(const std::string& address,const std::string& root) {
     }
     return match;
 }
+// Only GitHub release downloads may follow a bounded explicit redirect to
+// the two known asset hosts; every destination must also be locally allowed.
+inline bool ReleaseRedirect(const std::string& origin,const std::string& next,const std::string& root){
+    MediaUrl a,b;
+    if(!Allowed(origin,root)||!Allowed(next,root)||!a.Parse(origin)||!b.Parse(next))return false;
+    if(lower(a.host)!="github.com"||a.target.find("/releases/download/")==std::string::npos)return false;
+    const auto host=lower(b.host);return host=="release-assets.githubusercontent.com"||host=="objects.githubusercontent.com";
+}
 }

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.38 — Catálogo Homebrew e vídeo (sem build)
+
+- Seis itens oficiais com metadados fixados, fontes e allowlist; empacotamento substitui demo.
+- Redirecionamento GitHub de pacotes estritamente autorizado; testes preparados.
+- Indicação de saída 1080p escalonada (framebuffer 720p), sem forçar modos físicos.
+
 ## V0.2.37 — P4 detalhes e Store (sem build)
 
 - Detalhes modernos: hero, capa, identidade de título, histórico e atalhos existentes.
