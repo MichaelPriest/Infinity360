@@ -53,7 +53,7 @@ bool Save(const FileWorkspace& ws,const std::string& root,unsigned title,bool co
     if(!ws.CanWrite(personal)||(!ws.CanWrite(art)&&!ws.Create(personal,"Art"))||
        (!ws.CanWrite(folder)&&!ws.Create(art,id)))return reject("Area pessoal de arte indisponivel.");
     const auto dest=FileWorkspace::Join(folder,cover?"cover.rgba":"background.rgba"),temp=FileWorkspace::Join(folder,"AXCOPY-ART.part");
-    if(ws.CanReadPersonalFile(dest))return reject("Arte pessoal ja existe; arquive pelo explorer antes de substituir.");
+    if(ws.CanReadPersonalFile(dest))return reject("Arte pessoal ja existe; LB arquiva antes de importar outra.");
     int flags=O_WRONLY|O_CREAT|O_EXCL;
 #ifndef __XSDK__
     flags|=O_NOFOLLOW;
@@ -74,6 +74,27 @@ bool Save(const FileWorkspace& ws,const std::string& root,unsigned title,bool co
     }
     unlink(temp.c_str());if(!published)return reject("Falha ao salvar sem sobrescrever.");return true;
 #endif
+}
+namespace {
+std::string artPath(const std::string& root,unsigned title,bool cover,bool archived){
+    return FileWorkspace::Join(Folder(root,title),cover?(archived?"cover.saved.rgba":"cover.rgba"):(archived?"background.saved.rgba":"background.rgba"));
+}
+bool validArt(const FileWorkspace& ws,const std::string& path,bool cover){
+    if(!ws.CanReadPersonalFile(path))return false;
+    std::ifstream in(path.c_str(),std::ios::binary|std::ios::ate);
+    return in&&in.tellg()==static_cast<std::streamoff>(cover?160*240*4:640*360*4);
+}
+}
+bool HasArchived(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover){
+    return title&&validArt(ws,artPath(root,title,cover,true),cover);
+}
+bool SetArchived(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,bool archived,std::string& error){
+    error.clear();
+    if(!title||!ws.CanWrite(Folder(root,title))){error="Area pessoal de arte indisponivel.";return false;}
+    const auto from=artPath(root,title,cover,!archived),to=artPath(root,title,cover,archived);
+    if(!validArt(ws,from,cover)){error="Arte de origem ausente ou invalida.";return false;}
+    if(!ws.MovePersonalExclusive(from,to,false)){error="Destino ocupado ou movimento indisponivel; arte preservada.";return false;}
+    return true;
 }
 bool Local(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,std::string& error){
     if(!title){error="Title ID desconhecido.";return false;}

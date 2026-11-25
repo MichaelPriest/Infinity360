@@ -1071,6 +1071,29 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(artEditing_) {
+        if(artArchiveConfirm_){
+            artArchiveConfirm_=false;
+            if(key!=Accept){notice_="Operacao de arte cancelada.";return "";}
+            if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+            unsigned title=0;for(char ch:artEditId_)title=(title<<4)|(ch<='9'?ch-'0':ch-'A'+10);
+            StopFtp();std::string error;
+            const bool ok=ArtImport::SetArchived(fileWorkspace_,dir_,title,artEditRow_==0,!artArchiveRestore_,error);
+            artDirty_=true;
+            notice_=ok?(artArchiveRestore_?"Arte pessoal restaurada.":"Arte pessoal arquivada; importe outra se desejar."):error;
+            RecordEvent(ok?"Arquivo de arte movido":"Movimento de arte recusado");
+            return "";
+        }
+        if(key==PageUp){
+            if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+            unsigned title=0;for(char ch:artEditId_)title=(title<<4)|(ch<='9'?ch-'0':ch-'A'+10);
+            const auto active=FileWorkspace::Join(ArtImport::Folder(dir_,title),artEditRow_==0?"cover.rgba":"background.rgba");
+            const bool have=fileWorkspace_.CanReadPersonalFile(active),saved=ArtImport::HasArchived(fileWorkspace_,dir_,title,artEditRow_==0);
+            if(have&&saved){notice_="Arte atual e arquivo existem; preserve um deles pelo explorer.";return "";}
+            if(!have&&!saved){notice_="Nenhuma arte pessoal disponivel.";return "";}
+            artArchiveRestore_=!have;artArchiveConfirm_=true;
+            notice_=artArchiveRestore_?"A confirma restaurar arte; B cancela.":"A confirma arquivar arte; B cancela.";
+            return "";
+        }
 #if defined(INFINITY_XSDK_HTTPS)
         if(key==Guide||key==Search){
             if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
@@ -1278,7 +1301,7 @@ std::string ConsoleHome::Press(Key key) {
         artEditId_=artEditFolder_.substr(artEditFolder_.size()-9,8);
         const std::map<std::string,std::string>::const_iterator it=artChoices_.find(artEditId_);
         artDraft_=it==artChoices_.end()?"00":it->second;
-        artEditRow_=0;artEditing_=true;notice_.clear();
+        artEditRow_=0;artEditing_=true;artArchiveConfirm_=false;notice_.clear();
         return "";
     }
     if(page_==Details && (section_==Library || section_==Recent || section_==Favorites)
@@ -2423,7 +2446,7 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
             (artDraft_[i]=='1'?"cover-alt.rgba":"cover.rgba"),17,Muted,w-32);
     }
     c.Text(46,570,"Cima/Baixo Selecionar | Esquerda/Direita ou A Alterar | RB Recarregar",19,White,1180);
-    c.Text(46,604,"START Capa XboxUnity | R3 Importar JPG/PNG | Y Salvar | B Cancelar",19,Lime,1180);
+    c.Text(46,604,artArchiveConfirm_?"A Confirmar | B Cancelar":"START Capa XboxUnity | R3 Importar | LB Arquivar/Restaurar | Y Salvar | B Voltar",18,Lime,1180);
 }
 void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     c.Text(45,145,"Acoes do arquivo",31,White,1180);

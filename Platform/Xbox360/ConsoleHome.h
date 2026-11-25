@@ -211,6 +211,7 @@ private:
     std::string ArtFolder(const Game& game) const;
     std::map<std::string,std::string> artChoices_;
     bool artEditing_;
+    bool artArchiveConfirm_=false,artArchiveRestore_=false;
     int artEditRow_;
     std::string artEditFolder_, artEditId_, artDraft_;
     std::string ArtPath(const Game& game,bool cover) const;

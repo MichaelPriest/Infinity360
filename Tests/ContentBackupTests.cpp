@@ -51,5 +51,20 @@ int main(){
     assert(ArtImport::Save(ws,root,0x494E4635,true,encoded,error));
     assert(!ArtImport::Save(ws,root,0x494E4635,true,encoded,error));
     assert(ArtImport::Convert(encoded,false,rgba)&&rgba.size()==640*360*4);
+    assert(ArtImport::Save(ws,root,0x494E4635,false,encoded,error));
+    const auto art=fs::path(ArtImport::Folder(root,0x494E4635));
+    assert(ArtImport::SetArchived(ws,root,0x494E4635,true,true,error));
+    assert(!fs::exists(art/"cover.rgba")&&ArtImport::HasArchived(ws,root,0x494E4635,true));
+    assert(fs::exists(art/"background.rgba"));
+    assert(ArtImport::Save(ws,root,0x494E4635,true,encoded,error));
+    assert(!ArtImport::SetArchived(ws,root,0x494E4635,true,true,error));
+    assert(!ArtImport::SetArchived(ws,root,0x494E4635,true,false,error));
+    fs::remove(art/"cover.rgba");
+    assert(ArtImport::SetArchived(ws,root,0x494E4635,true,false,error));
+    assert(fs::exists(art/"cover.rgba")&&!ArtImport::HasArchived(ws,root,0x494E4635,true));
+    assert(ArtImport::SetArchived(ws,root,0x494E4635,false,true,error));
+    {std::ofstream broken(art/"background.saved.rgba",std::ios::trunc);broken<<"invalid";}
+    assert(!ArtImport::SetArchived(ws,root,0x494E4635,false,false,error));
+    assert(fs::exists(art/"background.saved.rgba"));
     fs::remove_all(base);
 }

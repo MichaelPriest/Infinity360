@@ -46,3 +46,7 @@ O importador local, os recibos XboxUnity e a reinstalação de backups aceitam n
 ### P1 — Gerenciamento reversível de versões TU
 
 A aba Title Updates permite retirar individualmente a TU selecionada do Cache/Content do HDD (X), e a aba TU Retiradas permite recolocá-la (A). A operação exige confirmação, identidade compatível, opt-in de escrita e instalação, workspace hdd:/Infinity360Files existente; usa movimento exclusivo no mesmo volume para DisabledTU/TitleID/Cache ou Content, preservando o nome original. Não remove outras TUs, não modifica licenças e não confirma ativação. USB e variantes não reconhecidas não são movimentados. Testes de colisão, recuperação e origem indevida adicionados. CI e console pendentes.
+
+### P1 — Gerenciamento de capas e fundos
+
+No editor de arte, LB abre confirmação para arquivar a capa ou fundo pessoal selecionado, ou restaurar o arquivo quando o slot ativo está vazio. Os arquivos RGBA são validados pelo tamanho exato e movimentados sem sobrescrita dentro do workspace pessoal. A importação local e de capas XboxUnity continua disponível para slots vazios. Se o slot ativo e o arquivado coexistem, ambos são preservados; a escolha adicional deve ser feita pelo explorador. Testes de colisão, restauração, independência de capa/fundo e arquivo inválido adicionados.
