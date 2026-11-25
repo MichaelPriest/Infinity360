@@ -176,7 +176,8 @@ private:
     std::vector<ContentBackup::Record> backups_;
     bool pruneQueueConfirm_=false;
     XboxContentPackage backupItem_{};
-    std::vector<XboxContentPackage> stagedItems_;
+    std::vector<XboxContentPackage> stagedItems_,archivedItems_;
+    bool restoreArchivedConfirm_=false;
     bool artPending_=false,artRemote_=false,artCover_=true;
     bool coverBatchConfirm_=false,coverBatchPending_=false;
     bool updateActive_=false,updateConfirm_=false,updatePending_=false,updateKnown_=false;

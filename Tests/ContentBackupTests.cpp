@@ -28,6 +28,20 @@ int main(){
     assert(ContentBackup::ArchiveStaged(ws,root,rows[0],error));assert(!fs::exists(source));
     assert(fs::exists(base/"UserFiles/ArchivedTU/494E4635/update.tu"));
     assert(!ContentBackup::ArchiveStaged(ws,root,rows[0],error));
+    auto archived=ContentBackup::Archived(ws,root,0x494E4635);assert(archived.size()==1);
+    {std::ofstream collision(source);collision<<"preserve";}
+    assert(!ContentBackup::RestoreArchived(ws,root,archived[0],error));
+    assert(fs::file_size(source)==8);fs::remove(source);
+    assert(ContentBackup::RestoreArchived(ws,root,archived[0],error));assert(fs::exists(source));
+    assert(ContentBackup::Archived(ws,root,0x494E4635).empty());
+    assert(!ContentBackup::RestoreArchived(ws,root,archived[0],error));
+    // Archive and restore a payload together with its original receipt.
+    const auto receipt=fs::path(source.string()+".receipt");
+    {std::ofstream r(receipt);r<<"test receipt";}
+    assert(ContentBackup::ArchiveStaged(ws,root,rows[0],error));assert(!fs::exists(receipt));
+    archived=ContentBackup::Archived(ws,root,0x494E4635);assert(archived.size()==1);
+    assert(ContentBackup::RestoreArchived(ws,root,archived[0],error));
+    assert(fs::exists(receipt)&&fs::exists(source));
     {std::fstream corrupt(backups[1].package.path,std::ios::binary|std::ios::in|std::ios::out);corrupt.seekp(0x17ff);corrupt.put('x');}
     assert(!ContentBackup::Recover(ws,root,backups[1],go,error));
     std::vector<unsigned char> rgba;assert(!ArtImport::Convert("not png",true,rgba));

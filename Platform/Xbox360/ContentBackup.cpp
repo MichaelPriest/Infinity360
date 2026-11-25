@@ -23,7 +23,7 @@ bool enabled(const std::string& root){
     return bool(std::getline(f,line))&&line=="ENABLE-CONTENT-BACKUP";
 }
 bool same(const XboxContentPackage& a,const XboxContentPackage& b){
-    return a.titleId==b.titleId&&a.mediaId==b.mediaId&&a.version==b.version&&a.contentType==b.contentType&&a.volumeType==b.volumeType;
+    return a.titleId==b.titleId&&a.mediaId==b.mediaId&&a.version==b.version&&a.contentType==b.contentType&&a.volumeType==b.volumeType&&a.baseVersion==b.baseVersion&&a.discNumber==b.discNumber&&a.discCount==b.discCount&&a.sizeBytes==b.sizeBytes&&a.dataFileCount==b.dataFileCount;
 }
 bool record(const FileWorkspace& ws,const std::string& root,unsigned title,const std::string& slot,Record& out){
     if(!title||slot.size()!=13||slot[8]!='-'||slot.substr(9).find_first_not_of("0123456789")!=std::string::npos||slot.substr(0,8).find_first_not_of("0123456789ABCDEF")!=std::string::npos)return false;
@@ -132,11 +132,10 @@ bool ArchiveStaged(const FileWorkspace& ws,const std::string& root,const XboxCon
     return true;
 }
 
-std::vector<XboxContentPackage> Staged(const FileWorkspace& ws,const std::string& root,unsigned title){
+static std::vector<XboxContentPackage> ListTU(const FileWorkspace& ws,const std::string& root,unsigned title,const char* area){
     std::vector<XboxContentPackage> out;
     if(!title)return out;
-    char id[9];std::sprintf(id,"%08X",title);
-    const auto folder=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"TitleUpdates"),id);
+    const auto folder=titleFolder(root,area,title);
     std::vector<FolderEntry> rows;
     if(!ws.CanBrowse(folder)||!ReadFolder(folder,rows))return out;
     for(const auto& row:rows){
@@ -148,6 +147,31 @@ std::vector<XboxContentPackage> Staged(const FileWorkspace& ws,const std::string
         }
     }
     return out;
+}
+std::vector<XboxContentPackage> Staged(const FileWorkspace& ws,const std::string& root,unsigned title){
+    return ListTU(ws,root,title,"TitleUpdates");
+}
+std::vector<XboxContentPackage> Archived(const FileWorkspace& ws,const std::string& root,unsigned title){
+    return ListTU(ws,root,title,"ArchivedTU");
+}
+bool RestoreArchived(const FileWorkspace& ws,const std::string& root,const XboxContentPackage& selected,std::string& error){
+    error.clear();if(!enabled(root)){error="Habilite backup de conteudo.";return false;}
+    const auto list=Archived(ws,root,selected.titleId);
+    const auto it=std::find_if(list.begin(),list.end(),[&](const XboxContentPackage& p){return p.path==selected.path&&same(p,selected);});
+    if(it==list.end()){error="TU arquivada mudou.";return false;}
+    const auto personal=FileWorkspace::Join(root,"UserFiles"),parent=FileWorkspace::Join(personal,"TitleUpdates"),folder=titleFolder(root,"TitleUpdates",selected.titleId);
+    if(!ws.CanWrite(personal)||(!ws.CanWrite(parent)&&!ws.Create(personal,"TitleUpdates"))||
+       (!ws.CanWrite(folder)&&!ws.Create(parent,folder.substr(folder.find_last_of("/\\")+1)))){error="Pasta TU indisponivel.";return false;}
+    const auto dest=FileWorkspace::Join(folder,it->name),receipt=it->path+".receipt",destReceipt=dest+".receipt";
+    if(ws.CanReadFile(dest)||ws.CanReadFile(destReceipt)){error="Destino existente; nenhuma sobrescrita.";return false;}
+    const bool hasReceipt=ws.CanReadFile(receipt);
+    if(hasReceipt&&!ws.MovePersonalExclusive(receipt,destReceipt,false)){error="Recibo nao recuperado; TU preservada.";return false;}
+    if(!ws.MovePersonalExclusive(it->path,dest,false)){
+        if(hasReceipt&&!ws.MovePersonalExclusive(destReceipt,receipt,false))error="TU preservada; recibo em TitleUpdates.";
+        else error="Conflito ou falha; origem preservada.";
+        return false;
+    }
+    return true;
 }
 bool Archive(const FileWorkspace& ws,const std::string& root,const XboxContentPackage& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){

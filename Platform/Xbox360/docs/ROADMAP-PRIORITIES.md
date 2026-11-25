@@ -24,3 +24,7 @@ A instalação local, o recibo de staging e o download XboxUnity compartilham ag
 - P2: sensores SMC e energia, System Link autorizado, integração de perfil ativo e saves, SMB, captura de tela, rede e resolução de vídeo.
 - P3: temas e fontes nativos, localização, Guide, conquistas, estatísticas e personalização de blocos.
 - Windows e checklist físico: após desenvolvimento das funções de console.
+
+### P1 — Recuperação de TU arquivada
+
+A aba TU Arquivadas lista os pacotes pessoais e permite recuperá-los para TitleUpdates com dupla confirmação, preservação do recibo e bloqueio de sobrescrita. O inventário informa Media ID e Base Version incompatíveis, metadados inconclusivos e identidade compatível; isso não comprova ativação. Testes de colisão, recuperação e recibo acrescentados. CI e hardware pendentes nesta revisão.
