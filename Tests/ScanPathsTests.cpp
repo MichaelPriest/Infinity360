@@ -1,6 +1,7 @@
 #include "GameScanner.h"
 #include "XsdkPaths.h"
 #include "XexLaunchCheck.h"
+#include "DownloadRange.h"
 #include <sstream>
 
 #include <cassert>
@@ -13,6 +14,12 @@
 namespace fs = std::filesystem;
 
 int main() {
+    assert(DownloadRange::Matches("bytes 100-999/1000",100,1000));
+    assert(!DownloadRange::Matches("bytes 0-999/1000",100,1000));
+    assert(!DownloadRange::Matches("bytes 100-999/1001",100,1000));
+    assert(!DownloadRange::Matches("bytes 100-998/1000",100,1000));
+    assert(!DownloadRange::Matches("bytes 18446744073709551616-999/1000",100,1000));
+    assert(!DownloadRange::Matches("bytes 100-999/1000junk",100,1000));
     assert(XexLaunchCheck::Path("HDD1:\\Games\\Test\\default.XEX")=="hdd:/Games/Test/default.XEX");
     assert(XexLaunchCheck::Path("game:/infinity_menu_preview.xex").empty());
     assert(XexLaunchCheck::Path("hdd:/Content/package").empty());

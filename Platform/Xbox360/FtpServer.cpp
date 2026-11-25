@@ -105,14 +105,55 @@ bool listEntry(FtpSession& ftp,const std::string& name,bool names,std::string& r
 }
 // Exact-size, exclusive upload. Temp names cannot be accessed through FTP.
 #ifdef __XSDK__
-// The native file adapter supports safe publication, but FTP upload needs a
-// separate reviewed transport adapter. Never fall back to FATX hard links.
 class Upload {
 public:
-    bool Open(FtpSession&,const std::string&,unsigned long long){return false;}
-    bool Write(const char*,unsigned){return false;}
-    bool Publish(FtpSession&){return false;}
-    void Cancel(){}
+    ~Upload(){Cancel();}
+    bool Open(FtpSession& ftp,const std::string& argument,unsigned long long expected){
+        Cancel();
+        const size_t slash=argument.find_last_of('/');
+        const std::string name=slash==std::string::npos?argument:argument.substr(slash+1);
+        relative_=slash==std::string::npos?".":slash==0?"/":argument.substr(0,slash);
+        if(!FileWorkspace::ValidName(name)||!ftp.DataDirectory(relative_,parent_))return false;
+        target_=FileWorkspace::Join(parent_,name);
+        struct stat st{};
+        if(stat(target_.c_str(),&st)==0||errno!=ENOENT)return false;
+        expected_=expected;
+        for(unsigned i=0;i<32;++i){
+            char candidate[32];std::sprintf(candidate,"AXCOPY-FTP-%04u.part",i);
+            const std::string path=FileWorkspace::Join(parent_,candidate);
+            handle_=open(path.c_str(),O_WRONLY|O_CREAT|O_EXCL,0600);
+            if(handle_>=0){temp_=path;return true;}
+        }
+        return false;
+    }
+    bool Write(const char* bytes,unsigned n){
+        if(handle_<0||n>expected_-received_)return false;
+        size_t at=0;
+        while(at<n){
+            const ssize_t r=write(handle_,bytes+at,n-at);
+            if(r<0&&errno==EINTR)continue;
+            if(r<=0)return false;
+            at+=static_cast<size_t>(r);
+        }
+        received_+=n;return true;
+    }
+    bool Publish(FtpSession& ftp,const FileWorkspace& workspace){
+        std::string current;
+        if(handle_<0||received_!=expected_||!ftp.DataDirectory(relative_,current)||current!=parent_)return false;
+        const bool flushed=fsync(handle_)==0;
+        const bool closed=close(handle_)==0;handle_=-1;
+        if(!flushed||!closed||!workspace.PublishStaged(temp_,target_))return false;
+        temp_.clear();return true;
+    }
+    void Cancel(){
+        if(handle_>=0){close(handle_);handle_=-1;}
+        if(!temp_.empty())unlink(temp_.c_str());
+        temp_.clear();target_.clear();parent_.clear();relative_.clear();expected_=received_=0;
+    }
+private:
+    int handle_=-1;
+    unsigned long long expected_=0,received_=0;
+    std::string parent_,target_,temp_,relative_;
 };
 #else
 class Upload {
@@ -261,9 +302,10 @@ struct FtpServer::Impl {
     std::string root,user,password,input,reply,payload;
     std::ifstream file;
     size_t offset;
-    Impl():server(Invalid),control(Invalid),passive(Invalid),data(Invalid),address(0),peer(0),
+    const FileWorkspace& workspace;
+    explicit Impl(const FileWorkspace& ws):server(Invalid),control(Invalid),passive(Invalid),data(Invalid),address(0),peer(0),
         port(0),last(0),disconnected(0),network(false),sockets(false),binary(false),closing(false),
-        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),restartOffset(0),restartPending(false),session(0),offset(0){}
+        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),restartOffset(0),restartPending(false),session(0),offset(0),workspace(ws){}
     void clearData() {
         closeSock(passive);closeSock(data);file.close();file.clear();
         payload.clear();offset=0;transferring=false;listing=false;uploading=false;upload.Cancel();
@@ -383,7 +425,13 @@ struct FtpServer::Impl {
             if(n>0) {
                 if(!upload.Write(buffer,static_cast<unsigned>(n)))finish(false);
                 else last=ticks();
-            } else if(n==0)finish(upload.Publish(*session));
+            } else if(n==0){
+#ifdef __XSDK__
+                finish(upload.Publish(*session,workspace));
+#else
+                finish(upload.Publish(*session));
+#endif
+            }
             else if(!pending())finish(false);
             return;
         }
@@ -410,9 +458,6 @@ unsigned FtpServer::Port()const{return impl_?impl_->port:0;}
 bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned port,
                       const std::string& user,const std::string& password,bool allowUpload) {
     Stop();error_.clear();
-#ifdef __XSDK__
-    if(allowUpload){error_="Upload FTP ainda indisponivel no XSDK.";return false;}
-#endif
     if(!workspace_.CanWrite(root)||!FtpSession::ValidCredentials(user,password)||port>65535) {
         error_="Workspace ou credenciais invalidos.";return false;
     }
@@ -424,7 +469,7 @@ bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned p
     const unsigned long ip=inet_addr(addr.c_str());
 #endif
     if(!localAddress(ip)){error_="IPv4 LAN privado necessario.";return false;}
-    Impl* p=new Impl;
+    Impl* p=new Impl(workspace_);
 #ifdef _XBOX
     XNetStartupParams params;std::memset(&params,0,sizeof params);
     params.cfgSizeOfStruct=sizeof params;

@@ -219,7 +219,8 @@ int main(){
                 menu.StopFtp();
                 bool success=false;
                 bool videoFailed=false;
-                auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                const auto started=std::chrono::steady_clock::now();
+                auto last=started-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
                     if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
@@ -233,6 +234,8 @@ int main(){
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);
                     if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
+                    const auto elapsed=std::chrono::duration_cast<std::chrono::seconds>(now-started).count();
+                    if(elapsed>0)canvas.Text(48,430,StorageInfo::FormatBytes(done/static_cast<unsigned long long>(elapsed))+"/s (media)",22,MUTED,1180);
                     canvas.Text(48,560,"B Cancelar | TLS 1.2 | SHA-256 antes de salvar",22,LIME,1180);
                     if(!p.Show(canvas,true)){videoFailed=true;return false;}
                     return true;

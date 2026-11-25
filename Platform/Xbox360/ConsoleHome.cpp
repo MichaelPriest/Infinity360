@@ -545,7 +545,13 @@ void ConsoleHome::ToggleFtp(bool allowUpload) {
     notice_="FTP nativo: somente no Xbox; teste de transporte separado no PC.";
 #else
 #ifdef __XSDK__
-    if(allowUpload){notice_="Upload FTP ainda indisponivel no XSDK.";return;}
+    if(allowUpload){
+        std::ifstream upload((dir_+"enable-ftp-upload.txt").c_str());
+        std::string enabled;
+        if(!std::getline(upload,enabled)||enabled!="ENABLE-FTP-UPLOAD"){
+            notice_="Upload bloqueado: habilite enable-ftp-upload.txt.";return;
+        }
+    }
     std::ifstream opt((dir_+"enable-ftp.txt").c_str());
     std::string signature;
     if(!std::getline(opt,signature)||signature!="ENABLE-FTP-LAN"){
