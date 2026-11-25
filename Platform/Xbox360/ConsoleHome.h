@@ -232,6 +232,8 @@ private:
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     bool sessionExitConfirm_=false;
     void DrawConsoleStatus(HomeCanvas& c) const;
+    void DrawLocalMilestones(HomeCanvas& c)const;
+    bool localMilestones_=false;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;
     UnityUpdate unityDownload_;
     int unityRow_=0;

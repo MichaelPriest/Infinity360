@@ -2,6 +2,10 @@ name: Dashboard native screenshots
 
 on:
   workflow_dispatch:
+  # Explicit screenshot requests only; no Xbox executable is built here.
+  push:
+    branches: [main]
+    paths: [docs/screenshots/request.txt]
 
 permissions:
   contents: write
@@ -30,7 +34,8 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 41, len(images)
+          assert len(images) == 42, len(images)
+          assert (frames / "42-marcos-locais.ppm").is_file()
           assert (frames / '40-guia-rapido.ppm').is_file() and (frames / '41-guia-edicao.ppm').is_file()
           assert (frames / '36-english.ppm').is_file() and (frames / '37-espanol.ppm').is_file()
           assert (frames / "29-rede-udp.ppm").is_file()
@@ -45,6 +50,25 @@ jobs:
               png = b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",1280,720,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(scan,9))+chunk(b"IEND",b"")
               (output/(image.stem+".png")).write_bytes(png)
           (output/"source.txt").write_text(os.environ["GITHUB_SHA"]+"\n")
+          # Gallery only references images actually produced by this renderer.
+          readme=pathlib.Path("README.md")
+          contents=readme.read_text(encoding="utf-8")
+          start="<!-- NATIVE-GALLERY-BEGIN -->"
+          end="<!-- NATIVE-GALLERY-END -->"
+          assert contents.count(start)==1 and contents.count(end)==1
+          names=[(p.stem,p.with_suffix(".png").name) for p in images]
+          lines=[f"**{len(names)} capturas nativas** — commit [{os.environ['GITHUB_SHA'][:12]}](https://github.com/MichaelPriest/Infinity360/commit/{os.environ['GITHUB_SHA']}).", "", "| Tela | Tela |", "| --- | --- |"]
+          for i in range(0,len(names),2):
+              pair=names[i:i+2]
+              cells=[f"![{stem}](docs/screenshots/{file})" for stem,file in pair]
+              if len(cells)==1: cells.append("")
+              lines.append("| "+" | ".join(cells)+" |")
+              labels=[stem[3:].replace("-"," ").capitalize() for stem,_ in pair]
+              if len(labels)==1: labels.append("")
+              lines.append("| "+" | ".join(labels)+" |")
+          left,rest=contents.split(start,1)
+          _,right=rest.split(end,1)
+          readme.write_text(left+start+"\n\n"+"\n".join(lines)+"\n\n"+end+right,encoding="utf-8")
           PY
       - uses: actions/upload-artifact@v4
         with:
@@ -55,7 +79,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots
+          git add docs/screenshots README.md
           if git diff --cached --quiet; then exit 0; fi
           git fetch origin main
           test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo "Main moved; newer workflow will render its own screenshots."; exit 0; }

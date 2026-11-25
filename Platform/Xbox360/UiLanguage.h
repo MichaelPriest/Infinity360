@@ -17,6 +17,20 @@ inline const char* Name(unsigned language){
 inline const char* Translate(unsigned language,const char* key){
     if(!key||!language||language>=Count)return key?key:"";
     static const char* const rows[][3]={
+        {"Sem sessao","Signed out","Sin sesión"},
+        {"Sessao local","Local session","Sesión local"},
+        {"Sessao online (XAM)","Online sign-in (XAM)","Sesión en línea (XAM)"},
+        {"Estado desconhecido","Unknown state","Estado desconocido"},
+        {"Provider indisponivel","Provider unavailable","Proveedor no disponible"},
+        {"Cima/Baixo Marcos locais","Up/Down Local milestones","Arriba/Abajo Hitos locales"},
+        {"Marcos locais da dashboard","Local dashboard milestones","Hitos locales de la interfaz"},
+        {"Jogos visiveis","Visible games","Juegos visibles"},
+        {"Titulos com tentativas","Titles with attempts","Títulos con intentos"},
+        {"Tentativas","Attempts","Intentos"},
+        {"Falhas imediatas","Immediate failures","Fallos inmediatos"},
+        {"Indicadores locais; nao sao conquistas oficiais nem Gamerscore.","Local indicators; not official achievements or Gamerscore.","Indicadores locales; no son logros oficiales ni Gamerscore."},
+        {"Conquistas Xbox: provider indisponivel.","Xbox achievements: provider unavailable.","Logros Xbox: proveedor no disponible."},
+        {"Cima/Baixo Perfis | B Voltar","Up/Down Profiles | B Back","Arriba/Abajo Perfiles | B Volver"},
         {"Configuracoes","Settings","Configuración"},
         {"Guia rapido","Quick guide","Guía rápida"},
         {"Personalizar guia","Customize guide","Personalizar guía"},

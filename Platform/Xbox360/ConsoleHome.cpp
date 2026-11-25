@@ -914,7 +914,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;status_=ConsoleStatus::Read();break;
+            section_=System;systemTab_=7;page_=Details;localMilestones_=false;status_=ConsoleStatus::Read();break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1628,6 +1628,8 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(page_==Details&&systemTab_==7){
+            if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
+            if(localMilestones_)return "";
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
                 if(!SaveProfile()){language_=previous;notice_="Falha ao salvar idioma.";}
@@ -1785,7 +1787,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==4)RefreshResidentPlugins();
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
-                else if(systemTab_==7)status_=ConsoleStatus::Read();
+                else if(systemTab_==7){localMilestones_=false;status_=ConsoleStatus::Read();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -2479,16 +2481,41 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
     c.Text(48,585,"Ventoinha: pendente. LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    if(localMilestones_){DrawLocalMilestones(c);return;}
     c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
     c.Text(48,389,std::string(c.Tr("Hora local: "))+status_.clock+std::string(c.Tr(" | Idioma: "))+status_.language+" | Locale: "+status_.country,21,Muted,1170);
     for(int i=0;i<4;++i){
         const int x=45+(i%2)*600,y=430+(i/2)*65;
         panel(c,x,y,585,58,Panel,false);
-        c.Text(x+12,y+10,std::string(c.Tr("Controle "))+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),23,White,560);
+        c.Text(x+12,y+3,std::string(c.Tr("Controle "))+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),20,White,560);
+        c.Text(x+12,y+30,c.Tr(ConsoleStatus::StateLabel(status_.profileProvider,status_.signin[i])),16,Muted,550);
     }
     c.Text(48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
-    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_),18,Lime,1170);
+    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_)+" | "+c.Tr("Cima/Baixo Marcos locais"),18,Lime,1170);
     c.Text(48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
+}
+void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
+    c.Text(45,349,c.Tr("Marcos locais da dashboard"),27,White,1170);
+    unsigned installed=0,pinned=0,favorited=0,attempted=0;unsigned long long attempts=0,failed=0;
+    for(const auto& game:games_){
+        if(contains(hidden_,game.executable))continue;
+        ++installed;
+        if(contains(pinned_,game.executable))++pinned;
+        if(contains(favorites_,game.executable))++favorited;
+        const auto stats=launchStats_.Get(game.executable);
+        if(stats.attempts){++attempted;attempts+=stats.attempts;failed+=stats.failed;}
+    }
+    const char* names[]={"Jogos visiveis","Favoritos","Fixados","Titulos com tentativas","Tentativas","Falhas imediatas"};
+    const unsigned long long values[]={installed,favorited,pinned,attempted,attempts,failed};
+    for(unsigned i=0;i<6;++i){
+        const int x=45+(i%3)*400,y=393+(i/3)*75;
+        panel(c,x,y,388,68,Panel,false);
+        c.Text(x+10,y+4,c.Tr(names[i]),18,Muted,365);
+        c.Text(x+10,y+28,std::to_string(values[i]),26,Lime,365);
+    }
+    c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
+    c.Text(48,579,c.Tr("Conquistas Xbox: provider indisponivel."),19,Muted,1170);
+    c.Text(48,606,c.Tr("Cima/Baixo Perfis | B Voltar"),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);

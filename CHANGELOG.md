@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.16 — em desenvolvimento (sem build XEX)
+
+- Estados de sessão dos perfis e painel de marcos locais, separados das conquistas Xbox.
+- Galeria real preparada para 42 capturas; publicação do README condicionada ao renderizador.
+- Gatilho restrito de atualização de imagens sob solicitação explícita, sem pacote XEX.
+
 ## V0.2.15 — em desenvolvimento (sem build)
 
 - Guia rápido da dashboard com oito atalhos e indicador de notificações/transferências.

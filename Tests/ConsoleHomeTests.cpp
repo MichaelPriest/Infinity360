@@ -119,7 +119,8 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==1);ok=save("36-english",system)&&ok;
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
             {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
-            system.Press(ConsoleHome::PageDown);assert(system.Language()==0);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
+            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);
@@ -1130,6 +1131,10 @@ int main(int argc,char** argv) {
         std::ofstream(guideRoot/"aurorax-profile.txt")<<"Q\t00000000\n";
         ConsoleHome invalid(dir,{});invalid.Load();assert(invalid.QuickGuideOrder()==QuickGuide::Default());
     }
+    assert(std::string(ConsoleStatus::StateLabel(false,0))=="Provider indisponivel");
+    assert(std::string(ConsoleStatus::StateLabel(true,0))=="Sem sessao");
+    assert(std::string(ConsoleStatus::StateLabel(true,1))=="Sessao local");
+    assert(std::string(ConsoleStatus::StateLabel(true,99))=="Estado desconhecido");
     // Each palette preserves opaque alpha, warnings and media pixels.
     {
         HomeCanvas palette;
