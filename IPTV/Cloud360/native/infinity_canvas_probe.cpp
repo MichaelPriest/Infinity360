@@ -29,6 +29,8 @@
 #include "cloud360_av_probe_shaders.h"
 #include "container_decode.h"
 #include "frame_output.h"
+#include "av_timeline.h"
+#include <chrono>
 #include "xsdk/audio.h"
 #include "xsdk/xam.h"
 #include <algorithm>
@@ -143,56 +145,42 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 #endif
 }
 #ifdef INFINITY_CONTAINER_OUTPUT_PROBE
-namespace {
-struct AVProbe {
-    Presenter& p;HomeCanvas& canvas;
-    std::vector<unsigned char> rgb;
-    std::vector<float> pcm;
-    bool image=false,audio=false;
-    unsigned audioFrames=0;
-    static int Frame(void* opaque,const AVFrame* frame,int video,int64_t pts){
-        (void)pts;auto& s=*static_cast<AVProbe*>(opaque);
-        INPUT_STATE input{};
-        if(XamInputGetState(0,0,&input)==ERROR_SUCCESS&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return -1;
-        if(video){
-            if(s.image)return 0;
-            s.rgb.resize(static_cast<size_t>(frame->width)*frame->height*3);
-            if(cloud_frame_rgb(frame,s.rgb.data(),s.rgb.size()))return -1;
-            s.canvas.VideoRgb(s.rgb.data(),frame->width,frame->height);
-            s.image=s.p.Show(s.canvas,true);return s.image?0:-1;
-        }
-        // Diagnostic only: submit at most 250 ms of 48 kHz mono/stereo PCM.
-        if(s.audioFrames>=12000)return 0;
-        if(frame->sample_rate!=48000)return -1;
-        s.pcm.resize(static_cast<size_t>(frame->nb_samples)*2);
-        if(cloud_frame_stereo(frame,s.pcm.data(),s.pcm.size()))return -1;
-        for(int i=0;i+256<=frame->nb_samples&&s.audioFrames+256<=12000;i+=256){
-            float* output=nullptr;
-            if(!NT_SUCCESS(xsdk_audio_next_frame(250,&output))||!output)return -1;
-            std::fill(output,output+XSDK_AUDIO_FRAME_FLOATS,0.0f);
-            for(unsigned j=0;j<256;++j){output[j]=s.pcm[2*(i+j)];output[256+j]=s.pcm[2*(i+j)+1];}
-            xsdk_audio_queue_frame();s.audioFrames+=256;
-        }
-        return 0;
-    }
-};
-}
 int main(){
+    // Decode before taking over the GPU/audio device. Short opt-in test only.
+    CloudAvTimeline timeline;CloudContainerReport report{};
+    int rc=cloud_container_decode_output("game:/test.mp4",&report,CloudAvTimeline::Capture,&timeline);
+    if(rc||!timeline.Prepare()){xsdk_log_write("Cloud360 timeline refused rc=%d",rc);return 1;}
     HomeCanvas canvas;Presenter p;
-    if(!p.Open()){p.Close();return 1;}
-    AVProbe probe{p,canvas};
-    probe.audio=NT_SUCCESS(xsdk_audio_open(16));
-    CloudContainerReport report{};
-    int rc=probe.audio?cloud_container_decode_output("game:/test.mp4",&report,AVProbe::Frame,&probe):-1;
-    if(probe.audio)xsdk_audio_close();
-    if(probe.image)for(unsigned i=0;i<120;++i){
+    if(!p.Open()){p.Close();return 2;}
+    bool audioOpen=NT_SUCCESS(xsdk_audio_open(16)),ok=audioOpen,cancelled=false;
+    unsigned shown=0,submitted=0;
+    using Clock=std::chrono::steady_clock;
+    const auto start=Clock::now();
+    auto video=[&](const CloudAvTimeline::Video& v){
+        canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
+        ++shown;return p.Show(canvas,true);
+    };
+    auto audio=[&](const float* pcm,unsigned count){
+        float* out=nullptr;
+        if(!NT_SUCCESS(xsdk_audio_next_frame(250,&out))||!out)return false;
+        std::fill(out,out+XSDK_AUDIO_FRAME_FLOATS,0.0f);
+        for(unsigned j=0;j<count;++j){out[j]=pcm[2*j];out[256+j]=pcm[2*j+1];}
+        xsdk_audio_queue_frame();submitted+=count;return true;
+    };
+    while(ok){
         INPUT_STATE state{};
-        if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))break;
-        if(!p.Show(canvas,false)){rc=-1;break;}
+        if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
+        const auto elapsed=std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();
+        if(timeline.Finished(elapsed))break;
+        if(elapsed>CloudAvTimeline::MaxDuration+1000000){ok=false;break;}
+        const auto before=shown;
+        ok=timeline.Pump(elapsed,video,audio);
+        if(ok&&shown==before)ok=p.Show(canvas,false);
     }
-    bool closed=p.Close();
-    xsdk_log_write("Cloud360 AV probe rc=%d image=%d audioFrames=%u",rc,probe.image,probe.audioFrames);
-    return rc==0&&probe.image&&probe.audioFrames&&closed?0:2;
+    if(audioOpen)xsdk_audio_close();
+    const bool closed=p.Close();
+    xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
+    return ok&&closed&&(cancelled||(shown&&submitted))?0:3;
 }
 #elif !defined(INFINITY_FULL_MENU_PREVIEW)
 int main(){

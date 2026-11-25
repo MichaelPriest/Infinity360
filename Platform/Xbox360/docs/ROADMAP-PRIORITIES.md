@@ -74,3 +74,7 @@ Adicionado diagnóstico local MP4/MPEG-TS com H.264/AAC e limites explícitos, t
 ### P1 — Ponte audiovisual FFmpeg
 
 Callbacks de frames com timestamps, conversão RGB24 e PCM, teste de conteúdo e cancelamento, alvo XSDK opcional de primeira imagem e amostra de áudio. Sincronização A/V, renderização contínua, HLS e cross-build/console pendentes.
+
+### P1 — Timeline audiovisual FFmpeg
+
+Agendamento por PTS, clock monotônico comum, buffer limitado de clipe local, descarte de vídeo atrasado e recusa de áudio atrasado. Alvo opcional cloud360_av_probe passa da primeira imagem a clipe curto. Testes portáteis adicionados; compilação PPC, saída e latência real do console, streaming e HLS pendentes.

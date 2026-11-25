@@ -51,3 +51,7 @@ O componente container_decode usa libavformat com AVIO local limitado a 8 MiB po
 ## Ponte de saída audiovisual
 
 Callbacks de quadro recebem timestamps em microssegundos (quando disponíveis). Conversão limitada YUV420P/YUVJ420P para RGB24, matriz BT.601/BT.709, e AAC FLTP mono/estéreo para PCM float intercalado. CI verifica mudança de imagens, amostras não nulas e cancelamento. O alvo opcional cloud360_av_probe usa o apresentador Xenos existente e envia somente a primeira imagem e até 250 ms de PCM 48 kHz ao dispositivo de áudio, a partir de game:/test.mp4. É um diagnóstico de saída, não reprodução sincronizada; sem garantia de cross-build ou funcionamento físico. Não altera a build padrão.
+
+## Timeline audiovisual experimental
+
+O alvo cloud360_av_probe (0.5.5) passa a preparar clipes MP4 locais H.264/AAC de até 8 segundos, 32 MiB de dados RGB/PCM, áudio 48 kHz mono/estéreo. Agendamento em relógio monotônico compartilhado, timestamps normalizados, áudio em blocos de até 256 amostras com antecedência de 20 ms, vídeo atrasado descartado e atraso de áudio acima de 250 ms recusado. Rejeita timestamps ausentes e descontinuidades de áudio acima de 5 ms. Testes no host usam MP4 e TS reais, conferem contagem de quadros/amostras e falhas por relógio reverso/atraso. Não é streaming contínuo: pré-decodifica clipes curtos; latência física, sincronização percebida, desempenho 720p e cross-compilação continuam sem confirmação. A build principal não muda de decoder.
