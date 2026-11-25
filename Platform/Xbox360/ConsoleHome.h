@@ -20,6 +20,7 @@
 #include "ConsoleStatus.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
+#include "DisplaySafeArea.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
 #include <map>
@@ -31,6 +32,7 @@ public:
                Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch };
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots);
     void Load();
+    unsigned SafeArea()const{return safeArea_;}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
@@ -202,7 +204,7 @@ private:
     void PrepareCoverBatch();
     unsigned artTitle_=0;
     ConsoleStatus status_;
-    unsigned theme_=0;
+    unsigned theme_=0,safeArea_=0;
     bool sessionExitConfirm_=false;
     void DrawConsoleStatus(HomeCanvas& c) const;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;

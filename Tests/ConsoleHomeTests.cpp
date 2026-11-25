@@ -1067,6 +1067,17 @@ int main(int argc,char** argv) {
         assert(!fs::exists(first+".part")&&!fs::exists(second+".part"));
 #endif
     }
+    // Safe area: zero-copy default and explicit border/scale.
+    {
+        unsigned p=0;assert(DisplaySafeArea::Parse("10",p)&&p==10);
+        assert(!DisplaySafeArea::Parse("11",p)&&p==10);
+        assert(!DisplaySafeArea::Parse("-1",p));
+        std::vector<unsigned> pixels(1280*720,0xff123456u),buffer;
+        assert(DisplaySafeArea::Apply(pixels.data(),0,buffer)==pixels.data());
+        assert(DisplaySafeArea::Apply(pixels.data(),10,buffer)==buffer.data());
+        assert(buffer[0]==0xff000000u&&buffer[72*1280+128]==0xff123456u);
+        assert(buffer[360*1280+640]==0xff123456u&&buffer.back()==0xff000000u);
+    }
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

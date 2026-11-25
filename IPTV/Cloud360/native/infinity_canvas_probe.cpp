@@ -1,6 +1,7 @@
 // Isolated, bounded GPU test of production canvas. No writes to profiles,
 // no launch, no playback, no network. Test only after no-GPU diagnostics.
 #include "HomeCanvas.h"
+#include "DisplaySafeArea.h"
 #include "GameScanner.h"
 #include "TvCatalog.h"
 #ifdef INFINITY_FULL_MENU_PREVIEW
@@ -64,7 +65,8 @@ struct Presenter {
     XsdkSamplerState sampler{};
     volatile uint32_t* vertices=nullptr;
     bool gpu=false,present=false;
-    unsigned width=0,height=0;
+    unsigned width=0,height=0,safeArea=0;
+    std::vector<unsigned> insetPixels;
     bool Open(){
         if(!NT_SUCCESS(xsdk_gpu_open()))return false;
         gpu=true;
@@ -92,7 +94,9 @@ struct Presenter {
         // A single texture is reused only after the prior frame has finished.
         if(upload){
             if(!NT_SUCCESS(xsdk_gpu_wait(xsdk_gpu_fence(),Timeout)))return false;
-            xsdk_texture_upload(&texture,0,canvas.Pixels(),HomeCanvas::Width*4);
+            const unsigned* pixels=DisplaySafeArea::Apply(canvas.Pixels(),safeArea,insetPixels);
+            if(!pixels)return false;
+            xsdk_texture_upload(&texture,0,pixels,HomeCanvas::Width*4);
             xsdk_gpu_invalidate(texture.address,texture.size_bytes);
         }
         uint32_t address=0;
@@ -184,10 +188,7 @@ int main(){
     for(unsigned frame=0;frame<MaxFrames;++frame){
         INPUT_STATE input{};
         uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
-        uint16_t edge=buttons&~previous;previous=buttons;
-        const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
-        const bool capture=(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
-        if(capture)edge&=~captureChord;
+        const uint16_t edge=buttons&~previous;previous=buttons;
         if(edge&INPUT_GAMEPAD_BACK)break;
         if(edge&INPUT_GAMEPAD_B){if(!page)break;page=0;row=0;dirty=true;}
         else if(!page){
@@ -239,6 +240,7 @@ int main(){
     };
     Presenter p;
     if(!p.Open()){xsdk_log_write("FAIL: menu presenter open");p.Close();return 3;}
+    p.safeArea=menu.SafeArea();
     const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
         INPUT_GAMEPAD_DPAD_UP,INPUT_GAMEPAD_DPAD_DOWN,INPUT_GAMEPAD_A,
         INPUT_GAMEPAD_B,INPUT_GAMEPAD_X,INPUT_GAMEPAD_Y,0x0100,0x0200,
@@ -256,7 +258,10 @@ int main(){
         if(input.gamepad.thumb_lx > 16000)buttons|=INPUT_GAMEPAD_DPAD_RIGHT;
         if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
-        const uint16_t edge=buttons&~previous;previous=buttons;
+        uint16_t edge=buttons&~previous;previous=buttons;
+        const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
+        const bool capture=(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
+        if(capture)edge=0;
         if(edge&INPUT_GAMEPAD_BACK){if(menu.TransferRunning()){launchNotice="Conclua ou cancele as copias antes de sair.";dirty=true;}else break;}
         if(!pendingLaunch.empty()){
             if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
@@ -594,6 +599,7 @@ int main(){
         }
         if(!ok||systemExit)break;
         if(menu.Tick())dirty=true;
+        if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
         if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
             canvas.Box(895,13,180,45,0xff102923u,5);

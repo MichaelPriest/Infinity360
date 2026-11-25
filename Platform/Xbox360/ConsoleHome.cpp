@@ -181,7 +181,7 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
-    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
@@ -190,6 +190,7 @@ void ConsoleHome::Load() {
         const std::string file=line.substr(2);
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&file[0]<='2')theme_=file[0]-'0';
+        if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -247,6 +248,7 @@ bool ConsoleHome::SaveProfile() const {
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     out<<"O\t"<<homeOrder_<<"\n";
     out<<"T\t"<<theme_<<"\n";
+    out<<"V\t"<<safeArea_<<"\n";
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
         out<<"A\t"<<it->first<<"\t"<<it->second<<"\n";
@@ -1633,6 +1635,14 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details && systemTab_==2 && (key==PageUp||key==PageDown)){telemetryVideo_=!telemetryVideo_;return "";}
+        if(page_==Details&&systemTab_==2&&telemetryVideo_&&(key==Left||key==Right||key==Favorite)){
+            const unsigned old=safeArea_;
+            if(key==Favorite)safeArea_=0;
+            else if(key==Left&&safeArea_>0)--safeArea_;
+            else if(key==Right&&safeArea_<DisplaySafeArea::Max)++safeArea_;
+            if(safeArea_!=old&&!SaveProfile()){safeArea_=old;notice_="Falha ao salvar margem.";}else notice_="Margem de tela: "+number(safeArea_)+"% por lado.";
+            return "";
+        }
         if(page_==Details && systemTab_==4 && (key==PageUp||key==PageDown)){
             const size_t count=residentConfigs_.size();
             if(count)residentSource_=(residentSource_+count+(key==PageDown?1:count-1))%count;
@@ -2369,8 +2379,8 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
             c.Text(x+9,y+5,labels[i],17,Muted,270);
             c.Text(x+9,y+30,values[i],22,White,270);
         }
-        c.Text(48,559,"Interface 1280 x 720 | Valores do kernel; nao altera a saida.",18,Muted,1170);
-        c.Text(48,585,"LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
+        c.Text(48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
+        c.Text(48,580,"LB/RB Pagina | Y Atualizar | B Voltar | Modo fisico inalterado",18,Muted,1170);
         return;
     }
     c.Text(45,349,"Telemetria 1/2 | Memoria e sensores",27,White,1170);

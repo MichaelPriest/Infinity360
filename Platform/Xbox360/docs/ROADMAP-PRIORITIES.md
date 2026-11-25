@@ -150,3 +150,7 @@ Consulta somente leitura VdQueryVideoMode, VdGetCurrentDisplayInformation e Xbox
 ### P2 — Captura de tela local
 
 L3+R3 salva BMP 24-bit da interface HomeCanvas em UserFiles/Screenshots com opt-in de escrita, arquivo temporário exclusivo e publicação sem sobrescrita. Bloqueia durante cópias, não captura outros títulos nem vídeo. Teste de formato/endian e publicação Linux. Galeria CI corrigida: render anterior produziu 28 imagens, mas a asserção ainda exigia 27. README passa a incluir vídeo/kernel. Nova revisão aguarda CI.
+
+### P2 — Calibração de margem segura
+
+Ajuste 0–10% por lado, persistência de perfil, rollback em erro de gravação e reset X. Escala por software no upload de textura; default sem cópia adicional, interface e player na variante XSDK permanecem 1280x720. Não altera modo físico. Testes de parsing e pixels. Corrigido escopo de capture no menu completo (run 45695618795). Galeria 28 telas aprovada anteriormente; nova build pendente.
