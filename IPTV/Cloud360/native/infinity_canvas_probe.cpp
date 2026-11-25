@@ -18,6 +18,7 @@
 #include <chrono>
 #endif
 #include "xsdk/xam.h"
+#include "XsdkMpegPlayer.h"
 #include <cerrno>
 #include <filesystem>
 #include "infinity_menu_preview_shaders.h"
@@ -220,7 +221,19 @@ int main(){
                     else pendingLaunch=path;
                 }
             }
-            if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
+            const auto movie=menu.TakeMovie();
+            if(!movie.empty()){
+                menu.StopFtp();bool presentFailed=false;
+                canvas.Box(0,0,1280,720,0xff000000u);
+                canvas.Text(45,80,"Cloud360 | Abrindo MPEG-PS",32,WHITE,1180);
+                if(!p.Show(canvas,true)){ok=false;break;}
+                const auto result=XsdkMpeg::Play(movie,dir,canvas,[&](){
+                    if(!p.Show(canvas,true)){presentFailed=true;return false;}return true;
+                });
+                menu.PlayerMessage(result);dirty=true;
+                if(presentFailed){ok=false;break;}
+                INPUT_STATE held{};previous=XamInputGetState(0,0,&held)==ERROR_SUCCESS?held.gamepad.buttons:0;
+            }
             StoreItem pending;
 #ifdef INFINITY_XSDK_HTTPS
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}

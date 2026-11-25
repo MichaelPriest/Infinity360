@@ -1,6 +1,7 @@
 ﻿#include "ConsoleHome.h"
 #include "DiscIdentity.h"
 #include "ArtImport.h"
+#include "XsdkPaths.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
 #include "ContentCatalog.h"
@@ -179,7 +180,7 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();
-    homeOrder_=DefaultHomeOrder;homeEditing_=false;
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
@@ -187,6 +188,7 @@ void ConsoleHome::Load() {
         if (line.size()<3 || line.size()>2048 || line[1]!='\t') continue;
         const std::string file=line.substr(2);
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
+        if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&file[0]<='2')theme_=file[0]-'0';
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -242,6 +244,7 @@ bool ConsoleHome::SaveProfile() const {
     const std::string path=dir_+"aurorax-profile.txt", tmp=path+".tmp";
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     out<<"O\t"<<homeOrder_<<"\n";
+    out<<"T\t"<<theme_<<"\n";
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
         out<<"A\t"<<it->first<<"\t"<<it->second<<"\n";
@@ -530,7 +533,9 @@ void ConsoleHome::RefreshResidentPlugins() {
     // Show only the first readable candidate, not a claim about active boot source.
     std::vector<std::string> paths;
     paths.push_back(dir_+"launch.ini");
-#ifdef _XBOX
+#ifdef __XSDK__
+    paths.push_back("hdd:/launch.ini");paths.push_back("usb0:/launch.ini");paths.push_back("usb1:/launch.ini");paths.push_back("usb2:/launch.ini");
+#elif defined(_XBOX)
     paths.push_back("HDD1:\\launch.ini");
     paths.push_back("USB0:\\launch.ini");
     paths.push_back("USB1:\\launch.ini");
@@ -1397,6 +1402,14 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details&&systemTab_==7){
+            if(key==Left||key==Right){
+                const auto previous=theme_;theme_=(theme_+(key==Right?1:2))%3;
+                if(!SaveProfile()){theme_=previous;notice_="Falha ao salvar tema.";}
+                else notice_="Tema salvo.";
+                return "";
+            }
+        }
         if(page_==Details && systemTab_==6){
 #if defined(INFINITY_XSDK_HTTPS)
             if(key==Left||key==Right){
@@ -1666,7 +1679,16 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
         const int y=415+static_cast<int>(i)*32;
         c.Text(51,y,"Slot "+number(i+1),18,White,110);
         c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,840);
-        c.Text(1025,y,slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"",17,Lime,195);
+        std::string state=slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"";
+#ifdef __XSDK__
+        if(!slot.path.empty()&&!slot.duplicate){
+            const auto normalized=XsdkPaths::Normalize(slot.path);
+            std::ifstream file(normalized.c_str(),std::ios::binary);char magic[4]{};
+            const bool valid=!normalized.empty()&&file.read(magic,4)&&std::string(magic,4)=="XEX2";
+            state=valid?(isLiveEmulationReference(slot.path)?"LE: XEX2":"XEX2 local"):"Ausente/invalido";
+        }
+#endif
+        c.Text(1025,y,state,17,Lime,195);
     }
     c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
     c.Text(47,610,"Y Atualizar | B Voltar",18,Lime,1170);
@@ -1888,10 +1910,12 @@ bool ConsoleHome::TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update)
     unityDownloadPending_=false;info=contentInfo_;update=unityDownload_;return true;
 }
 void ConsoleHome::UnityDownloadResult(const std::string& message,bool success){
+    if(success)stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
     notice_=message;RecordEvent(success?"TU salva em staging":"Download TU recusado");
 }
 void ConsoleHome::UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success){
     if(success){unityUpdates_=updates;unityRow_=0;}
+    unityConfirm_=false;
     notice_=message;RecordEvent(success?"XboxUnity TU consultado":"Consulta XboxUnity falhou");
 }
 void ConsoleHome::DrawUnity(HomeCanvas& c) const{
@@ -2010,7 +2034,9 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
         panel(c,x,y,585,58,Panel,false);
         c.Text(x+12,y+10,"Controle "+number(i+1)+" | "+(status_.users[i].empty()?"Sem perfil":status_.users[i]),23,White,560);
     }
-    c.Text(48,590,"Y Atualizar | B Voltar | Somente leitura; sem alterar conta Xbox",19,Lime,1170);
+    const char* themes[]={"Verde Infinity","Azul","Ambar"};
+    c.Text(48,565,std::string("Tema: < ")+themes[theme_]+" > | Esq/Dir Alterar",19,Lime,1170);
+    c.Text(48,600,"Y Atualizar | B Voltar | Contas somente leitura",19,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
@@ -2357,7 +2383,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
-    c.Background();
+    c.SetTheme(theme_);c.Background();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);

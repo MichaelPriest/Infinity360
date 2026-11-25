@@ -152,6 +152,8 @@ private:
     bool artPending_=false,artRemote_=false,artCover_=true;
     unsigned artTitle_=0;
     ConsoleStatus status_;
+    unsigned theme_=0;
+    bool sessionExitConfirm_=false;
     void DrawConsoleStatus(HomeCanvas& c) const;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;
     UnityUpdate unityDownload_;

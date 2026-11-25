@@ -62,7 +62,27 @@ bool HomeCanvas::LoadArt(const char* path) {
     if (!ok) art_.clear();
     return ok;
 }
+unsigned HomeCanvas::ThemeColor(unsigned color) const {
+    if(!theme_)return color;
+    const unsigned r=(color>>16)&255,g=(color>>8)&255,b=color&255;
+    // Recolor only green UI accents and green-tinted panels; retain warning colors and artwork.
+    if(g<=r||g<=b)return color;
+    if(theme_==1)return (color&0xff000000u)|(r<<16)|(b<<8)|g;
+    return (color&0xff000000u)|(g<<16)|(r<<8)|b;
+}
+void HomeCanvas::VideoRgb(const unsigned char* rgb,unsigned width,unsigned height){
+    if(!rgb||!width||!height||width>1280||height>720)return;
+    std::fill(frame_.begin(),frame_.end(),0xff000000u);
+    unsigned w=Width,h=Height;
+    if(width*Height>height*Width)h=Width*height/width;else w=Height*width/height;
+    const unsigned x0=(Width-w)/2,y0=(Height-h)/2;
+    for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x){
+        const auto* p=rgb+3*((y*height/h)*width+x*width/w);
+        frame_[(y+y0)*Width+x+x0]=0xff000000u|(unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2];
+    }
+}
 void HomeCanvas::Box(int x,int y,int w,int h,unsigned color,int radius) {
+    color=ThemeColor(color);
     for (int j=std::max(0,-y); j<h && y+j<Height; ++j) {
         int cut=0, edge=std::min(j,h-1-j);
         if (edge<radius) {
@@ -79,7 +99,7 @@ void HomeCanvas::Background() {
         unsigned* row=&frame_[y*Width];
         for(int x=0;x<Width;++x) {
             const unsigned glow = amount*x/Width*x/Width;
-            row[x] = 0xff031310u + (glow<<8) + glow/3;
+            row[x] = ThemeColor(0xff031310u + (glow<<8) + glow/3);
         }
     }
 }
@@ -140,6 +160,7 @@ bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,i
     return true;
 }
 void HomeCanvas::Text(int x,int y,const std::string& text,int size,unsigned color,int maxWidth) {
+    color=ThemeColor(color);
     const int right=x+maxWidth;
     for (size_t i=0; i<text.size();) {
         unsigned c=nextGlyph(text,i);

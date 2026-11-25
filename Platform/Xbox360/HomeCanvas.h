@@ -9,6 +9,8 @@ public:
     bool LoadArt(const char* path);
     const unsigned* Pixels() const { return &frame_[0]; }
     void Background();
+    void SetTheme(unsigned theme){theme_=theme<3?theme:0;}
+    void VideoRgb(const unsigned char* pixels,unsigned width,unsigned height);
     void Box(int x, int y, int w, int h, unsigned color, int radius = 0);
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
     bool Logo(const std::string& file, int x, int y, int w, int h);
@@ -24,4 +26,6 @@ private:
     };
     std::vector<ArtEntry> localArt_;
     std::vector<unsigned> frame_, art_;
+    unsigned theme_=0;
+    unsigned ThemeColor(unsigned color) const;
 };

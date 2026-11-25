@@ -2,6 +2,9 @@
 #include "GameScanner.h"
 #include "SavedFile.h"
 #include "MediaUrl.h"
+#ifdef __XSDK__
+#include "XsdkPaths.h"
+#endif
 #include <algorithm>
 #include <ctime>
 #include <set>
@@ -51,6 +54,17 @@ void moveRow(size_t& row,size_t size,MenuKey key) {
 std::string movieTarget(const std::string& playlist,const std::string& uri) {
     MediaUrl url;
     if(url.Parse(uri)) return url.NeedsConverter() ? "" : uri;
+#ifdef __XSDK__
+    if(tvEndsWith(uri,".mpg")||tvEndsWith(uri,".mpeg")||tvEndsWith(uri,".ps")){
+        std::string path=uri;
+        if(path.find(':')==std::string::npos){
+            const auto slash=playlist.find_last_of("/\\");
+            if(path.empty()||path[0]=='/'||path[0]=='\\'||slash==std::string::npos)return "";
+            path=playlist.substr(0,slash+1)+path;
+        }
+        return XsdkPaths::Normalize(path);
+    }
+#endif
     return tvLocalMovie(playlist,uri);
 }
 std::string playbackHint(const std::string& uri) {
