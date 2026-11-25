@@ -26,3 +26,8 @@ Pesquisa de repositórios públicos, 24/11/2026. Esta avaliação usa documenta�
 4. Diagnóstico de avatares sem gravação em Flash ou instalação automática de arquivos do sistema.
 
 Nenhum código externo foi incorporado nesta revisão. A CI anterior (45517243920) passou. Cloud360 IPTV e dados legados preservados.
+
+
+## Implementação própria: INFINITY Manager
+
+Cliente PC adicionado em `tools/infinity_manager.py`, utiliza o protocolo FTP passivo e o motor de teste já existente. Lista, download sem sobrescrita local, upload com ALLO e verificação por leitura, backup selecionado com manifesto SHA-256 e verificação offline. Teste de integração real no loopback. Não reutiliza binários de terceiros nem confirma FTP nativo no console.

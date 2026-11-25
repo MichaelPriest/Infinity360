@@ -1,4 +1,6 @@
 import ftplib
+import importlib.util
+import hashlib
 import io
 from pathlib import Path
 import socket
@@ -6,6 +8,9 @@ import subprocess
 import sys
 import tempfile
 
+
+spec=importlib.util.spec_from_file_location("manager",Path(__file__).resolve().parents[1]/"Platform/Xbox360/tools/infinity_manager.py")
+manager=importlib.util.module_from_spec(spec);spec.loader.exec_module(manager)
 
 def reject(action):
     try:
@@ -85,6 +90,20 @@ with tempfile.TemporaryDirectory() as directory:
             ftp.cwd('..')
             assert ftp.pwd() == '/'
             reject(lambda: ftp.sendcmd('CWD /../'))
+            # Companion PC uses the actual FTP transport, not a mock.
+            assert "sample.bin" in manager.list_files(ftp)
+            dest=root/"Backup"
+            result=manager.backup(ftp,"/",["sample.bin","uploaded.bin"],dest)
+            assert len(result["files"])==2
+            assert manager.verify_backup(dest)=={"verified":2}
+            assert (dest/"sample.bin").read_bytes()==payload
+            receipt=manager.upload(ftp,root/"private.txt","manager.txt")
+            assert receipt["sha256"]==hashlib.sha256(b"not shared").hexdigest()
+            assert (personal/"manager.txt").read_text()=="not shared"
+            (dest/"sample.bin").write_bytes(b"corrupt")
+            try:manager.verify_backup(dest)
+            except ValueError:pass
+            else:raise AssertionError("corrupt backup accepted")
             ftp.quit()
         assert server.wait(timeout=5) == 0
         assert not (personal / 'forbidden.bin').exists()
