@@ -178,3 +178,7 @@ Preferência persistente 0/1/3/5/10 min, padrão off; animação de baixo contra
 ### V0.2.11 — Versionamento centralizado
 
 Versão única em InfinityVersion.h, metadado XEX da dashboard XSDK, identificação visível, nomes de ZIP/PKG/artefato, checksums, manifesto e tags de prerelease. Inclui VERSION.txt e BUILD-COMMIT.txt no pacote XSDK, validados antes da release. XDK empacotado com mesma versão; diagnósticos independentes mantêm seus números. Cada novo lote incrementa patch; reexecuções não incrementam. CI sem runner; nenhuma nova build comprovada.
+
+### V0.2.12 — Temas e política de build manual
+
+Sete paletas persistentes, IDs antigos preservados, testes de pixels e seis capturas adicionais preparadas. Todos os workflows somente workflow_dispatch por solicitação do responsável; não gerar XEX, pacote ou galeria automaticamente. Instalador de atualização aceita metadados opcionais em conjunto e compara versão/commit com manifesto. Sem execução de build nesta revisão.

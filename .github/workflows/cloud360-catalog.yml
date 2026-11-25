@@ -1,13 +1,7 @@
 name: Cloud360 IPTV portable + real FFmpeg software decode tests
 on:
-  push:
-    paths:
-      - 'IPTV/Cloud360/**'
-      - '.github/workflows/cloud360-catalog.yml'
-  pull_request:
-    paths:
-      - 'IPTV/Cloud360/**'
-      - '.github/workflows/cloud360-catalog.yml'
+  workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest

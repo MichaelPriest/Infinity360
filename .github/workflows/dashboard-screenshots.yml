@@ -2,16 +2,6 @@ name: Dashboard native screenshots
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'Platform/Xbox360/**'
-      - 'Source/**'
-      - 'Engine/**'
-      - 'IPTV/Cloud360/core/**'
-      - 'Tests/ConsoleHomeTests.cpp'
-      - 'CMakeLists.txt'
-      - '.github/workflows/dashboard-screenshots.yml'
 
 permissions:
   contents: write
@@ -40,7 +30,7 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 29, len(images)
+          assert len(images) == 35, len(images)
           assert (frames / "29-rede-udp.ppm").is_file()
           assert (frames / "28-video-kernel.ppm").is_file()
           def chunk(kind, data):

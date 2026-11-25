@@ -190,7 +190,7 @@ void ConsoleHome::Load() {
         if (line.size()<3 || line.size()>2048 || line[1]!='\t') continue;
         const std::string file=line.substr(2);
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
-        if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&file[0]<='2')theme_=file[0]-'0';
+        if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
@@ -1599,7 +1599,7 @@ std::string ConsoleHome::Press(Key key) {
             }
 #endif
             if(key==Left||key==Right){
-                const auto previous=theme_;theme_=(theme_+(key==Right?1:2))%3;
+                const auto previous=theme_;theme_=(theme_+(key==Right?1:HomeCanvas::ThemeCount-1))%HomeCanvas::ThemeCount;
                 if(!SaveProfile()){theme_=previous;notice_="Falha ao salvar tema.";}
                 else notice_="Tema salvo.";
                 return "";
@@ -2436,8 +2436,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
         panel(c,x,y,585,58,Panel,false);
         c.Text(x+12,y+10,"Controle "+number(i+1)+" | "+(status_.users[i].empty()?"Sem perfil":status_.users[i]),23,White,560);
     }
-    const char* themes[]={"Verde Infinity","Azul","Ambar"};
-    c.Text(48,565,std::string("Tema: < ")+themes[theme_]+" > | Esq/Dir Alterar",19,Lime,1170);
+    c.Text(48,565,std::string("Tema ")+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+" > | Esq/Dir Alterar",19,Lime,1170);
     c.Text(48,590,"X Protetor: "+(idleMinutes_?number(idleMinutes_)+" min":"Desativado")+" | START Capas em lote | R3 Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {

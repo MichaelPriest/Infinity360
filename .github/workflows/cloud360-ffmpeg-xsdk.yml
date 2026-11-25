@@ -1,15 +1,7 @@
 name: Cloud360 FFmpeg PowerPC experimental build
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cloud360-ffmpeg-xsdk.yml'
-      - 'IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh'
-      - 'IPTV/Cloud360/tools/package_ffmpeg_probe.py'
-      - 'IPTV/Cloud360/tools/relink_ffmpeg_probe.py'
-      - 'IPTV/Cloud360/native/**'
-      - 'IPTV/Cloud360/core/**'
   workflow_dispatch:
+
 permissions:
   contents: read
 concurrency:

@@ -62,13 +62,28 @@ bool HomeCanvas::LoadArt(const char* path) {
     if (!ok) art_.clear();
     return ok;
 }
+const char* HomeCanvas::ThemeName(unsigned theme){
+    static const char* names[]={"Verde Infinity","Azul","Ambar","Violeta","Vermelho","Ciano","Grafite"};
+    return names[theme<ThemeCount?theme:0];
+}
 unsigned HomeCanvas::ThemeColor(unsigned color) const {
     if(!theme_)return color;
     const unsigned r=(color>>16)&255,g=(color>>8)&255,b=color&255;
     // Recolor only green UI accents and green-tinted panels; retain warning colors and artwork.
     if(g<=r||g<=b)return color;
     if(theme_==1)return (color&0xff000000u)|(r<<16)|(b<<8)|g;
-    return (color&0xff000000u)|(g<<16)|(r<<8)|b;
+    if(theme_==2)return (color&0xff000000u)|(g<<16)|(r<<8)|b;
+    // Preserve luminance contrast and use only green-dominant UI pixels.
+    // Text, artwork, video and non-green semantic warning colors stay intact.
+    const unsigned low=std::min(r,b),delta=g-low;
+    const auto rgb=[&](unsigned rr,unsigned gg,unsigned bb){return (color&0xff000000u)|(rr<<16)|(gg<<8)|bb;};
+    switch(theme_){
+        case 3:return rgb(low+delta*3/4,low,g);
+        case 4:return rgb(g,low+delta/5,low+delta/4);
+        case 5:return rgb(low,g,g);
+        case 6:{const unsigned gray=(g+low)/2;return rgb(gray,gray,gray);}
+        default:return color;
+    }
 }
 void HomeCanvas::VideoRgb(const unsigned char* rgb,unsigned width,unsigned height,double pixelAspect){
     if(!rgb||!width||!height||width>1280||height>720)return;

@@ -1,6 +1,14 @@
 # Histórico de versões — INFINITY 360
 
-## V0.2.11 — em desenvolvimento
+## V0.2.12 — em desenvolvimento (sem build)
+
+- Sete temas persistentes; quatro novos: Violeta, Vermelho, Ciano e Grafite.
+- Compatibilidade dos IDs de temas existentes e testes de cores.
+- Galeria preparada para 35 capturas do renderizador.
+- Workflows de compilação, empacotamento, testes e capturas somente manuais.
+- Validação dos metadados de versão/commit do pacote de atualização, mantendo suporte legado.
+
+## V0.2.11 — código-fonte
 
 - Versão centralizada na dashboard e no empacotamento XSDK/XDK.
 - Telemetria de memória/vídeo, captura BMP e calibração de área visível.

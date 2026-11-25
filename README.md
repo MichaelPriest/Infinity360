@@ -193,3 +193,7 @@ Sistema > Console: X alterna desativado, 1, 3, 5 e 10 minutos. Preferência I no
 ## Versionamento das builds — V0.2.11
 
 A versão da dashboard é definida exclusivamente em [`InfinityVersion.h`](Platform/Xbox360/InfinityVersion.h). A revisão V0.2.11 inicia a sequência V0.2.12, V0.2.13 etc. Cada novo lote de desenvolvimento deve incrementar a versão; uma reexecução do mesmo commit mantém o número. Pacotes XSDK, manifesto de atualização, versão XEX, pacote XDK, interface nativa e Releases usam a mesma versão. Tags incluem o SHA curto para preservar builds imutáveis. Os diagnósticos Cloud360 mantêm versões independentes. Consulte o [changelog](CHANGELOG.md). V0.2.11 publicada no código-fonte; binário pendente de CI.
+
+### V0.2.12 — Temas e builds sob demanda
+
+Sete temas: Verde Infinity, Azul, Âmbar, Violeta, Vermelho, Ciano e Grafite. Sistema > Console, esquerda/direita alterna e salva; IDs 0–2 preservados. A galeria foi preparada para 35 capturas reais, a gerar sob demanda. Todos os workflows passam a usar apenas `workflow_dispatch`: commits na main não compilam, não publicam releases nem disparam testes/capturas automáticos. Só iniciar uma build quando solicitada explicitamente. O instalador de atualizações aceita e valida VERSION.txt e BUILD-COMMIT.txt, mantendo compatibilidade com pacotes antigos sem ambos. V0.2.12 é código-fonte ainda não compilado.

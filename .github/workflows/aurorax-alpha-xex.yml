@@ -1,17 +1,6 @@
 name: INFINITY 360 Alpha - build and package Xbox 360 XEX
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - Platform/Xbox360/**
-      - Source/**
-      - Engine/**
-      - IPTV/Cloud360/core/**
-      - Tests/**
-      - CMakeLists.txt
-      - .github/workflows/aurorax-alpha-xex.yml
   workflow_dispatch:
     inputs:
       build_xex:

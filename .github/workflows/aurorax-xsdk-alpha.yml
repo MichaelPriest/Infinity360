@@ -1,32 +1,6 @@
 name: INFINITY 360 first XEX - XSDK visual alpha
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - IPTV/Cloud360/native/aurorax_alpha.c
-      - IPTV/Cloud360/native/probe.c
-      - IPTV/Cloud360/native/infinity_core_probe.cpp
-      - IPTV/Cloud360/native/infinity_canvas_probe.cpp
-      - IPTV/Cloud360/native/XsdkDownload.*
-      - IPTV/Cloud360/native/infinity_launch_target.c
-      - IPTV/Cloud360/native/xsdk_preview_workspace.cpp
-      - Platform/Xbox360/**
-      - Source/**
-      - IPTV/Cloud360/native/infinity_canvas.vert
-      - IPTV/Cloud360/native/infinity_canvas.frag
-      - Platform/Xbox360/HomeCanvas.*
-      - Platform/Xbox360/GlyphWidths.h
-      - Platform/Xbox360/Assets/home.tga
-      - Platform/Xbox360/MediaUrl.*
-      - Platform/Xbox360/TvCatalog.*
-      - Source/GameScanner.*
-      - IPTV/Cloud360/native/CMakeLists.txt
-      - IPTV/Cloud360/core/**
-      - .github/workflows/aurorax-xsdk-alpha.yml
-      - CMakeLists.txt
-      - Tests/**
   workflow_dispatch:
 
 permissions:

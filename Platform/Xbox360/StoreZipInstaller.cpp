@@ -194,6 +194,10 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
         const auto required=[&](const char* key,unsigned long long min,unsigned long long max){auto it=nodes.find(key);return it!=nodes.end()&&!it->second.directory&&it->second.size>=min&&it->second.size<=max;};
         if(expanded>128ULL*1024*1024||!required("home.tga",18,8*1024*1024)||!required("cacert.pem",1024,1024*1024)||!required("menupreview/infinity-preview.txt",24,64))return reject("Recursos obrigatorios da dashboard ausentes.");
         for(const auto& entry:nodes){const auto& key=entry.first;
+            if(key=="version.txt"||key=="build-commit.txt"){
+                if(!required(key.c_str(),1,key=="version.txt"?17:41))return reject("Metadado da build invalido.");
+                continue;
+            }
             if(key=="default.xex"||key=="home.tga"||key=="cacert.pem"||key=="leia-me.txt"||key=="menupreview"||key=="menupreview/infinity-preview.txt"||key=="menupreview/userfiles"||key=="licenses"||key.compare(0,9,"licenses/")==0)continue;
             return reject("Arquivo inesperado no pacote de atualizacao.");
         }
@@ -234,6 +238,17 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     if(dashboard){
         XboxExecutionInfo info{};
         if(!ContentCatalog::ReadExecutionInfo(FileWorkspace::Join(stage,"default.xex"),info)||info.titleId!=0x494E4633u)return fail("Title ID da dashboard divergente.");
+        // Optional for legacy packages; new packages must match the advertised manifest.
+        if(nodes.count("version.txt")!=nodes.count("build-commit.txt"))return fail("Metadados incompletos.");
+        if(nodes.count("version.txt")){
+            std::ifstream v(FileWorkspace::Join(stage,nodes.at("version.txt").name).c_str());
+            std::ifstream c(FileWorkspace::Join(stage,nodes.at("build-commit.txt").name).c_str());
+            std::string version,commit,extra;
+            if(!std::getline(v,version)||std::getline(v,extra)||version!=item.version||
+               !std::getline(c,commit)||std::getline(c,extra)||commit.size()!=40||
+               commit.find_first_not_of("0123456789abcdef")!=std::string::npos||
+               item.id!="infinity-"+commit.substr(0,12))return fail("Versao ou commit divergente.");
+        }
         std::ifstream marker(FileWorkspace::Join(FileWorkspace::Join(stage,"MenuPreview"),"infinity-preview.txt").c_str());std::string line,extra;
         if(!std::getline(marker,line)||line!="INFINITY360-XSDK-PREVIEW"||std::getline(marker,extra))return fail("Marcador da dashboard invalido.");
         std::ifstream atlas(FileWorkspace::Join(stage,"home.tga").c_str(),std::ios::binary);unsigned char header[18];

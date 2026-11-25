@@ -2,16 +2,6 @@ name: Cloud360 Xbox 360 SAFE graphics diagnostic
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/cloud360-xex-ci
-      - feature/cloud360-gpu-safe-v052
-    paths:
-      - .github/workflows/cloud360-xex-build.yml
-      - IPTV/Cloud360/native/**
-      - IPTV/Cloud360/core/**
-      - IPTV/Cloud360/tools/build_xex.sh
-      - IPTV/Cloud360/tools/package_xex.py
 
 permissions:
   contents: read

@@ -105,6 +105,13 @@ static int captureScreens(const char* atlas,const char* destination) {
         }
         system.Press(ConsoleHome::Back);
         if(i<7)system.Press(ConsoleHome::Right);
+        else {
+            system.Press(ConsoleHome::Accept);
+            for(const char* name:{"30-tema-azul","31-tema-ambar","32-tema-violeta","33-tema-vermelho","34-tema-ciano","35-tema-grafite"}){
+                system.Press(ConsoleHome::Right);ok=save(name,system)&&ok;
+            }
+            system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Back);
+        }
     }
     fs::remove_all(root);
     return ok?0:3;
@@ -1069,6 +1076,21 @@ int main(int argc,char** argv) {
         assert(fs::file_size(first)==DashboardScreenshot::FileBytes&&fs::file_size(second)==DashboardScreenshot::FileBytes);
         assert(!fs::exists(first+".part")&&!fs::exists(second+".part"));
 #endif
+    }
+    // Each palette preserves opaque alpha, warnings and media pixels.
+    {
+        HomeCanvas palette;
+        unsigned accents[HomeCanvas::ThemeCount]={};
+        for(unsigned t=0;t<HomeCanvas::ThemeCount;++t){
+            palette.SetTheme(t);palette.Box(0,0,1,1,0xff9dec31u);accents[t]=palette.Pixels()[0];
+            assert((accents[t]>>24)==255);
+            palette.Box(1,0,1,1,0xffb83c28u);assert(palette.Pixels()[1]==0xffb83c28u);
+            assert(std::string(HomeCanvas::ThemeName(t)).size()>0);
+            for(unsigned k=0;k<t;++k)assert(accents[k]!=accents[t]);
+        }
+        palette.SetTheme(999);palette.Box(0,0,1,1,0xff9dec31u);assert(palette.Pixels()[0]==0xff9dec31u);
+        const unsigned char video[]={0,255,0};palette.SetTheme(4);palette.VideoRgb(video,1,1);
+        assert(palette.Pixels()[360*1280+640]==0xff00ff00u);
     }
     // Safe area: zero-copy default and explicit border/scale.
     {
