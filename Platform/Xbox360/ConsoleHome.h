@@ -50,7 +50,7 @@ public:
     bool TakeBackupRequest(XboxContentPackage& selected);
     bool TakeContentInstall(ContentInstall::Request& item,XboxExecutionInfo& game);
     void ContentInstallResult(const std::string& message,bool success);
-    bool TakeRecoverRequest(ContentBackup::Record& selected);
+    bool TakeRecoverRequest(ContentBackup::Record& selected,bool& verifyOnly);
     void RecoverResult(const std::string& message,bool success);
     void BackupResult(const std::string& message,bool success);
     bool TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update);
@@ -178,6 +178,7 @@ private:
     bool contentActive_, contentKnown_;
     bool backupConfirm_=false,backupPending_=false,recoverConfirm_=false,recoverPending_=false,archiveTuConfirm_=false;
     ContentBackup::Record recoverItem_;
+    bool verifyOnly_=false;
     bool contentInstallActive_=false,contentInstallConfirm_=false,contentInstallPending_=false,contentInstallKnown_=false;
     ContentInstall::Request contentInstallItem_{};
     std::string contentInstallStaged_,contentInstallBackup_;

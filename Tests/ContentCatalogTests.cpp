@@ -176,7 +176,7 @@ int main() {
         if(item.path==tu.string() && item.contentType==0xb0000u){haveTu=true;assert(!item.legacyCache);}
         if(item.path==legacy.string()){haveLegacy=true;assert(item.legacyCache&&item.version==3);}
         if(item.path==dlc.string() && item.contentType==2u)haveDlc=true;
-        if(item.path==save.string() && item.contentType==1u)haveSave=true;
+        if(item.path==save.string() && item.contentType==1u){haveSave=true;assert(item.saveOwner=="E000000000000001"&&!item.saveDevice.empty());}
     }
     assert(haveTu && haveDlc && haveSave && haveLegacy);
     assert(extras.back().path==tu.string()); // TU versions descending

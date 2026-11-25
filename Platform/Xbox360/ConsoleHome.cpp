@@ -715,7 +715,7 @@ void ConsoleHome::OpenContent() {
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
-    contentItems_.clear();stagedItems_.clear();archivedItems_.clear();disabledItems_.clear();toggleTuConfirm_=false;restoreArchivedConfirm_=false;backups_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;recoverConfirm_=false;recoverPending_=false;archiveTuConfirm_=false;
+    contentItems_.clear();stagedItems_.clear();archivedItems_.clear();disabledItems_.clear();toggleTuConfirm_=false;restoreArchivedConfirm_=false;backups_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;recoverConfirm_=false;recoverPending_=false;verifyOnly_=false;archiveTuConfirm_=false;
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
@@ -1194,7 +1194,7 @@ std::string ConsoleHome::Press(Key key) {
             const bool recover=recoverConfirm_,restore=restoreArchivedConfirm_;recoverConfirm_=false;archiveTuConfirm_=false;restoreArchivedConfirm_=false;
 #if defined(INFINITY_XSDK_HTTPS)
             if(key==Accept&&!TransferRunning()){
-                if(recover){recoverPending_=true;notice_="Recuperando copia verificada.";}
+                if(recover){recoverPending_=true;notice_=verifyOnly_?"Verificando SHA-256.":"Recuperando copia verificada.";}
                 else{
                     StopFtp();std::string error;
                     if(restore?ContentBackup::RestoreArchived(fileWorkspace_,dir_,backupItem_,error):ContentBackup::ArchiveStaged(fileWorkspace_,dir_,backupItem_,error)){
@@ -1270,8 +1270,8 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Search&&contentTab_==5&&!TransferRunning()&&!detailMetadata_.package&&static_cast<size_t>(contentRow_)<backups_.size()){
             contentInstallStaged_.clear();contentInstallBackup_=backups_[contentRow_].slot;contentInstallActive_=true;RefreshContentInstall();return "";
         }
-        if(key==Accept&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
-            recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_="A confirma recuperar para area pessoal, sem ativacao.";return "";
+        if((key==Accept||key==Favorite)&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
+            verifyOnly_=key==Favorite;recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_=verifyOnly_?"A confirma verificar SHA-256 sem escrita.":"A confirma recuperar para area pessoal, sem ativacao.";return "";
         }
         if(((key==Favorite&&contentTab_==0)||(key==Accept&&contentTab_==7))&&!TransferRunning()&&!detailMetadata_.package){
             const auto* item=ContentAt(contentRow_);
@@ -2186,8 +2186,8 @@ void ConsoleHome::BackupResult(const std::string& message,bool success){
     if(success)backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
     notice_=message;RecordEvent(success?"Backup de conteudo verificado":"Backup recusado");
 }
-bool ConsoleHome::TakeRecoverRequest(ContentBackup::Record& selected){
-    if(!recoverPending_)return false;recoverPending_=false;selected=recoverItem_;return true;
+bool ConsoleHome::TakeRecoverRequest(ContentBackup::Record& selected,bool& verifyOnly){
+    if(!recoverPending_)return false;recoverPending_=false;selected=recoverItem_;verifyOnly=verifyOnly_;return true;
 }
 void ConsoleHome::RecoverResult(const std::string& message,bool success){
     if(success)stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
@@ -2296,10 +2296,13 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
             c.Text(62,y+31,"Versao: "+hexId(item->version)+" | Base: "+hexId(item->baseVersion)+(contentTab_==0?(item->legacyCache?" | CACHE LEGADO":" | CONTENT"):contentTab_==7?" | RETIRADA":" | NAO ATIVADA"),17,Muted,690);
         } else if(contentTab_==5)status="Backup | "+StorageInfo::FormatBytes(backups_[i].bytes);
         else if(contentTab_==1)status="Marketplace / DLC";
-        else status="Save localizado";
+        else {status="Save | "+item->saveDevice;
+            const auto& owner=item->saveOwner;
+            c.Text(62,y+31,owner.empty()?"Perfil nao identificado":owner=="0000000000000000"?"Pasta compartilhada":"Perfil ..."+owner.substr(owner.size()>6?owner.size()-6:0),17,Muted,690);
+        }
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_||toggleTuConfirm_?"A Confirmar | B Cancelar":contentTab_==7?"A Recolocar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia pessoal | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | X Retirar TU | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
+    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_||toggleTuConfirm_?"A Confirmar | B Cancelar":contentTab_==7?"A Recolocar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia | X Verificar SHA-256 | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | X Retirar TU | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){

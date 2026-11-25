@@ -396,21 +396,22 @@ int main(){
                 menu.ContentInstallResult(success?"Conteudo copiado para HDD; reconhecimento ainda nao confirmado.":result,success);
                 if(videoFailed){ok=false;break;}
             }
-            const bool recover=menu.TakeRecoverRequest(recovery);
+            bool verifyOnly=false;
+            const bool recover=menu.TakeRecoverRequest(recovery,verifyOnly);
             if(recover||menu.TakeBackupRequest(backup)){
                 menu.StopFtp();bool videoFailed=false;auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
-                    canvas.Background();canvas.Text(48,100,recover?"INFINITY | Recuperar backup":"INFINITY | Backup de conteudo",36,WHITE,1180);
+                    canvas.Background();canvas.Text(48,100,recover?(verifyOnly?"INFINITY | Verificar backup":"INFINITY | Recuperar backup"):"INFINITY | Backup de conteudo",36,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
                     canvas.Text(48,560,"B Cancelar | Origem intacta | SHA-256",22,LIME,1180);
                     if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
                 };
                 FileWorkspace ws(dir);std::string result;
-                const bool success=recover?ContentBackup::Recover(ws,dir,recovery,progress,result):ContentBackup::Archive(ws,dir,backup,progress,result);
-                if(recover)menu.RecoverResult(success?"Copia verificada em area pessoal; sem ativacao.":result,success);
+                const bool success=recover?(verifyOnly?ContentBackup::Verify(ws,dir,recovery,progress,result):ContentBackup::Recover(ws,dir,recovery,progress,result)):ContentBackup::Archive(ws,dir,backup,progress,result);
+                if(recover)menu.RecoverResult(success?(verifyOnly?"SHA-256 do backup confere; nenhum arquivo escrito.":"Copia verificada em area pessoal; sem ativacao."):result,success);
                 else menu.BackupResult(success?"Backup verificado em UserFiles/ContentBackups.":result,success);
                 if(videoFailed){ok=false;break;}
             }

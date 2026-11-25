@@ -154,3 +154,7 @@ L3+R3 salva BMP 24-bit da interface HomeCanvas em UserFiles/Screenshots com opt-
 ### P2 — Calibração de margem segura
 
 Ajuste 0–10% por lado, persistência de perfil, rollback em erro de gravação e reset X. Escala por software no upload de textura; default sem cópia adicional, interface e player na variante XSDK permanecem 1280x720. Não altera modo físico. Testes de parsing e pixels. Corrigido escopo de capture no menu completo (run 45695618795). Galeria 28 telas aprovada anteriormente; nova build pendente.
+
+### P2 — Saves e verificação de backups
+
+Origem de saves por dispositivo e pasta de perfil com sufixo no painel. Verificação SHA-256 independente na aba Backups (X, A confirma), sem recuperação/escrita, com releitura do registro, progresso e cancelamento. Não reinstala saves em perfil ativo ou altera titularidade. Overscan/captura: cinco workflows da revisão anterior aprovados. Nova revisão aguarda CI.

@@ -10,6 +10,7 @@ struct XboxContentPackage {
     unsigned volumeType, dataFileCount;
     unsigned baseVersion, discNumber, discCount;
     unsigned long long sizeBytes;
+    std::string saveOwner,saveDevice; // directory origin only, not authenticated ownership
     bool legacyCache=false; // Inventory origin only; does not imply activation.
 };
 

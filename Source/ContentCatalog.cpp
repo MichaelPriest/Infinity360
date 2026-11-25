@@ -388,7 +388,15 @@ std::vector<XboxContentPackage> ContentCatalog::ScanExtras(unsigned titleId) con
                         XboxContentPackage item;
                         if(ReadHeader(join(folder,files[i].name),item) &&
                            item.titleId==titleId && item.contentType==type &&
-                           seen.insert(item.path).second)result.push_back(item);
+                           seen.insert(item.path).second){
+                            if(type==1u){
+                                const auto& owner=owners[o];const auto slash=owner.find_last_of("/\\");
+                                item.saveOwner=owner.substr(slash==std::string::npos?0:slash+1);
+                                const auto colon=item.path.find(':');
+                                item.saveDevice=colon==std::string::npos?"Local":item.path.substr(0,colon);
+                            }
+                            result.push_back(item);
+                        }
                     }
                 }
             }

@@ -61,6 +61,28 @@ std::vector<Record> List(const FileWorkspace& ws,const std::string& root,unsigne
     }
     return result;
 }
+bool Verify(const FileWorkspace& ws,const std::string& root,const Record& selected,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){
+    error.clear();auto reject=[&](const char* msg){error=msg;return false;};
+    Record r;
+    if(!record(ws,root,selected.package.titleId,selected.slot,r)||!same(r.package,selected.package)||
+        r.sha256!=selected.sha256||r.bytes!=selected.bytes||r.original!=selected.original)
+        return reject("Backup mudou ou registro invalido.");
+    std::ifstream in(r.package.path.c_str(),std::ios::binary);
+    StoreSha256 hash;unsigned char buf[32768];unsigned long long done=0;
+    if(!progress(0,r.bytes))return reject("Cancelado.");
+    while(done<r.bytes){
+        const auto n=static_cast<size_t>(std::min<unsigned long long>(sizeof buf,r.bytes-done));
+        if(!in.read(reinterpret_cast<char*>(buf),n))return reject("Backup ilegivel.");
+        hash.Update(buf,n);done+=n;
+        if(!progress(done,r.bytes))return reject("Cancelado.");
+    }
+    if(in.peek()!=std::char_traits<char>::eof()||hash.Finish()!=r.sha256)return reject("SHA-256 divergente.");
+    Record after;
+    if(!record(ws,root,r.package.titleId,r.slot,after)||!same(r.package,after.package)||
+       r.sha256!=after.sha256||r.bytes!=after.bytes||r.original!=after.original)return reject("Backup alterado.");
+    return true;
+}
 bool Recover(const FileWorkspace& ws,const std::string& root,const Record& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){
     error.clear();

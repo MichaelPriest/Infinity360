@@ -169,3 +169,7 @@ Na Alpha XSDK, pressione L3+R3 simultaneamente para salvar a tela da dashboard e
 ### Calibração de área visível
 
 Na Alpha XSDK, Sistema > Telemetria > Vídeo e kernel (RB): esquerda/direita altera margem uniforme de 0–10% por lado, X restaura 0%. A preferência V é salva no perfil da dashboard. O presenter reduz o canvas na subida de textura, com bordas pretas; não altera HDMI, resolução física ou configuração do sistema. A captura BMP permanece do canvas original. CI e hardware pendentes.
+
+### Saves e integridade de backups
+
+Na aba Saves, o inventário indica o dispositivo e o sufixo da pasta de perfil (não comprova titularidade do save). Na aba Backups, X solicita verificação SHA-256 somente leitura, com confirmação, progresso e cancelamento. A continua recuperando cópia pessoal. Nenhuma gravação em perfis ativos, alteração de assinatura ou transferência de propriedade. Testes de origem, integridade, cancelamento e corrupção.
