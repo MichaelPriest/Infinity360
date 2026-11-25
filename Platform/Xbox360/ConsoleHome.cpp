@@ -847,6 +847,12 @@ std::string ConsoleHome::Press(Key key) {
 #endif
                 return "";
             }
+            if(key==PageDown && store_.Progress(item).state==StoreProgress::NativePaused){
+                // Explicit two-press discard, separate from removing a PC request.
+                if(notice_!="RB novamente: descartar parcial?"){notice_="RB novamente: descartar parcial?";return "";}
+                notice_=store_.DiscardPartial(item)?"Parcial descartado.":"Nao foi possivel descartar parcial.";
+                return "";
+            }
             if(key==Favorite) {
                 storeConfirm_=false;
                 const bool cancelled=store_.Cancel(item);
@@ -1495,7 +1501,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,260,item.name,32,White,1150);
         c.Text(55,315,"Versao: "+item.version+" | "+StorageInfo::FormatBytes(item.bytes),24,Muted,1150);
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
-        c.Text(55,415,store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
+        c.Text(55,415,store_.Progress(item).state==StoreProgress::NativePaused?"Parcial salvo | START retoma | RB duas vezes descarta":store_.Progress(item).state==StoreProgress::NativeVerified?"Verificado no Xbox (registro local)":store_.Staged(item)?"Arquivo local encontrado (tamanho)":
             store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
         if(item.category=="translation") {
             char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
@@ -1716,6 +1722,7 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
         panel(c,45,y,1189,43,Panel,i==storeDownloadRow_);
         c.Text(60,y+8,item.name,20,White,650);
         const std::string label=status.state==StoreProgress::NativeVerified?"Verificado no Xbox (registro)":status.state==StoreProgress::Verified?"Verificado pelo PC":
+            status.state==StoreProgress::NativePaused?"Pausado "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
             status.state==StoreProgress::Failed?"Ultima tentativa falhou":
             status.state==StoreProgress::Receiving?"Ultimo progresso "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
             "Pedido pendente / sem estado";

@@ -92,7 +92,7 @@ if(DEFINED MBEDTLS_XENON_DIR AND DEFINED CURL_XENON_DIR)
   target_link_libraries(infinity_menu_preview PRIVATE CURL::libcurl mbedtls)
   target_compile_definitions(infinity_menu_preview PRIVATE INFINITY_XSDK_HTTPS=1)
 endif()
-xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.8.1)
+xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.8.2)
 
 add_executable(infinity_launch_target infinity_launch_target.c)
 set_target_properties(infinity_launch_target PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON)

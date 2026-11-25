@@ -1,4 +1,5 @@
 #include "StorePackage.h"
+#include "StorePartial.h"
 #include "MediaUrl.h"
 #include "SavedFile.h"
 #include <cstring>
@@ -13,6 +14,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cerrno>
+#include <sys/stat.h>
 #endif
 namespace {
 uint32_t rotr(uint32_t n,unsigned s){return (n>>s)|(n<<(32-s));}
@@ -84,7 +86,7 @@ bool StoreNativeSource(const StoreItem& item,const std::string& root) {
     }
     return match;
 }
-StorePackage::StorePackage(const FileWorkspace& workspace):workspace_(workspace),done_(0),active_(false)
+StorePackage::StorePackage(const FileWorkspace& workspace):workspace_(workspace),done_(0),active_(false),resumable_(false)
 #if defined(_XBOX) || defined(_WIN32)
     ,handle_(INVALID_HANDLE_VALUE)
 #else
@@ -100,10 +102,21 @@ void StorePackage::Cancel() {
     if(handle_>=0){close(handle_);handle_=-1;}
     if(!temp_.empty())unlink(temp_.c_str());
 #endif
-    temp_.clear();active_=false;
+    temp_.clear();active_=false;resumable_=false;
+}
+bool StorePackage::Pause(){
+#if defined(_XBOX) || defined(_WIN32)
+    return false;
+#else
+    if(!active_||!resumable_||handle_<0)return false;
+    const bool flushed=fsync(handle_)==0;
+    const bool closed=close(handle_)==0;handle_=-1;
+    if(!flushed||!closed)return Fail("Falha ao preservar parcial.");
+    temp_.clear();active_=false;resumable_=false;return true;
+#endif
 }
 bool StorePackage::Fail(const char* message){Cancel();error_=message;return false;}
-bool StorePackage::Begin(const StoreItem& item,const std::string& root) {
+bool StorePackage::Begin(const StoreItem& item,const std::string& root,bool resume) {
     Cancel();error_.clear();done_=0;hash_=StoreSha256();item_=item;
     if(item.id.empty()||item.id.size()>32||item.id.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_-")!=std::string::npos||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos||
@@ -120,6 +133,39 @@ bool StorePackage::Begin(const StoreItem& item,const std::string& root) {
 #else
     if(access(target_.c_str(),F_OK)==0)return Fail("Pacote local ja existe.");
 #endif
+    if(resume){
+#if defined(_XBOX) || defined(_WIN32)
+        return Fail("Retomada persistente indisponivel neste provider.");
+#else
+        const std::string path=StorePartial::Path(folder_,item);
+        if(path.empty())return Fail("Identificador parcial invalido.");
+        int flags=O_RDWR;
+#ifndef __XSDK__
+        flags|=O_NOFOLLOW;
+#endif
+        handle_=open(path.c_str(),flags|O_CREAT|O_EXCL,0600);
+        if(handle_<0){
+            if(errno!=EEXIST||!workspace_.CanReadPersonalFile(path))return Fail("Parcial indisponivel.");
+            handle_=open(path.c_str(),flags);
+            if(handle_<0)return Fail("Nao foi possivel abrir parcial.");
+        }
+        temp_=path;
+        struct stat info{};
+        if(fstat(handle_,&info)!=0||!S_ISREG(info.st_mode)||info.st_size<0||
+           static_cast<unsigned long long>(info.st_size)>item.bytes)return Fail("Parcial invalido descartado.");
+        unsigned char buffer[32768];
+        const unsigned long long bytes=static_cast<unsigned long long>(info.st_size);
+        while(done_<bytes){
+            const size_t want=static_cast<size_t>(bytes-done_>sizeof buffer?sizeof buffer:bytes-done_);
+            ssize_t got=read(handle_,buffer,want);
+            if(got<0&&errno==EINTR)continue;
+            if(got<=0)return Fail("Falha ao reler parcial.");
+            hash_.Update(buffer,static_cast<size_t>(got));done_+=static_cast<unsigned long long>(got);
+        }
+        if(lseek(handle_,0,SEEK_END)!=static_cast<off_t>(done_))return Fail("Parcial alterado.");
+        resumable_=true;active_=true;return true;
+#endif
+    }
     for(unsigned i=0;i<32;++i) {
         char name[32];std::sprintf(name,"AXCOPY-STORE-%04u.part",i);
         const std::string candidate=FileWorkspace::Join(folder_,name);
@@ -146,7 +192,14 @@ bool StorePackage::Write(const unsigned char* bytes,unsigned count) {
     size_t at=0;
     while(at<count){ssize_t n=write(handle_,bytes+at,count-at);if(n<0&&errno==EINTR)continue;if(n<=0)return Fail("Falha de escrita.");at+=n;}
 #endif
-    hash_.Update(bytes,count);done_+=count;return true;
+    const unsigned long long previous=done_;
+    hash_.Update(bytes,count);done_+=count;
+#if !defined(_XBOX) && !defined(_WIN32)
+    if(resumable_&&previous/(1024*1024)!=done_/(1024*1024)&&fsync(handle_)!=0)return Fail("Falha ao gravar checkpoint.");
+#else
+    (void)previous;
+#endif
+    return true;
 }
 bool StorePackage::Finish() {
     if(!active_||done_!=item_.bytes||hash_.Finish()!=item_.sha256)return Fail("Tamanho ou SHA-256 divergente.");

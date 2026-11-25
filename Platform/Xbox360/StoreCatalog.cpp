@@ -1,4 +1,5 @@
 #include "StoreCatalog.h"
+#include "StorePartial.h"
 #include "SavedFile.h"
 #include "FileWorkspace.h"
 #include <algorithm>
@@ -130,7 +131,8 @@ bool StoreCatalog::Cancel(const StoreItem& item) {
     requests_=old;return false;
 }
 bool StoreCatalog::ListedDownload(const StoreItem& item) const {
-    return Requested(item)||Progress(item).state==StoreProgress::NativeVerified;
+    const StoreProgress::State state=Progress(item).state;
+    return Requested(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;
 }
 bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.
@@ -139,9 +141,22 @@ bool StoreCatalog::Staged(const StoreItem& item) const {
     return in&&in.tellg()>=0&&static_cast<unsigned long long>(in.tellg())==item.bytes;
 }
 
+bool StoreCatalog::DiscardPartial(const StoreItem& item) {
+    const std::string folder=FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store");
+    const std::string path=StorePartial::Path(folder,item);
+    FileWorkspace workspace(root_);
+    return !path.empty()&&workspace.CanReadPersonalFile(path)&&std::remove(path.c_str())==0;
+}
 StoreProgress StoreCatalog::Progress(const StoreItem& item) const {
     StoreProgress result;
     const std::string folder=FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store");
+    const std::string partial=StorePartial::Path(folder,item);
+    if(!partial.empty()&&!Staged(item)){
+        std::ifstream in(partial.c_str(),std::ios::binary|std::ios::ate);
+        if(in&&in.tellg()>=0&&static_cast<unsigned long long>(in.tellg())<=item.bytes){
+            result.state=StoreProgress::NativePaused;result.received=static_cast<unsigned long long>(in.tellg());return result;
+        }
+    }
     std::string data;
     if(!readBound(FileWorkspace::Join(folder,item.id+".state"),256,data))return result;
     std::istringstream in(data);std::string digest,state,bytes,extra;

@@ -37,5 +37,20 @@ int main(){
     {std::ofstream f(root/"UserFiles/Store/race.pkg");f<<"original";}
     assert(!out.Finish());assert(fs::file_size(root/"UserFiles/Store/race.pkg")==8);
     for(auto& entry:fs::directory_iterator(root/"UserFiles/Store"))assert(entry.path().extension()!=".part");
+#ifndef _WIN32
+    item.id="resume";
+    {StorePackage first(workspace);assert(first.Begin(item,base,true));assert(first.Write((const unsigned char*)"a",1));assert(first.Pause());}
+    assert(cat.Progress(item).state==StoreProgress::NativePaused);
+    assert(cat.Progress(item).received==1);assert(cat.ListedDownload(item));
+    {StorePackage resumed(workspace);assert(resumed.Begin(item,base,true));assert(resumed.Done()==1);assert(resumed.Write((const unsigned char*)"bc",2));assert(resumed.Finish());}
+    assert(cat.Progress(item).state==StoreProgress::NativeVerified);
+    item.id="resume-bad";
+    {StorePackage first(workspace);assert(first.Begin(item,base,true));assert(first.Write((const unsigned char*)"x",1));assert(first.Pause());}
+    {StorePackage resumed(workspace);assert(resumed.Begin(item,base,true));assert(resumed.Write((const unsigned char*)"bc",2));assert(!resumed.Finish());}
+    assert(!cat.Staged(item));assert(!cat.ListedDownload(item));
+    item.id="discard";
+    {StorePackage first(workspace);assert(first.Begin(item,base,true));assert(first.Write((const unsigned char*)"a",1));assert(first.Pause());}
+    assert(cat.DiscardPartial(item));assert(!cat.ListedDownload(item));
+#endif
     fs::remove_all(root);
 }

@@ -74,11 +74,12 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
     {std::ifstream file(ca.c_str(),std::ios::binary|std::ios::ate);
      if(!file||file.tellg()<1024||file.tellg()>1024*1024)return "CA bundle ausente ou invalido.";}
     FileWorkspace workspace(root);StorePackage output(workspace);
-    if(!output.Begin(item,root))return output.Error();
-    if(!progress(0,item.bytes))return "Download cancelado.";
-    if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return "Falha ao inicializar HTTPS.";
+    if(!output.Begin(item,root,true))return output.Error();
+    if(!progress(output.Done(),item.bytes))return output.Pause()?"Parcial salvo. START retoma.":output.Error();
+    if(output.Done()==item.bytes){success=output.Finish();return success?"Pacote recuperado e verificado.":output.Error();}
+    if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK){output.Pause();return "Falha ao inicializar HTTPS.";}
     CURL* curl=curl_easy_init();
-    if(!curl){curl_global_cleanup();return "Falha ao criar sessao HTTPS.";}
+    if(!curl){curl_global_cleanup();output.Pause();return "Falha ao criar sessao HTTPS.";}
     Transfer t{output,progress,item.bytes};
     bool options=true;
     // Treat any unsupported security setting as fatal, rather than weaken TLS.
@@ -99,7 +100,7 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
     SET(CURLOPT_FAILONERROR,1L);
     SET(CURLOPT_MAXFILESIZE_LARGE,static_cast<curl_off_t>(item.bytes));
     SET(CURLOPT_HTTP_VERSION,long(CURL_HTTP_VERSION_1_1));
-    SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.8.1");
+    SET(CURLOPT_USERAGENT,"INFINITY360-XSDK/0.1.8.2");
     SET(CURLOPT_HEADERFUNCTION,header);
     SET(CURLOPT_HEADERDATA,&t);
     SET(CURLOPT_WRITEFUNCTION,receive);
@@ -122,11 +123,16 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
         if(!progress(output.Done(),item.bytes)){t.cancelled=true;break;}
     }
     curl_easy_cleanup(curl);curl_global_cleanup();
-    if(t.cancelled)return "Download cancelado ou video indisponivel.";
-    if(!options)return "Configuracao HTTPS indisponivel.";
-    if(result!=CURLE_OK)return output.Error().empty()?std::string("HTTPS: ")+curl_easy_strerror(result):output.Error();
-    if(t.invalidResponse||!t.headersReady||code!=(t.offset?206:200))return "Resposta HTTP ou Content-Range invalido.";
-    if(!progress(output.Done(),item.bytes))return "Download cancelado.";
+    if(t.cancelled)return output.Pause()?"Parcial salvo. START retoma.":output.Error();
+    if(!options){output.Pause();return "Configuracao HTTPS indisponivel.";}
+    if(t.invalidResponse){output.Pause();return "Resposta HTTP/Range invalida. RB duas vezes descarta parcial.";} 
+    if(result!=CURLE_OK){
+        if(!output.Error().empty())return output.Error();
+        const std::string error=std::string("HTTPS: ")+curl_easy_strerror(result);
+        return output.Pause()?error+" | Parcial salvo.":error;
+    }
+    if(!t.headersReady||code!=(t.offset?206:200)){output.Pause();return "Resposta HTTP invalida.";}
+    if(!progress(output.Done(),item.bytes))return output.Pause()?"Parcial salvo. START retoma.":output.Error();
     success=output.Finish();
     return success?(output.Error().empty()?"Pacote verificado por SHA-256 e salvo.":output.Error()):output.Error();
 }

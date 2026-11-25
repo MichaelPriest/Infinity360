@@ -7,7 +7,7 @@ struct StoreItem {
     unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
 };
 struct StoreProgress {
-    enum State { Unknown, Receiving, Verified, Failed, NativeVerified };
+    enum State { Unknown, Receiving, Verified, Failed, NativeVerified, NativePaused };
     State state;
     unsigned long long received;
     StoreProgress():state(Unknown),received(0){}
@@ -22,6 +22,7 @@ public:
     bool Requested(const StoreItem& item) const;
     bool Staged(const StoreItem& item) const;
     bool ListedDownload(const StoreItem& item) const;
+    bool DiscardPartial(const StoreItem& item);
     StoreProgress Progress(const StoreItem& item) const;
 private:
     std::string root_;

@@ -18,7 +18,9 @@ class StorePackage {
 public:
     explicit StorePackage(const FileWorkspace& workspace);
     ~StorePackage();
-    bool Begin(const StoreItem& item,const std::string& root);
+    bool Begin(const StoreItem& item,const std::string& root,bool resume=false);
+    // Flush and preserve a resumable partial; Cancel explicitly removes it.
+    bool Pause();
     bool Write(const unsigned char* bytes,unsigned count);
     bool Finish();
     void Cancel();
@@ -32,7 +34,7 @@ private:
     StoreSha256 hash_;
     std::string folder_,temp_,target_,error_;
     unsigned long long done_;
-    bool active_;
+    bool active_,resumable_;
 #if defined(_XBOX) || defined(_WIN32)
     void* handle_;
 #else
