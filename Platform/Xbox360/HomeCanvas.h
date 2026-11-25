@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "UiLanguage.h"
 
 class HomeCanvas {
 public:
@@ -11,6 +12,9 @@ public:
     void Background();
     enum { ThemeCount=7 };
     void SetTheme(unsigned theme){theme_=theme<ThemeCount?theme:0;}
+    void SetLanguage(unsigned language){language_=language<UiLanguage::Count?language:0;}
+    const char* Tr(const char* key)const{return UiLanguage::Translate(language_,key);}
+    unsigned Language()const{return language_;}
     static const char* ThemeName(unsigned theme);
     void VideoRgb(const unsigned char* pixels,unsigned width,unsigned height,double pixelAspect=1.0);
     void Box(int x, int y, int w, int h, unsigned color, int radius = 0);
@@ -28,6 +32,6 @@ private:
     };
     std::vector<ArtEntry> localArt_;
     std::vector<unsigned> frame_, art_;
-    unsigned theme_=0;
+    unsigned theme_=0,language_=0;
     unsigned ThemeColor(unsigned color) const;
 };

@@ -197,3 +197,7 @@ A versão da dashboard é definida exclusivamente em [`InfinityVersion.h`](Platf
 ### V0.2.12 — Temas e builds sob demanda
 
 Sete temas: Verde Infinity, Azul, Âmbar, Violeta, Vermelho, Ciano e Grafite. Sistema > Console, esquerda/direita alterna e salva; IDs 0–2 preservados. A galeria foi preparada para 35 capturas reais, a gerar sob demanda. Todos os workflows passam a usar apenas `workflow_dispatch`: commits na main não compilam, não publicam releases nem disparam testes/capturas automáticos. Só iniciar uma build quando solicitada explicitamente. O instalador de atualizações aceita e valida VERSION.txt e BUILD-COMMIT.txt, mantendo compatibilidade com pacotes antigos sem ambos. V0.2.12 é código-fonte ainda não compilado.
+
+### V0.2.13 — Idiomas da interface
+
+Português (BR), English e Español, em Sistema > Console, LB/RB alterna e salva a preferência L. Tradução inicial de navegação, abas, comandos, títulos de painéis e parte do IPTV; mensagens operacionais e detalhes ainda não cobertos permanecem em português. Nomes e caminhos de conteúdo não são traduzidos automaticamente. Galeria preparada para 37 telas. Nenhuma build iniciada.

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.13 — em desenvolvimento (sem build)
+
+- Português, inglês e espanhol selecionáveis e persistentes.
+- Tradução inicial da navegação e dos comandos IPTV, com fallback em português.
+- Duas capturas adicionais preparadas e testes de persistência.
+
 ## V0.2.12 — em desenvolvimento (sem build)
 
 - Sete temas persistentes; quatro novos: Violeta, Vermelho, Ciano e Grafite.

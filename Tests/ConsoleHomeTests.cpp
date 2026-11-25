@@ -110,7 +110,11 @@ static int captureScreens(const char* atlas,const char* destination) {
             for(const char* name:{"30-tema-azul","31-tema-ambar","32-tema-violeta","33-tema-vermelho","34-tema-ciano","35-tema-grafite"}){
                 system.Press(ConsoleHome::Right);ok=save(name,system)&&ok;
             }
-            system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::Right);
+            system.Press(ConsoleHome::PageDown);assert(system.Language()==1);ok=save("36-english",system)&&ok;
+            system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
+            {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
+            system.Press(ConsoleHome::PageDown);assert(system.Language()==0);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);
@@ -1076,6 +1080,14 @@ int main(int argc,char** argv) {
         assert(fs::file_size(first)==DashboardScreenshot::FileBytes&&fs::file_size(second)==DashboardScreenshot::FileBytes);
         assert(!fs::exists(first+".part")&&!fs::exists(second+".part"));
 #endif
+    }
+    {
+        unsigned lang=0;assert(UiLanguage::Parse("2",lang)&&lang==2);
+        assert(!UiLanguage::Parse("3",lang)&&lang==2);
+        assert(std::string(UiLanguage::Translate(1,"Biblioteca"))=="Library");
+        assert(std::string(UiLanguage::Translate(2,"Arquivos"))=="Archivos");
+        assert(std::string(UiLanguage::Translate(9,"Biblioteca"))=="Biblioteca");
+        assert(std::string(UiLanguage::Translate(1,"game:/Games/Biblioteca/default.xex"))=="game:/Games/Biblioteca/default.xex");
     }
     // Each palette preserves opaque alpha, warnings and media pixels.
     {

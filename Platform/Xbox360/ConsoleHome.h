@@ -37,6 +37,7 @@ public:
     void Load();
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
+    unsigned Language()const{return language_;}
     bool IdleEligible()const{return page_==Home&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
@@ -215,7 +216,7 @@ private:
     void PrepareCoverBatch();
     unsigned artTitle_=0;
     ConsoleStatus status_;
-    unsigned theme_=0,safeArea_=0,idleMinutes_=0;
+    unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     bool sessionExitConfirm_=false;
     void DrawConsoleStatus(HomeCanvas& c) const;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;

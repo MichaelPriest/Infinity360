@@ -36,7 +36,7 @@ public:
         c.Box(x,y+9,38,30,0xff406a27u,13);c.Box(x+4,y+13,30,22,0xff000000u,9);
         c.Box(x+29,y+9,38,30,0xff406a27u,13);c.Box(x+33,y+13,30,22,0xff000000u,9);
         c.Text(x+82,y,"INFINITY 360",32,0xff739456u,380);
-        c.Text(x+82,y+47,"Pressione um botao",17,0xff829080u,380);
+        c.Text(x+82,y+47,c.Tr("Pressione um botao"),17,0xff829080u,380);
     }
 private:
     bool initialized_=false,active_=false;unsigned minutes_=0;uint64_t last_=0,step_=0;

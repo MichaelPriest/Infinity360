@@ -279,11 +279,11 @@ void CloudTv::DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const 
         c.Box(fx+i,fy+5,13,7,0xff0c2119u,2);c.Box(fx+i,fy+fh-12,13,7,0xff0c2119u,2);
     }
     c.Box(fx+12,fy+18,fw-24,fh-36,0xff193928u,4);
-    c.Text(fx+28,fy+fh/2-20,tabs[item.category],31,Lime,fw-52);
+    c.Text(fx+28,fy+fh/2-20,c.Tr(tabs[item.category]),31,Lime,fw-52);
 }
 void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     const bool picking=tab_==TvSources;
-    c.Text(44,76,picking?"Fontes de conteúdo":tab_==TvAll?"Cloud360 IPTV":tab_==TvLive?"TV ao vivo":
+    c.Text(44,76,picking?c.Tr("Fontes de conteúdo"):tab_==TvAll?"Cloud360 IPTV":tab_==TvLive?c.Tr("TV ao vivo"):
            tab_==TvFavorites?"Favoritos":"Cinema",40,Ink,750);
     const size_t total=picking?sources_.size():rows_.size();
     if(!query_.empty() && !picking) c.Text(723,98,"Busca  "+query_,17,Lime,215);
@@ -291,10 +291,10 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     for(int i=0;i<TvTabCount;++i) {
         const int x=45+i*150;
         c.Box(x,146,143,42,i==tab_?Lime:Panel,6);
-        c.Text(x+12,152,tabs[i],19,i==tab_?0xff102312u:Soft,122);
+        c.Text(x+12,152,c.Tr(tabs[i]),19,i==tab_?0xff102312u:Soft,122);
     }
     if(!total) {
-        c.Text(58,250,picking?"Nenhuma lista encontrada.":"Nenhum item nesta seção.",26,Soft,1130);
+        c.Text(58,250,picking?c.Tr("Nenhuma lista encontrada."):c.Tr("Nenhum item nesta seção."),26,Soft,1130);
         if(picking)c.Text(58,300,"Coloque um M3U na pasta da dashboard ou na subpasta Listas.",19,Soft,1100);
         return;
     }
@@ -318,7 +318,7 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     }
     tile(c,624,210,610,385,false);
     if(picking) {
-        c.Text(649,238,"Lista selecionada",29,Ink,554);
+        c.Text(649,238,c.Tr("Lista selecionada"),29,Ink,554);
         c.Text(649,302,sources_[row_],23,Lime,552);
         c.Text(649,373,"A abre a lista e salva a escolha.",20,Soft,552);
         c.Text(649,429,"Guia XMLTV",21,Ink,550);
@@ -339,10 +339,10 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     c.Text(48,602,countText(row_+1)+" / "+countText(total),15,Soft,300);
 }
 void CloudTv::DrawGuide(HomeCanvas& c,int64_t now) const {
-    c.Text(45,78,"Guia de programação",40,Ink,720);
+    c.Text(45,78,c.Tr("Guia de programação"),40,Ink,720);
     const int left=310,w=920;
     const int64_t first=now-now%1800+int64_t(guideOffset_)*1800,end=first+5400;
-    c.Text(49,162,"Canal",21,Lime,245);
+    c.Text(49,162,c.Tr("Canal"),21,Lime,245);
     for(int j=0;j<3;++j) c.Text(left+j*w/3,162,localTime(first+1800*j),20,Soft,250);
     if(rows_.empty()) {c.Text(50,260,"Nenhum canal de TV nesta lista.",25,Soft,1100);return;}
     const size_t base=row_/PageSize*PageSize;
@@ -361,14 +361,14 @@ void CloudTv::DrawGuide(HomeCanvas& c,int64_t now) const {
             if(stop-x>35) c.Text(left+x+7,y+15,prog.title,18,Ink,stop-x-14);
             painted=true;
         }
-        if(!painted)c.Text(left+15,y+17,"Sem programação",18,Soft,w-30);
+        if(!painted)c.Text(left+15,y+17,c.Tr("Sem programação"),18,Soft,w-30);
     }
     if(now>=first && now<end)c.Box(left+int((now-first)*w/5400),202,2,int(std::min(PageSize,rows_.size()-base))*76,Lime);
     c.Text(47,601,"Esquerda e direita mudam o horário em 30 minutos.",16,Soft,1160);
 }
 void CloudTv::DrawDetails(HomeCanvas& c,int64_t now) const {
     const TvItem& item=catalog_.Items()[detail_];
-    c.Text(45,80,item.category==TvLive?"Detalhes do canal":"Detalhes de mídia",38,Ink,1130);
+    c.Text(45,80,item.category==TvLive?c.Tr("Detalhes do canal"):c.Tr("Detalhes de mídia"),38,Ink,1130);
     tile(c,45,171,1190,393,false);DrawArt(c,detail_,60,194,460,259);
     c.Text(550,195,item.group,19,Lime,655);c.Text(550,238,item.name,30,Ink,650);
     c.Text(550,303,protocol(item,dir_+source_),20,Soft,655);
@@ -379,13 +379,13 @@ void CloudTv::DrawDetails(HomeCanvas& c,int64_t now) const {
         if(next)c.Text(550,398,"A seguir   "+localTime(next->start)+"   "+next->title,18,Soft,650);
     }
     if(!movieTarget(dir_+source_,item.uri).empty()) {
-        c.Box(550,470,212,52,Lime,6);c.Text(570,480,"Reproduzir",21,0xff0c190fu,181);
+        c.Box(550,470,212,52,Lime,6);c.Text(570,480,c.Tr("Reproduzir"),21,0xff0c190fu,181);
     } else c.Text(550,467,playbackHint(item.uri),18,Soft,650);
 }
 void CloudTv::DrawEpisodes(HomeCanvas& c) const {
-    c.Text(45,78,"Temporadas e episódios",39,Ink,1160);
+    c.Text(45,78,c.Tr("Temporadas e episódios"),39,Ink,1160);
     tile(c,45,171,416,417,false);DrawArt(c,detail_,60,190,386,217);
-    c.Text(63,427,"Série",17,Lime,370);c.Text(63,461,show_,27,Ink,370);
+    c.Text(63,427,c.Tr("Série"),17,Lime,370);c.Text(63,461,show_,27,Ink,370);
     c.Text(487,169,"Temporada "+countText(seasons_[season_]),25,Lime,713);
     const size_t base=episodeRow_/PageSize*PageSize;
     for(size_t i=base;i<episodes_.size() && i<base+PageSize;++i) {
@@ -406,13 +406,13 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now) const {
     }
     c.Box(0,663,1280,57,0xff061915u);
     const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri).empty();
-    c.Text(44,675,view_==Details?(playable?"A  Reproduzir":""):"A  Selecionar",19,Lime,190);
-    c.Text(240,675,"B  Voltar",19,Ink,130);
-    if(tab_!=TvSources)c.Text(390,675,"X  Favorito",19,Ink,150);
-    c.Text(567,675,"Y  Atualizar",19,Ink,151);
-    if(view_!=Details && view_!=Episodes)c.Text(764,675,"Start  Guia",19,Ink,159);
-    if(view_!=Details)c.Text(922,675,"LB/RB  Página",18,Ink,155);
-    if(view_==Browse && tab_!=TvSources)c.Text(1092,675,"RS  Buscar",18,Ink,152);
+    c.Text(44,675,view_==Details?(playable?c.Tr("A  Reproduzir"):""):c.Tr("A  Selecionar"),19,Lime,190);
+    c.Text(240,675,c.Tr("B  Voltar"),19,Ink,130);
+    if(tab_!=TvSources)c.Text(390,675,c.Tr("X  Favorito"),19,Ink,150);
+    c.Text(567,675,c.Tr("Y  Atualizar"),19,Ink,151);
+    if(view_!=Details && view_!=Episodes)c.Text(764,675,c.Tr("Start  Guia"),19,Ink,159);
+    if(view_!=Details)c.Text(922,675,c.Tr("LB/RB  Página"),18,Ink,155);
+    if(view_==Browse && tab_!=TvSources)c.Text(1092,675,c.Tr("RS  Buscar"),18,Ink,152);
 }
 void CloudTv::SearchKey(MenuKey key) {
     if(key==MenuBack) {view_=Browse;return;}
@@ -433,15 +433,15 @@ void CloudTv::SearchKey(MenuKey key) {
     if(key==MenuDown && letter_<36) letter_=std::min(letter_+6,39);
 }
 void CloudTv::DrawSearch(HomeCanvas& c) const {
-    c.Text(46,77,"Buscar no catálogo",38,Ink,1160);
+    c.Text(46,77,c.Tr("Buscar no catálogo"),38,Ink,1160);
     tile(c,48,147,1168,55,false);
-    c.Text(66,155,edit_.empty()?"Digite o nome ou a categoria":edit_,23,edit_.empty()?Soft:Ink,1120);
+    c.Text(66,155,edit_.empty()?c.Tr("Digite o nome ou a categoria"):edit_,23,edit_.empty()?Soft:Ink,1120);
     const char* actions[]={"Espaço","Apagar","Limpar","Buscar"};
     for(int i=0;i<40;++i) {
         int x=48+(i%6)*196,y=220+(i/6)*56;tile(c,x,y,183,49,i==letter_);
-        c.Text(x+15,y+8,i<36?std::string(1,letters[i]):actions[i-36],20,i==letter_?Lime:Ink,155);
+        c.Text(x+15,y+8,i<36?std::string(1,letters[i]):c.Tr(actions[i-36]),20,i==letter_?Lime:Ink,155);
     }
     c.Box(0,663,1280,57,0xff061915u);
-    c.Text(44,675,"A  Selecionar",19,Lime,203);c.Text(260,675,"B  Cancelar",19,Ink,205);
-    c.Text(482,675,"X  Apagar",19,Ink,209);c.Text(706,675,"Y  Buscar",19,Ink,200);
+    c.Text(44,675,c.Tr("A  Selecionar"),19,Lime,203);c.Text(260,675,c.Tr("B  Cancelar"),19,Ink,205);
+    c.Text(482,675,c.Tr("X  Apagar"),19,Ink,209);c.Text(706,675,c.Tr("Y  Buscar"),19,Ink,200);
 }

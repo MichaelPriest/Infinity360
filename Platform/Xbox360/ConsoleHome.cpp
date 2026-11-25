@@ -182,7 +182,7 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
-    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
@@ -193,6 +193,7 @@ void ConsoleHome::Load() {
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
+        if(line[0]=='L')UiLanguage::Parse(file,language_);
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -253,6 +254,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"T\t"<<theme_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
     out<<"I\t"<<idleMinutes_<<"\n";
+    out<<"L\t"<<language_<<"\n";
     launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
@@ -1585,6 +1587,10 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details&&systemTab_==7){
+            if(key==PageUp||key==PageDown){const auto previous=language_;
+                language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
+                if(!SaveProfile()){language_=previous;notice_="Falha ao salvar idioma.";}
+                else notice_="Idioma da interface salvo.";return ""; }
             if(key==Favorite){const auto previous=idleMinutes_;idleMinutes_=IdleScreen::Next(idleMinutes_);
                 if(!SaveProfile()){idleMinutes_=previous;notice_="Falha ao salvar protetor de tela.";}
                 else notice_="Protetor de tela salvo.";return ""; }
@@ -1923,12 +1929,12 @@ void panel(HomeCanvas& c,int x,int y,int w,int h,unsigned bg,bool active) {
 void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned color) {
     c.Box(x,674,29,29,color,14);
     c.Text(x+7,673,key,21,White,26);
-    c.Text(x+38,672,action,20,White,150);
+    c.Text(x+38,672,c.Tr(action),20,White,150);
 }
 }
 
 void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
-    c.Text(47,349,"Plugins residentes / DashLaunch",27,White,1170);
+    c.Text(47,349,c.Tr("Plugins residentes / DashLaunch"),27,White,1170);
     if(residentSource_>=residentConfigs_.size()){
         c.Text(47,385,"Nenhum launch.ini legivel",18,Muted,1170);
     }else{
@@ -1956,14 +1962,14 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
     c.Text(47,610,"LB/RB Fonte | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
-    c.Text(44,82,"Personalizar inicio",40,White,1190);
-    c.Text(46,150,"Organize os quatro atalhos da segunda fileira.",24,Muted,1180);
+    c.Text(44,82,c.Tr("Personalizar inicio"),40,White,1190);
+    c.Text(46,150,c.Tr("Organize os quatro atalhos da segunda fileira."),24,Muted,1180);
     c.Text(46,196,"Biblioteca e Cloud360 IPTV permanecem no topo.",21,Muted,1180);
     for(int i=0;i<4;++i) {
         const int x=42+i*302, item=homeDraft_[i]-'0';
         panel(c,x,282,289,168,Panel,i==homeEditSlot_);
         c.Image(600+item*52,0,52,52,x+112,303,60,60);
-        c.Text(x+16,374,labels[Apps+item],26,i==homeEditSlot_?Lime:White,258);
+        c.Text(x+16,374,c.Tr(labels[Apps+item]),26,i==homeEditSlot_?Lime:White,258);
         c.Text(x+16,414,"Posicao "+number(i+1),18,Muted,252);
     }
     c.Text(46,500,"Direcional: selecionar | LB/RB: mover o atalho",23,White,1180);
@@ -2008,6 +2014,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
             c.Text(915,y+14,p.cached?"Disponivel offline":"Sincronizar",20,p.cached?Lime:Muted,285);
         }
     }
+    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_),18,Lime,1170);
     c.Text(48,590,"A Sincronizar selecionado | Y Recarregar local | B Voltar",20,Lime,1175);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
@@ -2018,7 +2025,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
         panel(c,x,177,140,44,Panel,i==storeTab_);
-        c.Text(x+8,185,tabs[i],18,i==storeTab_?Lime:White,124);
+        c.Text(x+8,185,c.Tr(tabs[i]),18,i==storeTab_?Lime:White,124);
     }
     if(storeVisible_.empty()) {
         c.Text(48,270,"Nenhum item no catalogo desta categoria.",24,White,1175);
@@ -2061,30 +2068,30 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(storeActive_) {DrawStore(c);return;}
     if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
-    c.Text(44,76,"Início",42,White,330);
-    c.Text(459,86,"RB Loja | X Importar | Start Personalizar",20,Muted,775);
+    c.Text(44,76,c.Tr("Início"),42,White,330);
+    c.Text(459,86,c.Tr("RB Loja | X Importar | Start Personalizar"),20,Muted,775);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
     c.Image(344,0,254,222,1035,155,183,163);
     c.Image(652,0,52,52,70,160,47,43,Lime);
-    c.Text(69,214,"Biblioteca",43,White,350);
-    c.Text(70,278,"Jogos instalados",23,Muted,350);
+    c.Text(69,214,c.Tr("Biblioteca"),43,White,350);
+    c.Text(70,278,c.Tr("Jogos instalados"),23,Muted,350);
     c.Text(752,219,"Cloud360 IPTV",35,White,283);
-    c.Text(753,275,"TV ao vivo, filmes e séries",20,Muted,280);
+    c.Text(753,275,c.Tr("TV ao vivo, filmes e séries"),20,Muted,280);
     for(int i=0;i<4;++i) {
         int x=42+i*302;
         panel(c,x,357,289,75,Panel,focus_==Apps+i);
         const int item=homeOrder_[i]-'0';
         c.Image(600+item*52,0,52,52,x+24,376,39,38);
-        c.Text(x+80,375,labels[Apps+item],23,White,205);
+        c.Text(x+80,375,c.Tr(labels[Apps+item]),23,White,205);
     }
     c.Box(767,456,1,174,0xff355148u);
     for(int side=0;side<2;++side) {
         int x=side?789:42, w=side?449:701;
         bool focused=focus_==(side?Favorites:Recent);
         if(focused) c.Box(x,490,w,3,Lime);
-        c.Text(x,448,labels[side?Favorites:Recent],side?24:28,focused?Lime:White,w);
+        c.Text(x,448,c.Tr(labels[side?Favorites:Recent]),side?24:28,focused?Lime:White,w);
         const std::vector<std::string> paths=side?HomeShortcuts():history_;
         int shown=0, cardWidth=(w-18)/3;
         for(size_t i=0;i<paths.size() && shown<3;++i) {
@@ -2104,12 +2111,12 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
                 else c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
             }
             c.Text(left+8,594,g->name,16,White,cardWidth-16);
-            if(side && contains(pinned_,paths[i])) c.Text(left+8,508,"FIXADO",14,Lime,cardWidth-16);
+            if(side && contains(pinned_,paths[i])) c.Text(left+8,508,c.Tr("FIXADO"),14,Lime,cardWidth-16);
             ++shown;
         }
         if(!shown) {
             c.Box(x,503,w,124,Panel,9);
-            c.Text(x+15,543,side?"LB nos detalhes fixa um jogo.":"Os jogos abertos aparecem aqui.",19,Muted,w-26);
+            c.Text(x+15,543,side?c.Tr("LB nos detalhes fixa um jogo."):c.Tr("Os jogos abertos aparecem aqui."),19,Muted,w-26);
         }
     }
 }
@@ -2284,7 +2291,7 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
     if(contentInstallActive_){DrawContentInstall(c);return;}
     if(unityActive_){DrawUnity(c);return;}
-    c.Text(44,78,"Conteudo instalado",40,White,1170);
+    c.Text(44,78,c.Tr("Conteudo instalado"),40,White,1170);
     if(!contentKnown_) {
         c.Text(48,150,"Title ID indisponivel para este executavel.",26,White,1170);
         c.Text(48,198,"Nao e possivel associar TU, DLC ou saves com seguranca.",21,Muted,1170);
@@ -2298,7 +2305,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
         panel(c,x,183,141,47,Panel,i==contentTab_);
-        c.Text(x+6,191,tabs[i],17,i==contentTab_?Lime:White,129);
+        c.Text(x+6,191,c.Tr(tabs[i]),17,i==contentTab_?Lime:White,129);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+(contentTab_==0?" TUs locais | Ativacao desconhecida":" pacotes encontrados")+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
@@ -2389,7 +2396,7 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
 }
 void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
     if(telemetryVideo_){
-        c.Text(45,349,"Telemetria 2/2 | Video e kernel",27,White,1170);
+        c.Text(45,349,c.Tr("Telemetria 2/2 | Video e kernel"),27,White,1170);
         const auto& v=videoTelemetry_;
         const std::string labels[]={"Saida configurada","Frequencia","Proporcao","Varredura","Display kernel","Buffer kernel","Kernel","Modo HD"};
         const std::string values[]={
@@ -2409,7 +2416,7 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         c.Text(48,580,"LB/RB Pagina | Y Atualizar | B Voltar | Modo fisico inalterado",18,Muted,1170);
         return;
     }
-    c.Text(45,349,"Telemetria 1/2 | Memoria e sensores",27,White,1170);
+    c.Text(45,349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);
     if(telemetry_.available){
         const uint64_t bytes[]={telemetry_.physical,telemetry_.kernel,telemetry_.titlePhysical,
             telemetry_.titleAvailable,telemetry_.systemPhysical,telemetry_.titleHeap,telemetry_.titleStack,telemetry_.titleImage};
@@ -2429,18 +2436,18 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
     c.Text(48,585,"Ventoinha: pendente. LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
-    c.Text(45,349,"Console | Perfis conectados",27,White,1170);
-    c.Text(48,389,"Hora local: "+status_.clock+" | Idioma: "+status_.language+" | Locale: "+status_.country,21,Muted,1170);
+    c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
+    c.Text(48,389,std::string(c.Tr("Hora local: "))+status_.clock+std::string(c.Tr(" | Idioma: "))+status_.language+" | Locale: "+status_.country,21,Muted,1170);
     for(int i=0;i<4;++i){
         const int x=45+(i%2)*600,y=430+(i/2)*65;
         panel(c,x,y,585,58,Panel,false);
-        c.Text(x+12,y+10,"Controle "+number(i+1)+" | "+(status_.users[i].empty()?"Sem perfil":status_.users[i]),23,White,560);
+        c.Text(x+12,y+10,std::string(c.Tr("Controle "))+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),23,White,560);
     }
-    c.Text(48,565,std::string("Tema ")+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+" > | Esq/Dir Alterar",19,Lime,1170);
-    c.Text(48,590,"X Protetor: "+(idleMinutes_?number(idleMinutes_)+" min":"Desativado")+" | START Capas em lote | R3 Atualizar | B Voltar",18,Lime,1170);
+    c.Text(48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
+    c.Text(48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
-    c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
+    c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
     for(size_t i=0;i<4 && storagePage_*4+i<storageVolumes_.size();++i) {
         const size_t index=storagePage_*4+i;
         const StorageVolume& v=storageVolumes_[index];
@@ -2464,7 +2471,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     if(networkPeer_){
-        c.Text(45,349,"Rede 2/2 | Diagnostico UDP entre consoles",27,White,1170);
+        c.Text(45,349,c.Tr("Rede 2/2 | Diagnostico UDP entre consoles"),27,White,1170);
         c.Text(48,392,"Local: "+(network_.ipv4.empty()?"-":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
         c.Text(48,433,peerProbe_.Label(),23,Lime,1170);
         c.Text(48,475,"Tentativas: "+number(peerProbe_.Attempts())+" | Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
@@ -2472,9 +2479,9 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.Text(48,560,"Inicie nos dois consoles. Nao confirma System Link de jogos.",18,Muted,1170);
         c.Text(48,607,"A Iniciar | X Parar | LB/RB Pagina | B Voltar",18,Lime,1170);return;
     }
-    c.Text(45,349,"Rede 1/2 | Diagnostico de rede local",27,White,1170);
+    c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
     c.Box(42,391,589,190,Panel,10);
-    c.Text(58,404,"Conexao e endereco IPv4",25,White,550);
+    c.Text(58,404,c.Tr("Conexao e endereco IPv4"),25,White,550);
     c.Text(58,447,NetworkInfo::StateLabel(network_.state),20,Muted,550);
     c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string("Nao identificado"):network_.ipv4),
            23,network_.ipv4.empty()?Muted:Lime,550);
@@ -2482,7 +2489,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
            (network_.ethernetActive?"Ethernet: ativo"+(network_.linkMbps?" | "+number(network_.linkMbps)+" Mbps":"")+(network_.duplex.empty()?"":" | "+network_.duplex):"Ethernet: sem link"):
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
-    c.Text(660,404,"Servicos de rede",25,White,558);
+    c.Text(660,404,c.Tr("Servicos de rede"),25,White,558);
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado",21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?"Leitura/upload":"Somente leitura"):"A Leitura | X Leitura/upload (ALLO)",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
@@ -2611,7 +2618,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
-    c.Text(44,78,labels[section_],43,White,1190);
+    c.Text(44,78,c.Tr(labels[section_]),43,White,1190);
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
@@ -2680,8 +2687,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             const int x=42+i*150;
             panel(c,x,166,140,166,Panel,i==systemTab_);
             c.Text(x+10,184,marks[i],20,i==systemTab_?Lime:Muted,96);
-            c.Text(x+10,222,titles[i],19,White,172);
-            c.Text(x+10,284,summaries[i],16,Muted,172);
+            c.Text(x+10,222,c.Tr(titles[i]),19,White,172);
+            c.Text(x+10,284,c.Tr(summaries[i]),16,Muted,172);
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
@@ -2693,7 +2700,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(page_==Details && systemTab_==7) {DrawConsoleStatus(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
-            c.Text(68,391,titles[systemTab_],34,White,1120);
+            c.Text(68,391,c.Tr(titles[systemTab_]),34,White,1120);
             c.Text(69,470,details[systemTab_],23,Muted,1122);
             c.Text(69,543,"B para voltar aos paineis.",20,Lime,1120);
         } else {
@@ -2761,12 +2768,12 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
-            c.Text(x+(numTabs==9?7:15),155,tabs[i],numTabs==9?17:21,i==subtab_?Lime:White,tabWidth-(numTabs==9?14:25));
+            c.Text(x+(numTabs==9?7:15),155,c.Tr(tabs[i]),numTabs==9?17:21,i==subtab_?Lime:White,tabWidth-(numTabs==9?14:25));
         }
-        c.Text(49,200,number(Count())+" itens nesta aba",21,Muted,1120);
+        c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,1120);
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
-            c.Text(861,201,subtab_==8?"Ordem manual":std::string("RS Ordenar: ")+sorts[gameSort_],18,Muted,355);
+            c.Text(861,201,subtab_==8?c.Tr("Ordem manual"):std::string(c.Tr("RS Ordenar: "))+c.Tr(sorts[gameSort_]),18,Muted,355);
             if(subtab_==5 && !collections_.Items().empty()) {
                 const size_t current=static_cast<size_t>(collectionIndex_);
                 if(current<collections_.Items().size())
@@ -2816,7 +2823,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
-    c.SetTheme(theme_);c.Background();
+    c.SetTheme(theme_);c.SetLanguage(language_);c.Background();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
@@ -2837,7 +2844,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     if(!notice_.empty()) {
         c.Box(40,628,1200,35,0xff102923u,6);
-        c.Text(51,630,notice_,18,Lime,1170);
+        c.Text(51,630,c.Tr(notice_.c_str()),18,Lime,1170);
     }
     c.Box(0,663,1280,57,0xff061915u);
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);

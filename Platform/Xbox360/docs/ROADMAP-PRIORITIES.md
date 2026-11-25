@@ -182,3 +182,7 @@ Versão única em InfinityVersion.h, metadado XEX da dashboard XSDK, identifica�
 ### V0.2.12 — Temas e política de build manual
 
 Sete paletas persistentes, IDs antigos preservados, testes de pixels e seis capturas adicionais preparadas. Todos os workflows somente workflow_dispatch por solicitação do responsável; não gerar XEX, pacote ou galeria automaticamente. Instalador de atualização aceita metadados opcionais em conjunto e compara versão/commit com manifesto. Sem execução de build nesta revisão.
+
+### V0.2.13 — Localização inicial
+
+Preferência L, PT-BR/EN/ES, LB/RB em Sistema > Console; dicionário explícito somente para textos de UI selecionados, fallback PT e preservação de nomes de conteúdo. Cobertura parcial; mensagens técnicas e demais módulos exigem expansão. Galeria 37 preparada. Sem build/CI por solicitação do responsável.
