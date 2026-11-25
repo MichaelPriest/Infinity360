@@ -98,6 +98,37 @@ int main(){
     {std::fstream corrupt(backups[0].package.path,std::ios::binary|std::ios::in|std::ios::out);corrupt.seekp(0x17ff);corrupt.put('x');}
     assert(!ContentInstall::Install(ws,root,game,selected,go,error));
     assert(!fs::exists(installed)&&fs::exists(backups[0].package.path));
+    // Legacy cache installs use the exact original filename, never Content.
+    const std::string legacy="TU_16L61V6_0000008000000.00000000000O2";
+    assert(ContentInstall::LegacyFilename(legacy));
+    assert(!ContentInstall::LegacyFilename("TU_../bad"));
+    assert(!ContentInstall::LegacyFilename("TU_name..part"));
+    assert(!ContentInstall::Filename(2,legacy));
+    build(0xb0000,legacy,game.mediaId,game.baseVersion);
+    assert(ContentInstall::Read(ws,root,game,selected,error));
+    assert(!ContentInstall::Install(ws,root,game,selected,go,error)); // missing Cache
+    fs::create_directories(base/"Cache");
+    const auto cached=base/"Cache"/legacy;
+    assert(!ContentInstall::Install(ws,root,game,selected,[](auto done,auto){return done==0;},error));
+    assert(!fs::exists(cached));
+    assert(ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(fs::exists(cached)&&!fs::exists(installed.parent_path()/legacy));
+    assert(!ContentInstall::Install(ws,root,game,selected,go,error));
+    // Receipt-based install accepts an original legacy filename too.
+    const std::string stagedLegacy="11223344-43.tu";
+    fs::copy_file(cached,stage/stagedLegacy);
+    {std::ofstream r(stage/(stagedLegacy+".receipt"));r<<"INFINITY-TU-1\n"<<game.baseVersion<<"\n"<<legacy<<"\n"<<raw.size()<<"\n"<<digest<<"\n";}
+    assert(ContentInstall::ReadStaged(ws,root,game,stagedLegacy,selected,error));
+    fs::remove(cached);
+    assert(ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(fs::exists(cached)&&fs::exists(stage/stagedLegacy));
+    // Back up and restore the legacy package without modifying its backup.
+    assert(ContentCatalog::ReadHeader(cached.string(),installedPackage));
+    assert(ContentBackup::Archive(ws,root,installedPackage,go,error));
+    assert(ContentInstall::ReadBackup(ws,root,game,"000B0000-0001",selected,error));
+    fs::remove(cached);
+    assert(ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(fs::exists(cached));
     for(const auto& e:fs::recursive_directory_iterator(base))assert(e.path().filename()!="AXCOPY-CONTENT.part");
     fs::remove_all(base);
 }

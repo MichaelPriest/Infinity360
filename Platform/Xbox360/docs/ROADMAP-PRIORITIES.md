@@ -38,3 +38,7 @@ Na aba Backups, R3 abre a reinstalação do pacote autorizado quando o recibo co
 ### P1 — Inventário de cache legado
 
 O catálogo consulta pastas Cache irmãs de Content, em modo somente leitura. Reconhece arquivos TU_ com cabeçalho STFS de Title Update válido para o Title ID selecionado, distingue a origem CACHE LEGADO/CONTENT e ordena TUs por versão decrescente. Ignora tipos divergentes, títulos diferentes, arquivos inválidos, temporários e symlinks no host. Referências de formato: https://consolemods.org/wiki/Xbox_360:Manually_Installing_Title_Updates e https://github.com/XboxUnity/AuroraScripts/blob/master/UtilityScripts/TUDownloader/Main.lua. A gravação no Cache, variantes sem cabeçalho reconhecido e confirmação de ativação permanecem pendentes. Novos testes portáteis adicionados.
+
+### P1 — Instalação de TU legada
+
+O importador local, os recibos XboxUnity e a reinstalação de backups aceitam nomes originais TU_ reconhecidos e encaminham exclusivamente ao Cache existente do HDD. A publicação continua sem sobrescrita, com opt-in de escrita, SHA-256, releitura e identidade do pacote; não cria nomes de sistema nem modifica outras atualizações. Testes cobrem destino ausente, cancelamento, colisão, instalação manual, recibo e backup. Não confirma ativação no jogo; variantes não reconhecidas continuam bloqueadas. CI e hardware pendentes.

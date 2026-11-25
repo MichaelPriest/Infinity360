@@ -111,12 +111,14 @@ bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecution
 #else
     const auto common=FileWorkspace::Join(FileWorkspace::Join(root,"Content"),"0000000000000000"),volume=root;
 #endif
+    const bool legacy=current.package.contentType==0xb0000u&&LegacyFilename(current.filename);
+    const auto cache=FileWorkspace::Join(volume,"Cache");
     const auto capacity=StorageInfo::Read(volume);
-    if(!ws.CanBrowse(common)||!capacity.available||capacity.writableBytes<current.bytes+16ULL*1024*1024)return reject("HDD de conteudo ou espaco indisponivel.");
+    if(!ws.CanBrowse(legacy?cache:common)||!capacity.available||capacity.writableBytes<current.bytes+16ULL*1024*1024)return reject("Pasta de destino ou espaco indisponivel.");
     if(!progress(0,current.bytes*2))return reject("Cancelado.");
     char title[9],type[9];std::sprintf(title,"%08X",game.titleId);std::sprintf(type,"%08X",current.package.contentType);
-    auto folder=common;
-    for(const char* part:{title,type}){
+    auto folder=legacy?cache:common;
+    if(!legacy)for(const char* part:{title,type}){
         folder=FileWorkspace::Join(folder,part);
         if(!ws.CanBrowse(folder)){
             std::error_code ec;

@@ -64,7 +64,7 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
     unlink(temp.c_str());
 #endif
     // Keep the original filename and SHA-256 for a separate, explicit install.
-    // Missing/legacy filenames still allow staging; never invent a system filename.
+    // Unrecognized filenames still allow staging; never invent a system filename.
     if(ContentInstall::Filename(0xb0000u,item.filename)){
         const auto receipt=dest+".receipt",receiptTemp=FileWorkspace::Join(folder,"AXCOPY-TU-RECEIPT.part");
         const std::string record="INFINITY-TU-1\n"+std::to_string(info.baseVersion)+"\n"+item.filename+"\n"+std::to_string(item.bytes)+"\n"+sha.Finish()+"\n";
@@ -85,6 +85,6 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
         }
         unlink(receiptTemp.c_str());
         if(!published)error="TU baixada; recibo nao publicado. Instalacao manual necessaria.";
-    }else error="TU baixada; nome antigo ou desconhecido. Instalacao direta indisponivel.";
+    }else error="TU baixada; nome original desconhecido. Instalacao direta indisponivel.";
     return true;
 }

@@ -2144,10 +2144,10 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
     c.Text(48,135,"Title "+hexId(contentInfo_.titleId)+" | Media "+hexId(contentInfo_.mediaId),21,Muted,1170);
     if(contentInstallKnown_){
         const auto& i=contentInstallItem_;
-        c.Text(48,205,!contentInstallBackup_.empty()?"Reinstalar backup TU / DLC":i.package.contentType==2?"DLC local":"Title Update moderno",28,White,1170);
+        c.Text(48,205,!contentInstallBackup_.empty()?"Reinstalar backup TU / DLC":i.package.contentType==2?"DLC local":ContentInstall::LegacyFilename(i.filename)?"Title Update legado":"Title Update moderno",28,White,1170);
         c.Text(48,251,i.filename+" | "+StorageInfo::FormatBytes(i.bytes),22,White,1170);
         c.Text(48,295,"SHA-256 "+i.sha256,18,Muted,1170);
-        c.Text(48,350,"HDD/Content/0000000000000000/"+hexId(i.package.titleId)+"/"+hexId(i.package.contentType),19,Lime,1170);
+        c.Text(48,350,i.package.contentType==0xb0000u&&ContentInstall::LegacyFilename(i.filename)?"HDD/Cache/"+i.filename:"HDD/Content/0000000000000000/"+hexId(i.package.titleId)+"/"+hexId(i.package.contentType),19,Lime,1170);
     }else c.Text(48,215,!contentInstallBackup_.empty()?"Backup nao elegivel para instalacao; use copia pessoal.":contentInstallStaged_.empty()?"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.":"TU sem recibo valido. Use importacao manual (R3) com nome original.",20,White,1170);
     c.Text(48,425,"Requer enable-content-install.txt e enable-file-writes.txt.",20,Muted,1170);
     c.Text(48,470,"Somente copia verificada. Nao altera licencas, nao remove outras TUs.",20,Muted,1170);
