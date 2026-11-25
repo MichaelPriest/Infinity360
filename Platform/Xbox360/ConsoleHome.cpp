@@ -181,7 +181,7 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
-    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
@@ -191,6 +191,7 @@ void ConsoleHome::Load() {
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&file[0]<='2')theme_=file[0]-'0';
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
+        if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -250,6 +251,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"O\t"<<homeOrder_<<"\n";
     out<<"T\t"<<theme_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
+    out<<"I\t"<<idleMinutes_<<"\n";
     launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
@@ -1582,6 +1584,9 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details&&systemTab_==7){
+            if(key==Favorite){const auto previous=idleMinutes_;idleMinutes_=IdleScreen::Next(idleMinutes_);
+                if(!SaveProfile()){idleMinutes_=previous;notice_="Falha ao salvar protetor de tela.";}
+                else notice_="Protetor de tela salvo.";return ""; }
             if(key==Search){updateActive_=true;RefreshDashboardUpdate();return "";}
 #if defined(INFINITY_XSDK_HTTPS)
             if(key==Guide&&!TransferRunning()){
@@ -2432,7 +2437,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     }
     const char* themes[]={"Verde Infinity","Azul","Ambar"};
     c.Text(48,565,std::string("Tema: < ")+themes[theme_]+" > | Esq/Dir Alterar",19,Lime,1170);
-    c.Text(48,600,"START Capas em lote | R3 Atualizar dashboard | Y Atualizar | B Voltar",19,Lime,1170);
+    c.Text(48,590,"X Protetor: "+(idleMinutes_?number(idleMinutes_)+" min":"Desativado")+" | START Capas em lote | R3 Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);

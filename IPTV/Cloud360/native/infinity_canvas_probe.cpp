@@ -248,6 +248,7 @@ int main(){
     uint16_t previous=0;
     bool ok=true,dirty=true,systemExit=false;
     FileWorkspace captureWorkspace(dir);
+    IdleScreen idleScreen;
     // Longer than the minimal GPU probe, but still bounded.
     std::string clock;
     for(unsigned frame=0;continuous||frame<3600;++frame){
@@ -259,6 +260,10 @@ int main(){
         if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
         uint16_t edge=buttons&~previous;previous=buttons;
+        const bool wasIdle=idleScreen.Active();
+        const bool activity=buttons||input.gamepad.left_trigger>30||input.gamepad.right_trigger>30||input.gamepad.thumb_rx>16000||input.gamepad.thumb_rx< -16000||input.gamepad.thumb_ry>16000||input.gamepad.thumb_ry< -16000;
+        if(idleScreen.Update(IdleScreen::Now(),menu.IdleMinutes(),continuous&&pendingLaunch.empty()&&menu.IdleEligible(),activity))dirty=true;
+        if(wasIdle&&activity)edge=0;
         const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
         const bool capture=(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
         if(capture)edge=0;
@@ -603,7 +608,8 @@ int main(){
         if(!ok||systemExit)break;
         if(menu.Tick())dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
-        if(dirty){
+        if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
+        else if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
             canvas.Box(895,13,180,45,0xff102923u,5);
             canvas.Text(905,20,continuous?"ALPHA SESSAO":"ALPHA TESTE",20,LIME,170);

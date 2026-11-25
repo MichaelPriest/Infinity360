@@ -1097,6 +1097,20 @@ int main(int argc,char** argv) {
         assert(!restored.LoadLine("1000001\t0\t0\tbad"));
         assert(!restored.LoadLine("1\t0\t0\tbad\tpath"));
     }
+    {
+        IdleScreen idle;unsigned minutes=0;
+        assert(IdleScreen::Parse("3",minutes)&&minutes==3&&!IdleScreen::Parse("2",minutes));
+        assert(IdleScreen::Next(0)==1&&IdleScreen::Next(10)==0);
+        assert(!idle.Update(1000,1,true,false));
+        assert(!idle.Update(60999,1,true,false));
+        assert(idle.Update(61000,1,true,false)&&idle.Active());
+        assert(idle.Update(62000,1,true,false)&&idle.Step()==1);
+        assert(idle.Update(62001,1,true,true)&&!idle.Active());
+        assert(!idle.Update(120000,1,false,false));
+        assert(!idle.Update(120001,1,true,false));
+        assert(idle.Update(180000,1,true,false)&&idle.Active());
+        assert(idle.Update(100,1,true,false)&&!idle.Active());
+    }
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

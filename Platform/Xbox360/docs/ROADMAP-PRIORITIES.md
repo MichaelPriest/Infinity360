@@ -170,3 +170,7 @@ Contabilização separada de tentativas e envios, nonce pendente somente após e
 ### P3 — Estatísticas locais de lançamento
 
 Contagem persistente de tentativas e falhas imediatas por caminho, data/hora da última tentativa, limites de registros e validação de campos. Atualização antes do handoff e quando loader retorna. Sem estimativa de tempo jogado ou conquistas. CI de 2574f59 falhou antes das etapas (runner vazio); nova revisão aguarda validação.
+
+### P3 — Protetor de tela configurável
+
+Preferência persistente 0/1/3/5/10 min, padrão off; animação de baixo contraste com atualização por segundo, apenas na home da sessão contínua, sem transferências/FTP/UDP, consumo do primeiro comando ao despertar. Testes de máquina de estados e limites. Sem controle de energia ou brilho físico. CI anterior sem runner; nova revisão aguarda validação.
