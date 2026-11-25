@@ -26,3 +26,18 @@ with tempfile.TemporaryDirectory() as tmp:
     store.process(root,{"example.org"},lambda u,h:None)
     assert target.read_bytes()==data
     assert not list(target.parent.glob("*.part"))
+
+    # Translation compatibility fields and parallel independent downloads.
+    (root/"aurorax-store.tsv").write_text(
+        f"ptbr\ttranslation\tTraducao PT-BR\t1\t{len(data)}\t{digest}\thttps://example.org/ptbr.zip\tAuthorized\t4D5307E6\t12345678\t20010002\n"
+        f"demo2\tapp\tDemo2\t1\t{len(data)}\t{digest}\thttps://example.org/demo2.zip\tAuthorized\n")
+    (root/"aurorax-store-requests.tsv").write_text(f"ptbr\t{digest}\ndemo2\t{digest}\n")
+    store.process(root,{"example.org"},lambda u,h:io.BytesIO(data),workers=2)
+    assert (target.parent/"ptbr.pkg").read_bytes()==data
+    assert (target.parent/"demo2.pkg").read_bytes()==data
+    assert not list(target.parent.glob("*.part"))
+    (root/"aurorax-store.tsv").write_text(
+        f"ptbr\ttranslation\tTraducao\t1\t{len(data)}\t{digest}\thttps://example.org/ptbr.zip\tAuthorized\n")
+    try:store.read_catalog(root)
+    except ValueError:pass
+    else:raise AssertionError("translation without compatibility accepted")

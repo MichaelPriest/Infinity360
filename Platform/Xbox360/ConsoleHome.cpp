@@ -137,7 +137,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),copyPaused_(false),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
-      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),importPreview_(false),
+      homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),storeTranslationMatch_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
@@ -666,11 +666,22 @@ void ConsoleHome::ApplyAuroraProfile() {
     importPreview_=false;notice_="Perfil Aurora mesclado; preferencias locais preservadas.";
 }
 void ConsoleHome::RebuildStore() {
-    static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc"};
+    static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc","translation"};
     storeVisible_.clear();
     for(size_t i=0;i<store_.Items().size();++i)
         if(storeTab_==0||store_.Items()[i].category==tabs[storeTab_])storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
+}
+bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
+    if(item.category!="translation")return true;
+    for(size_t i=0;i<games_.size();++i) {
+        if(isContentPackage(games_[i]))continue;
+        XboxExecutionInfo info;
+        if(ContentCatalog::ReadExecutionInfo(games_[i].executable,info) &&
+           info.titleId==item.titleId&&info.mediaId==item.mediaId&&info.version==item.gameVersion)
+            return true;
+    }
+    return false;
 }
 std::string ConsoleHome::Press(Key key) {
     if(storeActive_) {
@@ -687,10 +698,13 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(!storeDetails_) {
             if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
-            if(key==Right&&storeTab_<6) {++storeTab_;storeRow_=0;RebuildStore();}
+            if(key==Right&&storeTab_<7) {++storeTab_;storeRow_=0;RebuildStore();}
             if(key==Up&&storeRow_>0)--storeRow_;
             if(key==Down&&static_cast<size_t>(storeRow_+1)<storeVisible_.size())++storeRow_;
-            if(key==Accept&&!storeVisible_.empty())storeDetails_=true;
+            if(key==Accept&&!storeVisible_.empty()) {
+                storeDetails_=true;
+                storeTranslationMatch_=TranslationMatches(store_.Items()[storeVisible_[storeRow_]]);
+            }
         } else if(!storeVisible_.empty()) {
             const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
             if(key==Favorite) {
@@ -698,6 +712,10 @@ std::string ConsoleHome::Press(Key key) {
                 notice_=store_.Cancel(item)?"Solicitacao removida; arquivos locais preservados.":"Falha ao salvar fila.";
             }
             if(key==Accept) {
+                if(!TranslationMatches(item)) {
+                    storeConfirm_=false;storeTranslationMatch_=false;
+                    notice_="Traducao: nenhum XEX local com Title ID, Media ID e versao iguais.";return "";
+                }
                 if(!storeConfirm_) {storeConfirm_=true;notice_="A confirma pedido para o PC | B cancela.";}
                 else {
                     storeConfirm_=false;
@@ -1282,11 +1300,11 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     c.Text(44,78,"AuroraX Store",40,White,1175);
     c.Text(48,133,"Catalogos autorizados | Downloads pelo PC nesta versao",21,Muted,1175);
-    const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC"};
-    for(int i=0;i<7;++i) {
-        const int x=45+i*170;
-        panel(c,x,177,160,44,Panel,i==storeTab_);
-        c.Text(x+10,185,tabs[i],20,i==storeTab_?Lime:White,140);
+    const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
+    for(int i=0;i<8;++i) {
+        const int x=45+i*149;
+        panel(c,x,177,140,44,Panel,i==storeTab_);
+        c.Text(x+8,185,tabs[i],18,i==storeTab_?Lime:White,124);
     }
     if(storeVisible_.empty()) {
         c.Text(48,270,"Nenhum item no catalogo desta categoria.",24,White,1175);
@@ -1298,7 +1316,13 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,367,"Licenca / autorizacao declarada: "+item.rights,22,Muted,1150);
         c.Text(55,415,store_.Staged(item)?"Arquivo local encontrado (tamanho; SHA pelo PC)":
             store_.Requested(item)?"Solicitado na fila PC":"Disponivel no catalogo",22,Lime,1150);
-        c.Text(55,470,item.url,18,Muted,1150);
+        if(item.category=="translation") {
+            char ids[128];std::sprintf(ids,"Title %08X | Media %08X | XEX %08X",
+                                       item.titleId,item.mediaId,item.gameVersion);
+            c.Text(55,467,ids,20,Muted,1150);
+            c.Text(55,505,storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":
+                "Nenhum XEX local correspondente; pedido bloqueado",20,storeTranslationMatch_?Lime:Muted,1150);
+        } else c.Text(55,470,item.url,18,Muted,1150);
         c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"A Solicitar download | X Remover pedido | B Voltar",21,Lime,1150);
         return;
     } else {

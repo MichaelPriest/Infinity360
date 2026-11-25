@@ -72,6 +72,8 @@ private:
     StoreCatalog store_;
     std::vector<size_t> storeVisible_;
     void RebuildStore();
+    bool TranslationMatches(const StoreItem& item) const;
+    bool storeTranslationMatch_;
     void DrawStore(HomeCanvas& c) const;
     bool importPreview_;
     std::vector<std::string> importFavorites_, importHistory_;

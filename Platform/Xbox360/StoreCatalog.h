@@ -4,6 +4,7 @@
 struct StoreItem {
     std::string id, category, name, version, sha256, url, rights;
     unsigned long long bytes;
+    unsigned titleId, mediaId, gameVersion; // translation only; zero otherwise
 };
 class StoreCatalog {
 public:

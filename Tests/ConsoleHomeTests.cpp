@@ -874,5 +874,25 @@ int main(int argc,char** argv) {
     storeMenu.Press(ConsoleHome::Favorite);
     assert(fs::file_size(storeRoot/"aurorax-store-requests.tsv")==0);
     storeMenu.Press(ConsoleHome::Back);storeMenu.Press(ConsoleHome::Back);
+    // PT-BR requests require a matching installed extracted XEX.
+    const fs::path ptbrRoot=root/"TranslationFixture";
+    const fs::path ptbrGame=ptbrRoot/"Games"/"Demo"/"default.xex";
+    fs::create_directories(ptbrGame.parent_path());
+    {std::ofstream out(ptbrGame,std::ios::binary);
+     out.write(reinterpret_cast<const char*>(trainerGameHeader.data()),trainerGameHeader.size());}
+    {std::ofstream out(ptbrRoot/"aurorax-store.tsv");
+     out<<"ptbr\ttranslation\tTraducao PT-BR\t1\t4\t"<<storeHash
+        <<"\thttps://example.org/ptbr.zip\tAuthorized\t4D5307E6\t12345678\t20010002\n";
+     out<<"wrong\ttranslation\tOutra versao\t1\t4\t"<<storeHash
+        <<"\thttps://example.org/other.zip\tAuthorized\t4D5307E6\t12345678\t20010003\n";}
+    ConsoleHome ptbr(ptbrRoot.string()+"/",std::vector<std::string>(1,(ptbrRoot/"Games").string()));
+    ptbr.Load();ptbr.Press(ConsoleHome::PageDown);
+    for(int i=0;i<7;++i)ptbr.Press(ConsoleHome::Right);
+    ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);
+    assert(fs::exists(ptbrRoot/"aurorax-store-requests.tsv"));
+    ptbr.Press(ConsoleHome::Back);ptbr.Press(ConsoleHome::Down);
+    ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);
+    {std::ifstream in(ptbrRoot/"aurorax-store-requests.tsv");std::string line;
+     std::getline(in,line);assert(line=="ptbr\t"+storeHash);assert(!std::getline(in,line));}
     fs::remove_all(root);
 }

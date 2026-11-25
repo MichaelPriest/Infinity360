@@ -26,7 +26,18 @@ bool hash(const std::string& s) {
     return true;
 }
 bool category(const std::string& s) {
-    return s=="game"||s=="xbla"||s=="homebrew"||s=="app"||s=="emulator"||s=="dlc";
+    return s=="game"||s=="xbla"||s=="homebrew"||s=="app"||s=="emulator"||s=="dlc"||s=="translation";
+}
+bool hex8(const std::string& s,unsigned& value) {
+    if(s.size()!=8)return false;
+    value=0;
+    for(size_t i=0;i<s.size();++i) {
+        const char ch=s[i];
+        if(ch>='0'&&ch<='9')value=(value<<4)|(ch-'0');
+        else if(ch>='A'&&ch<='F')value=(value<<4)|(ch-'A'+10);
+        else return false;
+    }
+    return value!=0;
 }
 bool readBound(const std::string& path,size_t cap,std::string& data) {
     std::ifstream in(path.c_str(),std::ios::binary);
@@ -42,10 +53,15 @@ bool parse(const std::string& line,StoreItem& item) {
     for(size_t i=0;i<=line.size();++i)if(i==line.size()||line[i]=='\t') {
         fields.push_back(line.substr(at,i-at));at=i+1;
     }
-    if(fields.size()!=8||!token(fields[0],32)||!category(fields[1])||
+    if((fields.size()!=8&&fields.size()!=11)||!token(fields[0],32)||!category(fields[1])||
        !display(fields[2],96)||!display(fields[3],24)||!hash(fields[5])||
        fields[6].compare(0,8,"https://")!=0||!display(fields[6],1024)||
        !display(fields[7],96))return false;
+    item.titleId=item.mediaId=item.gameVersion=0;
+    if(fields[1]=="translation") {
+        if(fields.size()!=11||!hex8(fields[8],item.titleId)||
+           !hex8(fields[9],item.mediaId)||!hex8(fields[10],item.gameVersion))return false;
+    } else if(fields.size()!=8)return false;
     unsigned long long size=0;
     if(fields[4].empty()||fields[4].size()>12)return false;
     for(size_t i=0;i<fields[4].size();++i) {

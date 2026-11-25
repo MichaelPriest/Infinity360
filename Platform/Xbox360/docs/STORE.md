@@ -11,3 +11,8 @@ python Platform/Xbox360/tools/store_download.py D:/AuroraX --allow-host repo.exa
 ```
 
 O domínio é ilustrativo; substitua por um repositório HTTPS autorizado. O download é validado por tamanho e SHA-256 e fica em UserFiles/Store/<id>.pkg, sem extração ou execução automática. Cancele pedidos na dashboard antes de executar o downloader; não altere a fila simultaneamente. A UI mostra arquivo local pelo tamanho, não certifica hash. Ainda não há transporte nativo, integração com API original X-Store, instalação nem teste em hardware.
+
+
+## Traduções PT-BR e downloads simultâneos
+
+Categoria `translation` exige 11 colunas: as oito anteriores mais Title ID, Media ID e versão XEX (8 dígitos hexadecimais maiúsculos, não zero). A aba PT-BR mostra os pacotes e bloqueia pedidos sem XEX extraído local correspondente. Não confirma TU ativa nem instala tradução. O PC aceita `--workers 1..4` para baixar arquivos independentes em paralelo, com verificação por pacote. Não é download segmentado de um único arquivo; não altera nem executa o jogo.
