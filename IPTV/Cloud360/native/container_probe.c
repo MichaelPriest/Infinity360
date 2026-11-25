@@ -1,5 +1,4 @@
 #include "container_decode.h"
-#include "xsdk/log.h"
 #include <stdio.h>
 int main(void){
     const char* paths[]={"game:/test.mp4","game:/test.ts"};

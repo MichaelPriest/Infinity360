@@ -1,0 +1,105 @@
+name: Cloud360 FFmpeg PowerPC experimental build
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloud360-ffmpeg-xsdk.yml'
+      - 'IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh'
+      - 'IPTV/Cloud360/native/**'
+      - 'IPTV/Cloud360/core/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ffmpeg-xsdk-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ffmpeg-xsdk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential bison flex texinfo libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 cmake ninja-build git glslang-tools ffmpeg
+      - name: Pin XSDK and compiler
+        run: |
+          git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
+          git -C "$HOME/xsdk" checkout 74dfcca8d21c5fe83b59079ef0e032e62994c1a2
+      - uses: actions/cache@v4
+        id: toolchain-cache
+        with:
+          path: ~/xsdk-gcc
+          key: xsdk-gcc-powerpc-74dfcca8-ubuntu-2404-v1
+      - name: Build compiler on cache miss
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: |
+          cd "$HOME/xsdk"
+          PREFIX="$HOME/xsdk-gcc" WORK="$RUNNER_TEMP/xsdk-gcc-work" JOBS=4 bash tools/toolchain/build.sh
+      - name: Build XSDK support and shader compiler
+        run: |
+          cd "$HOME/xsdk"
+          make -j4 build/libxsdk.a build/host/libxsc.so
+      - name: Pin FFmpeg 7.1.3 source
+        run: |
+          git clone --depth 1 --branch n7.1.3 https://github.com/FFmpeg/FFmpeg.git "$HOME/ffmpeg"
+          test "$(git -C "$HOME/ffmpeg" rev-parse HEAD)" = f46e514491172d15bd74b4abb1814cd2f05a763e
+          mkdir -p "$RUNNER_TEMP/ffmpeg-diagnostics"
+          git -C "$HOME/ffmpeg" rev-parse HEAD > "$RUNNER_TEMP/ffmpeg-diagnostics/source.txt"
+      - name: Compile FFmpeg PowerPC libraries
+        shell: bash
+        run: |
+          set -o pipefail
+          FFMPEG_SOURCE="$HOME/ffmpeg" XSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+            CLOUD360_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" FFMPEG_BUILD_DIR="$RUNNER_TEMP/ffmpeg-build" \
+            bash IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh 2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/ffmpeg-build.log"
+      - name: Pin TLS and curl ports
+        run: |
+          git clone https://github.com/xenosworks/mbedtls-xenon.git "$HOME/mbedtls-xenon"
+          git -C "$HOME/mbedtls-xenon" checkout 591b04adbec4bc5582649601f4407506a610162b
+          git -C "$HOME/mbedtls-xenon" submodule update --init --recursive
+          git clone https://github.com/xenosworks/curl-xenon.git "$HOME/curl-xenon"
+          git -C "$HOME/curl-xenon" checkout a6b70bd06820e1c625f47fe0e592e08c5daaa6b4
+      - name: Link both experimental XEX targets
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake -S IPTV/Cloud360/native -B "$RUNNER_TEMP/av-native" -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+            -DXSDK_GLSLANG="$(command -v glslangValidator)" \
+            -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
+            -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" \
+            -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF -DCMAKE_BUILD_TYPE=Release \
+            2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/cmake.log"
+          cmake --build "$RUNNER_TEMP/av-native" --parallel 2 --target cloud360_container_probe cloud360_av_probe \
+            2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/xex-link.log"
+      - name: Verify XEX2 headers and record hashes
+        run: |
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          with (root/"ffmpeg-diagnostics"/"XEX-SHA256.txt").open("w") as out:
+              for name in ("cloud360_container_probe.xex","cloud360_av_probe.xex"):
+                  data=(root/"av-native"/name).read_bytes()
+                  assert len(data)>4096 and data[:4]==b"XEX2", name
+                  out.write(f"{hashlib.sha256(data).hexdigest()}  {name}\n")
+          PY
+      - name: Collect configure and linker diagnostics
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg-diagnostics"
+          for file in "$RUNNER_TEMP/ffmpeg-build/ffbuild/config.log" "$RUNNER_TEMP/ffmpeg-build/ffbuild/config.mak" "$RUNNER_TEMP/ffmpeg-build/config.h"; do
+            if [ -f "$file" ]; then cp "$file" "$RUNNER_TEMP/ffmpeg-diagnostics/"; fi
+          done
+          if [ -x "$HOME/xsdk-gcc/bin/powerpc-xsdk-elf-gcc" ]; then
+            "$HOME/xsdk-gcc/bin/powerpc-xsdk-elf-gcc" -v > "$RUNNER_TEMP/ffmpeg-diagnostics/compiler.txt" 2>&1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud360-ffmpeg-xsdk-diagnostics
+          path: ${{ runner.temp }}/ffmpeg-diagnostics/
+          retention-days: 14
+          if-no-files-found: warn

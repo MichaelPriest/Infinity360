@@ -98,3 +98,7 @@ Parser de master/media, seleção inicial por bitrate, leitor sequencial TS de m
 ### P1 — HLS live restrito
 
 Atualização de janela por sequência, início próximo à borda live, proteção contra duplicação, retries antes do primeiro byte e testes determinísticos. Sem ABR, recuperação de descontinuidade, rebuffering ou confirmação de build FFmpeg PPC. README atualizado.
+
+### P1 — Cross-build FFmpeg
+
+CI PowerPC experimental independente, FFmpeg 7.1.3 fixado por commit, verificação de dois XEX2 e preservação de logs. Primeira execução pendente. Distribuição de binários FFmpeg depende de revisão LGPL e testes físicos; Releases Alpha continuam no workflow normal.

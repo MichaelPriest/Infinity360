@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
+export LC_ALL=C
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SOURCE="$FFMPEG_SOURCE"
 TOOLCHAIN="$XSDK_TOOLCHAIN"
@@ -29,6 +30,7 @@ cd "$BUILD"
   --disable-everything --disable-autodetect \
   --disable-avdevice --disable-avfilter --enable-avformat --enable-demuxer=mov,mpegts \
   --disable-network --disable-postproc --disable-swresample --disable-swscale \
+  --disable-gpl --disable-nonfree \
   --disable-pthreads --disable-w32threads --disable-os2threads \
   --disable-asm --disable-runtime-cpudetect --disable-iconv \
   --disable-bzlib --disable-zlib \
@@ -40,4 +42,8 @@ make install
 test -s "$DEST/lib/libavformat.a"
 test -s "$DEST/lib/libavcodec.a"
 test -s "$DEST/lib/libavutil.a"
+for lib in avformat avcodec avutil; do
+  "$TOOLCHAIN/bin/powerpc-xsdk-elf-ar" t "$DEST/lib/lib$lib.a" > "$BUILD/$lib-objects.txt"
+  test -s "$BUILD/$lib-objects.txt"
+done
 echo "FFmpeg static libraries installed in $DEST"
