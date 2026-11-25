@@ -4,6 +4,13 @@
 #include <fstream>
 #include <cerrno>
 #include <set>
+#ifdef __XSDK__
+#include "XsdkPaths.h"
+#include "xsdk/kernel.h"
+#include <cstdlib>
+#include <sys/stat.h>
+#include "GameScanner.h"
+#endif
 #if defined(_WIN32) && !defined(_XBOX)
 #include <windows.h>
 #elif !defined(_XBOX)
@@ -19,7 +26,11 @@ namespace fs=std::filesystem;
 
 namespace {
 std::string key(std::string s) {
-#ifdef _XBOX
+#ifdef __XSDK__
+    const std::string normalized=XsdkPaths::Key(s);
+    if(!normalized.empty())return normalized;
+    for(char& ch:s)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+#elif defined(_XBOX)
     for(size_t i=0;i<s.size();++i) {
         if(s[i]=='/')s[i]='\\';
         s[i]=(char)std::tolower((unsigned char)s[i]);
@@ -30,10 +41,14 @@ std::string key(std::string s) {
     return s;
 }
 bool inside(const std::string& path,const std::string& root) {
+#ifdef __XSDK__
+    return XsdkPaths::Inside(path,root);
+#else
     const std::string p=key(path),r=key(root);
     if(p==r)return true;
     if(p.size()<=r.size() || p.compare(0,r.size(),r)!=0)return false;
     return r=="/" || p[r.size()]=='/' || p[r.size()]=='\\';
+#endif
 }
 bool clean(const std::string& path) {
     if(path.empty() || path.size()>240)return false;
@@ -49,7 +64,10 @@ bool clean(const std::string& path) {
         if(part=="." || part=="..")return false;
         start=i+1;
     }
-#ifndef _XBOX
+#ifdef __XSDK__
+    // FATX has no symbolic links; never permit internal drive changes or ..
+    return !XsdkPaths::Normalize(path,true).empty();
+#elif !defined(_XBOX)
     // Reject links, including links in parent components, even if the
     // target is inside the workspace. This also covers nonexistent targets.
     std::error_code ec;
@@ -83,10 +101,55 @@ bool exists(const std::string& path) {
     return fs::exists(path,ec) && !ec;
 #endif
 }
+#ifdef __XSDK__
+// XSDK POSIX rename overwrites and FATX has no hard links. Use the kernel
+// no-replace flag instead; keep the original on collision or failure.
+std::string kernelPath(const std::string& path){
+    char* raw=realpath(path.c_str(),nullptr);
+    if(!raw)return "";
+    std::string result(raw);std::free(raw);
+    for(char& ch:result)if(ch=='/')ch='\\';
+    return result;
+}
+bool renameNoReplace(const std::string& from,const std::string& to){
+    if(!clean(from)||!clean(to)||key(from)==key(to))return false;
+    const std::string source=kernelPath(from);
+    const size_t split=to.find_last_of("/\\");
+    if(source.empty()||split==std::string::npos)return false;
+    std::string target=kernelPath(to.substr(0,split+1));
+    if(target.empty())return false;
+    if(target.back()!='\\')target+='\\';
+    target+=to.substr(split+1);
+    if(target.size()>255||source.size()>255)return false;
+    ANSI_STRING name{};name.length=static_cast<uint16_t>(source.size());
+    name.maximum_length=name.length+1;name.pointer=source.c_str();
+    OBJECT_ATTRIBUTES attr{};attr.root_directory=source.front()=='\\'?0:OB_DOS_DEVICES;attr.name=&name;
+    HANDLE handle=0;IO_STATUS_BLOCK io{};
+    NTSTATUS status=NtCreateFile(&handle,DELETE|SYNCHRONIZE,&attr,&io,nullptr,
+        FILE_ATTRIBUTE_NORMAL,0,FILE_OPEN,FILE_SYNCHRONOUS_IO_NONALERT);
+    if(!NT_SUCCESS(status))return false;
+    FILE_RENAME_INFORMATION info{};info.replace_if_exists=0;
+    info.name.length=static_cast<uint16_t>(target.size());
+    info.name.maximum_length=info.name.length+1;info.name.pointer=target.c_str();
+    status=NtSetInformationFile(handle,&io,&info,sizeof info,FILE_RENAME_INFORMATION_CLASS);
+    const NTSTATUS closed=NtClose(handle);
+    return NT_SUCCESS(status)&&NT_SUCCESS(closed);
+}
+#endif
 }
 
 FileWorkspace::FileWorkspace(const std::string& appDirectory) {
     roots_.push_back(appDirectory);
+#ifdef __XSDK__
+    const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/","mu0:/","mu1:/","dvd:/"};
+    roots_.insert(roots_.end(),drives,drives+7);
+    std::ifstream marker(Join(appDirectory,"enable-file-writes.txt").c_str());
+    std::string signature;
+    if(std::getline(marker,signature)&&signature=="ENABLE-FILE-WRITES"){
+        workspaces_.push_back(Join(appDirectory,"UserFiles"));
+        for(size_t i=1;i<=4;++i)workspaces_.push_back(Join(roots_[i],"Infinity360Files"));
+    }
+#else
     workspaces_.push_back(Join(appDirectory,"UserFiles"));
 #ifdef _XBOX
     roots_.push_back("HDD1:\\");
@@ -98,6 +161,7 @@ FileWorkspace::FileWorkspace(const std::string& appDirectory) {
     roots_.push_back("DVD:\\");
     roots_.push_back("MU0:\\");
     roots_.push_back("MU1:\\");
+#endif
 #endif
 }
 bool FileWorkspace::ValidName(const std::string& name) {
@@ -169,6 +233,8 @@ bool FileWorkspace::Rename(const std::string& parent,const std::string& oldName,
        !exists(from) || exists(to))return false;
 #ifdef _XBOX
     return MoveFileA(from.c_str(),to.c_str())!=0;
+#elif defined(__XSDK__)
+    return renameNoReplace(from,to);
 #else
     std::error_code ec;
     fs::rename(from,to,ec);
@@ -180,6 +246,12 @@ bool FileWorkspace::Remove(const std::string& parent,const std::string& name) co
     const std::string path=Join(parent,name);
     if(!Allowed(path,workspaces_)||!exists(path))return false;
     // Nonrecursive only: an empty directory or a regular personal file.
+#ifdef __XSDK__
+    if(directory(path)){
+        std::vector<FolderEntry> children;
+        if(!ReadFolder(path,children)||!children.empty())return false;
+    }
+#endif
 #ifdef _XBOX
     return directory(path)?RemoveDirectoryA(path.c_str())!=0:DeleteFileA(path.c_str())!=0;
 #else
@@ -201,12 +273,18 @@ bool FileWorkspace::Move(const std::string& source,const std::string& name,const
 #endif
     return MoveFileA(from.c_str(),to.c_str())!=0;
 #else
+#ifdef __XSDK__
+    const std::string a=XsdkPaths::Key(source),b=XsdkPaths::Key(dest);
+    if(a.substr(0,a.find(':'))!=b.substr(0,b.find(':')))return false;
+    return renameNoReplace(from,to);
+#else
     // A same-filesystem hard link reserves a new name without clobbering it.
     // If source unlink fails, leave both names rather than risk deleting data.
     std::error_code ec;
     if(!fs::is_regular_file(from,ec)||ec)return false;
     if(link(from.c_str(),to.c_str())!=0)return false;
     return unlink(from.c_str())==0;
+#endif
 #endif
 }
 bool FileWorkspace::PrepareCopy(const std::string& sourceDir,const std::string& name,
@@ -400,11 +478,17 @@ void FileTransfer::Tick() {
     const bool closed=close(output_)==0;
     output_=-1;
     if(!flushed || !closed) {Fail("Falha ao finalizar a escrita.");return;}
+#ifdef __XSDK__
+    if(!renameNoReplace(temporary_,target_)){
+        Fail("Destino ocupado ou falha ao concluir sem sobrescrever.");return;
+    }
+#else
     // Atomic no-replace publication on filesystems with hard-link support.
     if(link(temporary_.c_str(),target_.c_str())!=0) {
         Fail("Destino ocupado ou sistema sem suporte a publicacao segura.");return;
     }
     unlink(temporary_.c_str());
+#endif
 #endif
     temporary_.clear();state_=Completed;
 }
