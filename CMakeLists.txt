@@ -26,7 +26,7 @@ endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
 add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
-    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
+    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
     Platform/Xbox360/CloudTv.cpp Platform/Xbox360/MediaUrl.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
@@ -84,4 +84,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
     target_include_directories(ftp_loopback_probe PRIVATE Platform/Xbox360)
     add_test(NAME ftp_loopback COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/FtpLoopbackTest.py $<TARGET_FILE:ftp_loopback_probe>)
     set_tests_properties(ftp_loopback PROPERTIES TIMEOUT 30)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
+    add_executable(ftp_server_probe Tests/FtpServerProbe.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/FileWorkspace.cpp)
+    target_include_directories(ftp_server_probe PRIVATE Platform/Xbox360)
+    add_test(NAME ftp_server COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/FtpServerTest.py $<TARGET_FILE:ftp_server_probe>)
+    set_tests_properties(ftp_server PROPERTIES TIMEOUT 30)
 endif()

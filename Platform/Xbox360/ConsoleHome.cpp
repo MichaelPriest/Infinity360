@@ -161,7 +161,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
+      fileWorkspace_(dataDir),ftp_(fileWorkspace_),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),storeTranslationMatch_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -490,7 +490,8 @@ void ConsoleHome::MovePin(int direction) {
     row_=neighbor;Rebuild();notice_="Ordem dos jogos fixados salva.";
 }
 bool ConsoleHome::Tick() {
-    if(!TransferRunning() || copyPaused_)return false;
+    const bool ftpChanged=ftp_.Tick();
+    if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
         if(!TransferRunning() && section_==Files && page_==Listing && !searchActive_)Reload();
@@ -506,7 +507,7 @@ bool ConsoleHome::Tick() {
             "Copia interrompida: "+transfer_.Error();
         RecordEvent(transfer_.Status()==FileTransfer::Completed?"Arquivo copiado":"Copia interrompida");return true;
     }
-    return previous!=transfer_.Percent();
+    return ftpChanged || previous!=transfer_.Percent();
 }
 std::string ConsoleHome::TakeMovie() {
     const std::string movie=tv_.TakeMovie();
@@ -535,6 +536,30 @@ void ConsoleHome::RefreshResidentPlugins() {
         }
     }
     residentPlugins_.clear();
+}
+void ConsoleHome::ToggleFtp() {
+    if(ftp_.Running()){ftp_.Stop();notice_="FTP encerrado.";RecordEvent("FTP encerrado");return;}
+#ifndef _XBOX
+    notice_="FTP nativo: somente no Xbox; teste de transporte separado no PC.";
+#else
+    RefreshNetwork();
+    std::ifstream in((dir_+"infinity360-ftp.txt").c_str(),std::ios::binary);
+    char data[132];
+    in.read(data,sizeof data);
+    if(in.bad()||in.gcount()>=static_cast<std::streamsize>(sizeof data)) {
+        notice_="Arquivo de credenciais FTP invalido.";return;
+    }
+    std::istringstream lines(std::string(data,static_cast<size_t>(in.gcount())));
+    std::string user,password,extra;
+    if(!std::getline(lines,user)||!std::getline(lines,password)||std::getline(lines,extra)) {
+        notice_="Configure infinity360-ftp.txt: usuario e senha em duas linhas.";return;
+    }
+    if(!user.empty()&&user[user.size()-1]=='\r')user.erase(user.size()-1);
+    if(!password.empty()&&password[password.size()-1]=='\r')password.erase(password.size()-1);
+    const bool started=ftp_.Start(FileWorkspace::Join(dir_,"UserFiles"),network_.ipv4,2121,user,password);
+    notice_=started?"FTP LAN somente leitura iniciado na porta 2121.":ftp_.Error();
+    RecordEvent(started?"FTP iniciado":"Falha ao iniciar FTP");
+#endif
 }
 void ConsoleHome::RefreshNetwork() {
     network_=NetworkInfo::Read();
@@ -1166,6 +1191,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details && systemTab_==1 && key==Accept) {ToggleFtp();return "";}
         if(page_==Details && systemTab_==3 && key==PageDown) {
             storeDownloads_=!storeDownloads_;storeDownloadRow_=0;
             if(storeDownloads_)store_.Load();
@@ -1622,10 +1648,10 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,"Servicos de rede",25,White,558);
-    c.Text(660,447,"FTP: teste TCP no PC; inativo no Xbox",21,Muted,558);
-    c.Text(660,486,"SMB / System Link: pendentes",20,Muted,558);
+    c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado (somente leitura)",21,ftp_.Running()?Lime:Muted,558);
+    c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | UserFiles":"A Iniciar FTP LAN na porta 2121",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
-    c.Text(45,607,"Y Atualizar | B Voltar | IP local nao comprova acesso a Internet.",18,Muted,1180);
+    c.Text(45,607,"A Iniciar/Parar FTP | Y Atualizar | B Voltar | Use rede local confiavel.",18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     c.Text(45,349,"Historico operacional (ultimos 64)",27,White,1170);
@@ -1777,7 +1803,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
-            "FTP: autenticacao local implementada; transporte de rede pendente.",
+            "FTP LAN somente leitura; ativacao manual.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
             "Transferencias locais; downloads de internet pendentes.",
             "Diagnostico somente leitura do launch.ini.",

@@ -285,9 +285,10 @@ int main() {
         if(edge&XINPUT_GAMEPAD_BACK) break;
         for(size_t i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(edge&keys[i]) {
             std::string path=menu.Press(static_cast<ConsoleHome::Key>(i));
-            if(!path.empty()) { XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
+            if(!path.empty()) { menu.StopFtp(); XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
             const std::string movie=menu.TakeMovie();
             if(!movie.empty()) {
+                menu.StopFtp();
                 menu.PlayerMessage("Abrindo vídeo...  B para voltar.");
                 menu.Draw(canvas,"");video.Show(canvas);
                 menu.PlayerMessage(video.Play(movie));

@@ -359,3 +359,8 @@ Ver `Platform/Xbox360/docs/NEXUS-INTEROP.md`. Importador de metadados local e op
 ## INFINITY 360 — central de downloads e histórico
 
 CI da transição 45516747993/45516748020 aprovadas. Sistema > Downloads alterna fila local e pedidos Store com snapshots PC vinculados a hash/tamanho. Histórico persistente de até 64 eventos de cópia, pedidos e falhas de lançamento; tela mostra os seis últimos. Não há confirmação de conexão ativa, hash calculado no Xbox, HTTP nativo ou execução em segundo plano durante jogos. Testes de integridade de snapshots e eventos adicionados; validação da nova revisão pendente.
+
+
+## FTP LAN experimental
+
+Novo transporte não bloqueante passivo somente leitura (`FtpServer`) integrado a Sistema > Rede e FTP, ativação manual, credenciais próprias, UserFiles, IPv4 privado, 2121, um cliente, sem alteração de segurança de rede. Teste real Linux do mesmo adapter; XDK/hardware e upload nativo pendentes. CI do Manager 45518143726 aprovada. Ver MANAGER.md.

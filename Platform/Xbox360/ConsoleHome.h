@@ -10,6 +10,7 @@
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "ResidentPlugins.h"
+#include "FtpServer.h"
 #include <map>
 #include <set>
 
@@ -23,6 +24,7 @@ public:
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
     bool Tick();
+    void StopFtp() {ftp_.Stop();}
     bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
@@ -39,6 +41,8 @@ private:
     CloudTv tv_;
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
+    FtpServer ftp_;
+    void ToggleFtp();
     FileTransfer transfer_;
     std::vector<WorkspaceCopyStep> copyQueue_;
     std::string activeCopyTarget_;
