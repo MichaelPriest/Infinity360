@@ -288,6 +288,8 @@ private:
     bool gridFilter_=false;
     bool GridListing()const;
     void DrawGameGrid(HomeCanvas& c)const;
+    void DrawModernGameDetails(HomeCanvas& c)const;
+    void DrawModernStore(HomeCanvas& c)const;
     bool layoutPreview_=false;
     void DrawModernHome(HomeCanvas& c,unsigned style,bool preview=false)const;
     unsigned themeDraft_=0,appearanceRow_=0;

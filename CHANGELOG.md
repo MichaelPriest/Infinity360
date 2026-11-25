@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.37 — P4 detalhes e Store (sem build)
+
+- Detalhes modernos: hero, capa, identidade de título, histórico e atalhos existentes.
+- Store: painel do produto, estado real, tamanho, licença e URL; Classic preservado.
+- Capturas 65–67 preparadas; sem execução da nova versão.
+
 ## V0.2.36 — Correção gráfica XSDK (sem build)
 
 - Input UV do shader canvas corrigido de location 1 (COLOR0) para 2 (TEXCOORD0), conforme XSDK fixado.

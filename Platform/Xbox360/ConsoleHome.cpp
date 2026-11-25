@@ -2268,6 +2268,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
+    if(layout_&&!storeManage_){DrawModernStore(c);return;}
     c.Text(44,78,"INFINITY Store",40,White,1175);
     c.Text(48,133,"Catalogos autorizados | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
@@ -3121,6 +3122,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         return;
     }
     if(page_==Details && Count()) {
+        if(layout_&&(section_==Library||section_==Recent||section_==Favorites)){DrawModernGameDetails(c);return;}
         c.Box(44,169,1190,407,Panel,12);
         std::string title,sub,hint;
         if(section_==Files) {
@@ -3756,4 +3758,95 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
     }
     const char* help=section_==Library?(gridFilter_?"Esq/Dir Categorias | A/baixo Jogos":"Direcoes Capas | Cima na 1a fila: categorias"):"Direcoes Capas | A Detalhes | X Favorito";
     c.Text(45,597,c.Tr(help),17,Muted,1000);
+}
+
+void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
+    const auto& game=*visible_[row_];const auto& m=detailMetadata_;
+    const auto cover=ArtPath(game,true),back=ArtPath(game,false);
+    panel(c,45,145,1190,246,Panel,false);
+    if(appearance_.ShowBackdrop()&&!back.empty())c.LocalArt(back,false,637,149,594,238);
+    c.Box(52,152,577,232,0xff102923u,8);
+    bool art=appearance_.ShowCover()&&!cover.empty()&&c.LocalArt(cover,true,65,166,136,204);
+    if(!art)c.Image(652,0,52,52,107,224,52,52,Muted);
+    c.Text(219,165,game.name,31,White,398);
+    c.Text(219,211,game.device,18,Muted,398);
+    c.Text(219,241,m.package?(m.volumeType==0?"STFS / GOD / XBLA":"SVOD"):"XEX",21,Lime,398);
+    if(m.discCount)c.Text(219,273,c.Tr("Disco")+" "+number(m.discNumber)+"/"+number(m.discCount),19,Muted,398);
+    c.Text(219,301,contains(pinned_,game.executable)?c.Tr("FIXADO"):Starred(game)?c.Tr("Favorito"):"",17,Lime,398);
+    panel(c,218,336,395,39,0xff102923u,true);
+    c.Text(232,343,c.Tr(m.package?"A Solicitar montagem":"A Jogar"),21,Lime,365);
+    // These are existing controller shortcuts, not new focus targets.
+    const char* actions[]={"RB TU / DLC / Saves","LB Fixar / Desafixar","START Capa e fundo","X Favorito"};
+    for(int i=0;i<4;++i){
+        const int x=45+i*300;panel(c,x,401,289,49,Panel,false);
+        c.Text(x+10,413,c.Tr(actions[i]),17,White,269);
+    }
+    panel(c,45,461,590,125,Panel,false);
+    panel(c,646,461,589,125,Panel,false);
+    c.Text(57,467,c.Tr("Identidade do titulo"),19,Lime,565);
+    if(m.known){
+        c.Text(57,494,"Title "+hexId(m.titleId)+" | Media "+(m.mediaId?hexId(m.mediaId):"-"),18,White,565);
+        c.Text(57,522,"XEX "+hexId(m.version)+" | "+(m.package?"Tipo "+hexId(m.contentType):"Base "+hexId(m.baseVersion)),17,Muted,565);
+        if(m.package)c.Text(57,550,c.Tr("Tamanho declarado")+std::string(": ")+StorageInfo::FormatBytes(m.declaredBytes),16,Muted,565);
+        else if(translationReferences_.count(m.titleId))c.Text(57,550,c.Tr("PT-BR referenciado; versao nao confirmada"),16,Muted,565);
+    }else c.Text(57,501,c.Tr("Metadados indisponiveis para este item."),18,Muted,565);
+    const auto stats=LaunchStats(game.executable);
+    c.Text(658,467,c.Tr("Historico de execucao"),19,Lime,562);
+    c.Text(658,495,c.Tr("Tentativas")+std::string(": ")+number(stats.attempts)+" | "+c.Tr("Falhas imediatas")+": "+number(stats.failed),17,White,562);
+    c.Text(658,522,stats.attempts?LaunchStatistics::Date(stats.last):c.Tr("Nenhuma tentativa registrada"),17,Muted,562);
+    c.Text(658,550,c.Tr("Y Atualizar"),17,Muted,562);
+    c.Text(45,597,game.executable,16,Muted,1180);
+    if(m.discCount>1)c.Text(45,619,c.Tr("R3 Selecionar disco"),17,Lime,1180);
+}
+void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
+    c.Text(44,78,"INFINITY Store",40,White,1175);
+    c.Text(48,133,std::string(c.Tr("Catalogos autorizados"))+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
+    const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
+    for(int i=0;i<8;++i){
+        const int x=45+i*149;panel(c,x,171,140,42,Panel,i==storeTab_);
+        c.Text(x+8,180,c.Tr(tabs[i]),18,i==storeTab_?Lime:White,124);
+    }
+    if(storeVisible_.empty()){
+        c.Text(55,270,c.Tr("Nenhum item no catalogo desta categoria."),23,White,1170);
+        c.Text(55,320,c.Tr("Configure aurorax-store.tsv com fontes e licencas autorizadas."),19,Muted,1170);return;
+    }
+    const auto& item=store_.Items()[storeVisible_[storeRow_]];
+    const auto status=[&](const StoreItem& p)->const char*{
+        if(store_.Installed(p))return "Instalado";
+        if(store_.Progress(p).state==StoreProgress::NativePaused)return "Parcial salvo";
+        if(store_.Staged(p))return "Arquivo local";
+        if(store_.NativeQueued(p))return "Na fila nativa";
+        if(store_.Requested(p))return "Na fila PC";
+        return "Disponivel";
+    };
+    if(!storeDetails_){
+        const int first=storeRow_/5*5;
+        for(int i=first;i<std::min(first+5,static_cast<int>(storeVisible_.size()));++i){
+            const auto& p=store_.Items()[storeVisible_[i]];const int y=228+(i-first)*70;
+            panel(c,45,y,675,64,Panel,i==storeRow_);
+            c.Text(60,y+5,p.name,23,White,643);
+            c.Text(60,y+34,p.version+" | "+StorageInfo::FormatBytes(p.bytes),17,Muted,643);
+        }
+    }
+    const int x=storeDetails_?45:735,w=storeDetails_?1190:500;
+    panel(c,x,228,w,344,Panel,false);
+    c.Box(x+10,238,w-20,58,0xff102923u,7);
+    c.Text(x+22,249,item.name,26,White,w-44);
+    c.Text(x+20,310,c.Tr(status(item)),21,Lime,w-40);
+    c.Text(x+20,346,item.version+" | "+StorageInfo::FormatBytes(item.bytes),20,White,w-40);
+    c.Text(x+20,379,std::string(c.Tr("Categoria"))+": "+item.category,18,Muted,w-40);
+    c.Text(x+20,412,std::string(c.Tr("Licenca / autorizacao declarada"))+": "+item.rights,18,Muted,w-40);
+    if(item.category=="translation"){
+        c.Text(x+20,445,"Title "+hexId(item.titleId)+" | Media "+hexId(item.mediaId)+" | XEX "+hexId(item.gameVersion),17,Muted,w-40);
+        if(storeDetails_)c.Text(x+20,479,c.Tr(storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":"Nenhum XEX local correspondente; pedido bloqueado"),17,storeTranslationMatch_?Lime:Muted,w-40);
+    }else c.Text(x+20,445,item.provider.empty()?c.Tr("Catalogo local"):item.provider,18,Muted,w-40);
+    if(storeDetails_){
+        c.Text(x+20,515,item.url,16,Muted,w-40);
+        c.Text(45,581,c.Tr(storeConfirm_?"A Confirmar pedido | B Cancelar":"START Baixar | A Pedido PC | X Remover PC | B Voltar"),19,Lime,1170);
+        c.Text(45,608,c.Tr("LB Fila nativa | RB Gerenciar | R3 Instalar XEX/ZIP"),18,Muted,1170);
+    }else{
+        c.Text(x+20,528,c.Tr("A Detalhes"),21,Lime,w-40);
+        c.Text(45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
+        c.Text(45,608,c.Tr("LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar"),18,Muted,1170);
+    }
 }

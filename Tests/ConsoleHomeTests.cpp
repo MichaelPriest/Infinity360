@@ -134,7 +134,10 @@ static int captureScreens(const char* atlas,const char* destination) {
         const auto name=std::to_string(53+style)+"-layout-"+std::to_string(style);
         ok=save(name.c_str(),modern)&&ok;
         if(style==DashboardLayout::TopIcons){modern.Press(ConsoleHome::Accept);ok=save("63-biblioteca-grade",modern)&&ok;
-            modern.Press(ConsoleHome::Up);ok=save("64-biblioteca-filtros",modern)&&ok;}
+            modern.Press(ConsoleHome::Up);ok=save("64-biblioteca-filtros",modern)&&ok;
+            modern.Press(ConsoleHome::Down);modern.Press(ConsoleHome::Accept);ok=save("65-detalhes-moderno",modern)&&ok;
+            modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::PageDown);ok=save("66-store-moderna",modern)&&ok;
+            modern.Press(ConsoleHome::Accept);ok=save("67-store-produto-moderno",modern)&&ok;}
     }
     fs::remove_all(root);
     return ok?0:3;

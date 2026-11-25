@@ -278,3 +278,7 @@ Preferência de apresentação independente de layout, grade paginada e seleçã
 ### V0.2.36 — Bloqueio gráfico encontrado no Xenia
 
 Corrigido mismatch de semântica do shader (GLSL location 2 TEXCOORD0). Próxima homologação: compile, abra canvas probe, abra menu, verifique `Presenter PASS` e primeiro frame. Redesign de detalhes permanece pendente. Não houve nova build.
+
+### V0.2.37 — P4 detalhes de jogos e Store
+
+Redesign de detalhes e catálogo/produto Store, sem substituir fluxos ou ações existentes. Provedores, gestão, conteúdo interno, IPTV, arquivos e sistema ainda pendentes. Capturas 67 preparadas; sem build V0.2.37.
