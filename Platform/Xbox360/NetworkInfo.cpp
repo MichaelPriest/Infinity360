@@ -61,8 +61,7 @@ NetworkSnapshot NetworkInfo::Read() {
 #elif defined(__XSDK__)
     uint32_t link=0;
     if(xsdk_net_link(&link)==0){
-        result.ethernetKnown=true;
-        result.ethernetActive=(link&XSDK_NET_LINK_ACTIVE)!=0;
+        result.SetLink(link&XSDK_NET_LINK_ACTIVE,link&XSDK_NET_LINK_100MBPS,link&XSDK_NET_LINK_10MBPS,link&XSDK_NET_LINK_FULL_DUPLEX,link&XSDK_NET_LINK_HALF_DUPLEX);
     }
     struct in_addr address={};
     const int status=xsdk_net_address(&address);

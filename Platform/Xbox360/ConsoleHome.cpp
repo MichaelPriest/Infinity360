@@ -508,7 +508,8 @@ void ConsoleHome::MovePin(int direction) {
     row_=neighbor;Rebuild();notice_="Ordem dos jogos fixados salva.";
 }
 bool ConsoleHome::Tick() {
-    const bool ftpChanged=ftp_.Tick();
+    const bool peerChanged=peerProbe_.Tick();
+    const bool ftpChanged=ftp_.Tick()||peerChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -1541,6 +1542,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if (key==Back) {
+        if(section_==System&&systemTab_==1&&page_==Details)peerProbe_.Stop();
         notice_.clear();
         if (page_==Details) {
             page_=Listing;
@@ -1633,6 +1635,15 @@ std::string ConsoleHome::Press(Key key) {
             if(pages)storagePage_=(storagePage_+pages+(key==PageDown?1:pages-1))%pages;
             return "";
         }
+        if(page_==Details&&systemTab_==1&&(key==PageUp||key==PageDown)){peerProbe_.Stop();networkPeer_=!networkPeer_;return "";}
+        if(page_==Details&&systemTab_==1&&networkPeer_&&(key==Accept||key==Favorite)){
+            if(key==Favorite||peerProbe_.Running()){peerProbe_.Stop();return "";}
+            if(TransferRunning()){notice_="Conclua transferencias antes do teste.";return "";}
+            std::ifstream in((dir_+"infinity360-lan-peer.txt").c_str(),std::ios::binary);char raw[32]{};
+            if(!in.getline(raw,sizeof raw)||in.peek()!=std::char_traits<char>::eof()){notice_="Informe IPv4 privado em infinity360-lan-peer.txt.";return "";}
+            std::string peer=raw;if(!peer.empty()&&peer.back()=='\r')peer.pop_back();
+            RefreshNetwork();StopFtp();peerProbe_.Start(network_.ipv4,peer);return "";
+        }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details && systemTab_==2 && (key==PageUp||key==PageDown)){telemetryVideo_=!telemetryVideo_;return "";}
         if(page_==Details&&systemTab_==2&&telemetryVideo_&&(key==Left||key==Right||key==Favorite)){
@@ -1710,7 +1721,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Right && systemTab_<7) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
-                else if(systemTab_==1)RefreshNetwork();
+                else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;}
                 else if(systemTab_==4)RefreshResidentPlugins();
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
@@ -2441,21 +2452,30 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
-    c.Text(45,349,"Diagnostico de rede local",27,White,1170);
+    if(networkPeer_){
+        c.Text(45,349,"Rede 2/2 | Diagnostico UDP entre consoles",27,White,1170);
+        c.Text(48,392,"Local: "+(network_.ipv4.empty()?"-":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
+        c.Text(48,433,peerProbe_.Label(),23,Lime,1170);
+        c.Text(48,475,"Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
+        c.Text(48,530,"Configure o IPv4 do outro console em infinity360-lan-peer.txt.",18,Muted,1170);
+        c.Text(48,560,"Inicie nos dois consoles. Nao confirma System Link de jogos.",18,Muted,1170);
+        c.Text(48,607,"A Iniciar | X Parar | LB/RB Pagina | B Voltar",18,Lime,1170);return;
+    }
+    c.Text(45,349,"Rede 1/2 | Diagnostico de rede local",27,White,1170);
     c.Box(42,391,589,190,Panel,10);
     c.Text(58,404,"Conexao e endereco IPv4",25,White,550);
     c.Text(58,447,NetworkInfo::StateLabel(network_.state),20,Muted,550);
     c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string("Nao identificado"):network_.ipv4),
            23,network_.ipv4.empty()?Muted:Lime,550);
     c.Text(58,534,network_.ethernetKnown?
-           (network_.ethernetActive?"Ethernet: link ativo":"Ethernet: sem link"):
+           (network_.ethernetActive?"Ethernet: ativo"+(network_.linkMbps?" | "+number(network_.linkMbps)+" Mbps":"")+(network_.duplex.empty()?"":" | "+network_.duplex):"Ethernet: sem link"):
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,"Servicos de rede",25,White,558);
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado",21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?"Leitura/upload":"Somente leitura"):"A Leitura | X Leitura/upload (ALLO)",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
-    c.Text(45,607,"A Leitura | X Leitura/upload | A ou X Parar | Y Atualizar | B Voltar",18,Muted,1180);
+    c.Text(45,607,"A Leitura | X Upload | A/X Parar | LB/RB Teste UDP | Y Atualizar | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     c.Text(45,349,"Historico operacional (ultimos 64)",27,White,1170);

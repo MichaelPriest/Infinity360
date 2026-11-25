@@ -8,6 +8,7 @@
 #include "StorageInfo.h"
 #include "TransferRate.h"
 #include "NetworkInfo.h"
+#include "LanPeerProbe.h"
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
@@ -117,6 +118,8 @@ private:
     StorageVolume discVolume_{};
     void RefreshDiscInstall();
     NetworkSnapshot network_;
+    LanPeerProbe peerProbe_;
+    bool networkPeer_=false;
     void RefreshNetwork();
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;

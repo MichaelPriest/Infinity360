@@ -158,3 +158,7 @@ Ajuste 0–10% por lado, persistência de perfil, rollback em erro de gravação
 ### P2 — Saves e verificação de backups
 
 Origem de saves por dispositivo e pasta de perfil com sufixo no painel. Verificação SHA-256 independente na aba Backups (X, A confirma), sem recuperação/escrita, com releitura do registro, progresso e cancelamento. Não reinstala saves em perfil ativo ou altera titularidade. Overscan/captura: cinco workflows da revisão anterior aprovados. Nova revisão aguarda CI.
+
+### P2 — Rede local e diagnóstico UDP
+
+Velocidade/duplex Ethernet consultados pelo XSDK. Segunda página de rede com teste opt-in entre IPs privados explícitos, UDP 32160, limite de 15 segundos e cinco sondas, resposta apenas ao par configurado. Testes de formato e endereço. Não implementa protocolo System Link de jogos. CI do save anterior: cross-build/testes aprovados; publicação de prerelease falhou, log indisponível. Nova revisão aguarda CI.
