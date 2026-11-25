@@ -78,3 +78,7 @@ Callbacks de frames com timestamps, conversão RGB24 e PCM, teste de conteúdo e
 ### P1 — Timeline audiovisual FFmpeg
 
 Agendamento por PTS, clock monotônico comum, buffer limitado de clipe local, descarte de vídeo atrasado e recusa de áudio atrasado. Alvo opcional cloud360_av_probe passa da primeira imagem a clipe curto. Testes portáteis adicionados; compilação PPC, saída e latência real do console, streaming e HLS pendentes.
+
+### P1 — Decoder incremental
+
+API de sessão local open/step/report/close implementada, com modo estendido limitado, quadros emprestados e testes de arquivos de 12 segundos com buffers reutilizados. Timeline incremental no player XSDK, backpressure, streaming e compilação FFmpeg PPC permanecem pendentes.
