@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -19,7 +20,23 @@ static int captureScreens(const char* atlas,const char* destination) {
     const char* games[]={"Forza Horizon","Halo 3","Gears of War 3","Minecraft","Fable III","Castle Crashers"};
     for(const char* name:games) {
         fs::create_directories(root/"Games"/name);
-        std::ofstream(root/"Games"/name/"default.xex")<<"DEMONSTRATION ONLY";
+        // A synthetic XEX2 header supplies metadata without a commercial executable.
+        unsigned char raw[160]={};
+        auto put=[&](size_t at,unsigned v){for(unsigned i=0;i<4;++i)raw[at+i]=static_cast<unsigned char>(v>>(24-8*i));};
+        put(0,0x58455832);put(8,128);put(0x14,1);put(24,0x00040006);put(28,64);
+        put(64,0x12345678);put(68,0x20010002);put(72,0x20000000);
+        unsigned title=0x494e4600u;
+        for(const char* p=name;*p;++p)title=title*31u+static_cast<unsigned char>(*p);
+        put(76,title);raw[82]=1;raw[83]=1;
+        std::ofstream out(root/"Games"/name/"default.xex",std::ios::binary);
+        out.write(reinterpret_cast<const char*>(raw),sizeof raw);
+        const auto hex=[](unsigned v){char b[9];std::snprintf(b,sizeof b,"%08X",v);return std::string(b);};
+        const auto tu=root/"Content/0000000000000000"/hex(title)/"000B0000";
+        fs::create_directories(tu);
+        std::string package(0x1800,'\0');package.replace(0,4,"LIVE");
+        const auto write=[&](size_t at,unsigned v){for(unsigned i=0;i<4;++i)package[at+i]=static_cast<char>(v>>(24-8*i));};
+        write(0x344,0xb0000);write(0x354,0x12345678);write(0x358,0x20010003);write(0x35c,0x20000000);write(0x360,title);
+        std::ofstream pkg(tu/"tu00000003_00000000",std::ios::binary);pkg.write(package.data(),package.size());
     }
     {std::ofstream out(root/"aurorax-profile.txt");
      out<<"R\t"<<(root/"Games"/"Halo 3"/"default.xex").string()<<"\n";
@@ -53,6 +70,16 @@ static int captureScreens(const char* atlas,const char* destination) {
     ok=save("01-inicio",menu)&&ok;
     menu.Press(ConsoleHome::Accept);ok=save("02-biblioteca",menu)&&ok;
     menu.Press(ConsoleHome::Accept);ok=save("03-detalhes",menu)&&ok;
+    menu.Press(ConsoleHome::PageDown);ok=save("10-conteudo-tu",menu)&&ok;
+    for(const char* name:{"11-dlc","12-saves","13-trainers","14-tu-baixadas","15-backups","16-tu-arquivadas"}){
+        menu.Press(ConsoleHome::Right);ok=save(name,menu)&&ok;
+    }
+    ConsoleHome apps(dir,roots);apps.Load();apps.Press(ConsoleHome::Down);apps.Press(ConsoleHome::Accept);
+    ok=save("17-aplicativos",apps)&&ok;
+    ConsoleHome emu(dir,roots);emu.Load();emu.Press(ConsoleHome::Down);emu.Press(ConsoleHome::Right);emu.Press(ConsoleHome::Accept);
+    ok=save("18-emuladores",emu)&&ok;
+    ConsoleHome files(dir,roots);files.Load();files.Press(ConsoleHome::Right);files.Press(ConsoleHome::Down);files.Press(ConsoleHome::Accept);
+    ok=save("19-arquivos",files)&&ok;
     ConsoleHome store(dir,roots);store.Load();store.Press(ConsoleHome::PageDown);
     ok=save("04-loja",store)&&ok;
     store.Press(ConsoleHome::Accept);ok=save("05-produto",store)&&ok;
@@ -62,11 +89,12 @@ static int captureScreens(const char* atlas,const char* destination) {
     system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Down);
     system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Accept);
     ok=save("07-sistema",system)&&ok;
-    system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Accept);
-    ok=save("08-rede",system)&&ok;
-    system.Press(ConsoleHome::Back);
-    for(int i=0;i<3;++i)system.Press(ConsoleHome::Right);
-    system.Press(ConsoleHome::Accept);ok=save("09-plugins",system)&&ok;
+    const char* pages[]={"20-armazenamento","08-rede","21-sensores","22-downloads","09-plugins","23-eventos","24-dvd","25-configuracoes"};
+    for(int i=0;i<8;++i){
+        system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
+        system.Press(ConsoleHome::Back);
+        if(i<7)system.Press(ConsoleHome::Right);
+    }
     fs::remove_all(root);
     return ok?0:3;
 }

@@ -7,6 +7,48 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 > O projeto não inclui exploits, chaves, conteúdo protegido ou meios de contornar segurança. A apresentação Direct3D e o lançamento de títulos usam o projeto XDK. A validação em console e a leitura de temperaturas continuam pendentes.
 
+
+## Galeria da interface nativa
+
+Capturas de **1280 × 720** geradas pelo código C++ real (`ConsoleHome` e `HomeCanvas`), com dados de teste locais. Não são mockups de IA nem fotografias de um Xbox físico. As informações de hardware e rede são do ambiente portátil ou indisponíveis; a execução no console continua em homologação.
+
+O [workflow de capturas](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) regenera as imagens após mudanças no código da interface. O commit de origem das imagens é registrado no [manifesto](docs/screenshots/source.txt).
+
+| Início | Biblioteca |
+| --- | --- |
+| ![Início](docs/screenshots/01-inicio.png) | ![Biblioteca](docs/screenshots/02-biblioteca.png) |
+| Detalhes do título | Loja |
+| ![Detalhes](docs/screenshots/03-detalhes.png) | ![Loja](docs/screenshots/04-loja.png) |
+| Produto | Cloud360 IPTV |
+| ![Produto](docs/screenshots/05-produto.png) | ![IPTV](docs/screenshots/06-iptv.png) |
+| Sistema | Rede e FTP |
+| ![Sistema](docs/screenshots/07-sistema.png) | ![Rede](docs/screenshots/08-rede.png) |
+| Plugins | Title Updates |
+| ![Plugins](docs/screenshots/09-plugins.png) | ![TU](docs/screenshots/10-conteudo-tu.png) |
+| DLC | Saves |
+| ![DLC](docs/screenshots/11-dlc.png) | ![Saves](docs/screenshots/12-saves.png) |
+| Trainers | TU baixadas |
+| ![Trainers](docs/screenshots/13-trainers.png) | ![TU baixadas](docs/screenshots/14-tu-baixadas.png) |
+| Backups | TU arquivadas |
+| ![Backups](docs/screenshots/15-backups.png) | ![TU arquivadas](docs/screenshots/16-tu-arquivadas.png) |
+| Aplicativos | Emuladores |
+| ![Aplicativos](docs/screenshots/17-aplicativos.png) | ![Emuladores](docs/screenshots/18-emuladores.png) |
+| Arquivos | Armazenamento |
+| ![Arquivos](docs/screenshots/19-arquivos.png) | ![Armazenamento](docs/screenshots/20-armazenamento.png) |
+| Sensores | Downloads |
+| ![Sensores](docs/screenshots/21-sensores.png) | ![Downloads](docs/screenshots/22-downloads.png) |
+| Eventos | DVD |
+| ![Eventos](docs/screenshots/23-eventos.png) | ![DVD](docs/screenshots/24-dvd.png) |
+| Configurações | |
+| ![Configurações](docs/screenshots/25-configuracoes.png) | |
+
+### Estado atual — Alpha 0.2.10
+
+- P0: indexação XEX/GOD/XBLA, importação de pacotes, DVD para XEX/GOD e multidisco no código; lançamento e montagem no console em homologação.
+- P1: inventário TU/DLC/saves, staging XboxUnity, instalação local verificada, diagnóstico de Base Version, backups e recuperação de TUs arquivadas. Ativação efetiva e cache legado ainda pendentes. Store e Cloud360 IPTV experimentais.
+- P2/P3: sensores, energia, System Link, personalização e conquistas ainda incompletos.
+- [Roadmap detalhado](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md) · [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Builds](https://github.com/MichaelPriest/Infinity360/actions)
+
 ## Instalar um DVD no Xbox 360
 
 Na Alpha XSDK 0.2.10, abra **Sistema → DVD → DVD para GOD**, selecione o HDD ou USB e confirme com **A** duas vezes. A dashboard lê os arquivos da unidade óptica, gera um pacote SVOD e verifica os fragmentos antes de incluir o jogo na biblioteca do dispositivo. A extração para pasta XEX, a importação de pacotes existentes e a instalação pelo sistema continuam disponíveis nesse menu.

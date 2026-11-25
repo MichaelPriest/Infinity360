@@ -1,0 +1,69 @@
+name: Dashboard native screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Platform/Xbox360/**'
+      - 'Source/**'
+      - 'Engine/**'
+      - 'IPTV/Cloud360/core/**'
+      - 'Tests/ConsoleHomeTests.cpp'
+      - 'CMakeLists.txt'
+      - '.github/workflows/dashboard-screenshots.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dashboard-screenshots-main
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile native canvas and validate console navigation
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --target console_home_tests -j2
+          ctest --test-dir build -R '^console_home$' --output-on-failure
+      - name: Capture and encode PNG screenshots
+        run: |
+          build/console_home_tests Platform/Xbox360/Assets/home.tga "$RUNNER_TEMP/infinity-frames"
+          python3 - <<'PY'
+          import os, pathlib, struct, zlib
+          frames = pathlib.Path(os.environ["RUNNER_TEMP"]) / "infinity-frames"
+          output = pathlib.Path("docs/screenshots")
+          output.mkdir(parents=True, exist_ok=True)
+          images = sorted(frames.glob("*.ppm"))
+          assert len(images) == 25, len(images)
+          def chunk(kind, data):
+              return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind+data)&0xffffffff)
+          for image in images:
+              magic, size, depth, rgb = image.read_bytes().split(b"\n", 3)
+              assert (magic,size,depth)==(b"P6",b"1280 720",b"255")
+              assert len(rgb)==1280*720*3
+              scan = b"".join(b"\x00"+rgb[i:i+3840] for i in range(0,len(rgb),3840))
+              png = b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",1280,720,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(scan,9))+chunk(b"IEND",b"")
+              (output/(image.stem+".png")).write_bytes(png)
+          (output/"source.txt").write_text(os.environ["GITHUB_SHA"]+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: infinity-native-screenshots
+          path: docs/screenshots/
+      - name: Publish gallery to main without overwriting newer source
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then exit 0; fi
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo "Main moved; newer workflow will render its own screenshots."; exit 0; }
+          git commit -m "docs: refresh native dashboard screenshots"
+          git push origin HEAD:main
