@@ -17,6 +17,23 @@ inline const char* Name(unsigned language){
 inline const char* Translate(unsigned language,const char* key){
     if(!key||!language||language>=Count)return key?key:"";
     static const char* const rows[][3]={
+        {"Notificacoes","Notifications","Notificaciones"},
+        {"nao lidas","unread","sin leer"},
+        {"Todas","All","Todas"},
+        {"Nao lidas","Unread","Sin leer"},
+        {"Atencao","Attention","Atención"},
+        {"Lida","Read","Leída"},
+        {"Nova","New","Nueva"},
+        {"Rede","Network","Red"},
+        {"Jogos","Games","Juegos"},
+        {"Loja","Store","Tienda"},
+        {"Conteudo","Content","Contenido"},
+        {"Arte","Art","Arte"},
+        {"Nenhuma notificacao neste filtro.","No notifications in this filter.","No hay notificaciones en este filtro."},
+        {"LB/RB Filtro | A Ler | X Ler todas | Cima/Baixo | B Voltar","LB/RB Filter | A Read | X Read all | Up/Down | B Back","LB/RB Filtro | A Leer | X Leer todas | Arriba/Abajo | B Volver"},
+        {"LB Notificacoes | RB Loja | X Importar | Start Personalizar","LB Notifications | RB Store | X Import | Start Customize","LB Notificaciones | RB Tienda | X Importar | Start Personalizar"},
+        {"Todas marcadas como lidas.","All marked as read.","Todas marcadas como leídas."},
+        {"Notificacao marcada como lida.","Notification marked as read.","Notificación marcada como leída."},
         {"Início","Home","Inicio"},
         {"Biblioteca","Library","Biblioteca"},
         {"Jogos instalados","Installed games","Juegos instalados"},

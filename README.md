@@ -201,3 +201,7 @@ Sete temas: Verde Infinity, Azul, Âmbar, Violeta, Vermelho, Ciano e Grafite. Si
 ### V0.2.13 — Idiomas da interface
 
 Português (BR), English e Español, em Sistema > Console, LB/RB alterna e salva a preferência L. Tradução inicial de navegação, abas, comandos, títulos de painéis e parte do IPTV; mensagens operacionais e detalhes ainda não cobertos permanecem em português. Nomes e caminhos de conteúdo não são traduzidos automaticamente. Galeria preparada para 37 telas. Nenhuma build iniciada.
+
+### V0.2.14 — Central de notificações
+
+LB na home ou Sistema > Histórico abre o histórico operacional de até 64 eventos. Filtros Todas, Não lidas e Atenção; A marca o item, X marca todos, cima/baixo navega. Indicador de pendências no cabeçalho. Leitura persistida com prefixos N1 U/R; linhas legadas são mantidas como lidas. Logs inválidos ou acima do limite bloqueiam a gravação. Categorias e severidade derivadas de mensagens operacionais fixas; não há notificações externas nem do Xbox Live. Galeria preparada para 39 telas. Ajustada a posição da dica de idioma. Sem build.

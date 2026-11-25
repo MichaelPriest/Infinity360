@@ -20,6 +20,7 @@
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
 #include "LaunchStatistics.h"
+#include "NotificationCenter.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
 #include "DisplaySafeArea.h"
@@ -38,6 +39,7 @@ public:
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
     unsigned Language()const{return language_;}
+    size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool IdleEligible()const{return page_==Home&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
@@ -109,7 +111,10 @@ private:
     std::vector<size_t> storeDownloadItems_;
     void RecordEvent(const std::string& message);
     void LoadEvents();
-    std::vector<std::string> events_;
+    NotificationCenter notifications_;
+    NotificationCenter::Filter eventFilter_=NotificationCenter::All;
+    int eventRow_=0;
+    void MarkNotifications(bool all);
     void DrawEvents(HomeCanvas& c) const;
     std::vector<StorageVolume> storageVolumes_;
     size_t storagePage_;

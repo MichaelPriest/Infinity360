@@ -56,6 +56,7 @@ static int captureScreens(const char* atlas,const char* destination) {
      for(int i=1;i<=5;++i)out<<"#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo "<<i<<"\nhttps://example.invalid/stream"<<i<<".ts\n";}
     {std::ofstream out(root/"launch.ini");
      out<<"[Plugins]\nplugin1=Hdd1:\\LiveEmulation.xex\nplugin2=\nplugin3=\nplugin4=\nplugin5=\n";}
+    {std::ofstream out(root/"infinity360-events.log");out<<"N1 U 2026-11-25 21:41Z | Download nativo verificado\nN1 U 2026-11-25 21:40Z | Backup recusado\n2026-11-25 21:30Z | FTP iniciado\n";}
     HomeCanvas canvas;
     if(!canvas.LoadArt(atlas)){fs::remove_all(root);return 2;}
     const std::vector<std::string> roots(1,(root/"Games").string());
@@ -99,6 +100,7 @@ static int captureScreens(const char* atlas,const char* destination) {
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
         if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::PageUp);}
         if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);}
+        if(i==5){system.Press(ConsoleHome::PageDown);ok=save("38-notificacoes-pendentes",system)&&ok;system.Press(ConsoleHome::PageDown);ok=save("39-notificacoes-alertas",system)&&ok;system.Press(ConsoleHome::Favorite);assert(system.UnreadNotifications()==0);}
         if(i==3){
             system.Press(ConsoleHome::PageDown);ok=save("27-fila-store",system)&&ok;
             system.Press(ConsoleHome::PageDown);
@@ -1088,6 +1090,24 @@ int main(int argc,char** argv) {
         assert(std::string(UiLanguage::Translate(2,"Arquivos"))=="Archivos");
         assert(std::string(UiLanguage::Translate(9,"Biblioteca"))=="Biblioteca");
         assert(std::string(UiLanguage::Translate(1,"game:/Games/Biblioteca/default.xex"))=="game:/Games/Biblioteca/default.xex");
+    }
+    {
+        NotificationCenter center;
+        const auto path=(root/"notification-test.log").string();
+        {std::ofstream out(path);out<<"2026-11-25 21:00Z | FTP iniciado\n";}
+        assert(center.Load(path)&&center.UnreadCount()==0);
+        assert(center.Append("2026-11-25 21:01Z | Download nativo verificado"));
+        assert(center.Append("2026-11-25 21:02Z | Backup recusado"));
+        assert(center.UnreadCount()==2&&center.Visible(NotificationCenter::Attention).size()==1);
+        assert(center.Mark(center.Visible(NotificationCenter::Unread).front()));
+        assert(center.Save(path));
+        NotificationCenter restored;assert(restored.Load(path)&&restored.UnreadCount()==1);
+        restored.MarkAll();assert(restored.UnreadCount()==0);
+        for(unsigned i=0;i<100;++i)assert(restored.Append("Copia agendada"));
+        assert(restored.Visible(NotificationCenter::All).size()==64);
+        assert(!restored.Append("bad\tdata"));
+        {std::ofstream out(path);out<<std::string(32769,'x');}
+        assert(!restored.Load(path)&&!restored.Save(path));
     }
     // Each palette preserves opaque alpha, warnings and media pixels.
     {

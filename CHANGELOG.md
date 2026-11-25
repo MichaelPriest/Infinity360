@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.14 — em desenvolvimento (sem build)
+
+- Central de notificações com 64 eventos, leitura individual/em lote, filtros e indicador de pendências.
+- Migração do histórico legado e proteção contra registros inválidos.
+- Ajuste da dica de idiomas e eventos de falha de lançamento/verificação de backup.
+- Galeria preparada para 39 capturas.
+
 ## V0.2.13 — em desenvolvimento (sem build)
 
 - Português, inglês e espanhol selecionáveis e persistentes.

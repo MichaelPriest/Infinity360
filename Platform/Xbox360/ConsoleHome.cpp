@@ -469,36 +469,27 @@ bool ConsoleHome::StartNextCopy() {
     notice_="Proxima copia iniciada.";return true;
 }
 void ConsoleHome::LoadEvents() {
-    events_.clear();
-    std::ifstream in(savedFile(dir_+"infinity360-events.log").c_str(),std::ios::binary);
-    if(!in)return;
-    std::vector<char> raw(32769);
-    in.read(&raw[0],static_cast<std::streamsize>(raw.size()));
-    if(in.bad()||in.gcount()>32768)return;
-    std::istringstream lines(std::string(&raw[0],static_cast<size_t>(in.gcount())));
-    std::string line;
-    while(std::getline(lines,line)) {
-        if(line.empty()||line.size()>240)continue;
-        bool clean=true;
-        for(size_t i=0;i<line.size();++i)if((unsigned char)line[i]<32||line[i]==127)clean=false;
-        if(!clean)continue;
-        events_.push_back(line);
-        if(events_.size()>64)events_.erase(events_.begin());
-    }
+    eventFilter_=NotificationCenter::All;eventRow_=0;
+    if(!notifications_.Load(dir_+"infinity360-events.log"))notice_="Historico invalido; arquivo preservado.";
 }
 void ConsoleHome::RecordEvent(const std::string& message) {
-    // Fixed operational events only: no filenames, URLs, account details or tokens.
+    // Fixed operational events only; no filenames, URLs or account data.
     const std::time_t now=std::time(0);
-    std::tm* utc=std::gmtime(&now);
-    char stamp[32]="hora indisponivel";
-    if(utc)std::strftime(stamp,sizeof stamp,"%Y-%m-%d %H:%MZ",utc);
-    events_.push_back(std::string(stamp)+" | "+message);
-    if(events_.size()>64)events_.erase(events_.begin());
-    const std::string file=dir_+"infinity360-events.log";
-    std::ofstream out((file+".tmp").c_str(),std::ios::binary|std::ios::trunc);
-    for(size_t i=0;i<events_.size();++i)out<<events_[i]<<"\n";
-    out.close();
-    if(!out||!replaceSavedFile(file))notice_+=" (historico apenas nesta sessao)";
+    std::tm* utc=std::gmtime(&now);char stamp[32]="hora indisponivel";
+    if(now>=946684800&&utc)std::strftime(stamp,sizeof stamp,"%Y-%m-%d %H:%MZ",utc);
+    if(!notifications_.Append(std::string(stamp)+" | "+message))return;
+    if(!notifications_.Save(dir_+"infinity360-events.log"))notice_+=" (historico apenas nesta sessao)";
+}
+void ConsoleHome::MarkNotifications(bool all){
+    const auto rows=notifications_.Visible(eventFilter_);
+    auto previous=notifications_;
+    if(all)notifications_.MarkAll();
+    else if(eventRow_>=0&&static_cast<size_t>(eventRow_)<rows.size())notifications_.Mark(rows[eventRow_]);
+    else return;
+    if(!notifications_.Save(dir_+"infinity360-events.log")){
+        notifications_=previous;notice_="Falha ao salvar leitura; historico preservado.";
+    }else notice_=all?"Todas marcadas como lidas.":"Notificacao marcada como lida.";
+    clampRow(eventRow_,notifications_.Visible(eventFilter_).size());
 }
 void ConsoleHome::MovePin(int direction) {
     const int neighbor=row_+direction;
@@ -780,7 +771,7 @@ void ConsoleHome::RecordLaunchAttempt(const std::string& path){
     if(!SaveProfile())notice_="Historico desta sessao; falha ao salvar.";
 }
 void ConsoleHome::RecordLaunchFailure(const std::string& path){
-    if(launchStats_.Failed(path)&&!SaveProfile())notice_="Falha ao salvar estatistica de lancamento.";
+    if(launchStats_.Failed(path)){if(!SaveProfile())notice_="Falha ao salvar estatistica de lancamento.";RecordEvent("Falha de lancamento");}
 }
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; RecordEvent("Falha de lancamento"); }
 
@@ -1575,7 +1566,7 @@ std::string ConsoleHome::Press(Key key) {
                 else notice_="Transferencias locais atualizadas automaticamente.";
             }
             else if(systemTab_==4) {RefreshResidentPlugins();notice_="Configuracao de plugins consultada.";}
-            else if(systemTab_==5)notice_="Historico local dos ultimos 64 eventos.";
+            else if(systemTab_==5){clampRow(eventRow_,notifications_.Visible(eventFilter_).size());notice_="Historico local dos ultimos 64 eventos.";}
             else if(systemTab_==7){status_=ConsoleStatus::Read();notice_="Perfis e configuracoes consultados.";}
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
@@ -1586,6 +1577,15 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details&&systemTab_==5){
+            if(key==PageUp||key==PageDown){
+                const unsigned count=NotificationCenter::FilterCount;
+                eventFilter_=static_cast<NotificationCenter::Filter>((eventFilter_+count+(key==PageDown?1:count-1))%count);
+                eventRow_=0;notice_.clear();
+            }else if(key==Accept||key==Favorite)MarkNotifications(key==Favorite);
+            else if(key==Up||key==Down){eventRow_=std::max(0,eventRow_+(key==Down?1:-1));clampRow(eventRow_,notifications_.Visible(eventFilter_).size());}
+            return "";
+        }
         if(page_==Details&&systemTab_==7){
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -1742,6 +1742,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;}
                 else if(systemTab_==4)RefreshResidentPlugins();
+                else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
                 else if(systemTab_==7)status_=ConsoleStatus::Read();
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
@@ -1756,6 +1757,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
+        if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";
@@ -2014,7 +2016,6 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
             c.Text(915,y+14,p.cached?"Disponivel offline":"Sincronizar",20,p.cached?Lime:Muted,285);
         }
     }
-    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_),18,Lime,1170);
     c.Text(48,590,"A Sincronizar selecionado | Y Recarregar local | B Voltar",20,Lime,1175);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
@@ -2069,7 +2070,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
     c.Text(44,76,c.Tr("Início"),42,White,330);
-    c.Text(459,86,c.Tr("RB Loja | X Importar | Start Personalizar"),20,Muted,775);
+    c.Text(459,86,c.Tr("LB Notificacoes | RB Loja | X Importar | Start Personalizar"),18,Muted,775);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
@@ -2221,7 +2222,7 @@ bool ConsoleHome::TakeRecoverRequest(ContentBackup::Record& selected,bool& verif
 }
 void ConsoleHome::RecoverResult(const std::string& message,bool success){
     if(success)stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
-    notice_=message;RecordEvent(success?"Copia de conteudo recuperada":"Recuperacao recusada");
+    notice_=message;RecordEvent(verifyOnly_?(success?"Backup de conteudo verificado":"Verificacao de backup recusada"):(success?"Copia de conteudo recuperada":"Recuperacao recusada"));
 }
 bool ConsoleHome::TakeUnityRequest(XboxExecutionInfo& info){
     if(!unityPending_)return false;
@@ -2444,6 +2445,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
         c.Text(x+12,y+10,std::string(c.Tr("Controle "))+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),23,White,560);
     }
     c.Text(48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
+    c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_),18,Lime,1170);
     c.Text(48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
@@ -2496,12 +2498,26 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(45,607,"A Leitura | X Upload | A/X Parar | LB/RB Teste UDP | Y Atualizar | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
-    c.Text(45,349,"Historico operacional (ultimos 64)",27,White,1170);
-    if(events_.empty())c.Text(48,410,"Nenhum evento registrado.",23,Muted,1160);
-    const size_t shown=events_.size()<6?events_.size():6;
-    for(size_t i=0;i<shown;++i)
-        c.Text(48,390+static_cast<int>(i)*32,events_[events_.size()-1-i],19,White,1160);
-    c.Text(48,610,"6 mais recentes na tela | Arquivo infinity360-events.log | B Voltar",18,Muted,1180);
+    const auto rows=notifications_.Visible(eventFilter_);
+    static const char* filters[]={"Todas","Nao lidas","Atencao"};
+    c.Text(45,349,std::string(c.Tr("Notificacoes"))+" | "+number(notifications_.UnreadCount())+" "+c.Tr("nao lidas"),26,White,1170);
+    for(unsigned i=0;i<NotificationCenter::FilterCount;++i){
+        const int x=48+static_cast<int>(i)*210;
+        panel(c,x,387,200,31,Panel,i==static_cast<unsigned>(eventFilter_));
+        c.Text(x+9,389,c.Tr(filters[i]),17,i==static_cast<unsigned>(eventFilter_)?Lime:Muted,180);
+    }
+    if(rows.empty())c.Text(48,455,c.Tr("Nenhuma notificacao neste filtro."),23,Muted,1160);
+    const int first=(eventRow_/4)*4;
+    for(int i=first;i<first+4&&static_cast<size_t>(i)<rows.size();++i){
+        const auto& item=notifications_.At(rows[i]);const int y=426+(i-first)*42;
+        panel(c,48,y,1184,38,Panel,i==eventRow_);
+        const unsigned tone=item.level==NotificationCenter::Warning?0xffe4a34bu:item.level==NotificationCenter::Success?Lime:Muted;
+        c.Box(57,y+9,6,19,item.read?Muted:tone,2);
+        c.Text(72,y+3,c.Tr(item.area.c_str()),17,tone,125);
+        c.Text(203,y+3,item.text,17,White,825);
+        c.Text(1044,y+3,c.Tr(item.read?"Lida":"Nova"),17,item.read?Muted:Lime,170);
+    }
+    c.Text(48,600,c.Tr("LB/RB Filtro | A Ler | X Ler todas | Cima/Baixo | B Voltar"),18,Lime,1175);
 }
 void ConsoleHome::RebuildStoreDownloads() {
     storeDownloadItems_=store_.NativeQueue();
@@ -2830,6 +2846,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Text(105,16,"INFINITY",32,White,220);
     c.Text(282,16,"360",32,Lime,84);
     c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
+    if(notifications_.UnreadCount())c.Text(540,26,std::string(c.Tr("Notificacoes"))+": "+number(notifications_.UnreadCount()),18,Lime,330);
     c.Text(1088,19,clock,26,White,90);
     c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
     c.Text(1197,26,"360",16,White,37);

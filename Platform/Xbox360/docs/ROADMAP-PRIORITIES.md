@@ -186,3 +186,7 @@ Sete paletas persistentes, IDs antigos preservados, testes de pixels e seis capt
 ### V0.2.13 — Localização inicial
 
 Preferência L, PT-BR/EN/ES, LB/RB em Sistema > Console; dicionário explícito somente para textos de UI selecionados, fallback PT e preservação de nomes de conteúdo. Cobertura parcial; mensagens técnicas e demais módulos exigem expansão. Galeria 37 preparada. Sem build/CI por solicitação do responsável.
+
+### V0.2.14 — Central de notificações
+
+LB na home, Sistema > Histórico, indicador de não lidas, filtros e leitura persistente. Reaproveita log anterior com limite 64, migração como lido e recusa de escrita em log inválido. Categorias/severidade de eventos locais; sem integração Xbox Live. Galeria 39 preparada. Sem build/CI.
