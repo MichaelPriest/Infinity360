@@ -110,3 +110,7 @@ Primeira tentativa FFmpeg PPC falhou em erf/hypot. Adicionado teste de link real
 ### P1 — Compensação de leitura síncrona
 
 Relógio lógico compensado em bloqueios de rede, read-ahead de 150–600 ms com limites, métricas e testes determinísticos. Não substitui rebuffering assíncrono nem ABR. Cross-build FFmpeg em validação.
+
+### P1 — Bibliotecas FFmpeg PPC compiladas
+
+Run 45686402200 compilou as três bibliotecas estáticas. Link XEX falhou por times/_times_r da newlib; shim ENOSYS isolado nos alvos experimentais. Aguardando novo link/validação XEX2. Alpha e testes host aprovados.
