@@ -274,3 +274,7 @@ Dez estilos incluindo Classic, seleção persistente e prévia, nove geometrias 
 ### V0.2.35 — P4 Grade de biblioteca
 
 Preferência de apresentação independente de layout, grade paginada e seleção de categorias com foco próprio. 64 capturas preparadas no total; nenhuma build V0.2.35. Próximos: detalhes, Store, IPTV, arquivos e configurações.
+
+### V0.2.36 — Bloqueio gráfico encontrado no Xenia
+
+Corrigido mismatch de semântica do shader (GLSL location 2 TEXCOORD0). Próxima homologação: compile, abra canvas probe, abra menu, verifique `Presenter PASS` e primeiro frame. Redesign de detalhes permanece pendente. Não houve nova build.

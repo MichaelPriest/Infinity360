@@ -68,39 +68,44 @@ struct Presenter {
     unsigned width=0,height=0,safeArea=0;
     std::vector<unsigned> insetPixels;
     bool Open(){
-        if(!NT_SUCCESS(xsdk_gpu_open()))return false;
+        xsdk_log_write("Presenter: GPU open");
+        if(!NT_SUCCESS(xsdk_gpu_open())){xsdk_log_write("Presenter FAIL: GPU open");return false;}
         gpu=true;
-        if(!NT_SUCCESS(xsdk_shader_load(&vs,infinity_canvas_vert.container,infinity_canvas_vert.container_bytes)) ||
-           !NT_SUCCESS(xsdk_shader_load(&ps,infinity_canvas_frag.container,infinity_canvas_frag.container_bytes)))return false;
+        if(!NT_SUCCESS(xsdk_shader_load(&vs,infinity_canvas_vert.container,infinity_canvas_vert.container_bytes))){xsdk_log_write("Presenter FAIL: vertex shader load");return false;}
+        if(!NT_SUCCESS(xsdk_shader_load(&ps,infinity_canvas_frag.container,infinity_canvas_frag.container_bytes))){xsdk_log_write("Presenter FAIL: pixel shader load");return false;}
         XsdkVertexElement layout[2]{};
         layout[0].usage=XSDK_USAGE_POSITION;layout[0].format=XSDK_VERTEX_FLOAT3;
         layout[1].usage=XSDK_USAGE_TEXCOORD;layout[1].format=XSDK_VERTEX_FLOAT2;layout[1].offset_bytes=12;
         const uint32_t stride[]={sizeof quad[0]};
-        if(!NT_SUCCESS(xsdk_shader_set_vertex_layout(&vs,layout,2,stride)))return false;
+        xsdk_log_write("Presenter: vertex layout POSITION0 + TEXCOORD0 (GLSL locations 0,2)");
+        if(!NT_SUCCESS(xsdk_shader_set_vertex_layout(&vs,layout,2,stride))){xsdk_log_write("Presenter FAIL: vertex layout");return false;}
         vertices=xsdk_gpu_alloc(sizeof quad);
-        if(!vertices)return false;
+        if(!vertices){xsdk_log_write("Presenter FAIL: vertex buffer");return false;}
         for(unsigned i=0;i<sizeof quad/4;++i){uint32_t word;std::memcpy(&word,reinterpret_cast<const char*>(quad)+4*i,4);vertices[i]=word;}
         xsdk_gpu_invalidate(xsdk_gpu_address(vertices),sizeof quad);
-        if(!NT_SUCCESS(xsdk_texture_create(&texture,XSDK_FORMAT_A8R8G8B8,HomeCanvas::Width,HomeCanvas::Height,1,true)))return false;
+        if(!NT_SUCCESS(xsdk_texture_create(&texture,XSDK_FORMAT_A8R8G8B8,HomeCanvas::Width,HomeCanvas::Height,1,true))){xsdk_log_write("Presenter FAIL: canvas texture");return false;}
         XsdkSampler cfg{};cfg.mag_filter=cfg.min_filter=XSDK_FILTER_POINT;
         cfg.address_u=cfg.address_v=XSDK_ADDRESS_CLAMP;
         xsdk_texture_sampler_state(&sampler,&cfg);
         uint32_t w=0,h=0;
-        if(!NT_SUCCESS(xsdk_present_open(XSDK_DISPLAY_720P,3,1,&w,&h)))return false;
+        if(!NT_SUCCESS(xsdk_present_open(XSDK_DISPLAY_720P,3,1,&w,&h))){xsdk_log_write("Presenter FAIL: display open");return false;}
         present=true;width=w;height=h;
-        return width==HomeCanvas::Width && height==HomeCanvas::Height;
+        xsdk_log_write("Presenter: display %u x %u",width,height);
+        if(width!=HomeCanvas::Width || height!=HomeCanvas::Height){xsdk_log_write("Presenter FAIL: unexpected display size");return false;}
+        xsdk_log_write("Presenter PASS: shader layout, texture and display initialized");
+        return true;
     }
     bool Show(const HomeCanvas& canvas,bool upload){
         // A single texture is reused only after the prior frame has finished.
         if(upload){
-            if(!NT_SUCCESS(xsdk_gpu_wait(xsdk_gpu_fence(),Timeout)))return false;
+            if(!NT_SUCCESS(xsdk_gpu_wait(xsdk_gpu_fence(),Timeout))){xsdk_log_write("Presenter FAIL: frame fence");return false;}
             const unsigned* pixels=DisplaySafeArea::Apply(canvas.Pixels(),safeArea,insetPixels);
             if(!pixels)return false;
             xsdk_texture_upload(&texture,0,pixels,HomeCanvas::Width*4);
             xsdk_gpu_invalidate(texture.address,texture.size_bytes);
         }
         uint32_t address=0;
-        if(!NT_SUCCESS(xsdk_present_begin(&address,Timeout)))return false;
+        if(!NT_SUCCESS(xsdk_present_begin(&address,Timeout))){xsdk_log_write("Presenter FAIL: begin frame");return false;}
         xsdk_gpu_set_target(width,height);
         xsdk_gpu_set_shaders(&vs,&ps);
         xsdk_built_shader_set_literals(&infinity_canvas_vert);

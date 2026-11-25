@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.36 — Correção gráfica XSDK (sem build)
+
+- Input UV do shader canvas corrigido de location 1 (COLOR0) para 2 (TEXCOORD0), conforme XSDK fixado.
+- Logs de inicialização do presenter e falhas de frame detalhados.
+- Requer nova compilação e teste Xenia/Xbox; nenhuma build solicitada.
+
 ## V0.2.35 — P4 Biblioteca visual (sem build)
 
 - Grade de capas 6x2 para Biblioteca, Recentes e Favoritos, opção persistente Automático/Lista/Grade.
