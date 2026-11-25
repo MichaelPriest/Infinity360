@@ -166,3 +166,19 @@ if(DEFINED CLOUD360_CONTAINER_FFMPEG_ROOT)
   xsdk_add_shaders(cloud360_av_probe infinity_canvas.vert infinity_canvas.frag)
   xsdk_add_xex(cloud360_av_probe TITLE_ID 0x43333633 NAME "Cloud360 AV Stream Probe" VERSION 0.5.11.0)
 endif()
+
+# Opt-in link-only diagnostic, intentionally separate from the dashboard and Releases.
+# A reviewed, PowerPC-built libsmb2 archive is required; never link a host archive.
+option(INFINITY_EXPERIMENTAL_SMB_LINK "Link isolated libsmb2 context diagnostic" OFF)
+if(INFINITY_EXPERIMENTAL_SMB_LINK)
+  if(NOT EXISTS "${INFINITY_LIBSMB2_ROOT}/include/smb2/libsmb2.h" OR
+     NOT EXISTS "${INFINITY_LIBSMB2_ROOT}/lib/libsmb2.a")
+    message(FATAL_ERROR "Provide reviewed XSDK libsmb2 port in INFINITY_LIBSMB2_ROOT")
+  endif()
+  add_executable(infinity_smb_link_probe infinity_smb_link_probe.cpp)
+  target_include_directories(infinity_smb_link_probe PRIVATE
+    "${INFINITY_LIBSMB2_ROOT}/include" "${INFINITY_ROOT}/Platform/Xbox360")
+  target_compile_features(infinity_smb_link_probe PRIVATE cxx_std_17)
+  target_link_libraries(infinity_smb_link_probe PRIVATE "${INFINITY_LIBSMB2_ROOT}/lib/libsmb2.a")
+  xsdk_add_xex(infinity_smb_link_probe TITLE_ID 0x494E4636 NAME "INFINITY 360 SMB Link Probe" VERSION ${INFINITY_VERSION}.0)
+endif()

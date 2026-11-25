@@ -2766,7 +2766,7 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
     const auto& result=smbProbe_.Info();
     c.Text(48,480,std::string("Dialeto: ")+SmbProbe::Dialect(result.dialect)+(smbProbe_.Status()==SmbProbe::Negotiated?(result.signingRequired?" | Assinatura exigida":" | Assinatura suportada"):""),21,Muted,1170);
     if(smbProbe_.Status()==SmbProbe::Rejected)c.Text(48,510,"Status NT: "+number(result.status),18,Muted,1170);
-    c.Text(48,550,"Somente negociacao; sem login, montagem ou acesso a arquivos.",19,Muted,1170);
+    c.Text(48,550,"Dashboard: somente negociacao; adaptador de sessao em homologacao.",19,Muted,1170);
     c.Text(48,579,smbProbe_.Status()==SmbProbe::Negotiated?
         std::string(result.preauthSha512?"SHA-512 selecionado | ":"")+"Token de seguranca: "+number(result.securityTokenBytes)+" bytes | Sessao nao autenticada":
         "SMB 2.0.2 a 3.1.1 | Sem SMB1 ou acesso anonimo.",17,Muted,1170);

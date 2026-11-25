@@ -230,3 +230,7 @@ Diagnóstico TCP 445 e negociação SMB2-only de quatro dialetos, interface de c
 ### V0.2.24 — P2 SMB 3.1.1 e portabilidade TCP
 
 NEGOTIATE diagnóstico com contexto SHA-512, validação de contexto e token de segurança, poll não bloqueante compatível com o header do XSDK fixado. Sem hash de transcript ou SESSION_SETUP; cliente autenticado exige provider de criptografia, assinatura e autenticação. Testes preparados. Nenhuma build/CI; galeria 49 preparada.
+
+### V0.2.25 — P2 Adaptador SMB autenticado
+
+Integração opcional de libsmb2 fixada, sessão assíncrona e listagem de diretório, ferramenta Linux com senha transitória e teste de validação. Alvo XSDK link-only depende de biblioteca PowerPC portada, não integra a dashboard nem acessa rede. Portabilidade de headers/sockets/entropia, validação criptográfica, política de sessão, credenciais por controle, cópia e homologação ainda pendentes. Sem CI/build.

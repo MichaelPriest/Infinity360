@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.25 — em desenvolvimento (sem build XEX)
+
+- Adaptador de sessão SMB autenticada e listagem somente leitura com libsmb2 fixada, exigindo SMB 3.1.1 e proteção de sessão.
+- Ferramenta Linux de teste interativo e alvo XSDK isolado de link/contexto, dependente de port estático PowerPC.
+- Sem integração ao navegador do console, transferência ou teste executado; nenhuma build gerada.
+
 ## V0.2.24 — em desenvolvimento (sem build XEX)
 
 - Negociação diagnóstica SMB 3.1.1 com validação de contexto SHA-512 e tamanho do token de segurança.
