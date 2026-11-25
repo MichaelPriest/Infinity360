@@ -1554,7 +1554,7 @@ std::string ConsoleHome::Press(Key key) {
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
-            else if(systemTab_==2) {telemetry_=SystemTelemetry::Read();notice_="Telemetria de memoria atualizada.";}
+            else if(systemTab_==2) {telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();notice_="Telemetria atualizada.";}
             else if(systemTab_==3) {
                 if(storeDownloads_) {store_.Load();RebuildStoreDownloads();notice_="Registros de downloads atualizados.";}
                 else notice_="Transferencias locais atualizadas automaticamente.";
@@ -1632,6 +1632,7 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
+        if(page_==Details && systemTab_==2 && (key==PageUp||key==PageDown)){telemetryVideo_=!telemetryVideo_;return "";}
         if(page_==Details && systemTab_==4 && (key==PageUp||key==PageDown)){
             const size_t count=residentConfigs_.size();
             if(count)residentSource_=(residentSource_+count+(key==PageDown?1:count-1))%count;
@@ -1700,7 +1701,7 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
-                else if(systemTab_==2)telemetry_=SystemTelemetry::Read();
+                else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;}
                 else if(systemTab_==4)RefreshResidentPlugins();
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
                 else if(systemTab_==7)status_=ConsoleStatus::Read();
@@ -2351,7 +2352,28 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
 #endif
 }
 void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
-    c.Text(45,349,"Telemetria | Memoria e sensores",27,White,1170);
+    if(telemetryVideo_){
+        c.Text(45,349,"Telemetria 2/2 | Video e kernel",27,White,1170);
+        const auto& v=videoTelemetry_;
+        const std::string labels[]={"Saida configurada","Frequencia","Proporcao","Varredura","Display kernel","Buffer kernel","Kernel","Modo HD"};
+        const std::string values[]={
+            v.available?number(v.width)+" x "+number(v.height):"Indisponivel",
+            v.Frequency(),v.available?(v.widescreen?"16:9":"4:3"):"-",
+            v.available?(v.interlaced?"Entrelacada":"Progressiva"):"-",
+            v.displayAvailable?number(v.displayWidth)+" x "+number(v.displayHeight):"Indisponivel",
+            v.displayAvailable?number(v.bufferWidth)+" x "+number(v.bufferHeight):"Indisponivel",
+            v.kernel.empty()?"Indisponivel":v.kernel,v.available?(v.hiDef?"Sim":"Nao"):"-"};
+        for(int i=0;i<8;++i){
+            const int x=45+(i%4)*300,y=390+(i/4)*78;
+            panel(c,x,y,289,70,Panel,false);
+            c.Text(x+9,y+5,labels[i],17,Muted,270);
+            c.Text(x+9,y+30,values[i],22,White,270);
+        }
+        c.Text(48,559,"Interface 1280 x 720 | Valores do kernel; nao altera a saida.",18,Muted,1170);
+        c.Text(48,585,"LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
+        return;
+    }
+    c.Text(45,349,"Telemetria 1/2 | Memoria e sensores",27,White,1170);
     if(telemetry_.available){
         const uint64_t bytes[]={telemetry_.physical,telemetry_.kernel,telemetry_.titlePhysical,
             telemetry_.titleAvailable,telemetry_.systemPhysical,telemetry_.titleHeap,telemetry_.titleStack,telemetry_.titleImage};
@@ -2368,7 +2390,7 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         c.Text(65,467,"Nenhuma medida simulada e exibida.",19,Muted,1145);
     }
     c.Text(48,559,"CPU / GPU / EDRAM / placa: sensores SMC ainda indisponiveis.",18,Muted,1170);
-    c.Text(48,585,"Ventoinha: controle nao implementado. Y Atualizar | B Voltar",18,Lime,1170);
+    c.Text(48,585,"Ventoinha: pendente. LB/RB Pagina | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     c.Text(45,349,"Console | Perfis conectados",27,White,1170);

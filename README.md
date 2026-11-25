@@ -156,3 +156,7 @@ A aba Sistema > Plugins inventaria configurações legíveis da pasta da dashboa
 ### Telemetria do sistema
 
 Sistema > Telemetria consulta MmQueryStatistics no XSDK: RAM física, páginas do kernel, título/sistema, heap, stack e imagem. Os contadores são mostrados separadamente, sem somá-los como consumo global. Em host ou erro do provider, a tela declara indisponibilidade. SMC e ventoinha permanecem pendentes; nenhuma temperatura é simulada. A variante FFmpeg e seus probes também são bloqueados no lançamento comum para evitar relançamento acidental.
+
+### Informações de vídeo e kernel
+
+Sistema > Telemetria (LB/RB) acrescenta a página Vídeo e kernel: modo de saída informado pelo kernel, frequência, proporção, entrelaçamento, modo HD, dimensões de display/front buffer e versão do kernel. Não altera resolução, não identifica a TV nem afirma que o sinal foi validado. Valores indisponíveis permanecem explícitos. Captura `28-video-kernel.png` prevista no CI de telas nativas.

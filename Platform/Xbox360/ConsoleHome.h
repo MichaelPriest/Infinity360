@@ -19,6 +19,7 @@
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
 #include "SystemTelemetry.h"
+#include "VideoTelemetry.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
 #include <map>
@@ -116,6 +117,8 @@ private:
     NetworkSnapshot network_;
     void RefreshNetwork();
     SystemTelemetry telemetry_;
+    VideoTelemetry videoTelemetry_;
+    bool telemetryVideo_=false;
     void DrawTelemetry(HomeCanvas& c) const;
     void RefreshResidentPlugins();
     void DrawResidentPlugins(HomeCanvas& c) const;

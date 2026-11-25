@@ -94,6 +94,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     const char* pages[]={"20-armazenamento","08-rede","21-sensores","22-downloads","09-plugins","23-eventos","24-dvd","25-configuracoes"};
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
+        if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);}
         if(i==3){
             system.Press(ConsoleHome::PageDown);ok=save("27-fila-store",system)&&ok;
             system.Press(ConsoleHome::PageDown);
@@ -1052,6 +1053,15 @@ int main(int argc,char** argv) {
     assert(!SystemTelemetry::FromPages(0,0,0,0,0,0,0,0).available);
     assert(!SystemTelemetry::FromPages(100,101,0,0,0,0,0,0).available);
     assert(!SystemTelemetry::Read().available);
+    auto video=VideoTelemetry::FromMode(1920,1080,59.94f,0,1,1,1);
+    assert(video.available&&video.width==1920&&video.Frequency()=="59.940 Hz"&&video.widescreen&&!video.interlaced);
+    video.SetDisplay(1920,1080,1280,720);
+    assert(video.displayAvailable&&video.bufferWidth==1280);
+    video.SetDisplay(1920,1080,0,0);assert(!video.displayAvailable&&video.bufferWidth==0);
+    assert(!VideoTelemetry::FromMode(0,720,60,0,1,1,1).available);
+    assert(!VideoTelemetry::FromMode(1280,720,0,0,1,1,1).available);
+    assert(!VideoTelemetry::FromMode(1280,720,60,2,1,1,1).available);
+    assert(!VideoTelemetry::Read().available);
     // Read-only INI inventory; duplicate slots are ambiguous, not loaded state.
     const fs::path residentRoot=root/"ResidentFixture";
     fs::create_directories(residentRoot);
