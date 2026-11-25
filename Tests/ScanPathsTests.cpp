@@ -1,6 +1,7 @@
 #include "GameScanner.h"
 #include "XsdkPaths.h"
 #include "XexLaunchCheck.h"
+#include "DiscSet.h"
 #include "DownloadRange.h"
 #include <sstream>
 
@@ -34,6 +35,10 @@ int main() {
     {std::istringstream stream(image);assert(XexLaunchCheck::Capture(stream,ticketB)&&!XexLaunchCheck::Same(ticketA,ticketB));}
     image.back()=0;
     assert(XexLaunchCheck::OwnTitle(0x494E4633u)&&!XexLaunchCheck::OwnTitle(0x494E4634u));
+    XboxExecutionInfo disc1{},disc2{};disc1.titleId=disc2.titleId=0x494E1234;disc1.baseVersion=disc2.baseVersion=1;
+    disc1.discCount=disc2.discCount=2;disc1.discNumber=1;disc2.discNumber=2;disc1.mediaId=7;disc2.mediaId=8;
+    assert(DiscSet::Matches(disc1,disc2));disc2.baseVersion=2;assert(!DiscSet::Matches(disc1,disc2));
+    disc2.baseVersion=1;disc2.discNumber=3;assert(!DiscSet::Matches(disc1,disc2));
     {std::istringstream stream("XEX2");assert(!XexLaunchCheck::Header(stream));}
     image[10]=64;
     {std::istringstream stream(image);assert(!XexLaunchCheck::Header(stream));}

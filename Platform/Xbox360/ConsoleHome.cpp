@@ -883,6 +883,23 @@ bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     return false;
 }
 std::string ConsoleHome::Press(Key key) {
+    if(discSetActive_){
+        if(key==Back){discSetActive_=false;notice_.clear();return "";}
+        if(key==Up&&discSetRow_>0)--discSetRow_;
+        if(key==Down&&discSetRow_+1<discSet_.size())++discSetRow_;
+        if(key==Refresh){discSet_=DiscSet::Find(games_,discSetIdentity_);discSetRow_=0;return "";}
+        if(key==Accept&&discSetRow_<discSet_.size()){
+            if(TransferRunning()){notice_="Conclua ou cancele as copias.";return "";}
+            const auto& selected=discSet_[discSetRow_];XboxExecutionInfo info{};
+            if(!ContentCatalog::ReadExecutionInfo(selected.path,info)||!DiscSet::Matches(discSetIdentity_,info)||
+               info.discNumber!=selected.info.discNumber||info.mediaId!=selected.info.mediaId||info.version!=selected.info.version){
+                notice_="Disco mudou ou indisponivel. Y atualiza.";return "";
+            }
+            return selected.path;
+        }
+        return "";
+    }
+    if(coverBatchConfirm_&&key!=Guide)coverBatchConfirm_=false;
     if(section_==System&&page_==Details&&systemTab_==6&&!storeActive_){
         if(key==Refresh){RefreshDiscInstall();notice_="DVD e destino consultados.";return "";}
         if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
@@ -1178,6 +1195,12 @@ std::string ConsoleHome::Press(Key key) {
         }
         return "";
     }
+    if(page_==Details&&(section_==Library||section_==Recent||section_==Favorites)&&key==Search&&Count()){
+        if(detailMetadata_.package||!ContentCatalog::ReadExecutionInfo(visible_[row_]->executable,discSetIdentity_)||discSetIdentity_.discCount<2){
+            notice_="Nenhum conjunto multidisco identificado.";return "";
+        }
+        discSet_=DiscSet::Find(games_,discSetIdentity_);discSetRow_=0;discSetActive_=true;notice_.clear();return "";
+    }
     if(page_==Details && (section_==Library || section_==Recent || section_==Favorites)
        && key==Guide && Count()) {
         artEditFolder_=ArtFolder(*visible_[row_]);
@@ -1437,6 +1460,15 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details&&systemTab_==7){
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Guide&&!TransferRunning()){
+                if(!coverBatchConfirm_){
+                    PrepareCoverBatch();coverBatchConfirm_=!coverBatch_.empty();
+                    notice_=coverBatchConfirm_?"START confirma baixar "+number(coverBatch_.size())+" capas faltantes. B cancela.":"Nenhuma capa faltante neste lote.";
+                }else{coverBatchConfirm_=false;coverBatchPending_=true;}
+                return "";
+            }
+#endif
             if(key==Left||key==Right){
                 const auto previous=theme_;theme_=(theme_+(key==Right?1:2))%3;
                 if(!SaveProfile()){theme_=previous;notice_="Falha ao salvar tema.";}
@@ -1937,6 +1969,27 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
 bool ConsoleHome::TakeArtRequest(unsigned& title,bool& cover,bool& remote){
     if(!artPending_)return false;artPending_=false;title=artTitle_;cover=artCover_;remote=artRemote_;return true;
 }
+void ConsoleHome::PrepareCoverBatch(){
+    coverBatch_.clear();std::set<unsigned> seen;
+    // Limit each manually initiated batch to 32 missing titles; skip hidden titles and existing artwork.
+    for(const auto& game:games_){
+        if(contains(hidden_,game.executable))continue;
+        const auto info=ContentCatalog::DescribeTitle(game.executable,isContentPackage(game));
+        if(!info.known||!info.titleId||!seen.insert(info.titleId).second)continue;
+        const auto personal=FileWorkspace::Join(ArtImport::Folder(dir_,info.titleId),"cover.rgba");
+        const auto legacy=artFile(ArtFolder(game),true,'0');
+        if(fileExists(personal)||fileExists(legacy))continue;
+        coverBatch_.push_back(info.titleId);
+        if(coverBatch_.size()>=32)break;
+    }
+}
+bool ConsoleHome::TakeCoverBatch(std::vector<unsigned>& titles){
+    if(!coverBatchPending_)return false;coverBatchPending_=false;titles.swap(coverBatch_);return true;
+}
+void ConsoleHome::CoverBatchResult(unsigned saved,unsigned failed,bool cancelled){
+    artDirty_=true;notice_="Capas: "+number(saved)+" salvas, "+number(failed)+" indisponiveis"+(cancelled?" | cancelado.":".");
+    RecordEvent("Lote de capas concluido");
+}
 void ConsoleHome::ArtResult(const std::string& message,bool success){
     artDirty_=true;notice_=message;RecordEvent(success?"Arte importada":"Importacao de arte recusada");
 }
@@ -2090,7 +2143,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     }
     const char* themes[]={"Verde Infinity","Azul","Ambar"};
     c.Text(48,565,std::string("Tema: < ")+themes[theme_]+" > | Esq/Dir Alterar",19,Lime,1170);
-    c.Text(48,600,"Y Atualizar | B Voltar | Contas somente leitura",19,Lime,1170);
+    c.Text(48,600,"START Capas em lote | Y Atualizar | B Voltar",19,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
@@ -2232,7 +2285,23 @@ void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     c.Text(48,550,"Somente espaco pessoal. Exclusao nao recursiva; movimento no mesmo volume.",20,Muted,1175);
     c.Text(48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
 }
+void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
+    c.Text(44,78,"Jogos multidisco | Selecionar disco",37,White,1170);
+    c.Text(48,136,"Title ID "+hexId(discSetIdentity_.titleId)+" | Base "+hexId(discSetIdentity_.baseVersion)+" | "+number(discSetIdentity_.discCount)+" discos",21,Muted,1170);
+    std::set<unsigned> present;for(const auto& e:discSet_)present.insert(e.info.discNumber);
+    c.Text(48,177,number(present.size())+" de "+number(discSetIdentity_.discCount)+" discos localizados | "+number(discSet_.size())+" instalacoes",20,Muted,1170);
+    const size_t first=discSetRow_/5*5;
+    for(size_t i=first;i<discSet_.size()&&i<first+5;++i){
+        const auto& e=discSet_[i];const int y=220+static_cast<int>(i-first)*70;
+        panel(c,45,y,1189,62,Panel,i==discSetRow_);
+        c.Text(60,y+4,"Disco "+number(e.info.discNumber)+" | "+e.name+" | "+e.device,23,White,1150);
+        c.Text(60,y+32,e.path+" | Media "+hexId(e.info.mediaId),17,Muted,1150);
+    }
+    if(discSet_.empty())c.Text(48,270,"Nenhum disco correspondente instalado.",24,Muted,1170);
+    c.Text(48,590,"A Selecionar XEX | Y Revalidar | B Voltar | Sem troca automatica",19,Lime,1170);
+}
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
+    if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
     c.Text(44,78,labels[section_],43,White,1190);
@@ -2365,7 +2434,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         c.Text(77,469,hint,21,Lime,textWidth);
         if(section_==Library || section_==Recent || section_==Favorites)
-            c.Text(47,593,"Start Personalizar capa e fundo | Y Atualizar",18,Muted,1170);
+            c.Text(47,593,detailMetadata_.discCount>1?"Start Arte | R3 Selecionar disco | Y Atualizar":"Start Personalizar capa e fundo | Y Atualizar",18,Muted,1170);
         if(section_==Library || section_==Recent || section_==Favorites) {
             c.Text(77,512,"RB Conteudo instalado (TU / DLC / Saves / Trainers)",20,Muted,1110);
             c.Text(77,545,contains(pinned_,visible_[row_]->executable)?"LB Desafixar do inicio":"LB Fixar no inicio",20,Lime,1110);

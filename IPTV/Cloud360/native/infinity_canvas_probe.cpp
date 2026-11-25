@@ -262,6 +262,29 @@ int main(){
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}
             unsigned artTitle=0;bool artCover=false,artRemote=false;
             XboxContentPackage backup{};ContentBackup::Record recovery;
+            std::vector<unsigned> coverBatch;
+            if(menu.TakeCoverBatch(coverBatch)){
+                menu.StopFtp();unsigned saved=0,failed=0;bool cancelled=false,videoFailed=false;
+                for(size_t index=0;index<coverBatch.size()&&!cancelled;++index){
+                    auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                    auto progress=[&](unsigned long long done,unsigned long long total){
+                        INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;return false;}
+                        const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
+                        canvas.Background();canvas.Text(48,100,"XboxUnity | Capas em lote",36,WHITE,1180);
+                        canvas.Text(48,220,std::to_string(index+1)+" / "+std::to_string(coverBatch.size())+" | Salvas "+std::to_string(saved),28,WHITE,1180);
+                        canvas.Text(48,300,StorageInfo::FormatBytes(done)+" recebidos",24,MUTED,1180);
+                        canvas.Text(48,560,"B Cancelar | Capas existentes preservadas",22,LIME,1180);
+                        if(!p.Show(canvas,true)){videoFailed=true;cancelled=true;return false;}return true;
+                    };
+                    if(!progress(0,1))break;
+                    bool success=false;const auto result=XsdkUnityCover(coverBatch[index],dir,progress,success);
+                    if(success)++saved;else if(!cancelled)++failed;
+                    // Stop after an initial failure to avoid repeatedly querying an unavailable provider.
+                    if(index==0&&!success&&!cancelled)break;
+                }
+                menu.CoverBatchResult(saved,failed,cancelled);
+                if(videoFailed){ok=false;break;}
+            }
             if(menu.TakeArtRequest(artTitle,artCover,artRemote)){
                 menu.StopFtp();bool success=false,videoFailed=false;std::string result;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);

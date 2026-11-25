@@ -11,6 +11,7 @@
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
 #include "ContentBackup.h"
+#include "DiscSet.h"
 #include "ConsoleStatus.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
@@ -32,6 +33,8 @@ public:
     bool TakeProviderRequest(StoreProvider& provider);
     bool TakeUnityRequest(XboxExecutionInfo& info);
     bool TakeArtRequest(unsigned& title,bool& cover,bool& remote);
+    bool TakeCoverBatch(std::vector<unsigned>& titles);
+    void CoverBatchResult(unsigned saved,unsigned failed,bool cancelled);
     void ArtResult(const std::string& message,bool success);
     bool TakeBackupRequest(XboxContentPackage& selected);
     bool TakeRecoverRequest(ContentBackup::Record& selected);
@@ -156,6 +159,14 @@ private:
     XboxContentPackage backupItem_{};
     std::vector<XboxContentPackage> stagedItems_;
     bool artPending_=false,artRemote_=false,artCover_=true;
+    bool coverBatchConfirm_=false,coverBatchPending_=false;
+    std::vector<unsigned> coverBatch_;
+    bool discSetActive_=false;
+    size_t discSetRow_=0;
+    XboxExecutionInfo discSetIdentity_{};
+    std::vector<DiscSet::Entry> discSet_;
+    void DrawDiscSet(HomeCanvas& c) const;
+    void PrepareCoverBatch();
     unsigned artTitle_=0;
     ConsoleStatus status_;
     unsigned theme_=0;

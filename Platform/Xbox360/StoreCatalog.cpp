@@ -381,7 +381,17 @@ bool StoreCatalog::ArchivePackage(const StoreItem& item,std::string& saved){
     const int next=newestBackup(ws,back,true)+1;if(next>=32)return false;
     const auto from=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".pkg");
     const auto dest=slot(back,next,true);
-    if(!ws.MovePersonalExclusive(from,dest,false))return false;
+    const auto state=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root_,"UserFiles"),"Store"),item.id+".state");
+    const auto receipt=FileWorkspace::Join(back,"package-"+std::string(next<10?"000":"00")+std::to_string(next)+".state");
+    bool movedState=false;
+    if(fileExists(state)){
+        if(!ws.MovePersonalExclusive(state,receipt,false))return false;
+        movedState=true;
+    }
+    if(!ws.MovePersonalExclusive(from,dest,false)){
+        if(movedState)ws.MovePersonalExclusive(receipt,state,false);
+        return false;
+    }
     saved=dest;return true;
 }
 bool StoreCatalog::Installed(const StoreItem& item) const{
@@ -392,7 +402,9 @@ bool StoreCatalog::Installed(const StoreItem& item) const{
     const auto size=static_cast<unsigned long long>(input.tellg());
     if(!XexLaunchCheck::Header(input))return false;
     std::string record;
-    if(readBound(FileWorkspace::Join(folder,"infinity-install.txt"),128,record)){
+    const auto receipt=FileWorkspace::Join(folder,"infinity-install.txt");
+    if(fileExists(receipt)&&!readBound(receipt,128,record))return false;
+    if(!record.empty()||fileExists(receipt)){
         std::istringstream in(record);std::string sha,extra;unsigned long long expected=0;
         return (in>>sha>>expected)&&!(in>>extra)&&sha==item.sha256&&expected==size;
     }
