@@ -6,6 +6,11 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "XexLaunchCheck.h"
+#ifdef INFINITY_XSDK_HTTPS
+#include "XsdkDownload.h"
+#include "StorageInfo.h"
+#include <chrono>
+#endif
 #include "xsdk/xam.h"
 #include <cerrno>
 #include <filesystem>
@@ -209,9 +214,39 @@ int main(){
             }
             if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
             StoreItem pending;
-            if(menu.TakeNativeStoreRequest(pending))menu.NativeStoreResult("HTTPS ainda indisponivel no XSDK.",false);
+            if(menu.TakeNativeStoreRequest(pending)){
+#ifdef INFINITY_XSDK_HTTPS
+                menu.StopFtp();
+                bool success=false;
+                bool videoFailed=false;
+                auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                const auto progress=[&](unsigned long long done,unsigned long long total){
+                    INPUT_STATE state{};
+                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
+                       (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    const auto now=std::chrono::steady_clock::now();
+                    if(now-last<std::chrono::milliseconds(200))return true;
+                    last=now;
+                    canvas.Background();
+                    canvas.Text(48,100,"INFINITY Store | HTTPS",36,WHITE,1180);
+                    canvas.Text(48,210,pending.name,28,WHITE,1180);
+                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
+                    canvas.Box(48,370,1180,22,0xff28413au,5);
+                    if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
+                    canvas.Text(48,560,"B Cancelar | TLS 1.2 | SHA-256 antes de salvar",22,LIME,1180);
+                    if(!p.Show(canvas,true)){videoFailed=true;return false;}
+                    return true;
+                };
+                const std::string result=XsdkDownload(pending,dir,progress,success);
+                menu.NativeStoreResult(result,success);
+                if(videoFailed){ok=false;break;}
+#else
+                menu.NativeStoreResult("HTTPS ainda indisponivel no XSDK.",false);
+#endif
+            }
             dirty=true;break;
         }
+        if(!ok)break;
         if(menu.Tick())dirty=true;
         if(dirty){
             menu.Draw(canvas,"XSDK");

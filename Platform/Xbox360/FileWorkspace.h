@@ -18,6 +18,10 @@ public:
     bool CanBrowse(const std::string& path) const;
     bool CanWrite(const std::string& directory) const;
     bool CanReadPersonalFile(const std::string& path) const;
+#ifdef __XSDK__
+    // Publish an exclusive staging file, never replacing a destination.
+    bool PublishStaged(const std::string& temporary,const std::string& destination) const;
+#endif
     bool Create(const std::string& directory,const std::string& name) const;
     bool Rename(const std::string& directory,const std::string& oldName,
                 const std::string& newName) const;

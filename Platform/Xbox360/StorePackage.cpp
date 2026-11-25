@@ -127,7 +127,11 @@ bool StorePackage::Begin(const StoreItem& item,const std::string& root) {
         handle_=CreateFileA(candidate.c_str(),GENERIC_WRITE,0,0,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,0);
         if(handle_==INVALID_HANDLE_VALUE)continue;
 #else
+#ifdef __XSDK__
+        handle_=open(candidate.c_str(),O_WRONLY|O_CREAT|O_EXCL,0600);
+#else
         handle_=open(candidate.c_str(),O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW,0600);
+#endif
         if(handle_<0)continue;
 #endif
         temp_=candidate;active_=true;return true;
@@ -152,8 +156,12 @@ bool StorePackage::Finish() {
     if(!flush||!closed||!MoveFileA(temp_.c_str(),target_.c_str()))return Fail("Falha ao publicar pacote.");
 #else
     bool flush=fsync(handle_)==0;bool closed=close(handle_)==0;handle_=-1;
+#ifdef __XSDK__
+    if(!flush||!closed||!workspace_.PublishStaged(temp_,target_))return Fail("Falha ao publicar pacote sem sobrescrever.");
+#else
     if(!flush||!closed||link(temp_.c_str(),target_.c_str())!=0)return Fail("Falha ao publicar pacote.");
     unlink(temp_.c_str());
+#endif
 #endif
     temp_.clear();active_=false;
     // Snapshot is informational, not a signature. Never replace the package.

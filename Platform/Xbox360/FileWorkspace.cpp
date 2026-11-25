@@ -206,6 +206,18 @@ bool FileWorkspace::CanReadPersonalFile(const std::string& path) const {
     return true;
 #endif
 }
+#ifdef __XSDK__
+bool FileWorkspace::PublishStaged(const std::string& temporary,const std::string& destination) const {
+    const size_t a=temporary.find_last_of("/\\"),b=destination.find_last_of("/\\");
+    if(a==std::string::npos||b==std::string::npos)return false;
+    const std::string name=temporary.substr(a+1);
+    if(name.compare(0,7,"AXCOPY-")!=0||!ValidName(destination.substr(b+1)))return false;
+    if(key(temporary.substr(0,a))!=key(destination.substr(0,b))||
+       !CanWrite(destination.substr(0,b))||!CanReadPersonalFile(temporary)||
+       !Allowed(destination,workspaces_)||exists(destination))return false;
+    return renameNoReplace(temporary,destination);
+}
+#endif
 std::string FileWorkspace::WorkspaceFor(const std::string& root) const {
     for(size_t i=0;i<roots_.size();++i)
         if(key(root)==key(roots_[i]))return i<workspaces_.size()?workspaces_[i]:"";

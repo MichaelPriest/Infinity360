@@ -9,6 +9,7 @@ on:
       - IPTV/Cloud360/native/probe.c
       - IPTV/Cloud360/native/infinity_core_probe.cpp
       - IPTV/Cloud360/native/infinity_canvas_probe.cpp
+      - IPTV/Cloud360/native/XsdkDownload.*
       - IPTV/Cloud360/native/infinity_launch_target.c
       - IPTV/Cloud360/native/xsdk_preview_workspace.cpp
       - Platform/Xbox360/**
@@ -63,12 +64,20 @@ jobs:
           cd "$HOME/xsdk"
           make -j4 build/libxsdk.a build/host/libxsc.so
           test -s build/libxsdk.a
+      - name: Pin XSDK TLS and HTTP libraries
+        run: |
+          git clone https://github.com/xenosworks/mbedtls-xenon.git "$HOME/mbedtls-xenon"
+          git -C "$HOME/mbedtls-xenon" checkout 591b04adbec4bc5582649601f4407506a610162b
+          git -C "$HOME/mbedtls-xenon" submodule update --init --recursive
+          git clone https://github.com/xenosworks/curl-xenon.git "$HOME/curl-xenon"
+          git -C "$HOME/curl-xenon" checkout a6b70bd06820e1c625f47fe0e592e08c5daaa6b4
       - name: Compile isolated INFINITY 360 Alpha and no-GPU probe
         run: |
           cmake -S IPTV/Cloud360/native -B IPTV/Cloud360/native/build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" \
             -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
+            -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
@@ -77,7 +86,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile, ZIP_DEFLATED
-          import hashlib
+          import hashlib, os
 
           base = Path("IPTV/Cloud360/native/build")
           outputs = {
@@ -92,9 +101,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.zip")
           note = (
-              "INFINITY 360 XSDK Alpha 0.1.7 - experimental hardware preview ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.1.8 - experimental hardware preview ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
@@ -102,7 +111,10 @@ jobs:
               "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
               "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
-              "Optional XEX launch only after GPU checks pass; no playback or HTTPS.\n"
+              "Optional XEX launch only after GPU checks pass; no playback.\n"
+              "HTTPS Store opt-in: MenuPreview/enable-https-store.txt containing ENABLE-HTTPS-STORE.\n"
+              "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
+              "Console clock must be correct. HTTPS only; redirects refused; SHA-256 verified before publication.\n"
               "FTP LAN read-only is opt-in: create MenuPreview/enable-ftp.txt containing ENABLE-FTP-LAN.\n"
               "Requires enable-file-writes.txt and private credentials in infinity360-ftp.txt (two lines).\n"
               "Use an isolated trusted LAN; FTP credentials are not encrypted. Never forward port 2121.\n"
@@ -123,6 +135,11 @@ jobs:
               archive.writestr("playlist.m3u", playlist)
               archive.writestr("probe-playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV\",INFINITY Probe\nhttps://example.invalid/probe.m3u8\n")
               archive.write("Platform/Xbox360/Assets/home.tga", "home.tga")
+              home = Path(os.environ["HOME"])
+              archive.write(home / "mbedtls-xenon/programs/xsdk/cacert.pem", "cacert.pem")
+              archive.write(home / "mbedtls-xenon/LICENSE", "Licenses/mbedtls-LICENSE.txt")
+              archive.write(home / "curl-xenon/COPYING", "Licenses/curl-COPYING.txt")
+              archive.writestr("Licenses/SOURCES.txt", "Mbed TLS: https://github.com/xenosworks/mbedtls-xenon/tree/591b04adbec4bc5582649601f4407506a610162b\nlibcurl: https://github.com/xenosworks/curl-xenon/tree/a6b70bd06820e1c625f47fe0e592e08c5daaa6b4\nCA bundle: Mozilla roots, MPL-2.0; source https://curl.se/docs/caextract.html\n")
               archive.writestr("MenuPreview/infinity-preview.txt", "INFINITY360-XSDK-PREVIEW\n")
               archive.writestr("MenuPreview/UserFiles/", "")
               archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo\nhttps://example.invalid/test.ts\n")
@@ -139,14 +156,14 @@ jobs:
       - name: Package checksum
         run: |
           cd IPTV/Cloud360
-          sha256sum Infinity360-Alpha-XSDK-0.1.7.zip > Infinity360-Alpha-XSDK-0.1.7.zip.sha256
+          sha256sum Infinity360-Alpha-XSDK-0.1.8.zip > Infinity360-Alpha-XSDK-0.1.8.zip.sha256
       - name: Upload actual INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.7
+          name: Infinity360-Alpha-XSDK-0.1.8
           path: |
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip
-            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.7.zip.sha256
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.zip
+            IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.8.zip.sha256
           retention-days: 14
           if-no-files-found: error
 
@@ -164,7 +181,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Infinity360-Alpha-XSDK-0.1.7
+          name: Infinity360-Alpha-XSDK-0.1.8
           path: release
       - name: Verify package and publish immutable commit-specific prerelease
         env:
@@ -174,33 +191,33 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c Infinity360-Alpha-XSDK-0.1.7.zip.sha256
+          sha256sum -c Infinity360-Alpha-XSDK-0.1.8.zip.sha256
           python3 - <<'PY'
           from zipfile import ZipFile
           import hashlib
-          with ZipFile("Infinity360-Alpha-XSDK-0.1.7.zip") as z:
+          with ZipFile("Infinity360-Alpha-XSDK-0.1.8.zip") as z:
               assert z.testzip() is None
               for line in z.read("SHA256SUMS.txt").decode().splitlines():
                   digest, name = line.split("  ", 1)
                   raw = z.read(name)
                   assert raw[:4] == b"XEX2" and hashlib.sha256(raw).hexdigest() == digest
           PY
-          tag="xsdk-v0.1.7-${GITHUB_SHA:0:12}"
+          tag="xsdk-v0.1.8-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Existing release for this commit; not replacing its assets."
             exit 0
           fi
           cat > notes.md <<EOF
-          INFINITY 360 XSDK Alpha 0.1.7 — experimental prerelease.
+          INFINITY 360 XSDK Alpha 0.1.8 — experimental prerelease.
           
           Cross-compiled PowerPC XEX2 package from commit ${GITHUB_SHA}.
           Package and individual executable checksums verified in CI.
           Not hardware-homologated; do not replace your installed dashboard or enable autoboot.
           Read LEIA-ME-SEGURANCA.txt before testing. XEX launch and file writes are opt-in.
-          Experimental IPv4/Ethernet and LAN read-only FTP; HTTPS, FTP uploads, GOD/XBLA launch and native IPTV remain pending.
+          Experimental IPv4/Ethernet, LAN read-only FTP and opt-in TLS 1.2 Store staging. FTP uploads, GOD/XBLA launch, installation and native IPTV remain pending.
           
           Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.7.zip Infinity360-Alpha-XSDK-0.1.7.zip.sha256 \
-            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.7 (${GITHUB_SHA:0:7})" \
+          gh release create "$tag" Infinity360-Alpha-XSDK-0.1.8.zip Infinity360-Alpha-XSDK-0.1.8.zip.sha256 \
+            --target "$GITHUB_SHA" --title "INFINITY 360 XSDK Alpha 0.1.8 (${GITHUB_SHA:0:7})" \
             --prerelease --latest=false --notes-file notes.md

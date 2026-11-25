@@ -830,7 +830,7 @@ std::string ConsoleHome::Press(Key key) {
         } else if(!storeVisible_.empty()) {
             const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
             if(key==Guide) {
-#ifdef _XBOX
+#if defined(_XBOX) || defined(INFINITY_XSDK_HTTPS)
                 if(TransferRunning()||!TranslationMatches(item)) {
                     notice_="Copia ativa ou traducao incompativel.";return "";
                 }
