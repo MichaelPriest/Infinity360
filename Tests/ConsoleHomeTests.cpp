@@ -1198,6 +1198,23 @@ int main(int argc,char** argv) {
      smc[3]=0;smc[4]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Partial);
      assert(ThermalTelemetry::Decode(smc,8).state==ThermalTelemetry::Invalid);
      smc[0]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Invalid);}
+    {ThermalHistory history;
+      unsigned char smc[16]={0x07,0x80,60,0,70,0,65,0,40};
+      history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
+      assert(history.attempts==1&&history.valid==1&&history.Min(0)=="60.5 C"&&history.Max(0)=="60.5 C");
+      smc[1]=0;smc[2]=55;smc[3]=0;smc[4]=0;smc[6]=80;
+      history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
+      assert(history.attempts==2&&history.partial==1&&history.Min(0)=="55.0 C"&&history.Max(0)=="60.5 C");
+      assert(history.Min(1)=="70.0 C"&&history.Max(2)=="80.0 C");
+      smc[0]=0;history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
+      assert(history.invalid==1&&history.attempts==3&&history.Min(0)=="55.0 C");
+      ThermalTelemetry unsupported;unsupported.state=ThermalTelemetry::Unsupported;history.Add(unsupported);
+      assert(history.attempts==3&&history.Min(4)=="--");
+      history.attempts=UINT32_MAX;history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
+      assert(history.attempts==UINT32_MAX);
+      history.Clear();assert(history.attempts==0&&history.Min(0)=="--"&&history.Max(2)=="--");
+      smc[0]=0x07;history.Add(ThermalTelemetry::Decode(smc,sizeof smc));
+      assert(history.Min(1)=="--"&&history.Min(0)=="55.0 C");}
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

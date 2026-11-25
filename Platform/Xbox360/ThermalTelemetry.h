@@ -44,9 +44,34 @@ struct ThermalTelemetry {
         ThermalTelemetry t;t.state=Unsupported;return t;
 #endif
     }
-    std::string Celsius(unsigned i)const{
-        if(i>=4||!available[i])return "--";
-        const unsigned tenths=(unsigned(raw[i])*10+128)/256;
+    static std::string FormatCelsius(uint16_t rawValue){
+        const unsigned tenths=(unsigned(rawValue)*10+128)/256;
         char value[24];std::snprintf(value,sizeof value,"%u.%u C",tenths/10,tenths%10);return value;
     }
+    std::string Celsius(unsigned i)const{
+        return i<4&&available[i]?FormatCelsius(raw[i]):"--";
+    }
+};
+
+// Session-only manual observations; invalid samples never become extrema.
+struct ThermalHistory {
+    uint16_t minimum[4]={},maximum[4]={};
+    bool seen[4]={};
+    uint32_t attempts=0,valid=0,partial=0,invalid=0;
+    static void Increment(uint32_t& n){if(n<UINT32_MAX)++n;}
+    void Add(const ThermalTelemetry& sample){
+        if(sample.state!=ThermalTelemetry::Valid&&sample.state!=ThermalTelemetry::Partial&&sample.state!=ThermalTelemetry::Invalid)return;
+        Increment(attempts);
+        if(sample.state==ThermalTelemetry::Invalid){Increment(invalid);return;}
+        if(sample.state==ThermalTelemetry::Valid)Increment(valid);else Increment(partial);
+        for(unsigned i=0;i<4;++i){
+            if(!sample.available[i]||sample.raw[i]<256||sample.raw[i]>125u*256u)continue;
+            const uint16_t v=sample.raw[i];
+            if(!seen[i]){minimum[i]=maximum[i]=v;seen[i]=true;}
+            else{if(v<minimum[i])minimum[i]=v;if(v>maximum[i])maximum[i]=v;}
+        }
+    }
+    void Clear(){*this=ThermalHistory();}
+    std::string Min(unsigned i)const{return i<4&&seen[i]?ThermalTelemetry::FormatCelsius(minimum[i]):"--";}
+    std::string Max(unsigned i)const{return i<4&&seen[i]?ThermalTelemetry::FormatCelsius(maximum[i]):"--";}
 };

@@ -210,3 +210,7 @@ Inventário de manifestos habilitados/desabilitados e XEX ausentes, conflitos de
 ### V0.2.19 — SMC leitura térmica
 
 Provider opcional com importação 0x029 confirmada em referências públicas, comando 0x07, decodificação 8.8 LE, validação parcial, leitura manual. Build experimental isolada sem Release, default OFF. API síncrona sem garantia de timeout; não validada em hardware. Não escreve ventoinha, energia ou parâmetros térmicos. Galeria 45 preparada. Sem build/CI.
+
+### V0.2.20 — P2 Histórico térmico manual
+
+Mínimo e máximo por sensor em RAM, última consulta preservada entre telas, contadores de respostas e reset por X. Amostras inválidas não alteram extremos; respostas parciais afetam somente sensores válidos. Sem polling automático, persistência, controle de ventoinha ou energia. Testes preparados; sem build/CI. Galeria permanece com 45 telas preparadas.

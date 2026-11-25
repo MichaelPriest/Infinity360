@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.20 — em desenvolvimento (sem build XEX)
+
+- Histórico térmico em RAM por sessão, mínimos e máximos de amostras manuais válidas por sensor.
+- Contadores de consultas completas, parciais e inválidas, limpeza por X e testes de regressão.
+- Atualização da tela térmica preparada para a próxima captura real. Sem compilação ou validação física.
+
 ## V0.2.19 — em desenvolvimento (sem build XEX)
 
 - Painel de temperaturas e provider SMC experimental de leitura manual, desligado por padrão.

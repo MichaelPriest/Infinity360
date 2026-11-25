@@ -151,6 +151,7 @@ private:
     VideoTelemetry videoTelemetry_;
     bool telemetryVideo_=false,thermalPage_=false;
     ThermalTelemetry thermal_;
+    ThermalHistory thermalHistory_;
     void DrawThermal(HomeCanvas& c)const;
     void DrawTelemetry(HomeCanvas& c) const;
     void RefreshResidentPlugins();
