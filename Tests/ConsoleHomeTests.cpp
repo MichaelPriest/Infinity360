@@ -1,4 +1,5 @@
 #include "ConsoleHome.h"
+#include "DashboardScreenshot.h"
 #include "MediaUrl.h"
 #include <cassert>
 #include <algorithm>
@@ -1046,6 +1047,26 @@ int main(int argc,char** argv) {
     nexusMeta.Load();nexusMeta.Press(ConsoleHome::Accept);nexusMeta.Press(ConsoleHome::Accept);
     nexusMeta.Draw(canvas,"20:50");
     assert(nexusMeta.Press(ConsoleHome::Accept)==nexusGame.string());
+    // Verify BMP byte order and exclusive publication using actual canvas pixels.
+    {
+        const auto shots=root/"ScreenFixture";
+        fs::create_directories(shots/"UserFiles");
+        const auto shotRoot=shots.string()+"/";
+        FileWorkspace ws(shotRoot);HomeCanvas shot;
+        shot.Box(0,0,1280,720,0xff123456u);
+        std::vector<unsigned char> bytes;
+        assert(DashboardScreenshot::Encode(shot.Pixels(),[&](const unsigned char* p,size_t n){bytes.insert(bytes.end(),p,p+n);return true;}));
+        assert(bytes.size()==DashboardScreenshot::FileBytes&&bytes[0]=='B'&&bytes[1]=='M'&&bytes[28]==24);
+        assert(bytes[54]==0x56&&bytes[55]==0x34&&bytes[56]==0x12);
+        assert(!DashboardScreenshot::Encode(shot.Pixels(),[](const unsigned char*,size_t){return false;}));
+#if defined(__linux__)
+        const auto first=DashboardScreenshot::Save(shot,ws,shotRoot);
+        const auto second=DashboardScreenshot::Save(shot,ws,shotRoot);
+        assert(!first.empty()&&!second.empty()&&first!=second);
+        assert(fs::file_size(first)==DashboardScreenshot::FileBytes&&fs::file_size(second)==DashboardScreenshot::FileBytes);
+        assert(!fs::exists(first+".part")&&!fs::exists(second+".part"));
+#endif
+    }
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

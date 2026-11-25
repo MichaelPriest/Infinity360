@@ -6,6 +6,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "XexLaunchCheck.h"
+#include "DashboardScreenshot.h"
 #include "XsdkPackageMount.h"
 #ifdef INFINITY_XSDK_HTTPS
 #include "XsdkDownload.h"
@@ -183,7 +184,10 @@ int main(){
     for(unsigned frame=0;frame<MaxFrames;++frame){
         INPUT_STATE input{};
         uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
-        const uint16_t edge=buttons&~previous;previous=buttons;
+        uint16_t edge=buttons&~previous;previous=buttons;
+        const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
+        const bool capture=(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
+        if(capture)edge&=~captureChord;
         if(edge&INPUT_GAMEPAD_BACK)break;
         if(edge&INPUT_GAMEPAD_B){if(!page)break;page=0;row=0;dirty=true;}
         else if(!page){
@@ -241,6 +245,7 @@ int main(){
         INPUT_GAMEPAD_START,0x0080};
     uint16_t previous=0;
     bool ok=true,dirty=true,systemExit=false;
+    FileWorkspace captureWorkspace(dir);
     // Longer than the minimal GPU probe, but still bounded.
     std::string clock;
     for(unsigned frame=0;continuous||frame<3600;++frame){
@@ -607,6 +612,15 @@ int main(){
         }
         if(!p.Show(canvas,dirty)){ok=false;break;}
         dirty=false;
+        if(capture&&pendingLaunch.empty()){
+            if(menu.TransferRunning())launchNotice="Conclua as transferencias antes de capturar.";
+            else{
+                menu.StopFtp();
+                const auto saved=DashboardScreenshot::Save(canvas,captureWorkspace,dir);
+                launchNotice=saved.empty()?"Captura recusada: confira UserFiles e enable-file-writes.txt.":"Captura salva: "+saved.substr(saved.find_last_of("/\\")+1);
+            }
+            dirty=true;
+        }
     }
     menu.StopFtp();
     const bool restored=p.Close();

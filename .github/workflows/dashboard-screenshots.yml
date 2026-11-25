@@ -40,7 +40,8 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 27, len(images)
+          assert len(images) == 28, len(images)
+          assert (frames / "28-video-kernel.ppm").is_file()
           def chunk(kind, data):
               return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind+data)&0xffffffff)
           for image in images:

@@ -42,7 +42,8 @@ O [workflow de capturas](https://github.com/MichaelPriest/Infinity360/actions/wo
 | Configurações | TU retiradas |
 | ![Configurações](docs/screenshots/25-configuracoes.png) | ![TU retiradas](docs/screenshots/26-tu-retiradas.png) |
 | Fila da Store | |
-| ![Fila da Store](docs/screenshots/27-fila-store.png) | |
+| ![Fila da Store](docs/screenshots/27-fila-store.png) | ![Video e kernel](docs/screenshots/28-video-kernel.png) |
+| Fila da Store | Video e kernel |
 
 ### Estado atual — Alpha 0.2.10
 
@@ -160,3 +161,7 @@ Sistema > Telemetria consulta MmQueryStatistics no XSDK: RAM física, páginas d
 ### Informações de vídeo e kernel
 
 Sistema > Telemetria (LB/RB) acrescenta a página Vídeo e kernel: modo de saída informado pelo kernel, frequência, proporção, entrelaçamento, modo HD, dimensões de display/front buffer e versão do kernel. Não altera resolução, não identifica a TV nem afirma que o sinal foi validado. Valores indisponíveis permanecem explícitos. Captura `28-video-kernel.png` prevista no CI de telas nativas.
+
+### Captura local da interface
+
+Na Alpha XSDK, pressione L3+R3 simultaneamente para salvar a tela da dashboard em `MenuPreview/UserFiles/Screenshots/Shot0001.bmp` (numeração exclusiva). Requer `enable-file-writes.txt` com `ENABLE-FILE-WRITES`. O BMP 24-bit 1280x720 é gerado a partir do HomeCanvas, com bytes little-endian explícitos, staging e publicação sem sobrescrita. Não captura jogos, GPU externo ou vídeo do player. Transferências ativas bloqueiam a captura; FTP é encerrado antes de escrever. CI e hardware pendentes.

@@ -146,3 +146,7 @@ Novo painel com MmQueryStatistics, conversão de páginas de 4 KiB, validação 
 ### P2 — Informações de vídeo e kernel
 
 Consulta somente leitura VdQueryVideoMode, VdGetCurrentDisplayInformation e XboxKrnlVersion no XSDK fixado. Segunda página de telemetria com LB/RB, testes de validação de dimensões/frequência e captura nativa adicional. Não altera o modo físico. O SDK revisado não expõe provider SMC/energia; temperatura, ventoinha e desligamento/reboot continuam pendentes de interface segura e homologação. CI pendente.
+
+### P2 — Captura de tela local
+
+L3+R3 salva BMP 24-bit da interface HomeCanvas em UserFiles/Screenshots com opt-in de escrita, arquivo temporário exclusivo e publicação sem sobrescrita. Bloqueia durante cópias, não captura outros títulos nem vídeo. Teste de formato/endian e publicação Linux. Galeria CI corrigida: render anterior produziu 28 imagens, mas a asserção ainda exigia 27. README passa a incluir vídeo/kernel. Nova revisão aguarda CI.
