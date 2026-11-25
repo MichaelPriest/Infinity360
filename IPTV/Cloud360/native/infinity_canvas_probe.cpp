@@ -30,6 +30,7 @@
 #include "container_decode.h"
 #include "frame_output.h"
 #include "av_timeline.h"
+#include "av_stream_queue.h"
 #include <chrono>
 #include "xsdk/audio.h"
 #include "xsdk/xam.h"
@@ -146,17 +147,20 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 }
 #ifdef INFINITY_CONTAINER_OUTPUT_PROBE
 int main(){
-    // Decode before taking over the GPU/audio device. Short opt-in test only.
-    CloudAvTimeline timeline;CloudContainerReport report{};
-    int rc=cloud_container_decode_output("game:/test.mp4",&report,CloudAvTimeline::Capture,&timeline);
-    if(rc||!timeline.Prepare()){xsdk_log_write("Cloud360 timeline refused rc=%d",rc);return 1;}
+    CloudAvStreamQueue timeline;
+    auto* session=cloud_container_open("game:/test.mp4",CloudAvStreamQueue::Capture,&timeline,1);
+    if(!session)return 1;
+    int rc=1;unsigned prefill=0;
+    while(rc>0&&timeline.WantsInput(0)&&prefill++<4096)rc=cloud_container_step(session,1);
+    if(rc==0)timeline.EndInput();
+    if(rc<0||!timeline.Prepare()){cloud_container_close(session);return 1;}
     HomeCanvas canvas;Presenter p;
-    if(!p.Open()){p.Close();return 2;}
+    if(!p.Open()){p.Close();cloud_container_close(session);return 2;}
     bool audioOpen=NT_SUCCESS(xsdk_audio_open(16)),ok=audioOpen,cancelled=false;
     unsigned shown=0,submitted=0;
     using Clock=std::chrono::steady_clock;
     const auto start=Clock::now();
-    auto video=[&](const CloudAvTimeline::Video& v){
+    auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
         ++shown;return p.Show(canvas,true);
     };
@@ -172,11 +176,16 @@ int main(){
         if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
         const auto elapsed=std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();
         if(timeline.Finished(elapsed))break;
-        if(elapsed>CloudAvTimeline::MaxDuration+1000000){ok=false;break;}
+        if(elapsed>CloudAvStreamQueue::MaxDuration+1000000){ok=false;break;}
+        unsigned budget=4;
+        while(rc>0&&timeline.WantsInput(elapsed)&&budget--)rc=cloud_container_step(session,1);
+        if(rc==0)timeline.EndInput();
+        if(rc<0){ok=false;break;}
         const auto before=shown;
         ok=timeline.Pump(elapsed,video,audio);
         if(ok&&shown==before)ok=p.Show(canvas,false);
     }
+    cloud_container_close(session);
     if(audioOpen)xsdk_audio_close();
     const bool closed=p.Close();
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));

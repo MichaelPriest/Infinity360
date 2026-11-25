@@ -82,3 +82,7 @@ Agendamento por PTS, clock monotônico comum, buffer limitado de clipe local, de
 ### P1 — Decoder incremental
 
 API de sessão local open/step/report/close implementada, com modo estendido limitado, quadros emprestados e testes de arquivos de 12 segundos com buffers reutilizados. Timeline incremental no player XSDK, backpressure, streaming e compilação FFmpeg PPC permanecem pendentes.
+
+### P1 — Fila incremental audiovisual
+
+Fila RGB/PCM com limite de memória e liberação após consumo, leitura antecipada por PTS, blocos de áudio contínuos, integração no diagnóstico opcional XSDK e testes de 12 segundos MP4/TS. Cross-build, sincronização física, rebuffering e HLS pendentes.
