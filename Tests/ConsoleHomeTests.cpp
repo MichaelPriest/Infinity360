@@ -95,6 +95,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     const char* pages[]={"20-armazenamento","08-rede","21-sensores","22-downloads","09-plugins","23-eventos","24-dvd","25-configuracoes"};
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
+        if(i==1){system.Press(ConsoleHome::PageDown);ok=save("29-rede-udp",system)&&ok;system.Press(ConsoleHome::PageUp);}
         if(i==2){system.Press(ConsoleHome::PageDown);ok=save("28-video-kernel",system)&&ok;system.Press(ConsoleHome::PageUp);}
         if(i==3){
             system.Press(ConsoleHome::PageDown);ok=save("27-fila-store",system)&&ok;

@@ -43,8 +43,12 @@ public:
         response=b[5]==2;nonce=0;for(unsigned i=8;i<12;++i)nonce=(nonce<<8)|b[i];return nonce!=0;
     }
     bool Start(const std::string& local,const std::string& peer){
-        Stop();sent_=received_=0;rtt_=0;lastAccepted_=0;peerText_=peer;
-        if(!Private(local)||!Private(peer)||local==peer){label_="IPv4 privado distinto obrigatorio.";return false;}
+        Stop();sent_=received_=attempts_=0;rtt_=0;outstanding_=0;peerText_=peer;
+        bool permitted=Private(local)&&Private(peer);
+#if defined(INFINITY_LAN_LOOPBACK_TEST) && defined(__linux__) && !defined(__XSDK__)
+        permitted=permitted||((local=="127.0.0.1"&&peer=="127.0.0.2")||(local=="127.0.0.2"&&peer=="127.0.0.1"));
+#endif
+        if(!permitted||local==peer){label_="IPv4 privado distinto obrigatorio.";return false;}
 #if defined(__XSDK__) || defined(__linux__)
         fd_=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
         if(fd_<0){label_="Falha ao abrir UDP.";return false;}
@@ -68,22 +72,24 @@ public:
         if(fd_<0)return false;
         const auto now=Now();bool changed=false;
         if(now-start_>=15000){Stop();label_=received_?"UDP bidirecional confirmado.":"Sem resposta UDP no intervalo.";return true;}
-        if(sent_<5&&now-lastSend_>=2000){
+        if(attempts_<5&&now-lastSend_>=2000){
+            ++attempts_;outstanding_=0;
             ++nonce_;if(!nonce_)++nonce_;
             unsigned char b[12];Packet(b,false,nonce_);lastSend_=now;
-            if(sendto(fd_,b,sizeof b,0,reinterpret_cast<sockaddr*>(&peer_),sizeof peer_)==sizeof b){++sent_;changed=true;}
+            if(sendto(fd_,b,sizeof b,0,reinterpret_cast<sockaddr*>(&peer_),sizeof peer_)==sizeof b){++sent_;outstanding_=nonce_;}
+            changed=true;
         }
         for(unsigned i=0;i<4;++i){
             unsigned char b[64];sockaddr_in from{};socklen_t len=sizeof from;
             const auto n=recvfrom(fd_,b,sizeof b,0,reinterpret_cast<sockaddr*>(&from),&len);
             if(n<0)break;
             bool reply=false;uint32_t nonce=0;
-            if(from.sin_family!=AF_INET||from.sin_addr.s_addr!=peer_.sin_addr.s_addr||
+            if(len<sizeof from||from.sin_family!=AF_INET||from.sin_addr.s_addr!=peer_.sin_addr.s_addr||
                from.sin_port!=peer_.sin_port||!Decode(b,static_cast<size_t>(n),reply,nonce))continue;
             if(!reply&&now-lastReply_>=500){
                 Packet(b,true,nonce);sendto(fd_,b,12,0,reinterpret_cast<sockaddr*>(&peer_),sizeof peer_);lastReply_=now;
-            }else if(reply&&nonce==nonce_&&lastAccepted_!=nonce&&sent_){
-                lastAccepted_=nonce;++received_;rtt_=now-lastSend_;changed=true;
+            }else if(reply&&nonce==outstanding_&&outstanding_!=0){
+                outstanding_=0;++received_;rtt_=now-lastSend_;changed=true;
             }
         }
         return changed;
@@ -97,6 +103,7 @@ public:
 #endif
     }
     bool Running()const{return fd_>=0;}
+    unsigned Attempts()const{return attempts_;}
     unsigned Sent()const{return sent_;}
     unsigned Received()const{return received_;}
     uint64_t Rtt()const{return rtt_;}
@@ -104,7 +111,7 @@ public:
     const std::string& Peer()const{return peerText_;}
 private:
     static uint64_t Now(){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());}
-    int fd_=-1;unsigned sent_=0,received_=0;uint32_t nonce_=0,lastAccepted_=0;
+    int fd_=-1;unsigned sent_=0,received_=0,attempts_=0;uint32_t nonce_=0,outstanding_=0;
     uint64_t start_=0,lastSend_=0,lastReply_=0,rtt_=0;
     std::string label_="Teste nao iniciado.",peerText_;
 #if defined(__XSDK__) || defined(__linux__)

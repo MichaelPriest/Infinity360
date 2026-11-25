@@ -2456,7 +2456,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.Text(45,349,"Rede 2/2 | Diagnostico UDP entre consoles",27,White,1170);
         c.Text(48,392,"Local: "+(network_.ipv4.empty()?"-":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"-":peerProbe_.Peer())+" | UDP 32160",22,White,1170);
         c.Text(48,433,peerProbe_.Label(),23,Lime,1170);
-        c.Text(48,475,"Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
+        c.Text(48,475,"Tentativas: "+number(peerProbe_.Attempts())+" | Enviados: "+number(peerProbe_.Sent())+" | Respostas: "+number(peerProbe_.Received())+(peerProbe_.Received()?" | RTT "+number(peerProbe_.Rtt())+" ms":""),22,White,1170);
         c.Text(48,530,"Configure o IPv4 do outro console em infinity360-lan-peer.txt.",18,Muted,1170);
         c.Text(48,560,"Inicie nos dois consoles. Nao confirma System Link de jogos.",18,Muted,1170);
         c.Text(48,607,"A Iniciar | X Parar | LB/RB Pagina | B Voltar",18,Lime,1170);return;

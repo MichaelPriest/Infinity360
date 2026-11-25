@@ -162,3 +162,7 @@ Origem de saves por dispositivo e pasta de perfil com sufixo no painel. Verifica
 ### P2 — Rede local e diagnóstico UDP
 
 Velocidade/duplex Ethernet consultados pelo XSDK. Segunda página de rede com teste opt-in entre IPs privados explícitos, UDP 32160, limite de 15 segundos e cinco sondas, resposta apenas ao par configurado. Testes de formato e endereço. Não implementa protocolo System Link de jogos. CI do save anterior: cross-build/testes aprovados; publicação de prerelease falhou, log indisponível. Nova revisão aguarda CI.
+
+### P2 — Robustez do diagnóstico LAN
+
+Contabilização separada de tentativas e envios, nonce pendente somente após envio bem-sucedido, validação do tamanho do endereço de origem e rejeição de respostas repetidas. Teste real UDP com dois pares loopback Linux, exclusivo do target de teste; captura 29 da página UDP. CI de 605e36c terminou em dois segundos, runner vazio, nenhuma etapa executada, logs indisponíveis; não se conclui falha de compilação. Nova revisão aguarda validação.
