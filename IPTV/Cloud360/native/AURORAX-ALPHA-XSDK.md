@@ -72,3 +72,7 @@ de integração, validação em hardware e paridade visual com as páginas
 ## Novo estágio: código C++ compartilhado (0.1.1)
 
 O mesmo pipeline aberto agora também compila e empacota `infinity_core_probe.xex`, com o HomeCanvas, MediaUrl, TvCatalog e GameScanner reais. O probe carrega home.tga, desenha em RAM, classifica uma URL de teste, lê a playlist de fixture e tenta listar a pasta da aplicação. Não assume a GPU, não abre rede, não lança jogos e não grava dados de usuário. A URL example.invalid é apenas fixture, nunca acessada. A geração XEX valida a compilação/link; a execução dos testes desse probe precisa de console. O objetivo é migrar o código compartilhado incrementalmente, e depois implementar os adapters XSDK de apresentação, entrada, armazenamento, áudio, rede e lançamento. Não confundir com a dashboard integrada completa.
+
+## Estágio 0.1.2 — Canvas Xenos experimental
+
+`infinity_canvas_probe.xex` usa o HomeCanvas C++ de produção e a arte original, upload ARGB para textura Xenos, shaders GLSL compilados pelo xsc e apresentação 720p. Mostra início, biblioteca local `game:/Games` e catálogo M3U local, com navegação pelo controle. Não é ConsoleHome completo: não lança jogos, não reproduz mídia, não grava perfis, não ativa rede e não acessa volumes externos. O teste encerra por Back/B na home ou após 900 frames. Aguardar fence antes de reusar textura e verificar retorno de GPU. Teste isolado somente após os probes anteriores aprovados em hardware. A compilação cruzada não homologa GPU nem confirma compatibilidade de drives.

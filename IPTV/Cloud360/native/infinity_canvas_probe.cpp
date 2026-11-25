@@ -1,0 +1,143 @@
+// Isolated, bounded GPU test of production canvas. No writes to profiles,
+// no launch, no playback, no network. Test only after no-GPU diagnostics.
+#include "HomeCanvas.h"
+#include "GameScanner.h"
+#include "TvCatalog.h"
+#include "infinity_canvas_probe_shaders.h"
+#include "xsdk/gpu.h"
+#include "xsdk/present.h"
+#include "xsdk/log.h"
+#include <cstring>
+#include <cstdio>
+#include <vector>
+namespace {
+constexpr unsigned BG=0xff031310u,LIME=0xff9dec31u,WHITE=0xfff2f7f3u,MUTED=0xffb7c9c1u,PANEL=0xff172c28u;
+constexpr unsigned MaxFrames=900, Timeout=1500;
+const float quad[][5]={{-1,1,0,0,0},{1,1,0,1,0},{-1,-1,0,0,1},{1,-1,0,1,1}};
+struct Presenter {
+    XsdkShader vs{},ps{};
+    XsdkTexture texture{};
+    XsdkSamplerState sampler{};
+    volatile uint32_t* vertices=nullptr;
+    bool gpu=false,present=false;
+    unsigned width=0,height=0;
+    bool Open(){
+        if(!NT_SUCCESS(xsdk_gpu_open()))return false;
+        gpu=true;
+        if(!NT_SUCCESS(xsdk_shader_load(&vs,infinity_canvas_vert.container,infinity_canvas_vert.container_bytes)) ||
+           !NT_SUCCESS(xsdk_shader_load(&ps,infinity_canvas_frag.container,infinity_canvas_frag.container_bytes)))return false;
+        XsdkVertexElement layout[2]{};
+        layout[0].usage=XSDK_USAGE_POSITION;layout[0].format=XSDK_VERTEX_FLOAT3;
+        layout[1].usage=XSDK_USAGE_TEXCOORD;layout[1].format=XSDK_VERTEX_FLOAT2;layout[1].offset_bytes=12;
+        const uint32_t stride[]={sizeof quad[0]};
+        if(!NT_SUCCESS(xsdk_shader_set_vertex_layout(&vs,layout,2,stride)))return false;
+        vertices=xsdk_gpu_alloc(sizeof quad);
+        if(!vertices)return false;
+        for(unsigned i=0;i<sizeof quad/4;++i){uint32_t word;std::memcpy(&word,reinterpret_cast<const char*>(quad)+4*i,4);vertices[i]=word;}
+        xsdk_gpu_invalidate(xsdk_gpu_address(vertices),sizeof quad);
+        if(!NT_SUCCESS(xsdk_texture_create(&texture,XSDK_FORMAT_A8R8G8B8,HomeCanvas::Width,HomeCanvas::Height,1,true)))return false;
+        XsdkSampler cfg{};cfg.mag_filter=cfg.min_filter=XSDK_FILTER_POINT;
+        cfg.address_u=cfg.address_v=XSDK_ADDRESS_CLAMP;
+        xsdk_texture_sampler_state(&sampler,&cfg);
+        uint32_t w=0,h=0;
+        if(!NT_SUCCESS(xsdk_present_open(XSDK_DISPLAY_720P,3,1,&w,&h)))return false;
+        present=true;width=w;height=h;
+        return width==HomeCanvas::Width && height==HomeCanvas::Height;
+    }
+    bool Show(const HomeCanvas& canvas,bool upload){
+        // A single texture is reused only after the prior frame has finished.
+        if(upload){
+            if(!NT_SUCCESS(xsdk_gpu_wait(xsdk_gpu_fence(),Timeout)))return false;
+            xsdk_texture_upload(&texture,0,canvas.Pixels(),HomeCanvas::Width*4);
+            xsdk_gpu_invalidate(texture.address,texture.size_bytes);
+        }
+        uint32_t address=0;
+        if(!NT_SUCCESS(xsdk_present_begin(&address,Timeout)))return false;
+        xsdk_gpu_set_target(width,height);
+        xsdk_gpu_set_shaders(&vs,&ps);
+        xsdk_built_shader_set_literals(&infinity_canvas_vert);
+        xsdk_built_shader_set_literals(&infinity_canvas_frag);
+        xsdk_gpu_set_texture(INFINITY_CANVAS_FRAG_SAMPLER_0_0,&texture,&sampler);
+        xsdk_gpu_set_vertices(0,xsdk_gpu_address(vertices),sizeof quad);
+        xsdk_gpu_draw(XSDK_PRIMITIVE_TRIANGLE_STRIP,4);
+        xsdk_gpu_resolve(address,width,height,BG);
+        xsdk_present_end();
+        return true;
+    }
+    bool Close(){
+        if(!gpu)return true;
+        const bool idle=NT_SUCCESS(xsdk_gpu_wait(xsdk_gpu_fence(),Timeout));
+        if(present)xsdk_present_close();
+        // If the fence timed out, let GPU shutdown own recovery; never free
+        // buffers that might still be in use.
+        if(idle){
+            if(texture.texels)xsdk_texture_free(&texture);
+            if(vertices)xsdk_gpu_free(vertices);
+            if(ps.microcode)xsdk_shader_free(&ps);
+            if(vs.microcode)xsdk_shader_free(&vs);
+        }
+        const bool closed=NT_SUCCESS(xsdk_gpu_close());gpu=false;
+        return idle&&closed;
+    }
+};
+void panel(HomeCanvas& c,int x,int y,int w,int h,bool selected){
+    c.Box(x,y,w,h,selected?LIME:0xff365344u,8);
+    c.Box(x+3,y+3,w-6,h-6,PANEL,6);
+}
+void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vector<Game>& games,const TvCatalog& tv){
+    c.Background();
+    c.Text(44,32,"INFINITY 360",39,LIME,700);
+    c.Text(880,49,"XSDK | Canvas Alpha",21,MUTED,350);
+    c.Text(45,100,page==0?"Inicio":page==1?"Biblioteca":"Cloud360 IPTV",32,WHITE,1180);
+    if(!page){
+        const char* names[]={"Biblioteca","Cloud360 IPTV"};
+        for(unsigned i=0;i<2;++i){int x=45+int(i)*601;panel(c,x,180,580,340,focus==i);
+            c.Text(x+28,215,names[i],36,WHITE,520);
+            c.Text(x+28,300,i?"Catalogo M3U local":"Jogos XEX locais",24,MUTED,520);}
+        c.Text(45,570,"Teste de renderizacao: sem lancamento ou reproducao",23,MUTED,1180);
+    }else{
+        size_t count=page==1?games.size():tv.Items().size();
+        if(!count)c.Text(48,235,page==1?"Nenhum jogo encontrado em game:/Games":"Lista M3U vazia ou ausente",25,MUTED,1180);
+        size_t first=(row/6)*6;
+        for(size_t i=first;i<count&&i<first+6;++i){
+            int y=165+int(i-first)*65;panel(c,45,y,1188,59,i==row);
+            c.Text(65,y+10,page==1?games[i].name:tv.Items()[i].name,23,WHITE,1120);
+        }
+        c.Text(45,575,"Somente consulta | Y Atualizar | B Inicio",22,MUTED,1180);
+    }
+    c.Text(45,648,"Direcional Navegar | A Abrir | Back Sair | encerramento automatico",20,LIME,1180);
+}
+}
+int main(){
+    HomeCanvas canvas;
+    if(!canvas.LoadArt("game:/home.tga")){xsdk_log_write("FAIL: canvas atlas");return 1;}
+    auto games=GameScanner().Scan();
+    TvCatalog tv;tv.Load("game:/playlist.m3u");
+    Presenter p;
+    if(!p.Open()){xsdk_log_write("FAIL: canvas presenter open");p.Close();return 2;}
+    unsigned page=0,focus=0;size_t row=0;uint16_t previous=0;
+    bool ok=true,dirty=true;
+    for(unsigned frame=0;frame<MaxFrames;++frame){
+        INPUT_STATE input{};
+        uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
+        const uint16_t edge=buttons&~previous;previous=buttons;
+        if(edge&INPUT_GAMEPAD_BACK)break;
+        if(edge&INPUT_GAMEPAD_B){if(!page)break;page=0;row=0;dirty=true;}
+        else if(!page){
+            if(edge&INPUT_GAMEPAD_DPAD_LEFT){focus=0;dirty=true;}
+            if(edge&INPUT_GAMEPAD_DPAD_RIGHT){focus=1;dirty=true;}
+            if(edge&INPUT_GAMEPAD_A){page=focus+1;row=0;dirty=true;}
+        }else{
+            size_t count=page==1?games.size():tv.Items().size();
+            if(edge&INPUT_GAMEPAD_DPAD_UP && row){--row;dirty=true;}
+            if(edge&INPUT_GAMEPAD_DPAD_DOWN && row+1<count){++row;dirty=true;}
+            if(edge&INPUT_GAMEPAD_Y){if(page==1)games=GameScanner().Scan();else tv.Load("game:/playlist.m3u");row=0;dirty=true;}
+        }
+        if(dirty)draw(canvas,page,focus,row,games,tv);
+        if(!p.Show(canvas,dirty)){ok=false;break;}
+        dirty=false;
+    }
+    const bool restored=p.Close();
+    xsdk_log_write("%s: canvas GPU return",ok&&restored?"PASS":"FAIL");
+    return ok&&restored?0:3;
+}

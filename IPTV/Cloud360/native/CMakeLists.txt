@@ -38,3 +38,15 @@ target_include_directories(infinity_core_probe PRIVATE
 set_target_properties(infinity_core_probe PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_compile_options(infinity_core_probe PRIVATE -Wall -Wextra)
 xsdk_add_xex(infinity_core_probe TITLE_ID 0x494E4631 NAME "INFINITY 360 Core Probe" VERSION 0.1.1.0)
+
+# Experimental production pixel presenter; separate binary, never replaces the
+# no-GPU and text-only diagnostics or the integrated XDK build.
+add_executable(infinity_canvas_probe infinity_canvas_probe.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/HomeCanvas.cpp
+  ${INFINITY_ROOT}/Platform/Xbox360/TvCatalog.cpp
+  ${INFINITY_ROOT}/Source/GameScanner.cpp ../core/cloud360.c)
+target_include_directories(infinity_canvas_probe PRIVATE
+  ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
+set_target_properties(infinity_canvas_probe PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+xsdk_add_shaders(infinity_canvas_probe infinity_canvas.vert infinity_canvas.frag)
+xsdk_add_xex(infinity_canvas_probe TITLE_ID 0x494E4632 NAME "INFINITY 360 Canvas Probe" VERSION 0.1.2.0)

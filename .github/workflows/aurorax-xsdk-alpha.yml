@@ -8,6 +8,9 @@ on:
       - IPTV/Cloud360/native/aurorax_alpha.c
       - IPTV/Cloud360/native/probe.c
       - IPTV/Cloud360/native/infinity_core_probe.cpp
+      - IPTV/Cloud360/native/infinity_canvas_probe.cpp
+      - IPTV/Cloud360/native/infinity_canvas.vert
+      - IPTV/Cloud360/native/infinity_canvas.frag
       - Platform/Xbox360/HomeCanvas.*
       - Platform/Xbox360/GlyphWidths.h
       - Platform/Xbox360/Assets/home.tga
@@ -34,7 +37,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y build-essential bison flex texinfo \
             libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 \
-            cmake ninja-build git
+            cmake ninja-build git glslang-tools
       - name: Pin reviewed open-source Xbox 360 XSDK
         run: |
           git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
@@ -54,16 +57,17 @@ jobs:
       - name: Compile XSDK support library
         run: |
           cd "$HOME/xsdk"
-          make -j4 build/libxsdk.a
+          make -j4 build/libxsdk.a build/host/libxsc.so
           test -s build/libxsdk.a
       - name: Compile isolated INFINITY 360 Alpha and no-GPU probe
         run: |
           cmake -S IPTV/Cloud360/native -B IPTV/Cloud360/native/build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" \
             -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+            -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DCMAKE_BUILD_TYPE=Release
-          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe
+          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe
       - name: Verify real XEX2 and publish separate test package
         run: |
           python3 - <<'PY'
@@ -76,6 +80,7 @@ jobs:
               "default.xex": base / "aurorax_alpha.xex",
               "aurorax_gpu_probe.xex": base / "cloud360_probe.xex",
               "infinity_core_probe.xex": base / "infinity_core_probe.xex",
+              "infinity_canvas_probe.xex": base / "infinity_canvas_probe.xex",
           }
           for title, path in outputs.items():
               raw = path.read_bytes()
@@ -88,6 +93,8 @@ jobs:
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "infinity_core_probe.xex checks production C++ code without GPU.\n"
               "Run only from an isolated folder after the no-GPU probe.\n"
+              "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
+              "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
               "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
               "Follow docs/GPU-RESTORE-v052.md before opening default.xex.\n"

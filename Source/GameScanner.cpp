@@ -28,7 +28,7 @@ std::string compactRoot(std::string input) {
     return input;
 }
 std::string canonicalKey(std::string root) {
-#ifdef _XBOX
+#if defined(_XBOX) || defined(__XSDK__)
     for(size_t i=0;i<root.size();++i) {
         if(root[i]=='/') root[i]='\\';
         root[i]=(char)std::tolower((unsigned char)root[i]);
@@ -110,6 +110,10 @@ std::vector<std::string> GameScanner::DefaultRoots() {
         "USB1:\\Games", "USB1:\\XBOX 360", "USB1:\\XBLA",
         "USB1:\\Xbox Original"
     };
+#elif defined(__XSDK__)
+    // Newlib accepts device prefixes with forward slashes. Only the launch
+    // folder is confirmed by upstream; external volume adapters come later.
+    const char* paths[] = {"game:/Games"};
 #else
     const char* paths[] = {"Games", "USB/Games"};
 #endif
@@ -190,8 +194,14 @@ std::vector<Game> GameScanner::Scan() const {
                 if(filename!="default.xex")continue;
 #ifndef _XBOX
                 if(!fs::is_regular_file(status))continue;
+#ifdef __XSDK__
+                // libstdc++ treats device-prefixed paths as relative; avoid
+                // prepending game: a second time via weakly_canonical.
+                if(!seenGames.insert(canonicalKey(path)).second)continue;
+#else
                 const fs::path absolute=fs::weakly_canonical(path,ec);
                 if(ec || !seenGames.insert(absolute.string()).second)continue;
+#endif
                 const std::string device=root;
 #else
                 if(!seenGames.insert(canonicalKey(path)).second)continue;
