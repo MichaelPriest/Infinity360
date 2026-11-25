@@ -185,7 +185,7 @@ int main(){
         INPUT_GAMEPAD_B,INPUT_GAMEPAD_X,INPUT_GAMEPAD_Y,0x0100,0x0200,
         INPUT_GAMEPAD_START,0x0080};
     uint16_t previous=0;
-    bool ok=true,dirty=true;
+    bool ok=true,dirty=true,systemExit=false;
     // Longer than the minimal GPU probe, but still bounded.
     for(unsigned frame=0;frame<3600;++frame){
         INPUT_STATE input{};
@@ -216,8 +216,9 @@ int main(){
             if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
             StoreItem pending;
 #ifdef INFINITY_XSDK_HTTPS
-            std::string mount;
-            if(menu.TakeDiscInstallRequest(mount)){
+            if(menu.TakeDiscSystemExit()){systemExit=true;break;}
+            std::string mount;XboxExecutionInfo identity{};
+            if(menu.TakeDiscInstallRequest(mount,identity)){
                 menu.StopFtp();FileWorkspace workspace(dir);
                 bool videoFailed=false;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
@@ -238,7 +239,7 @@ int main(){
                     return true;
                 };
                 std::string installed,error;
-                const bool success=InstallDiscFiles(workspace,dir,"dvd:/",mount,progress,installed,error);
+                const bool success=InstallDiscFiles(workspace,dir,"dvd:/",mount,progress,installed,error,&identity);
                 menu.DiscInstallResult(success?"DVD instalado e verificado: "+installed:error,success);
                 if(videoFailed){ok=false;break;}
             }
@@ -307,7 +308,7 @@ int main(){
             }
             dirty=true;break;
         }
-        if(!ok)break;
+        if(!ok||systemExit)break;
         if(menu.Tick())dirty=true;
         if(dirty){
             menu.Draw(canvas,"XSDK");
@@ -331,6 +332,10 @@ int main(){
     menu.StopFtp();
     const bool restored=p.Close();
     xsdk_log_write("%s: full menu preview GPU return",ok&&restored?"PASS":"FAIL");
+    if(systemExit){
+        xsdk_log_write("NXE handoff requested; normal title exit, not automatic installation.");
+        return ok&&restored?0:4;
+    }
     if(ok&&restored&&!confirmedLaunch.empty()){
         // Recheck after shutting down GPU: removable storage may have changed.
         std::error_code ec;

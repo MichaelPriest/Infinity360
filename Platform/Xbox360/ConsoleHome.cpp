@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "DiscIdentity.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
 #include "ContentCatalog.h"
@@ -849,6 +850,10 @@ bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     return false;
 }
 std::string ConsoleHome::Press(Key key) {
+    if(section_==System&&page_==Details&&systemTab_==6&&!storeActive_){
+        if(key==Refresh){RefreshDiscInstall();notice_="DVD e destino consultados.";return "";}
+        if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
+    }
     if(storeActive_) {
         if(key!=Search&&notice_=="R3 novamente: confirmar instalacao XEX?")notice_.clear();
         if(key==Back) {
@@ -1290,9 +1295,25 @@ std::string ConsoleHome::Press(Key key) {
     if(section_==System && page_!=Home) {
         if(page_==Details && systemTab_==6){
 #if defined(INFINITY_XSDK_HTTPS)
-            if(key==Up||key==Down){discDestination_=(discDestination_+(key==Down?1:3))%4;discConfirm_=false;}
+            if(key==Left||key==Right){
+                discMode_=(discMode_+(key==Right?1:2))%3;discConfirm_=false;notice_.clear();
+            }
+            if(discMode_==0&&(key==Up||key==Down)){
+                discDestination_=(discDestination_+(key==Down?1:3))%4;RefreshDiscInstall();
+            }
             if(key==Accept){
                 if(TransferRunning()){notice_="Conclua ou cancele a copia ativa.";return "";}
+                if(discMode_==1){discConfirm_=false;notice_="GOD: provider de conversao ainda nao integrado.";return "";}
+                if(discMode_==2){
+                    if(!discConfirm_){discConfirm_=true;notice_="A confirma sair para a dashboard do sistema.";}
+                    else{discConfirm_=false;discSystemExit_=true;}
+                    return "";
+                }
+                XboxExecutionInfo current{};
+                if(!discKnown_||!discVolume_.available||!ContentCatalog::ReadExecutionInfo("dvd:/default.xex",current)||
+                   !DiscIdentity::Same(current,discIdentity_)){
+                    RefreshDiscInstall();notice_="DVD ou destino indisponivel/alterado. Confira novamente.";return "";
+                }
                 if(!discConfirm_){discConfirm_=true;notice_="Confirme apenas DVD de uso autorizado.";}
                 else{discConfirm_=false;discPending_=true;notice_="Preparando instalacao DVD.";}
             }
@@ -1350,7 +1371,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
                 else if(systemTab_==4)RefreshResidentPlugins();
-                else if(systemTab_==6){discConfirm_=false;discDestination_=0;}
+                else if(systemTab_==6){discMode_=0;discDestination_=0;RefreshDiscInstall();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -1746,29 +1767,56 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(48,601,"A Caminho | Y Atualizar | B Voltar | Nenhuma ativacao automatica",18,Lime,1175);
 }
 
-bool ConsoleHome::TakeDiscInstallRequest(std::string& mount){
+void ConsoleHome::RefreshDiscInstall(){
+    discConfirm_=false;
+#if defined(INFINITY_XSDK_HTTPS)
+    static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+    discIdentity_={};
+    discKnown_=ContentCatalog::ReadExecutionInfo("dvd:/default.xex",discIdentity_);
+    discVolume_=StorageInfo::Read(drives[discDestination_]);
+#else
+    discKnown_=false;discVolume_={};
+#endif
+}
+bool ConsoleHome::TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity){
     if(!discPending_)return false;
     discPending_=false;
     static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
-    mount=drives[discDestination_];return true;
+    mount=drives[discDestination_];identity=discIdentity_;return true;
+}
+bool ConsoleHome::TakeDiscSystemExit(){
+    const bool requested=discSystemExit_;discSystemExit_=false;return requested;
 }
 void ConsoleHome::DiscInstallResult(const std::string& message,bool success){
     if(success)ScanLibrary();
-    notice_=message;RecordEvent(success?"DVD copiado e verificado":"Instalacao DVD interrompida");
+    RefreshDiscInstall();notice_=message;RecordEvent(success?"DVD copiado e verificado":"Instalacao DVD interrompida");
 }
 void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
     c.Text(45,349,"Instalar a partir do DVD",28,White,1170);
 #if defined(INFINITY_XSDK_HTTPS)
-    XboxExecutionInfo info{};
-    if(ContentCatalog::ReadExecutionInfo("dvd:/default.xex",info)){
-        char id[80];std::sprintf(id,"Title %08X | Media %08X | Disco %u/%u",info.titleId,info.mediaId,info.discNumber,info.discCount);
-        c.Text(48,390,id,22,Lime,1170);
-    }else c.Text(48,390,"Insira DVD com default.xex acessivel.",22,Muted,1170);
-    static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
-    c.Text(48,443,std::string("Destino: < ")+drives[discDestination_]+" > /Infinity360Files/Games",23,White,1170);
-    c.Text(48,488,"Copia os arquivos acessiveis e verifica cada arquivo.",20,Muted,1170);
-    c.Text(48,532,discConfirm_?"A Confirmar instalacao | B Cancelar":"Cima/Baixo Destino | A Preparar | B Voltar",21,Lime,1170);
-    c.Text(48,570,"Sem GOD ou alteracao de licenca. Requer marcador DVD e escrita.",18,Muted,1170);
+    static const char* modes[]={"DVD Extract (XEX)","Games on Demand","NXE / Sistema"};
+    for(int i=0;i<3;++i){
+        const int x=45+i*396;
+        panel(c,x,389,385,43,Panel,i==discMode_);
+        c.Text(x+10,397,modes[i],20,i==discMode_?Lime:White,365);
+    }
+    if(discKnown_){
+        char id[128];std::sprintf(id,"Title %08X | Media %08X | Disco %u/%u",discIdentity_.titleId,discIdentity_.mediaId,discIdentity_.discNumber,discIdentity_.discCount);
+        c.Text(48,446,id,21,Lime,1170);
+    }else c.Text(48,446,"DVD sem default.xex legivel | Y consultar novamente",21,Muted,1170);
+    if(discMode_==0){
+        static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+        c.Text(48,486,std::string("Destino: < ")+drives[discDestination_]+" > | "+(discVolume_.available?StorageInfo::FormatBytes(discVolume_.writableBytes)+" livres":"Indisponivel"),22,White,1170);
+        c.Text(48,520,"Copia verificada de arquivos; sem sobrescrita.",18,Muted,1170);
+    }else if(discMode_==1){
+        c.Text(48,486,"Conversor GOD nativo ainda indisponivel.",22,White,1170);
+        c.Text(48,520,"Pacotes existentes sao catalogados pela biblioteca, sem alterar licencas.",18,Muted,1170);
+    }else{
+        c.Text(48,486,"Retornar ao sistema para instalar pelo recurso oficial.",22,White,1170);
+        c.Text(48,520,"Nao inicia instalacao automaticamente; destino depende da configuracao de boot.",18,Muted,1170);
+    }
+    c.Text(48,565,discConfirm_?"A Confirmar | B Cancelar":"Esq/Dir Metodo | Cima/Baixo Destino XEX | Y Atualizar | A Selecionar",19,Lime,1170);
+    c.Text(48,594,"XEX: marcadores DVD e escrita necessarios | B Voltar",18,Muted,1170);
 #else
     c.Text(48,400,"Instalador DVD disponivel no XSDK.",22,Muted,1170);
 #endif

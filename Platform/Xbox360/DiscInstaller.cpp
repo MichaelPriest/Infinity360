@@ -54,11 +54,11 @@ bool execution(const std::string& path,XboxExecutionInfo& info){
 bool InstallDiscFiles(const FileWorkspace& ws,const std::string& appRoot,
     const std::string& source,const std::string& mount,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,
-    std::string& installedPath,std::string& error){
+    std::string& installedPath,std::string& error,const XboxExecutionInfo* expected){
     installedPath.clear();error.clear();
     const auto reject=[&](const char* message){error=message;return false;};
 #if defined(_XBOX) || defined(_WIN32)
-    (void)ws;(void)appRoot;(void)source;(void)mount;(void)progress;
+    (void)ws;(void)appRoot;(void)source;(void)mount;(void)progress;(void)expected;
     return reject("Instalador DVD indisponivel neste provider.");
 #else
 #ifdef __XSDK__
@@ -73,6 +73,7 @@ bool InstallDiscFiles(const FileWorkspace& ws,const std::string& appRoot,
     const std::string defaultXex=FileWorkspace::Join(source,"default.xex");
     XboxExecutionInfo info{};
     if(!execution(defaultXex,info))return reject("DVD sem default.xex XEX2 com identificacao legivel.");
+    if(expected&&!DiscIdentity::Same(info,*expected))return reject("DVD mudou desde a confirmacao. Atualize e confirme novamente.");
     std::vector<Entry> entries;std::set<std::string> names;unsigned long long total=0;
     if(!progress(0,1))return reject("Instalacao cancelada.");
     if(!plan(ws,source,"",0,entries,names,total)||!total||!names.count("default.xex"))
@@ -148,8 +149,7 @@ bool InstallDiscFiles(const FileWorkspace& ws,const std::string& appRoot,
     }
     XboxExecutionInfo current{},copy{};
     if(!execution(defaultXex,current)||!execution(FileWorkspace::Join(stage,"default.xex"),copy)||
-       current.titleId!=info.titleId||current.mediaId!=info.mediaId||current.discNumber!=info.discNumber||
-       copy.titleId!=info.titleId||copy.mediaId!=info.mediaId||copy.discNumber!=info.discNumber)
+       !DiscIdentity::Same(current,info)||!DiscIdentity::Same(copy,info))
         return fail("Identificacao do DVD mudou ou copia invalida.");
     if(!ws.PublishDiscStage(parent,stage,name))return fail("Falha ao publicar pasta sem sobrescrever.");
     installedPath=FileWorkspace::Join(parent,name);return true;

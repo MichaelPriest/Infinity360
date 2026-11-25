@@ -27,7 +27,8 @@ public:
     void StopFtp() {ftp_.Stop();}
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeStoreInstallRequest(StoreItem& item);
-    bool TakeDiscInstallRequest(std::string& mount);
+    bool TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity);
+    bool TakeDiscSystemExit();
     void DiscInstallResult(const std::string& message,bool success);
     void StoreInstallResult(const std::string& message,bool success);
     void NativeStoreResult(const std::string& message,bool success);
@@ -71,8 +72,11 @@ private:
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
     void DrawDiscInstall(HomeCanvas& c) const;
-    int discDestination_=0;
-    bool discConfirm_=false,discPending_=false;
+    int discDestination_=0,discMode_=0;
+    bool discConfirm_=false,discPending_=false,discSystemExit_=false,discKnown_=false;
+    XboxExecutionInfo discIdentity_{};
+    StorageVolume discVolume_{};
+    void RefreshDiscInstall();
     NetworkSnapshot network_;
     void RefreshNetwork();
     void RefreshResidentPlugins();
