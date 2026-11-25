@@ -68,3 +68,7 @@ dashboard completa em um runner Windows **self-hosted** com XDK licenciado.
 A dashboard completa ainda precisa passar pela compilação XDK, correções
 de integração, validação em hardware e paridade visual com as páginas
 3–28 do PDF. A Alpha XSDK não substitui esse trabalho.
+
+## Novo estágio: código C++ compartilhado (0.1.1)
+
+O mesmo pipeline aberto agora também compila e empacota `infinity_core_probe.xex`, com o HomeCanvas, MediaUrl, TvCatalog e GameScanner reais. O probe carrega home.tga, desenha em RAM, classifica uma URL de teste, lê a playlist de fixture e tenta listar a pasta da aplicação. Não assume a GPU, não abre rede, não lança jogos e não grava dados de usuário. A URL example.invalid é apenas fixture, nunca acessada. A geração XEX valida a compilação/link; a execução dos testes desse probe precisa de console. O objetivo é migrar o código compartilhado incrementalmente, e depois implementar os adapters XSDK de apresentação, entrada, armazenamento, áudio, rede e lançamento. Não confundir com a dashboard integrada completa.

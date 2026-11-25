@@ -7,6 +7,13 @@ on:
     paths:
       - IPTV/Cloud360/native/aurorax_alpha.c
       - IPTV/Cloud360/native/probe.c
+      - IPTV/Cloud360/native/infinity_core_probe.cpp
+      - Platform/Xbox360/HomeCanvas.*
+      - Platform/Xbox360/GlyphWidths.h
+      - Platform/Xbox360/Assets/home.tga
+      - Platform/Xbox360/MediaUrl.*
+      - Platform/Xbox360/TvCatalog.*
+      - Source/GameScanner.*
       - IPTV/Cloud360/native/CMakeLists.txt
       - IPTV/Cloud360/core/**
       - .github/workflows/aurorax-xsdk-alpha.yml
@@ -56,7 +63,7 @@ jobs:
             -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DCMAKE_BUILD_TYPE=Release
-          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe
+          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe
       - name: Verify real XEX2 and publish separate test package
         run: |
           python3 - <<'PY'
@@ -68,6 +75,7 @@ jobs:
           outputs = {
               "default.xex": base / "aurorax_alpha.xex",
               "aurorax_gpu_probe.xex": base / "cloud360_probe.xex",
+              "infinity_core_probe.xex": base / "infinity_core_probe.xex",
           }
           for title, path in outputs.items():
               raw = path.read_bytes()
@@ -78,6 +86,8 @@ jobs:
               "INFINITY 360 XSDK Alpha 0.1.0 - GPU / navigation diagnostic ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
+              "infinity_core_probe.xex checks production C++ code without GPU.\n"
+              "Run only from an isolated folder after the no-GPU probe.\n"
               "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
               "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
               "Follow docs/GPU-RESTORE-v052.md before opening default.xex.\n"
@@ -89,6 +99,8 @@ jobs:
               for title, path in outputs.items():
                   archive.write(path, title)
               archive.writestr("playlist.m3u", playlist)
+              archive.writestr("probe-playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV\",INFINITY Probe\nhttps://example.invalid/probe.m3u8\n")
+              archive.write("Platform/Xbox360/Assets/home.tga", "home.tga")
               archive.writestr("LEIA-ME-SEGURANCA.txt", note)
               archive.writestr("SHA256SUMS.txt", "".join(
                   f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {title}\n"

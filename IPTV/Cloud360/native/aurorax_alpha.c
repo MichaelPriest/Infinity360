@@ -108,8 +108,8 @@ static void draw(unsigned width, unsigned height)
     int gap = height >= 650u ? 49 : 32;
     int footer = (int)height - 61;
     char line[168];
-    fitted(margin, top, big, LIME, "AURORAX", width, height);
-    fitted(margin + (int)(155u * big), top+6, 1u, MUTED,
+    fitted(margin, top, big, LIME, "INFINITY 360", width, height);
+    fitted(margin + (int)(135u * big), top+6, 1u, MUTED,
            "| CLOUD360 IPTV | ALPHA XSDK", width, height);
     fitted(margin, top+39*(int)big, 1u, MUTED,
            "Referencia visual: AuroraX_Telas.pdf / validacao inicial",
