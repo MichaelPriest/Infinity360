@@ -270,3 +270,7 @@ Editor de paleta, fundo, escurecimento e arte do início/detalhes com rascunho e
 ### V0.2.34 — P4 Home multi-layout
 
 Dez estilos incluindo Classic, seleção persistente e prévia, nove geometrias e menu navegável. Redesign das telas internas, grade de biblioteca e captura real de cada layout permanecem pendentes. Build V0.2.33 corrigida solicitada em commit separado; nenhuma build V0.2.34.
+
+### V0.2.35 — P4 Grade de biblioteca
+
+Preferência de apresentação independente de layout, grade paginada e seleção de categorias com foco próprio. 64 capturas preparadas no total; nenhuma build V0.2.35. Próximos: detalhes, Store, IPTV, arquivos e configurações.

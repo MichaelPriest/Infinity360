@@ -1,5 +1,6 @@
 ﻿#include "ConsoleHome.h"
 #include "DashboardLayout.h"
+#include "GameGrid.h"
 #include "InfinityVersion.h"
 #include "DiscIdentity.h"
 #include "ArtImport.h"
@@ -184,7 +185,7 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
-    appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=0;layoutPreview_=false;focus_=0;
+    appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=0;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
@@ -197,6 +198,7 @@ void ConsoleHome::Load() {
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
         if(line[0]=='W')AppearanceSettings::Parse(file,appearance_);
         if(line[0]=='J')DashboardLayout::Parse(file,layout_);
+        if(line[0]=='G')GameGrid::Parse(file,gridPreference_);
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='L')UiLanguage::Parse(file,language_);
@@ -262,6 +264,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"T\t"<<theme_<<"\n";
     out<<"W\t"<<appearance_.Encode()<<"\n";
     out<<"J\t"<<layout_<<"\n";
+    out<<"G\t"<<gridPreference_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
     out<<"I\t"<<idleMinutes_<<"\n";
     out<<"L\t"<<language_<<"\n";
@@ -613,7 +616,7 @@ void ConsoleHome::RefreshNetwork() {
     network_=NetworkInfo::Read();
 }
 void ConsoleHome::Enter(Section s) {
-    section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;
+    section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;gridFilter_=false;
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
     if(s==System) RefreshStorage();
@@ -1707,7 +1710,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;themeDraft_=theme_;layoutDraft_=layout_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -1957,6 +1960,24 @@ std::string ConsoleHome::Press(Key key) {
             Enter(static_cast<Section>(destination));
         }
         return "";
+    }
+    if(GridListing()){
+        if(gridFilter_){
+            if(key==Left||key==Right){
+                const int target=std::max(0,std::min(8,subtab_+(key==Right?1:-1)));
+                if(target!=subtab_){subtab_=target;row_=0;Rebuild();}
+                notice_.clear();return "";
+            }
+            if(key==Down||key==Accept||key==Back){gridFilter_=false;return "";}
+            if(key==Up)return "";
+            // Other existing shortcuts operate on the listing, not the filter row.
+            gridFilter_=false;
+        }
+        if(key<=Down){
+            if(section_==Library&&key==Up&&row_<GameGrid::Columns){gridFilter_=true;return "";}
+            row_=GameGrid::Move(row_,static_cast<int>(Count()),key);
+            notice_.clear();return "";
+        }
     }
     if(page_==Listing && section_==Library && subtab_==8 && (key==PageDown || key==Search)) {
         if(Count())MovePin(key==PageDown?-1:1);
@@ -3156,6 +3177,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
             c.Text(x+(numTabs==9?7:15),155,c.Tr(tabs[i]),numTabs==9?17:21,i==subtab_?Lime:White,tabWidth-(numTabs==9?14:25));
+            if(GridListing()&&gridFilter_&&i==subtab_)c.Box(x+4,185,tabWidth-8,3,Lime);
         }
         c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,1120);
         if(section_==Library) {
@@ -3188,6 +3210,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                section_==Library && subtab_==5?
                "Colecao vazia. RB gerencia colecoes ou cria uma nova.":
                "Nenhum item nesta seção.",25,Muted,1120);
+    if(GridListing()){DrawGameGrid(c);return;}
     int start=row_/7*7;
     for(int i=start;i<static_cast<int>(Count()) && i<start+7;++i) {
         int y=(tabbed?240:212)+(i-start)*(tabbed?55:59);
@@ -3599,8 +3622,8 @@ void ConsoleHome::PressAppearance(Key key){
     if(layoutPreview_){if(key==Back||key==Search)layoutPreview_=false;return;}
     if(key==Back){appearanceEditor_=false;notice_.clear();return;}
     if(key==Search){layoutPreview_=layoutDraft_!=0;return;}
-    if(key==Up)appearanceRow_=(appearanceRow_+4)%5;
-    if(key==Down)appearanceRow_=(appearanceRow_+1)%5;
+    if(key==Up)appearanceRow_=(appearanceRow_+5)%6;
+    if(key==Down)appearanceRow_=(appearanceRow_+1)%6;
     if(key==Left||key==Right||key==Accept){
         auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
         if(appearanceRow_==0)cycle(themeDraft_,HomeCanvas::ThemeCount);
@@ -3608,28 +3631,29 @@ void ConsoleHome::PressAppearance(Key key){
         if(appearanceRow_==2)cycle(appearanceDraft_.dim,AppearanceSettings::DimCount);
         if(appearanceRow_==3)cycle(appearanceDraft_.artwork,AppearanceSettings::ArtworkCount);
         if(appearanceRow_==4)cycle(layoutDraft_,DashboardLayout::Count);
+        if(appearanceRow_==5)cycle(gridDraft_,GameGrid::Count);
     }
-    if(key==Favorite){appearanceDraft_={};themeDraft_=0;layoutDraft_=0;notice_.clear();}
+    if(key==Favorite){appearanceDraft_={};themeDraft_=0;layoutDraft_=0;gridDraft_=0;notice_.clear();}
     if(key==Guide){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";}
     if(key==Refresh){
-        const auto previous=appearance_;const auto previousTheme=theme_,previousLayout=layout_;
-        appearance_=appearanceDraft_;theme_=themeDraft_;layout_=layoutDraft_;
+        const auto previous=appearance_;const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
+        appearance_=appearanceDraft_;theme_=themeDraft_;layout_=layoutDraft_;gridPreference_=gridDraft_;gridFilter_=false;
         if(SaveProfile()){appearanceEditor_=false;focus_=0;notice_="Aparencia salva.";}
-        else{appearance_=previous;theme_=previousTheme;layout_=previousLayout;notice_="Falha ao salvar aparencia.";}
+        else{appearance_=previous;theme_=previousTheme;layout_=previousLayout;gridPreference_=previousGrid;notice_="Falha ao salvar aparencia.";}
     }
 }
 void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
     c.Text(45,349,c.Tr("Personalizar aparencia"),27,White,1170);
-    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos","Layout"};
-    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),DashboardLayout::Name(layoutDraft_)};
-    for(unsigned i=0;i<5;++i){
+    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos","Layout","Biblioteca"};
+    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),DashboardLayout::Name(layoutDraft_),c.Tr(GameGrid::Name(gridDraft_))};
+    for(unsigned i=0;i<6;++i){
         const int x=48+(i%2)*600,y=385+(i/2)*54;
         panel(c,x,y,582,49,Panel,i==appearanceRow_);
         c.Text(x+12,y+4,c.Tr(labels[i]),17,Muted,550);
         c.Text(x+12,y+21,"< "+values[i]+" >",20,Lime,550);
     }
     if(appearanceDraft_.background==AppearanceSettings::Wallpaper)
-        c.Text(648,507,c.Tr(c.WallpaperReady()?"Imagem local carregada.":"Imagem ausente/invalida: fundo padrao aplicado."),19,White,1170);
+        c.Text(48,543,c.Tr(c.WallpaperReady()?"Imagem local carregada.":"Imagem ausente/invalida: fundo padrao aplicado."),19,White,1170);
     c.Text(48,565,c.Tr("UserFiles/wallpaper.rgba | RGBA 640x360 | START Recarregar"),17,Muted,1170);
     c.Text(48,607,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),18,Lime,1170);
 }
@@ -3702,4 +3726,34 @@ void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const
     if(!shown)for(const auto& game:games_){if(shown>=cols)break;card(game);}
     if(!shown)c.Text(shelf.x+10,shelf.y+45,c.Tr("Nenhum item nesta seção."),20,Muted,shelf.w-20);
     if(preview){c.Box(44,628,1190,33,Panel,4);c.Text(55,632,c.Tr("Previa de layout | B Voltar ao editor"),18,Lime,1160);}
+}
+
+bool ConsoleHome::GridListing()const{
+    return page_==Listing&&(section_==Library||section_==Recent||section_==Favorites)&&GameGrid::Enabled(gridPreference_,layout_);
+}
+void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
+    const int count=static_cast<int>(Count());
+    const int first=row_/GameGrid::Page*GameGrid::Page;
+    const int top=section_==Library?239:202;
+    const int cw=190,ch=174,stepX=200,stepY=182;
+    if(count){
+        for(int index=first;index<std::min(count,first+GameGrid::Page);++index){
+            const auto& game=*visible_[index];const int slot=index-first;
+            const int x=45+slot%GameGrid::Columns*stepX,y=top+slot/GameGrid::Columns*stepY;
+            const bool active=index==row_&&!gridFilter_;
+            panel(c,x,y,cw,ch,Panel,active);
+            const auto cover=ArtPath(game,true),back=ArtPath(game,false);
+            bool art=false;
+            if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+50,y+7,90,135);
+            if(!art&&appearance_.ShowBackdrop()&&!back.empty())art=c.LocalArt(back,false,x+7,y+19,cw-14,99);
+            if(!art)c.Image(652,0,52,52,x+67,y+44,56,56,Muted);
+            if(Starred(game))c.Text(x+10,y+7,"*",23,Lime,25);
+            if(contains(pinned_,game.executable))c.Text(x+cw-57,y+7,c.Tr("FIXADO"),12,Lime,50);
+            c.Box(x+5,y+143,cw-10,26,0xff102923u,4);
+            c.Text(x+9,y+146,game.name,17,White,cw-18);
+        }
+        c.Text(1060,597,number(first/GameGrid::Page+1)+"/"+number((count+GameGrid::Page-1)/GameGrid::Page),17,Lime,170);
+    }
+    const char* help=section_==Library?(gridFilter_?"Esq/Dir Categorias | A/baixo Jogos":"Direcoes Capas | Cima na 1a fila: categorias"):"Direcoes Capas | A Detalhes | X Favorito";
+    c.Text(45,597,c.Tr(help),17,Muted,1000);
 }

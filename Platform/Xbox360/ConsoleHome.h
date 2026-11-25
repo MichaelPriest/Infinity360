@@ -284,6 +284,10 @@ private:
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     AppearanceSettings appearance_,appearanceDraft_;
     unsigned layout_=0,layoutDraft_=0;
+    unsigned gridPreference_=0,gridDraft_=0;
+    bool gridFilter_=false;
+    bool GridListing()const;
+    void DrawGameGrid(HomeCanvas& c)const;
     bool layoutPreview_=false;
     void DrawModernHome(HomeCanvas& c,unsigned style,bool preview=false)const;
     unsigned themeDraft_=0,appearanceRow_=0;

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.35 — P4 Biblioteca visual (sem build)
+
+- Grade de capas 6x2 para Biblioteca, Recentes e Favoritos, opção persistente Automático/Lista/Grade.
+- Navegação por controle e foco nas categorias; preserva ações existentes.
+- 11 capturas reais preparadas e testes de movimento adicionados, não executados.
+
 ## V0.2.34 — P4 primeira etapa (sem build)
 
 - Nove layouts selecionáveis da tela inicial e Classic preservado, navegação e destinos compartilhados.

@@ -390,6 +390,12 @@ inline const char* Translate(unsigned language,const char* key){
         {"Sensores e rede: consultar em Sistema.","Sensors and network: see System.","Sensores y red: consulta Sistema."},
         {"Selecione uma secao pelo menu.","Select a section from the menu.","Selecciona una sección del menú."},
         {"Previa de layout | B Voltar ao editor","Layout preview | B Back to editor","Vista previa de diseño | B Volver al editor"},
+        {"Grade de capas","Cover grid","Cuadrícula de portadas"},
+        {"Automatico","Automatic","Automático"},
+        {"Lista","List","Lista"},
+        {"Esq/Dir Categorias | A/baixo Jogos","Left/Right Categories | A/Down Games","Izq/Der Categorías | A/Abajo Juegos"},
+        {"Direcoes Capas | Cima na 1a fila: categorias","D-pad Covers | Up from first row: categories","Direcciones Portadas | Arriba en primera fila: categorías"},
+        {"Direcoes Capas | A Detalhes | X Favorito","D-pad Covers | A Details | X Favorite","Direcciones Portadas | A Detalles | X Favorito"},
     };
     for(const auto& row:rows)if(std::strcmp(key,row[0])==0)return row[language];
     return key;

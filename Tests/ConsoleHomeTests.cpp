@@ -1,6 +1,7 @@
 #include "ConsoleHome.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
+#include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
 #include <cassert>
@@ -125,6 +126,15 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
             system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Favorite);ok=save("53-aparencia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
+    }
+    // Real renderer captures for the nine modern home layouts and cover grid.
+    for(unsigned style=1;style<DashboardLayout::Count;++style){
+        {std::ofstream out(root/"aurorax-profile.txt",std::ios::app);out<<"J\t"<<style<<"\nG\t2\n";}
+        ConsoleHome modern(dir,roots);modern.Load();
+        const auto name=std::to_string(53+style)+"-layout-"+std::to_string(style);
+        ok=save(name.c_str(),modern)&&ok;
+        if(style==DashboardLayout::TopIcons){modern.Press(ConsoleHome::Accept);ok=save("63-biblioteca-grade",modern)&&ok;
+            modern.Press(ConsoleHome::Up);ok=save("64-biblioteca-filtros",modern)&&ok;}
     }
     fs::remove_all(root);
     return ok?0:3;
@@ -1152,6 +1162,16 @@ int main(int argc,char** argv) {
         palette.SetTheme(999);palette.Box(0,0,1,1,0xff9dec31u);assert(palette.Pixels()[0]==0xff9dec31u);
         const unsigned char video[]={0,255,0};palette.SetTheme(4);palette.VideoRgb(video,1,1);
         assert(palette.Pixels()[360*1280+640]==0xff00ff00u);
+    }
+    {
+        unsigned p=0;assert(GameGrid::Parse("2",p)&&GameGrid::Enabled(p,0));
+        assert(!GameGrid::Parse("3",p)&&p==2);
+        assert(!GameGrid::Enabled(GameGrid::List,1));
+        assert(!GameGrid::Enabled(GameGrid::Auto,0)&&GameGrid::Enabled(GameGrid::Auto,1));
+        assert(GameGrid::Move(0,13,1)==1&&GameGrid::Move(5,13,1)==5);
+        assert(GameGrid::Move(5,13,3)==11&&GameGrid::Move(11,13,3)==12);
+        assert(GameGrid::Move(12,13,2)==6&&GameGrid::Move(12,13,1)==12);
+        assert(GameGrid::Move(0,0,3)==0);
     }
     // Layout geometry: each destination is within the TV safe canvas and
     // reachable from every other destination using the directional model.
