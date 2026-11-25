@@ -1,6 +1,6 @@
 # INFINITY 360
 
-> Nova identidade do projeto anteriormente chamado INFINITY 360. A estrutura de arquivos e as chaves de configuração legadas são preservadas para compatibilidade; Cloud360 IPTV mantém sua marca.
+> Nova identidade do projeto anteriormente chamado AuroraX. A estrutura de arquivos e as chaves de configuração legadas são preservadas para compatibilidade; Cloud360 IPTV mantém sua marca.
 
 
 Protótipo open-source de uma dashboard para Xbox 360 com interface portátil para desenvolvimento no PC. O núcleo já oferece navegação por controle, biblioteca com varredura recursiva de `default.xex`, favoritos, atualização, detalhes, configurações, sistema e gerenciador de arquivos.
@@ -85,3 +85,7 @@ extraídos (`XBOX 360`, `XBLA`, `Xbox Original`), aceitar caminhos adicionais
 em `aurorax-scanpaths.txt` e oferecer abas de categoria para `default.xex`.
 **Contêineres GOD/XBLA na pasta Content ainda exigem um indexador próprio.**
 Essas mudanças não substituem a interface aprovada nem removem o Cloud360 IPTV.
+
+## INFINITY Plugins
+
+Em Sistema > Plugins, a dashboard consulta os slots de plugins residentes do `launch.ini`, incluindo referências a LiveEmulation. A consulta é somente leitura e não confirma carregamento ou conectividade. Veja [documentação de plugins](Platform/Xbox360/PLUGINS.md) e [transição de marca](Platform/Xbox360/docs/INFINITY360-BRAND.md).
