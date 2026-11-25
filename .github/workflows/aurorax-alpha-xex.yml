@@ -66,6 +66,18 @@ jobs:
             build/Testing/Temporary/LastTest.log
           if-no-files-found: warn
           retention-days: 14
+      - name: Capture actual dashboard renderer
+        run: |
+          mkdir -p build/screens
+          build/console_home_tests Platform/Xbox360/Assets/home.tga build/screens
+          .art-venv/bin/python -c 'from PIL import Image; from pathlib import Path; [(Image.open(p).save(p.with_suffix(".png")), p.unlink()) for p in Path("build/screens").glob("*.ppm")]'
+      - name: Upload dashboard screen captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: Infinity360-dashboard-screens
+          path: build/screens/*.png
+          if-no-files-found: error
+          retention-days: 14
       - name: Validate native project assets
         run: |
           test -s Platform/Xbox360/Assets/home.tga

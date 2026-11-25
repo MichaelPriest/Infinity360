@@ -8,7 +8,71 @@
 #include <fstream>
 #include <iterator>
 
+static int captureScreens(const char* atlas,const char* destination) {
+    namespace fs=std::filesystem;
+    fs::path output(destination);
+    fs::create_directories(output);
+    const fs::path root=fs::temp_directory_path()/("infinity-capture-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(root/"Games");
+    fs::create_directories(root/"UserFiles");
+    const std::string dir=root.string()+"/";
+    const char* games[]={"Forza Horizon","Halo 3","Gears of War 3","Minecraft","Fable III","Castle Crashers"};
+    for(const char* name:games) {
+        fs::create_directories(root/"Games"/name);
+        std::ofstream(root/"Games"/name/"default.xex")<<"DEMONSTRATION ONLY";
+    }
+    {std::ofstream out(root/"aurorax-profile.txt");
+     out<<"R\t"<<(root/"Games"/"Halo 3"/"default.xex").string()<<"\n";
+     out<<"R\t"<<(root/"Games"/"Forza Horizon"/"default.xex").string()<<"\n";
+     out<<"R\t"<<(root/"Games"/"Gears of War 3"/"default.xex").string()<<"\n";
+     out<<"F\t"<<(root/"Games"/"Forza Horizon"/"default.xex").string()<<"\n";}
+    {std::ofstream out(root/"aurorax-store.tsv");
+     for(int i=0;i<5;++i)out<<"demo"<<i<<"\thomebrew\t"<<(i==0?"Demo Homebrew":i==1?"Retro Player":i==2?"Media Tools":i==3?"Demo Theme":"File Utility")
+        <<"\t1.0\t"<<(i+1)*1048576<<"\t"<<std::string(64,'a')<<"\thttps://example.invalid/demo"<<i<<".zip\tDemonstration only\n";}
+    {std::ofstream out(root/"playlist.m3u");
+     out<<"#EXTM3U\n";
+     for(int i=1;i<=5;++i)out<<"#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo "<<i<<"\nhttps://example.invalid/stream"<<i<<".ts\n";}
+    {std::ofstream out(root/"launch.ini");
+     out<<"[Plugins]\nplugin1=Hdd1:\\LiveEmulation.xex\nplugin2=\nplugin3=\nplugin4=\nplugin5=\n";}
+    HomeCanvas canvas;
+    if(!canvas.LoadArt(atlas)){fs::remove_all(root);return 2;}
+    const std::vector<std::string> roots(1,(root/"Games").string());
+    const auto save=[&](const char* name,ConsoleHome& menu) {
+        menu.Draw(canvas,"21:42",1795570920);
+        std::ofstream out(output/(std::string(name)+".ppm"),std::ios::binary);
+        out<<"P6\n1280 720\n255\n";
+        const unsigned* pixel=canvas.Pixels();
+        for(size_t i=0;i<1280*720;++i) {
+            const char rgb[]={static_cast<char>(pixel[i]>>16),static_cast<char>(pixel[i]>>8),static_cast<char>(pixel[i])};
+            out.write(rgb,3);
+        }
+        return !!out;
+    };
+    bool ok=true;
+    ConsoleHome menu(dir,roots);menu.Load();
+    ok=save("01-inicio",menu)&&ok;
+    menu.Press(ConsoleHome::Accept);ok=save("02-biblioteca",menu)&&ok;
+    menu.Press(ConsoleHome::Accept);ok=save("03-detalhes",menu)&&ok;
+    ConsoleHome store(dir,roots);store.Load();store.Press(ConsoleHome::PageDown);
+    ok=save("04-loja",store)&&ok;
+    store.Press(ConsoleHome::Accept);ok=save("05-produto",store)&&ok;
+    ConsoleHome tv(dir,roots);tv.Load();tv.Press(ConsoleHome::Right);tv.Press(ConsoleHome::Accept);
+    tv.Press(ConsoleHome::Right);ok=save("06-iptv",tv)&&ok;
+    ConsoleHome system(dir,roots);system.Load();
+    system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Down);
+    system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Accept);
+    ok=save("07-sistema",system)&&ok;
+    system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Accept);
+    ok=save("08-rede",system)&&ok;
+    system.Press(ConsoleHome::Back);
+    for(int i=0;i<3;++i)system.Press(ConsoleHome::Right);
+    system.Press(ConsoleHome::Accept);ok=save("09-plugins",system)&&ok;
+    fs::remove_all(root);
+    return ok?0:3;
+}
+
 int main(int argc,char** argv) {
+    if(argc==3)return captureScreens(argv[1],argv[2]);
     assert(argc==2);
     namespace fs=std::filesystem;
     const auto root=fs::temp_directory_path()/("aurorax-home-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
