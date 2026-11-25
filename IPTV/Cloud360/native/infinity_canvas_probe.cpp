@@ -5,6 +5,10 @@
 #include "TvCatalog.h"
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
+#include "XexLaunchCheck.h"
+#include "xsdk/xam.h"
+#include <cerrno>
+#include <filesystem>
 #include "infinity_menu_preview_shaders.h"
 #include <ctime>
 #else
@@ -163,6 +167,11 @@ int main(){
         xsdk_log_write("FAIL: isolated MenuPreview marker missing");return 2;
     }
     ConsoleHome menu(dir,GameScanner::DefaultRoots());menu.Load();
+    std::ifstream launchMarker((dir+"enable-xex-launch.txt").c_str());
+    std::string launchSignature;
+    const bool launchEnabled=bool(std::getline(launchMarker,launchSignature)) && launchSignature=="ENABLE-XEX-LAUNCH";
+    launchMarker.close();
+    std::string pendingLaunch,confirmedLaunch,launchNotice;
     Presenter p;
     if(!p.Open()){xsdk_log_write("FAIL: menu presenter open");p.Close();return 3;}
     const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
@@ -181,9 +190,23 @@ int main(){
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
         const uint16_t edge=buttons&~previous;previous=buttons;
         if(edge&INPUT_GAMEPAD_BACK)break;
-        for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
+        if(!pendingLaunch.empty()){
+            if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
+            else if(edge&INPUT_GAMEPAD_A){confirmedLaunch=pendingLaunch;break;}
+        }else for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
+            launchNotice.clear();
             const std::string launch=menu.Press(static_cast<ConsoleHome::Key>(i));
-            if(!launch.empty())menu.LaunchFailed();
+            if(!launch.empty()){
+                const std::string path=XexLaunchCheck::Path(launch);
+                std::error_code ec;
+                if(!launchEnabled)launchNotice="XEX bloqueado: habilite o teste em MenuPreview.";
+                else if(path.empty()||!std::filesystem::is_regular_file(path,ec)||ec)launchNotice="XEX invalido ou indisponivel.";
+                else {
+                    std::ifstream file(path.c_str(),std::ios::binary);
+                    if(!XexLaunchCheck::Header(file))launchNotice="Cabecalho XEX2 invalido ou incompleto.";
+                    else pendingLaunch=path;
+                }
+            }
             if(!menu.TakeMovie().empty())menu.PlayerMessage("Player ainda indisponivel no XSDK.");
             StoreItem pending;
             if(menu.TakeNativeStoreRequest(pending))menu.NativeStoreResult("HTTPS ainda indisponivel no XSDK.",false);
@@ -194,6 +217,17 @@ int main(){
             menu.Draw(canvas,"XSDK");
             canvas.Box(895,13,180,45,0xff102923u,5);
             canvas.Text(905,20,"ALPHA TESTE",20,LIME,170);
+            if(!launchNotice.empty()){
+                canvas.Box(40,590,1200,38,0xff102923u,6);
+                canvas.Text(54,593,launchNotice,22,LIME,1160);
+            }
+            if(!pendingLaunch.empty()){
+                canvas.Box(180,220,920,260,LIME,12);
+                canvas.Box(184,224,912,252,0xff102923u,10);
+                canvas.Text(210,242,"Executar XEX selecionado?",32,WHITE,850);
+                canvas.Text(210,310,pendingLaunch,20,MUTED,850);
+                canvas.Text(210,392,"A Confirmar | B Cancelar | retorna pela dashboard do console",20,LIME,850);
+            }
         }
         if(!p.Show(canvas,dirty)){ok=false;break;}
         dirty=false;
@@ -201,6 +235,17 @@ int main(){
     menu.StopFtp();
     const bool restored=p.Close();
     xsdk_log_write("%s: full menu preview GPU return",ok&&restored?"PASS":"FAIL");
+    if(ok&&restored&&!confirmedLaunch.empty()){
+        // Recheck after shutting down GPU: removable storage may have changed.
+        std::error_code ec;
+        if(!std::filesystem::is_regular_file(confirmedLaunch,ec)||ec)return 5;
+        {std::ifstream file(confirmedLaunch.c_str(),std::ios::binary);
+         if(!XexLaunchCheck::Header(file))return 5;}
+        xsdk_log_write("XEX launch requested: %s",confirmedLaunch.c_str());
+        (void)xsdk_launch(confirmedLaunch.c_str(),nullptr,0);
+        xsdk_log_write("FAIL: xsdk_launch returned, errno=%d",errno);
+        return 6;
+    }
     return ok&&restored?0:4;
 }
 #endif

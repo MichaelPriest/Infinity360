@@ -9,6 +9,7 @@ on:
       - IPTV/Cloud360/native/probe.c
       - IPTV/Cloud360/native/infinity_core_probe.cpp
       - IPTV/Cloud360/native/infinity_canvas_probe.cpp
+      - IPTV/Cloud360/native/infinity_launch_target.c
       - IPTV/Cloud360/native/xsdk_preview_workspace.cpp
       - Platform/Xbox360/**
       - Source/**
@@ -70,7 +71,7 @@ jobs:
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF \
             -DCMAKE_BUILD_TYPE=Release
-          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview
+          cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
       - name: Verify real XEX2 and publish separate test package
         run: |
           python3 - <<'PY'
@@ -85,6 +86,7 @@ jobs:
               "infinity_core_probe.xex": base / "infinity_core_probe.xex",
               "infinity_canvas_probe.xex": base / "infinity_canvas_probe.xex",
               "infinity_menu_preview.xex": base / "infinity_menu_preview.xex",
+              "Games/INFINITY Launch Test/default.xex": base / "infinity_launch_target.xex",
           }
           for title, path in outputs.items():
               raw = path.read_bytes()
@@ -100,7 +102,9 @@ jobs:
               "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
               "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
-              "No launch, playback, networking or explorer writes.\n"
+              "Optional XEX launch only after GPU checks pass; no playback/network/explorer writes.\n"
+              "To enable, manually create MenuPreview/enable-xex-launch.txt containing ENABLE-XEX-LAUNCH.\n"
+              "First launch Games/INFINITY Launch Test/default.xex from the menu; it only logs and exits.\n"
               "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
               "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
               "Follow docs/GPU-RESTORE-v052.md before opening default.xex.\n"

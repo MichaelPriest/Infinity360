@@ -52,7 +52,7 @@ xsdk_add_shaders(infinity_canvas_probe infinity_canvas.vert infinity_canvas.frag
 xsdk_add_xex(infinity_canvas_probe TITLE_ID 0x494E4632 NAME "INFINITY 360 Canvas Probe" VERSION 0.1.2.0)
 
 # Full production menu linked to the same Xenos presenter. File operations
-# are read-only in this isolated build; no network, launch or media adapters.
+# are read-only in this isolated build; optional XEX launch, no network or media adapters.
 add_executable(infinity_menu_preview infinity_canvas_probe.cpp xsdk_preview_workspace.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/ConsoleHome.cpp
   ${INFINITY_ROOT}/Platform/Xbox360/HomeCanvas.cpp
@@ -75,4 +75,8 @@ target_include_directories(infinity_menu_preview PRIVATE
   ${INFINITY_ROOT}/Platform/Xbox360 ${INFINITY_ROOT}/Source ../core)
 set_target_properties(infinity_menu_preview PROPERTIES C_STANDARD 17 CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 xsdk_add_shaders(infinity_menu_preview infinity_canvas.vert infinity_canvas.frag)
-xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.3.0)
+xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu Preview" VERSION 0.1.5.0)
+
+add_executable(infinity_launch_target infinity_launch_target.c)
+set_target_properties(infinity_launch_target PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON)
+xsdk_add_xex(infinity_launch_target TITLE_ID 0x494E4634 NAME "INFINITY 360 Launch Test" VERSION 0.1.5.0)

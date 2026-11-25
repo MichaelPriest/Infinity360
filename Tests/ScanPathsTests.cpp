@@ -1,5 +1,7 @@
 #include "GameScanner.h"
 #include "XsdkPaths.h"
+#include "XexLaunchCheck.h"
+#include <sstream>
 
 #include <cassert>
 #include <chrono>
@@ -11,6 +13,18 @@
 namespace fs = std::filesystem;
 
 int main() {
+    assert(XexLaunchCheck::Path("HDD1:\\Games\\Test\\default.XEX")=="hdd:/Games/Test/default.XEX");
+    assert(XexLaunchCheck::Path("game:/infinity_menu_preview.xex").empty());
+    assert(XexLaunchCheck::Path("hdd:/Content/package").empty());
+    assert(XexLaunchCheck::Path("flash:/default.xex").empty());
+    std::string image(8192,0);
+    image.replace(0,4,"XEX2");image[10]=16;image[19]=32;
+    {std::istringstream stream(image);assert(XexLaunchCheck::Header(stream));}
+    {std::istringstream stream("XEX2");assert(!XexLaunchCheck::Header(stream));}
+    image[10]=64;
+    {std::istringstream stream(image);assert(!XexLaunchCheck::Header(stream));}
+    image[10]=16;image[19]=8;
+    {std::istringstream stream(image);assert(!XexLaunchCheck::Header(stream));}
     assert(XsdkPaths::Normalize("HDD1:\\Games\\Halo")=="hdd:/Games/Halo");
     assert(XsdkPaths::Normalize("USB:/Games/")=="usb0:/Games");
     assert(XsdkPaths::Key("MU:/SAVE")==XsdkPaths::Key("mu0:/save"));
