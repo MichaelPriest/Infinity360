@@ -70,3 +70,7 @@ Correção de proporção de pixel, mute por X e pausa/retomada local por A no p
 ### P1 — Demux FFmpeg experimental
 
 Adicionado diagnóstico local MP4/MPEG-TS com H.264/AAC e limites explícitos, testes CI com mídia sintética e configuração opcional de alvo XSDK separado. Cross-compilação, saída A/V, sincronização, HLS e integração ao player principal continuam pendentes.
+
+### P1 — Ponte audiovisual FFmpeg
+
+Callbacks de frames com timestamps, conversão RGB24 e PCM, teste de conteúdo e cancelamento, alvo XSDK opcional de primeira imagem e amostra de áudio. Sincronização A/V, renderização contínua, HLS e cross-build/console pendentes.

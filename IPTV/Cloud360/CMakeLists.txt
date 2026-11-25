@@ -23,7 +23,7 @@ option(CLOUD360_WITH_HOST_FFMPEG "Compile real FFmpeg software decoder on host" 
 if(CLOUD360_WITH_HOST_FFMPEG)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(AVCODEC REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil)
-  add_library(cloud360_ffmpeg_decoder core/ffmpeg_decoder.c core/offline_decode.c core/container_decode.c)
+  add_library(cloud360_ffmpeg_decoder core/ffmpeg_decoder.c core/offline_decode.c core/container_decode.c core/frame_output.c)
   target_include_directories(cloud360_ffmpeg_decoder PUBLIC core)
   target_link_libraries(cloud360_ffmpeg_decoder PUBLIC PkgConfig::AVCODEC cloud360_core)
   add_executable(cloud360_decoder_init_test tests/test_ffmpeg_init.c)

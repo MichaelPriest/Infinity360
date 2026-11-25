@@ -25,7 +25,16 @@
 #include "infinity_menu_preview_shaders.h"
 #include <ctime>
 #else
+#ifdef INFINITY_CONTAINER_OUTPUT_PROBE
+#include "cloud360_av_probe_shaders.h"
+#include "container_decode.h"
+#include "frame_output.h"
+#include "xsdk/audio.h"
+#include "xsdk/xam.h"
+#include <algorithm>
+#else
 #include "infinity_canvas_probe_shaders.h"
+#endif
 #endif
 #include "xsdk/gpu.h"
 #include "xsdk/present.h"
@@ -103,7 +112,7 @@ struct Presenter {
         return idle&&closed;
     }
 };
-#ifndef INFINITY_FULL_MENU_PREVIEW
+#if !defined(INFINITY_FULL_MENU_PREVIEW) && !defined(INFINITY_CONTAINER_OUTPUT_PROBE)
 void panel(HomeCanvas& c,int x,int y,int w,int h,bool selected){
     c.Box(x,y,w,h,selected?LIME:0xff365344u,8);
     c.Box(x+3,y+3,w-6,h-6,PANEL,6);
@@ -133,7 +142,59 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 }
 #endif
 }
-#ifndef INFINITY_FULL_MENU_PREVIEW
+#ifdef INFINITY_CONTAINER_OUTPUT_PROBE
+namespace {
+struct AVProbe {
+    Presenter& p;HomeCanvas& canvas;
+    std::vector<unsigned char> rgb;
+    std::vector<float> pcm;
+    bool image=false,audio=false;
+    unsigned audioFrames=0;
+    static int Frame(void* opaque,const AVFrame* frame,int video,int64_t pts){
+        (void)pts;auto& s=*static_cast<AVProbe*>(opaque);
+        INPUT_STATE input{};
+        if(XamInputGetState(0,0,&input)==ERROR_SUCCESS&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return -1;
+        if(video){
+            if(s.image)return 0;
+            s.rgb.resize(static_cast<size_t>(frame->width)*frame->height*3);
+            if(cloud_frame_rgb(frame,s.rgb.data(),s.rgb.size()))return -1;
+            s.canvas.VideoRgb(s.rgb.data(),frame->width,frame->height);
+            s.image=s.p.Show(s.canvas,true);return s.image?0:-1;
+        }
+        // Diagnostic only: submit at most 250 ms of 48 kHz mono/stereo PCM.
+        if(s.audioFrames>=12000)return 0;
+        if(frame->sample_rate!=48000)return -1;
+        s.pcm.resize(static_cast<size_t>(frame->nb_samples)*2);
+        if(cloud_frame_stereo(frame,s.pcm.data(),s.pcm.size()))return -1;
+        for(int i=0;i+256<=frame->nb_samples&&s.audioFrames+256<=12000;i+=256){
+            float* output=nullptr;
+            if(!NT_SUCCESS(xsdk_audio_next_frame(250,&output))||!output)return -1;
+            std::fill(output,output+XSDK_AUDIO_FRAME_FLOATS,0.0f);
+            for(unsigned j=0;j<256;++j){output[j]=s.pcm[2*(i+j)];output[256+j]=s.pcm[2*(i+j)+1];}
+            xsdk_audio_queue_frame();s.audioFrames+=256;
+        }
+        return 0;
+    }
+};
+}
+int main(){
+    HomeCanvas canvas;Presenter p;
+    if(!p.Open()){p.Close();return 1;}
+    AVProbe probe{p,canvas};
+    probe.audio=NT_SUCCESS(xsdk_audio_open(16));
+    CloudContainerReport report{};
+    int rc=probe.audio?cloud_container_decode_output("game:/test.mp4",&report,AVProbe::Frame,&probe):-1;
+    if(probe.audio)xsdk_audio_close();
+    if(probe.image)for(unsigned i=0;i<120;++i){
+        INPUT_STATE state{};
+        if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))break;
+        if(!p.Show(canvas,false)){rc=-1;break;}
+    }
+    bool closed=p.Close();
+    xsdk_log_write("Cloud360 AV probe rc=%d image=%d audioFrames=%u",rc,probe.image,probe.audioFrames);
+    return rc==0&&probe.image&&probe.audioFrames&&closed?0:2;
+}
+#elif !defined(INFINITY_FULL_MENU_PREVIEW)
 int main(){
     HomeCanvas canvas;
     if(!canvas.LoadArt("game:/home.tga")){xsdk_log_write("FAIL: canvas atlas");return 1;}
