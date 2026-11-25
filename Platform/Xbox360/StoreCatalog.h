@@ -19,6 +19,10 @@ struct StoreProgress {
     unsigned long long received;
     StoreProgress():state(Unknown),received(0){}
 };
+struct StoreQueueSummary {
+    size_t queued=0,paused=0,verified=0,unavailable=0;
+    unsigned long long remaining=0;
+};
 class StoreCatalog {
 public:
     explicit StoreCatalog(const std::string& root):root_(root){}
@@ -42,6 +46,8 @@ public:
     bool DiscardPartial(const StoreItem& item);
     bool QueueNative(const StoreItem& item);
     bool RemoveNative(const StoreItem& item);
+    bool PrioritizeNative(const StoreItem& item);
+    StoreQueueSummary QueueSummary() const;
     bool NativeQueued(const StoreItem& item) const;
     std::vector<size_t> NativeQueue() const;
     size_t OrphanNativeCount() const;

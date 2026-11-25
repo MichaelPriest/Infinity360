@@ -1632,6 +1632,15 @@ std::string ConsoleHome::Press(Key key) {
                 notice_=store_.PruneOrphanNative()?"Referencias removidas; arquivos preservados.":"Falha ao salvar fila.";
                 RebuildStoreDownloads();return "";
             }
+            if(key==Search&&count){
+                if(TransferRunning()||nativeStorePending_||nativeBatch_){notice_="Conclua a transferencia ativa.";return "";}
+                const auto item=store_.Items()[storeDownloadItems_[storeDownloadRow_]];
+                notice_=store_.PrioritizeNative(item)?"Prioridade salva; item no inicio da fila.":"Item fora da fila ou falha ao salvar.";
+                RebuildStoreDownloads();
+                for(size_t i=0;i<storeDownloadItems_.size();++i)
+                    if(store_.Items()[storeDownloadItems_[i]].id==item.id){storeDownloadRow_=static_cast<int>(i);break;}
+                return "";
+            }
             if(key==Guide){
                 nativeBatch_=true;
                 if(!NextNativeStore())nativeBatch_=false;
@@ -2376,7 +2385,10 @@ void ConsoleHome::RebuildStoreDownloads() {
     clampRow(storeDownloadRow_,storeDownloadItems_.size());
 }
 void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
-    c.Text(45,349,"INFINITY Store | Downloads",25,White,1170);
+    const auto summary=store_.QueueSummary();
+    c.Text(45,346,"INFINITY Store | Downloads",25,White,590);
+    c.Text(590,346,store_.NativeQueueValid()?number(summary.queued)+" na fila | "+number(summary.paused)+" parciais | "+StorageInfo::FormatBytes(summary.remaining)+" restantes":"Fila invalida; arquivo preservado",18,Muted,640);
+    c.Text(590,370,number(summary.verified)+" verificados | "+number(summary.unavailable)+" referencias ausentes",15,Muted,640);
     const int first=(storeDownloadRow_/4)*4;
     for(int i=first;i<first+4&&static_cast<size_t>(i)<storeDownloadItems_.size();++i) {
         const StoreItem& item=store_.Items()[storeDownloadItems_[i]];
@@ -2393,7 +2405,7 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
     }
     if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
 #if defined(INFINITY_XSDK_HTTPS)
-    c.Text(48,590,"A Baixar/Retomar | START Rodar fila | X Remover da fila",18,Muted,1170);
+    c.Text(48,590,"A Baixar/Retomar | START Rodar fila | R3 Priorizar | X Remover",18,Muted,1170);
     c.Text(48,612,"LB Limpar ausentes ("+number(store_.OrphanNativeCount())+") | RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
 #else
     c.Text(48,590,"Registros locais do Xbox e PC; nao indicam conexao ativa.",18,Muted,1170);

@@ -46,6 +46,8 @@ static int captureScreens(const char* atlas,const char* destination) {
     {std::ofstream out(root/"aurorax-store.tsv");
      for(int i=0;i<5;++i)out<<"demo"<<i<<"\thomebrew\t"<<(i==0?"Demo Homebrew":i==1?"Retro Player":i==2?"Media Tools":i==3?"Demo Theme":"File Utility")
         <<"\t1.0\t"<<(i+1)*1048576<<"\t"<<std::string(64,'a')<<"\thttps://example.invalid/demo"<<i<<".zip\tDemonstration only\n";}
+    {std::ofstream out(root/"infinity360-native-queue.tsv");
+     for(int i:{2,0,1})out<<"demo"<<i<<"\t"<<std::string(64,'a')<<"\n";}
     {std::ofstream out(root/"playlist.m3u");
      out<<"#EXTM3U\n";
      for(int i=1;i<=5;++i)out<<"#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo "<<i<<"\nhttps://example.invalid/stream"<<i<<".ts\n";}
@@ -92,6 +94,10 @@ static int captureScreens(const char* atlas,const char* destination) {
     const char* pages[]={"20-armazenamento","08-rede","21-sensores","22-downloads","09-plugins","23-eventos","24-dvd","25-configuracoes"};
     for(int i=0;i<8;++i){
         system.Press(ConsoleHome::Accept);ok=save(pages[i],system)&&ok;
+        if(i==3){
+            system.Press(ConsoleHome::PageDown);ok=save("27-fila-store",system)&&ok;
+            system.Press(ConsoleHome::PageDown);
+        }
         system.Press(ConsoleHome::Back);
         if(i<7)system.Press(ConsoleHome::Right);
     }

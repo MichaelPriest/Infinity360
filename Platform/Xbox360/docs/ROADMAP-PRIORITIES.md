@@ -50,3 +50,7 @@ A aba Title Updates permite retirar individualmente a TU selecionada do Cache/Co
 ### P1 — Gerenciamento de capas e fundos
 
 No editor de arte, LB abre confirmação para arquivar a capa ou fundo pessoal selecionado, ou restaurar o arquivo quando o slot ativo está vazio. Os arquivos RGBA são validados pelo tamanho exato e movimentados sem sobrescrita dentro do workspace pessoal. A importação local e de capas XboxUnity continua disponível para slots vazios. Se o slot ativo e o arquivado coexistem, ambos são preservados; a escolha adicional deve ser feita pelo explorador. Testes de colisão, restauração, independência de capa/fundo e arquivo inválido adicionados.
+
+### P1 — Central de downloads Store
+
+Fila nativa persistente e retomada de parciais já existentes. Nesta revisão: R3 prioriza item no início da fila, a ordem é persistida, e a central apresenta quantidade, parciais, registros verificados, referências ausentes e bytes restantes estimados. Captura nativa da fila acrescentada à galeria. Não inicia downloads sem comando; integração HTTPS e retomada em hardware permanecem em homologação.

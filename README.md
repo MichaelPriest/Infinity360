@@ -41,11 +41,13 @@ O [workflow de capturas](https://github.com/MichaelPriest/Infinity360/actions/wo
 | ![Eventos](docs/screenshots/23-eventos.png) | ![DVD](docs/screenshots/24-dvd.png) |
 | Configurações | TU retiradas |
 | ![Configurações](docs/screenshots/25-configuracoes.png) | ![TU retiradas](docs/screenshots/26-tu-retiradas.png) |
+| Fila da Store | |
+| ![Fila da Store](docs/screenshots/27-fila-store.png) | |
 
 ### Estado atual — Alpha 0.2.10
 
 - P0: indexação XEX/GOD/XBLA, importação de pacotes, DVD para XEX/GOD e multidisco no código; lançamento e montagem no console em homologação.
-- P1: inventário TU/DLC/saves, staging XboxUnity, instalação local verificada, diagnóstico de Base Version, backups, recuperação de TUs arquivadas e reinstalação de backups TU/DLC elegíveis. Inventário de TUs no Cache legado e ordenação por versão implementados; instalação verificada de TUs legadas no Cache implementada; retirada e recolocação reversíveis de TUs do HDD implementadas; ativação efetiva ainda pendente. Capas e fundos pessoais podem ser arquivados/restaurados no editor de arte. Store e Cloud360 IPTV experimentais.
+- P1: inventário TU/DLC/saves, staging XboxUnity, instalação local verificada, diagnóstico de Base Version, backups, recuperação de TUs arquivadas e reinstalação de backups TU/DLC elegíveis. Inventário de TUs no Cache legado e ordenação por versão implementados; instalação verificada de TUs legadas no Cache implementada; retirada e recolocação reversíveis de TUs do HDD implementadas; ativação efetiva ainda pendente. Capas e fundos pessoais podem ser arquivados/restaurados no editor de arte. Store com fila persistente, retomada de parciais e priorização; homologação HTTPS e Cloud360 IPTV experimentais.
 - P2/P3: sensores, energia, System Link, personalização e conquistas ainda incompletos.
 - P4 — Modern UI: redesign aprovado em 25/11/2026, inspirado nos conceitos visuais de referência (sidebar, verde-limão/ciano e painéis escuros). Planejado após concluir as funcionalidades P0–P3, sem substituir as telas atuais nesta etapa. [Direção visual e critérios de aceite](Platform/Xbox360/docs/MODERN-UI.md).
 - [Roadmap detalhado](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md) · [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Builds](https://github.com/MichaelPriest/Infinity360/actions)

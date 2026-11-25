@@ -271,6 +271,36 @@ bool StoreCatalog::RemoveNative(const StoreItem& item){
     if(SaveNative())return true;
     native_=old;return false;
 }
+bool StoreCatalog::PrioritizeNative(const StoreItem& item){
+    if(!NativeQueued(item))return false;
+    const auto found=std::find(native_.begin(),native_.end(),key(item));
+    if(found==native_.begin())return true;
+    const auto old=native_;
+    std::rotate(native_.begin(),found,found+1);
+    if(SaveNative())return true;
+    native_=old;return false;
+}
+StoreQueueSummary StoreCatalog::QueueSummary() const{
+    StoreQueueSummary result;
+    if(!validNative_)return result;
+    const auto queue=NativeQueue();
+    result.queued=queue.size();
+    result.unavailable=native_.size()-queue.size();
+    for(size_t index:queue){
+        const auto& item=items_[index];
+        const auto progress=Progress(item);
+        if(progress.state==StoreProgress::Verified||progress.state==StoreProgress::NativeVerified){
+            ++result.verified;continue;
+        }
+        // Only native partials are resumable by the native downloader. PC state
+        // files and failed attempts do not prove that reusable bytes exist.
+        if(progress.state==StoreProgress::NativePaused){
+            ++result.paused;
+            result.remaining+=item.bytes-std::min(item.bytes,progress.received);
+        }else result.remaining+=item.bytes;
+    }
+    return result;
+}
 std::vector<size_t> StoreCatalog::NativeQueue() const {
     std::vector<size_t> ordered;
     if(!validNative_)return ordered;

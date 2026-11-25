@@ -65,10 +65,16 @@ int main(){
     auto ordered=reloaded.NativeQueue();assert(ordered.size()==2);
     assert(reloaded.Items()[ordered[0]].id=="second");
     assert(reloaded.Items()[ordered[1]].id=="first");
+    auto summary=reloaded.QueueSummary();assert(summary.queued==2&&summary.remaining==6&&summary.unavailable==0);
+    assert(reloaded.PrioritizeNative(one));assert(reloaded.PrioritizeNative(one));
+    assert(!reloaded.PrioritizeNative(item)); // unrelated identity
+    StoreCatalog prioritized(base);assert(prioritized.Load());
+    ordered=prioritized.NativeQueue();assert(ordered.size()==2&&prioritized.Items()[ordered[0]].id=="first");
+    assert(reloaded.Load());
     assert(reloaded.RemoveNative(two));assert(!reloaded.NativeQueued(two));assert(reloaded.NativeQueued(one));
     StoreItem changed=one;changed.sha256=std::string(64,'f');assert(!reloaded.NativeQueued(changed));
     {std::ofstream broken(root/"infinity360-native-queue.tsv");broken<<"malformed\n";}
-    assert(reloaded.Load());assert(!reloaded.NativeQueueValid());assert(!reloaded.QueueNative(two));
+    assert(reloaded.Load());assert(!reloaded.NativeQueueValid());assert(!reloaded.QueueNative(two));assert(!reloaded.PrioritizeNative(two));
 #ifndef _WIN32
     // Synthetic structural XEX fixture: no executable payload, never launched.
     std::string fixture(8192,'\0');
