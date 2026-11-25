@@ -161,6 +161,16 @@ int main(){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
         if(!r->Open(url,"game:/",!playlist,playlist))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
         return r;
+    },[](unsigned ms){
+        // libcurl poll with no descriptors provides a short cancellable wait.
+        if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;
+        CURLM* timer=curl_multi_init();bool ok=timer!=nullptr;
+        while(ok&&ms){
+            if(XsdkMpeg::RemoteCancelled()){ok=false;break;}
+            unsigned slice=std::min(ms,50u);int activity=0;
+            ok=curl_multi_poll(timer,nullptr,0,static_cast<int>(slice),&activity)==CURLM_OK;ms-=slice;
+        }
+        if(timer)curl_multi_cleanup(timer);curl_global_cleanup();return ok;
     });
     std::ifstream config("game:/cloud360-test-ts-url.txt",std::ios::binary);
     if(config){
@@ -170,7 +180,7 @@ int main(){
         std::ifstream enabled("game:/enable-iptv-playback.txt");std::string marker;
         if(!std::getline(enabled,marker)||marker!="ENABLE-IPTV-PLAYBACK")return 1;
         if(CloudHls::Extension(address,".m3u8")){
-            if(!hls.Start(address,2000000))return 1;
+            if(!hls.Start(address,2000000,true))return 1;
             session=cloud_container_open_ts([](void* user,uint8_t* bytes,unsigned cap){
                 return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(user)->Read(bytes,cap);
             },&hls,CloudAvStreamQueue::Capture,&timeline);

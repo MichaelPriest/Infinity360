@@ -94,3 +94,7 @@ Entrada por callback não-seekable com demux forçado TS, erro terminal e testes
 ### P1 — HLS VOD restrito
 
 Parser de master/media, seleção inicial por bitrate, leitor sequencial TS de mesma origem, limites e teste de demux via fonte simulada. Probe opcional aceita .m3u8 sem criptografia; live, ABR dinâmico, recuperação, fMP4, build PowerPC e integração principal pendentes.
+
+### P1 — HLS live restrito
+
+Atualização de janela por sequência, início próximo à borda live, proteção contra duplicação, retries antes do primeiro byte e testes determinísticos. Sem ABR, recuperação de descontinuidade, rebuffering ou confirmação de build FFmpeg PPC. README atualizado.
