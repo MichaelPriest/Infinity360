@@ -1,5 +1,7 @@
 #include "StoreCatalog.h"
 #include "StorePartial.h"
+#include "StoreInstallPath.h"
+#include "XexLaunchCheck.h"
 #include "SavedFile.h"
 #include "FileWorkspace.h"
 #include <algorithm>
@@ -187,6 +189,12 @@ std::vector<size_t> StoreCatalog::NativeQueue() const {
 bool StoreCatalog::ListedDownload(const StoreItem& item) const {
     const StoreProgress::State state=Progress(item).state;
     return Requested(item)||NativeQueued(item)||state==StoreProgress::NativeVerified||state==StoreProgress::NativePaused;
+}
+bool StoreCatalog::Installed(const StoreItem& item) const{
+    const std::string folder=StoreInstallPath::Folder(root_,item);
+    if(folder.empty())return false;
+    std::ifstream input(FileWorkspace::Join(folder,"default.xex").c_str(),std::ios::binary|std::ios::ate);
+    return input&&input.tellg()>=0&&static_cast<unsigned long long>(input.tellg())==item.bytes&&XexLaunchCheck::Header(input);
 }
 bool StoreCatalog::Staged(const StoreItem& item) const {
     // Size only. The PC worker checks SHA-256, and no package is auto-executed.

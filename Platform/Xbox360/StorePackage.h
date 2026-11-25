@@ -2,6 +2,7 @@
 #include "StoreCatalog.h"
 #include "FileWorkspace.h"
 #include <stdint.h>
+#include <functional>
 class StoreSha256 {
 public:
     StoreSha256();
@@ -43,3 +44,8 @@ private:
     bool Fail(const char* message);
 };
 bool StoreNativeSource(const StoreItem& item,const std::string& root);
+
+// Install only standalone, explicitly authorized homebrew/app/emulator XEX.
+// Rehash the exact bytes copied; never execute or overwrite a destination.
+bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error);

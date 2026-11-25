@@ -68,5 +68,26 @@ int main(){
     StoreItem changed=one;changed.sha256=std::string(64,'f');assert(!reloaded.NativeQueued(changed));
     {std::ofstream broken(root/"infinity360-native-queue.tsv");broken<<"malformed\n";}
     assert(reloaded.Load());assert(!reloaded.NativeQueueValid());assert(!reloaded.QueueNative(two));
+#ifndef _WIN32
+    // Synthetic structural XEX fixture: no executable payload, never launched.
+    std::string fixture(8192,'\0');
+    fixture.replace(0,4,"XEX2");fixture[10]=16;fixture[19]=32;
+    StoreItem app=one;app.id="installer";app.category="homebrew";app.bytes=fixture.size();app.rights="test fixture";
+    StoreSha256 appHash;appHash.Update(reinterpret_cast<const unsigned char*>(fixture.data()),fixture.size());app.sha256=appHash.Finish();
+    {std::ofstream file(root/"UserFiles/Store/installer.pkg",std::ios::binary);file.write(fixture.data(),fixture.size());}
+    const auto go=[](unsigned long long,unsigned long long){return true;};
+    std::string error;
+    assert(!StoreInstallXex(workspace,app,base,go,error));
+    {std::ofstream flag(root/"enable-store-install.txt");flag<<"ENABLE-STORE-INSTALL\n";}
+    auto denied=app;denied.category="game";assert(!StoreInstallXex(workspace,denied,base,go,error));
+    auto wrong=app;wrong.sha256=std::string(64,'0');assert(!StoreInstallXex(workspace,wrong,base,go,error));
+    assert(!cat.Installed(app));
+    assert(!StoreInstallXex(workspace,app,base,[](unsigned long long,unsigned long long){return false;},error));
+    assert(!cat.Installed(app));
+    assert(StoreInstallXex(workspace,app,base,go,error));assert(cat.Installed(app));
+    assert(!StoreInstallXex(workspace,app,base,go,error));
+    assert(fs::file_size(root/"UserFiles/Homebrew/installer/default.xex")==app.bytes);
+    assert(fs::exists(root/"UserFiles/Store/installer.pkg"));
+#endif
     fs::remove_all(root);
 }

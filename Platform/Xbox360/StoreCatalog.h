@@ -21,6 +21,7 @@ public:
     bool Cancel(const StoreItem& item);
     bool Requested(const StoreItem& item) const;
     bool Staged(const StoreItem& item) const;
+    bool Installed(const StoreItem& item) const;
     bool ListedDownload(const StoreItem& item) const;
     bool DiscardPartial(const StoreItem& item);
     bool QueueNative(const StoreItem& item);

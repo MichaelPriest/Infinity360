@@ -26,6 +26,8 @@ public:
     bool Tick();
     void StopFtp() {ftp_.Stop();}
     bool TakeNativeStoreRequest(StoreItem& item);
+    bool TakeStoreInstallRequest(StoreItem& item);
+    void StoreInstallResult(const std::string& message,bool success);
     void NativeStoreResult(const std::string& message,bool success);
     bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
@@ -98,6 +100,8 @@ private:
     bool TranslationMatches(const StoreItem& item) const;
     bool storeTranslationMatch_;
     bool nativeStorePending_;
+    bool storeInstallPending_=false;
+    StoreItem storeInstallItem_;
     bool nativeBatch_=false;
     bool StartNativeStore(const StoreItem& item);
     bool NextNativeStore();

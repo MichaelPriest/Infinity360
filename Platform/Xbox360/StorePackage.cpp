@@ -1,5 +1,7 @@
 #include "StorePackage.h"
 #include "StorePartial.h"
+#include "StoreInstallPath.h"
+#include "XexLaunchCheck.h"
 #include "MediaUrl.h"
 #include "SavedFile.h"
 #include <cstring>
@@ -223,4 +225,78 @@ bool StorePackage::Finish() {
     out<<item_.sha256<<"\tnative_verified\t"<<done_<<"\n";out.close();
     if(!out||!replaceSavedFile(receipt))error_="Pacote verificado; registro de estado indisponivel.";
     return true;
+}
+
+bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){
+    error.clear();
+#if defined(_XBOX) || defined(_WIN32)
+    (void)workspace;(void)item;(void)root;(void)progress;
+    error="Instalacao nativa indisponivel neste provider.";return false;
+#else
+    const auto reject=[&](const char* reason){error=reason;return false;};
+    std::ifstream opt(FileWorkspace::Join(root,"enable-store-install.txt").c_str());
+    std::string signature;
+    if(!std::getline(opt,signature)||signature!="ENABLE-STORE-INSTALL")return reject("Instalacao bloqueada: habilite enable-store-install.txt.");
+    const std::string folder=StoreInstallPath::Folder(root,item);
+    if(folder.empty()||item.bytes<4096||item.bytes>512ULL*1024*1024||
+       item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos||item.rights.empty())
+        return reject("Somente XEX independente de homebrew/app/emulador autorizado.");
+    const std::string personal=FileWorkspace::Join(root,"UserFiles");
+    const std::string store=FileWorkspace::Join(personal,"Store");
+    const std::string source=FileWorkspace::Join(store,item.id+".pkg");
+    if(!workspace.CanWrite(personal)||!workspace.CanReadPersonalFile(source))return reject("Pacote ou area pessoal indisponivel.");
+    std::ifstream input(source.c_str(),std::ios::binary|std::ios::ate);
+    if(!input||input.tellg()<0||static_cast<unsigned long long>(input.tellg())!=item.bytes||
+       !XexLaunchCheck::Header(input))return reject("Pacote nao e um XEX2 independente valido.");
+    input.clear();input.seekg(0,std::ios::beg);
+    const std::string category=StoreInstallPath::Category(item);
+    const std::string parent=FileWorkspace::Join(personal,category);
+    if(!workspace.CanWrite(parent)&&!workspace.Create(personal,category))return reject("Pasta de categoria indisponivel.");
+    // An existing folder is never merged, even if the prior attempt left files.
+    if(!workspace.Create(parent,item.id))return reject("Destino ja existe ou indisponivel; nao sera sobrescrito.");
+    const std::string target=FileWorkspace::Join(folder,"default.xex");
+    const std::string temp=FileWorkspace::Join(folder,"AXCOPY-INSTALL.part");
+    int flags=O_WRONLY|O_CREAT|O_EXCL;
+#ifndef __XSDK__
+    flags|=O_NOFOLLOW;
+#endif
+    int fd=open(temp.c_str(),flags,0600);
+    if(fd<0){workspace.Remove(parent,item.id);return reject("Falha ao reservar temporario.");}
+    auto fail=[&](const char* reason){
+        if(fd>=0){close(fd);fd=-1;}
+        unlink(temp.c_str());workspace.Remove(parent,item.id);error=reason;return false;
+    };
+    StoreSha256 hash;
+    unsigned long long done=0;
+    unsigned char block[32768];
+    if(!progress(0,item.bytes))return fail("Instalacao cancelada.");
+    while(done<item.bytes){
+        const size_t n=static_cast<size_t>(item.bytes-done>sizeof block?sizeof block:item.bytes-done);
+        if(!input.read(reinterpret_cast<char*>(block),static_cast<std::streamsize>(n)))return fail("Falha ao ler pacote.");
+        size_t at=0;
+        while(at<n){
+            const ssize_t written=write(fd,block+at,n-at);
+            if(written<0&&errno==EINTR)continue;
+            if(written<=0)return fail("Falha ao gravar aplicativo.");
+            at+=static_cast<size_t>(written);
+        }
+        hash.Update(block,n);done+=n;
+        if(!progress(done,item.bytes))return fail("Instalacao cancelada.");
+    }
+    if(input.peek()!=std::char_traits<char>::eof()||hash.Finish()!=item.sha256)return fail("SHA-256 ou tamanho do pacote divergente.");
+    const bool flushed=fsync(fd)==0;
+    const bool closed=close(fd)==0;fd=-1;
+    if(!flushed||!closed)return fail("Falha ao sincronizar aplicativo.");
+    // Validate the staged executable as well, not only its original source.
+    {std::ifstream staged(temp.c_str(),std::ios::binary);
+     if(!XexLaunchCheck::Header(staged))return fail("XEX2 temporario invalido.");}
+#ifdef __XSDK__
+    if(!workspace.PublishStaged(temp,target))return fail("Falha ao publicar sem sobrescrever.");
+#else
+    if(!workspace.CanWrite(folder)||link(temp.c_str(),target.c_str())!=0)return fail("Falha ao publicar sem sobrescrever.");
+    unlink(temp.c_str());
+#endif
+    return true;
+#endif
 }
