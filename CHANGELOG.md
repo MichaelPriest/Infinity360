@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.15 — em desenvolvimento (sem build)
+
+- Guia rápido da dashboard com oito atalhos e indicador de notificações/transferências.
+- Ordem configurável com edição em rascunho e persistência.
+- Testes de navegação, cancelamento e recuperação da configuração; galeria preparada para 41 telas.
+
 ## V0.2.14 — em desenvolvimento (sem build)
 
 - Central de notificações com 64 eventos, leitura individual/em lote, filtros e indicador de pendências.

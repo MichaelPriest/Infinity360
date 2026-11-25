@@ -205,3 +205,7 @@ Português (BR), English e Español, em Sistema > Console, LB/RB alterna e salva
 ### V0.2.14 — Central de notificações
 
 LB na home ou Sistema > Histórico abre o histórico operacional de até 64 eventos. Filtros Todas, Não lidas e Atenção; A marca o item, X marca todos, cima/baixo navega. Indicador de pendências no cabeçalho. Leitura persistida com prefixos N1 U/R; linhas legadas são mantidas como lidas. Logs inválidos ou acima do limite bloqueiam a gravação. Categorias e severidade derivadas de mensagens operacionais fixas; não há notificações externas nem do Xbox Live. Galeria preparada para 39 telas. Ajustada a posição da dica de idioma. Sem build.
+
+### V0.2.15 — Guia rápido personalizável
+
+R3 na tela inicial abre painel local com Biblioteca, Recentes, Fixados e favoritos, IPTV, Notificações, Downloads, Configurações e Loja. A abre a seção (não lança títulos diretamente); X entra na edição, LB/RB move, Y salva e B cancela. X na edição restaura a ordem padrão no rascunho. Preferência Q no perfil, validação de permutação e rollback se falhar a gravação. Não substitui o Guide oficial do Xbox nem aparece dentro de jogos. Galeria preparada para 41 telas. Sem build.

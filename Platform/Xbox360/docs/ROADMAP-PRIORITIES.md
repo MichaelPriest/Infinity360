@@ -190,3 +190,7 @@ Preferência L, PT-BR/EN/ES, LB/RB em Sistema > Console; dicionário explícito 
 ### V0.2.14 — Central de notificações
 
 LB na home, Sistema > Histórico, indicador de não lidas, filtros e leitura persistente. Reaproveita log anterior com limite 64, migração como lido e recusa de escrita em log inválido. Categorias/severidade de eventos locais; sem integração Xbox Live. Galeria 39 preparada. Sem build/CI.
+
+### V0.2.15 — Guia rápido local
+
+R3 na home, oito atalhos sem lançamento direto, ordem persistente Q com rascunho/rollback, indicadores de notificações e transferências. Sem hook global, sem substituição do Guide do sistema e sem overlay durante jogos. Galeria 41 preparada. Nenhuma build/CI iniciada.

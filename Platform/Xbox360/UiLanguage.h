@@ -17,6 +17,16 @@ inline const char* Name(unsigned language){
 inline const char* Translate(unsigned language,const char* key){
     if(!key||!language||language>=Count)return key?key:"";
     static const char* const rows[][3]={
+        {"Configuracoes","Settings","Configuración"},
+        {"Guia rapido","Quick guide","Guía rápida"},
+        {"Personalizar guia","Customize guide","Personalizar guía"},
+        {"R3 Guia | LB Notificacoes | RB Loja | Start Personalizar","R3 Guide | LB Notifications | RB Store | Start Customize","R3 Guía | LB Notificaciones | RB Tienda | Start Personalizar"},
+        {"LB/RB Mover | X Restaurar | Y Salvar","LB/RB Move | X Reset | Y Save","LB/RB Mover | X Restaurar | Y Guardar"},
+        {"A Abrir | X Editar | B Fechar","A Open | X Edit | B Close","A Abrir | X Editar | B Cerrar"},
+        {"B Cancelar edicao","B Cancel editing","B Cancelar edición"},
+        {"Guia local da dashboard","Dashboard-local guide","Guía local de la interfaz"},
+        {"Guia personalizado salvo.","Custom guide saved.","Guía personalizada guardada."},
+        {"Falha ao salvar guia.","Could not save guide.","No se pudo guardar la guía."},
         {"Notificacoes","Notifications","Notificaciones"},
         {"nao lidas","unread","sin leer"},
         {"Todas","All","Todas"},

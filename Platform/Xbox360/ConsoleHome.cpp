@@ -183,6 +183,7 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     std::string line;
     while (std::getline(in,line)) {
@@ -194,6 +195,7 @@ void ConsoleHome::Load() {
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='L')UiLanguage::Parse(file,language_);
+        if(line[0]=='Q'&&QuickGuide::Valid(file))quickGuideOrder_=file;
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
             if(validArtId(id) && validArtChoice(choice)) {
@@ -255,6 +257,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"V\t"<<safeArea_<<"\n";
     out<<"I\t"<<idleMinutes_<<"\n";
     out<<"L\t"<<language_<<"\n";
+    out<<"Q\t"<<quickGuideOrder_<<"\n";
     launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
         it!=artChoices_.end();++it)
@@ -899,7 +902,45 @@ bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     }
     return false;
 }
+void ConsoleHome::OpenQuickGuideAction(unsigned action){
+    quickGuideOpen_=false;quickGuideEditing_=false;notice_.clear();
+    switch(action){
+        case QuickGuide::Games:Enter(Library);break;
+        case QuickGuide::Recent:Enter(Recent);break;
+        case QuickGuide::Pinned:Enter(Favorites);break;
+        case QuickGuide::TV:Enter(Iptv);break;
+        case QuickGuide::Notifications:
+            section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;break;
+        case QuickGuide::Transfers:
+            section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
+        case QuickGuide::Settings:
+            section_=System;systemTab_=7;page_=Details;status_=ConsoleStatus::Read();break;
+        case QuickGuide::Store:
+            storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
+            notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
+        default:break;
+    }
+}
 std::string ConsoleHome::Press(Key key) {
+    if(quickGuideOpen_){
+        if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();}else quickGuideOpen_=false;notice_.clear();return "";}
+        if(key==Up&&quickGuideRow_>0)--quickGuideRow_;
+        if(key==Down&&quickGuideRow_<QuickGuide::Count-1)++quickGuideRow_;
+        if(quickGuideEditing_){
+            if(key==PageUp||key==PageDown)QuickGuide::Move(quickGuideDraft_,quickGuideRow_,key==PageUp?-1:1);
+            if(key==Favorite){quickGuideDraft_=QuickGuide::Default();quickGuideRow_=0;}
+            if(key==Refresh){
+                const auto old=quickGuideOrder_;quickGuideOrder_=quickGuideDraft_;
+                if(!SaveProfile()){quickGuideOrder_=old;notice_="Falha ao salvar guia.";}
+                else{quickGuideEditing_=false;notice_="Guia personalizado salvo.";}
+            }
+        }else{
+            if(key==Search){quickGuideOpen_=false;notice_.clear();}
+            if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditing_=true;notice_.clear();}
+            if(key==Accept)OpenQuickGuideAction(static_cast<unsigned>(quickGuideOrder_[quickGuideRow_]-'0'));
+        }
+        return "";
+    }
     if(updateActive_){
         if(key==Back){if(updateConfirm_)updateConfirm_=false;else updateActive_=false;notice_.clear();return "";}
         if(key==Refresh){RefreshDashboardUpdate();return "";}
@@ -1757,6 +1798,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=next[focus_][key]; notice_.clear(); }
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -2070,7 +2112,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
     c.Text(44,76,c.Tr("Início"),42,White,330);
-    c.Text(459,86,c.Tr("LB Notificacoes | RB Loja | X Importar | Start Personalizar"),18,Muted,775);
+    c.Text(459,86,c.Tr("R3 Guia | LB Notificacoes | RB Loja | Start Personalizar"),18,Muted,775);
     panel(c,42,140,672,196,0xff042417u,focus_==Library);
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
@@ -2837,6 +2879,24 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(886,y+9,detail,19,Muted,336);
     }
 }
+void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
+    const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
+    c.Box(37,126,485,525,Lime,10);c.Box(40,129,479,519,0xff102923u,9);
+    c.Text(58,141,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rapido"),30,White,445);
+    for(int i=0;i<QuickGuide::Count;++i){
+        const unsigned action=static_cast<unsigned>(order[i]-'0');
+        const int y=193+i*48;
+        panel(c,53,y,453,42,Panel,i==quickGuideRow_);
+        c.Text(64,y+3,c.Tr(QuickGuide::Label(action)),20,i==quickGuideRow_?Lime:White,345);
+        if(action==QuickGuide::Notifications&&notifications_.UnreadCount())
+            c.Text(420,y+4,number(notifications_.UnreadCount()),18,Lime,76);
+        if(action==QuickGuide::Transfers&&TransferRunning())
+            c.Text(414,y+4,number(transfer_.Percent())+"%",18,Lime,86);
+    }
+    c.Text(58,585,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),17,Lime,440);
+    c.Text(58,610,c.Tr(quickGuideEditing_?"B Cancelar edicao":"Guia local da dashboard"),16,Muted,440);
+    if(!notice_.empty())c.Text(551,632,c.Tr(notice_.c_str()),17,Lime,680);
+}
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
     c.SetTheme(theme_);c.SetLanguage(language_);c.Background();
@@ -2855,6 +2915,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
+    if(quickGuideOpen_){DrawQuickGuide(c);return;}
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
         c.Text(690,71,(copyPaused_?std::string("Fila pausada"):std::string("Copia ")+number(transfer_.Percent())+"%")+
                " | "+number(copyQueue_.size())+" aguardando",16,Lime,540);

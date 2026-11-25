@@ -74,6 +74,9 @@ static int captureScreens(const char* atlas,const char* destination) {
     bool ok=true;
     ConsoleHome menu(dir,roots);menu.Load();
     ok=save("01-inicio",menu)&&ok;
+    menu.Press(ConsoleHome::Search);assert(menu.QuickGuideOpen());ok=save("40-guia-rapido",menu)&&ok;
+    menu.Press(ConsoleHome::Favorite);menu.Press(ConsoleHome::PageDown);ok=save("41-guia-edicao",menu)&&ok;
+    menu.Press(ConsoleHome::Back);assert(menu.QuickGuideOrder()==QuickGuide::Default());menu.Press(ConsoleHome::Back);assert(!menu.QuickGuideOpen());
     menu.Press(ConsoleHome::Accept);ok=save("02-biblioteca",menu)&&ok;
     menu.Press(ConsoleHome::Accept);ok=save("03-detalhes",menu)&&ok;
     menu.Press(ConsoleHome::PageDown);ok=save("10-conteudo-tu",menu)&&ok;
@@ -1108,6 +1111,24 @@ int main(int argc,char** argv) {
         assert(!restored.Append("bad\tdata"));
         {std::ofstream out(path);out<<std::string(32769,'x');}
         assert(!restored.Load(path)&&!restored.Save(path));
+    }
+    {
+        assert(QuickGuide::Valid("01234567")&&!QuickGuide::Valid("11234567")&&!QuickGuide::Valid("01234568"));
+        auto draft=std::string(QuickGuide::Default());int selected=0;
+        assert(!QuickGuide::Move(draft,selected,-1));assert(QuickGuide::Move(draft,selected,1));
+        assert(draft=="10234567"&&selected==1);
+        const auto guideRoot=root/"QuickGuideFixture";fs::create_directories(guideRoot);
+        const auto dir=guideRoot.string()+"/";
+        ConsoleHome guide(dir,{});guide.Load();guide.Press(ConsoleHome::Search);
+        assert(guide.QuickGuideOpen()&&!guide.IdleEligible());
+        guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Back);
+        assert(guide.QuickGuideOrder()=="01234567");
+        guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Refresh);
+        assert(guide.QuickGuideOrder()=="10234567");
+        ConsoleHome reloaded(dir,{});reloaded.Load();assert(reloaded.QuickGuideOrder()=="10234567");
+        reloaded.Press(ConsoleHome::Search);assert(reloaded.Press(ConsoleHome::Accept).empty()&&!reloaded.QuickGuideOpen());
+        std::ofstream(guideRoot/"aurorax-profile.txt")<<"Q\t00000000\n";
+        ConsoleHome invalid(dir,{});invalid.Load();assert(invalid.QuickGuideOrder()==QuickGuide::Default());
     }
     // Each palette preserves opaque alpha, warnings and media pixels.
     {

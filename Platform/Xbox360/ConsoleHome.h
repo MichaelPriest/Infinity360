@@ -21,6 +21,7 @@
 #include "ConsoleStatus.h"
 #include "LaunchStatistics.h"
 #include "NotificationCenter.h"
+#include "QuickGuide.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
 #include "DisplaySafeArea.h"
@@ -40,7 +41,9 @@ public:
     unsigned IdleMinutes()const{return idleMinutes_;}
     unsigned Language()const{return language_;}
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
-    bool IdleEligible()const{return page_==Home&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
+    bool QuickGuideOpen()const{return quickGuideOpen_;}
+    const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
+    bool IdleEligible()const{return page_==Home&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
@@ -84,6 +87,11 @@ private:
     enum Page { Home, Listing, Details };
     std::string dir_, notice_;
     LaunchStatistics launchStats_;
+    bool quickGuideOpen_=false,quickGuideEditing_=false;
+    int quickGuideRow_=0;
+    std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
+    void OpenQuickGuideAction(unsigned action);
+    void DrawQuickGuide(HomeCanvas& c)const;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
     std::set<unsigned> translationReferences_;
