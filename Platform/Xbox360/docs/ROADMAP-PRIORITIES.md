@@ -42,3 +42,7 @@ O catálogo consulta pastas Cache irmãs de Content, em modo somente leitura. Re
 ### P1 — Instalação de TU legada
 
 O importador local, os recibos XboxUnity e a reinstalação de backups aceitam nomes originais TU_ reconhecidos e encaminham exclusivamente ao Cache existente do HDD. A publicação continua sem sobrescrita, com opt-in de escrita, SHA-256, releitura e identidade do pacote; não cria nomes de sistema nem modifica outras atualizações. Testes cobrem destino ausente, cancelamento, colisão, instalação manual, recibo e backup. Não confirma ativação no jogo; variantes não reconhecidas continuam bloqueadas. CI e hardware pendentes.
+
+### P1 — Gerenciamento reversível de versões TU
+
+A aba Title Updates permite retirar individualmente a TU selecionada do Cache/Content do HDD (X), e a aba TU Retiradas permite recolocá-la (A). A operação exige confirmação, identidade compatível, opt-in de escrita e instalação, workspace hdd:/Infinity360Files existente; usa movimento exclusivo no mesmo volume para DisabledTU/TitleID/Cache ou Content, preservando o nome original. Não remove outras TUs, não modifica licenças e não confirma ativação. USB e variantes não reconhecidas não são movimentados. Testes de colisão, recuperação e origem indevida adicionados. CI e console pendentes.

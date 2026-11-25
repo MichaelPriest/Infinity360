@@ -129,6 +129,24 @@ int main(){
     fs::remove(cached);
     assert(ContentInstall::Install(ws,root,game,selected,go,error));
     assert(fs::exists(cached));
+    // Move only the exact HDD TU into personal storage, without overwriting.
+    XboxContentPackage active{};
+    assert(ContentCatalog::ReadHeader(cached.string(),active));
+    assert(ContentInstall::SetUpdateAvailable(ws,root,game,active,false,error));
+    assert(!fs::exists(cached));
+    auto disabled=ContentInstall::DisabledUpdates(ws,root,game.titleId);
+    assert(disabled.size()==1&&disabled[0].legacyCache);
+    fs::copy_file(disabled[0].path,cached);
+    assert(!ContentInstall::SetUpdateAvailable(ws,root,game,disabled[0],true,error));
+    assert(fs::exists(disabled[0].path));fs::remove(cached);
+    assert(ContentInstall::SetUpdateAvailable(ws,root,game,disabled[0],true,error));
+    assert(fs::exists(cached)&&ContentInstall::DisabledUpdates(ws,root,game.titleId).empty());
+    assert(!ContentInstall::SetUpdateAvailable(ws,root,game,disabled[0],true,error));
+    // A matching package outside the managed HDD paths cannot be moved.
+    XboxContentPackage unrelated{};
+    assert(ContentCatalog::ReadHeader((base/"UserFiles/ContentImport"/legacy).string(),unrelated));
+    assert(!ContentInstall::SetUpdateAvailable(ws,root,game,unrelated,false,error));
+    assert(fs::exists(unrelated.path));
     for(const auto& e:fs::recursive_directory_iterator(base))assert(e.path().filename()!="AXCOPY-CONTENT.part");
     fs::remove_all(base);
 }

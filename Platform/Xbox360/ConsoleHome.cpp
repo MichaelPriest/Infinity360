@@ -708,7 +708,7 @@ void ConsoleHome::OpenContent() {
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
-    contentItems_.clear();stagedItems_.clear();archivedItems_.clear();restoreArchivedConfirm_=false;backups_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;recoverConfirm_=false;recoverPending_=false;archiveTuConfirm_=false;
+    contentItems_.clear();stagedItems_.clear();archivedItems_.clear();disabledItems_.clear();toggleTuConfirm_=false;restoreArchivedConfirm_=false;backups_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;recoverConfirm_=false;recoverPending_=false;archiveTuConfirm_=false;
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
@@ -726,6 +726,7 @@ void ConsoleHome::OpenContent() {
     stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
     backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
     archivedItems_=ContentBackup::Archived(fileWorkspace_,dir_,contentInfo_.titleId);
+    disabledItems_=ContentInstall::DisabledUpdates(fileWorkspace_,dir_,contentInfo_.titleId);
 }
 
 size_t ConsoleHome::ContentCount() const {
@@ -733,6 +734,7 @@ size_t ConsoleHome::ContentCount() const {
     if(contentTab_==4)return stagedItems_.size();
     if(contentTab_==5)return backups_.size();
     if(contentTab_==6)return archivedItems_.size();
+    if(contentTab_==7)return disabledItems_.size();
     const unsigned types[]={0x000b0000u,2u,1u};
     size_t count=0;
     for(size_t i=0;i<contentItems_.size();++i)
@@ -744,6 +746,7 @@ const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
     if(contentTab_==4)return index<stagedItems_.size()?&stagedItems_[index]:nullptr;
     if(contentTab_==5)return index<backups_.size()?&backups_[index].package:nullptr;
     if(contentTab_==6)return index<archivedItems_.size()?&archivedItems_[index]:nullptr;
+    if(contentTab_==7)return index<disabledItems_.size()?&disabledItems_[index]:nullptr;
     const unsigned types[]={0x000b0000u,2u,1u};
     for(size_t i=0;i<contentItems_.size();++i) {
         if(contentItems_[i].contentType!=types[contentTab_])continue;
@@ -1163,6 +1166,27 @@ std::string ConsoleHome::Press(Key key) {
 #endif
             notice_="Operacao cancelada.";return "";
         }
+        if(toggleTuConfirm_){
+            toggleTuConfirm_=false;
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Accept&&!TransferRunning()){
+                StopFtp();std::string error;XboxExecutionInfo current{};
+                const bool restore=contentTab_==7;
+                if(!Count()||!ContentCatalog::ReadExecutionInfo(visible_[row_]->executable,current)||
+                    current.titleId!=contentInfo_.titleId||current.mediaId!=contentInfo_.mediaId||current.baseVersion!=contentInfo_.baseVersion){
+                    notice_="Jogo alterado; selecione novamente.";return "";
+                }
+                if(ContentInstall::SetUpdateAvailable(fileWorkspace_,dir_,current,backupItem_,restore,error)){
+                    contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
+                    disabledItems_=ContentInstall::DisabledUpdates(fileWorkspace_,dir_,contentInfo_.titleId);
+                    clampRow(contentRow_,ContentCount());
+                    notice_=restore?"TU recolocada; ativacao nao confirmada.":"TU retirada do local original; arquivo preservado.";
+                }else notice_=error;
+                return "";
+            }
+#endif
+            notice_="Operacao cancelada.";return "";
+        }
         if(backupConfirm_){
             backupConfirm_=false;
             if(key==Accept&&!TransferRunning()){backupPending_=true;notice_="Preparando backup de conteudo.";}
@@ -1190,7 +1214,7 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
         if(key==Left && contentTab_>0) {--contentTab_;contentRow_=0;}
-        if(key==Right && contentTab_<6) {++contentTab_;contentRow_=0;}
+        if(key==Right && contentTab_<7) {++contentTab_;contentRow_=0;}
         if(key==Up && contentRow_>0)--contentRow_;
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
 #if defined(INFINITY_XSDK_HTTPS)
@@ -1205,6 +1229,11 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(key==Accept&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
             recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_="A confirma recuperar para area pessoal, sem ativacao.";return "";
+        }
+        if(((key==Favorite&&contentTab_==0)||(key==Accept&&contentTab_==7))&&!TransferRunning()&&!detailMetadata_.package){
+            const auto* item=ContentAt(contentRow_);
+            if(item){backupItem_=*item;toggleTuConfirm_=true;notice_=contentTab_==7?"A confirma recolocar TU; B cancela.":"A confirma retirar TU do local original; B cancela.";}
+            return "";
         }
         if(key==Favorite&&contentTab_==4&&!TransferRunning()&&static_cast<size_t>(contentRow_)<stagedItems_.size()){
             backupItem_=stagedItems_[contentRow_];archiveTuConfirm_=true;notice_="A confirma arquivar TU baixada; B cancela.";return "";
@@ -2167,11 +2196,11 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(45,135,"Title ID: "+hexId(contentInfo_.titleId)+"    Media ID: "+
            hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
            21,Muted,1180);
-    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas","Backups","TU Arquivadas"};
-    for(int i=0;i<7;++i) {
-        const int x=45+i*170;
-        panel(c,x,183,160,47,Panel,i==contentTab_);
-        c.Text(x+8,191,tabs[i],18,i==contentTab_?Lime:White,144);
+    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas","Backups","TU Arquivadas","TU Retiradas"};
+    for(int i=0;i<8;++i) {
+        const int x=45+i*149;
+        panel(c,x,183,141,47,Panel,i==contentTab_);
+        c.Text(x+6,191,tabs[i],17,i==contentTab_?Lime:White,129);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+(contentTab_==0?" TUs locais | Ativacao desconhecida":" pacotes encontrados")+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
@@ -2184,18 +2213,18 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         panel(c,45,y,1189,55,Panel,i==contentRow_);
         c.Text(62,y+6,item->name,23,White,700);
         std::string status;
-        if(contentTab_==0||contentTab_==4||contentTab_==6) {
+        if(contentTab_==0||contentTab_==4||contentTab_==6||contentTab_==7) {
             if(contentInfo_.mediaId&&item->mediaId&&item->mediaId!=contentInfo_.mediaId)status="Media ID diferente";
             else if(contentInfo_.baseVersion&&item->baseVersion&&item->baseVersion!=contentInfo_.baseVersion)status="Base Version diferente";
             else if(!contentInfo_.mediaId||!item->mediaId||!contentInfo_.baseVersion||!item->baseVersion)status="Compatibilidade inconclusiva";
             else status="Identidade compativel";
-            c.Text(62,y+31,"Versao: "+hexId(item->version)+" | Base: "+hexId(item->baseVersion)+(contentTab_==0?(item->legacyCache?" | CACHE LEGADO":" | CONTENT"):" | NAO ATIVADA"),17,Muted,690);
+            c.Text(62,y+31,"Versao: "+hexId(item->version)+" | Base: "+hexId(item->baseVersion)+(contentTab_==0?(item->legacyCache?" | CACHE LEGADO":" | CONTENT"):contentTab_==7?" | RETIRADA":" | NAO ATIVADA"),17,Muted,690);
         } else if(contentTab_==5)status="Backup | "+StorageInfo::FormatBytes(backups_[i].bytes);
         else if(contentTab_==1)status="Marketplace / DLC";
         else status="Save localizado";
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia pessoal | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
+    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_||toggleTuConfirm_?"A Confirmar | B Cancelar":contentTab_==7?"A Recolocar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia pessoal | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | X Retirar TU | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){

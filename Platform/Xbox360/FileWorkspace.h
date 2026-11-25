@@ -23,6 +23,7 @@ public:
     // Publish an exclusive staging file, never replacing a destination.
     bool PublishStaged(const std::string& temporary,const std::string& destination) const;
     // Narrow opt-in exception for verified TU/DLC installer only; no generic system writes.
+    bool MoveHddTitleUpdate(const std::string& source,const std::string& destination,unsigned title,bool restore) const;
     bool PublishCommonContent(const std::string& temporary,const std::string& destination,unsigned title,unsigned type) const;
 #endif
     bool MovePersonalExclusive(const std::string& from,const std::string& to,bool directory) const;

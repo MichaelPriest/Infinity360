@@ -35,6 +35,9 @@ bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInf
 bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error);
 // Reinstall a verified backup using its original, validated package filename.
 bool ReadBackup(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& slot,Request& out,std::string& error);
+// Reversible HDD-only availability management; no runtime activation claim.
+std::vector<XboxContentPackage> DisabledUpdates(const FileWorkspace& ws,const std::string& root,unsigned title);
+bool SetUpdateAvailable(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const XboxContentPackage& selected,bool available,std::string& error);
 bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error);
 }

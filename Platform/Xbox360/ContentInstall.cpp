@@ -1,5 +1,9 @@
 #include "ContentInstall.h"
 #include "ContentBackup.h"
+#include "GameScanner.h"
+#if defined(__linux__) && !defined(__XSDK__)
+#include <sys/syscall.h>
+#endif
 #include "StorageInfo.h"
 #include "StoreSha256.h"
 #include <algorithm>
@@ -28,6 +32,82 @@ bool compatible(const XboxExecutionInfo& game,const XboxContentPackage& pkg){
     if(!game.titleId||pkg.titleId!=game.titleId||pkg.volumeType!=0)return false;
     return pkg.contentType==2u||CompatibleUpdate(game,pkg);
 }
+}
+namespace {
+std::string updateWorkspace(const std::string& root){
+#ifdef __XSDK__
+    (void)root;return "hdd:/Infinity360Files";
+#else
+    return FileWorkspace::Join(root,"UserFiles");
+#endif
+}
+std::string updateFolder(const std::string& root,unsigned title,bool legacy,bool disabled){
+    char id[9];std::sprintf(id,"%08X",title);
+    if(disabled)return FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(updateWorkspace(root),"DisabledTU"),id),legacy?"Cache":"Content");
+#ifdef __XSDK__
+    const std::string volume="hdd:/";
+#else
+    const std::string volume=root;
+#endif
+    return legacy?FileWorkspace::Join(volume,"Cache"):
+        FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(volume,"Content/0000000000000000"),id),"000B0000");
+}
+std::string basename(const std::string& path){const auto p=path.find_last_of("/\\");return path.substr(p==std::string::npos?0:p+1);}
+}
+std::vector<XboxContentPackage> DisabledUpdates(const FileWorkspace& ws,const std::string& root,unsigned title){
+    std::vector<XboxContentPackage> items;
+    if(!title)return items;
+    for(bool legacy:{false,true}){
+        const auto folder=updateFolder(root,title,legacy,true);
+        std::vector<FolderEntry> files;
+        if(!ws.CanBrowse(folder)||!ReadFolder(folder,files))continue;
+        for(const auto& entry:files){
+            if(items.size()>=256)break;
+            if(entry.directory||!Filename(0xb0000u,entry.name)||LegacyFilename(entry.name)!=legacy)continue;
+            XboxContentPackage pkg{};
+            const auto path=FileWorkspace::Join(folder,entry.name);
+            if(ws.CanReadFile(path)&&ContentCatalog::ReadHeader(path,pkg)&&pkg.titleId==title&&pkg.contentType==0xb0000u&&pkg.volumeType==0){
+                pkg.legacyCache=legacy;items.push_back(pkg);
+            }
+        }
+    }
+    std::stable_sort(items.begin(),items.end(),[](const XboxContentPackage& a,const XboxContentPackage& b){return a.version>b.version;});
+    return items;
+}
+bool SetUpdateAvailable(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const XboxContentPackage& selected,bool available,std::string& error){
+    error.clear();auto reject=[&](const char* msg){error=msg;return false;};
+#if !defined(__XSDK__) && !defined(__linux__)
+    (void)ws;(void)root;(void)game;(void)selected;(void)available;return reject("Provider indisponivel.");
+#else
+    const auto name=basename(selected.path);
+    if(!enabled(root)||!ws.CanWrite(updateWorkspace(root)))return reject("Habilite escrita e instalacao; workspace HDD necessario.");
+    if(!Filename(0xb0000u,name)||!CompatibleUpdate(game,selected))return reject("TU incompativel ou nome invalido.");
+    const bool legacy=LegacyFilename(name);
+    const auto live=updateFolder(root,game.titleId,legacy,false),saved=updateFolder(root,game.titleId,legacy,true);
+    const auto source=FileWorkspace::Join(available?saved:live,name),dest=FileWorkspace::Join(available?live:saved,name);
+    XboxContentPackage current{};
+    if(selected.path!=source||!ws.CanReadFile(source)||!ContentCatalog::ReadHeader(source,current)||!same(current,selected))
+        return reject("TU mudou ou nao pertence ao HDD gerenciado.");
+    if(!ws.CanBrowse(live))return reject("Pasta original indisponivel.");
+    if(!available){
+        char id[9];std::sprintf(id,"%08X",game.titleId);
+        auto parent=updateWorkspace(root);
+        for(const std::string& part:std::vector<std::string>{"DisabledTU",id,legacy?"Cache":"Content"}){
+            const auto next=FileWorkspace::Join(parent,part);
+            if(!ws.CanWrite(next)&&!ws.Create(parent,part))return reject("Pasta de TUs desabilitadas indisponivel.");
+            parent=next;
+        }
+    }
+    if(!ws.CanWrite(saved))return reject("Pasta pessoal indisponivel.");
+#ifdef __XSDK__
+    if(!ws.MoveHddTitleUpdate(source,dest,game.titleId,available))return reject("Conflito ou falha; nenhuma sobrescrita.");
+#elif defined(SYS_renameat2)
+    if(syscall(SYS_renameat2,AT_FDCWD,source.c_str(),AT_FDCWD,dest.c_str(),1)!=0)return reject("Conflito ou falha; nenhuma sobrescrita.");
+#else
+    return reject("Movimento exclusivo indisponivel.");
+#endif
+    return true;
+#endif
 }
 bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error){
     out={};error.clear();auto reject=[&](const char* msg){error=msg;return false;};

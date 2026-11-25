@@ -219,6 +219,22 @@ bool FileWorkspace::CanReadPersonalFile(const std::string& path) const {
 #endif
 }
 #ifdef __XSDK__
+bool FileWorkspace::MoveHddTitleUpdate(const std::string& source,const std::string& destination,unsigned title,bool restore) const{
+    if(!title||roots_.empty()||workspaces_.empty())return false;
+    std::ifstream marker(Join(roots_[0],"enable-content-install.txt").c_str());std::string enabled;
+    if(!std::getline(marker,enabled)||enabled!="ENABLE-CONTENT-INSTALL")return false;
+    const auto name=source.substr(source.find_last_of("/\\")+1);
+    if(!ContentInstall::Filename(0xb0000u,name))return false;
+    const bool legacy=ContentInstall::LegacyFilename(name);
+    char id[9];std::sprintf(id,"%08X",title);
+    const auto live=legacy?std::string("hdd:/Cache"):Join(Join("hdd:/Content/0000000000000000",id),"000B0000");
+    const auto saved=Join(Join(Join("hdd:/Infinity360Files","DisabledTU"),id),legacy?"Cache":"Content");
+    if(!CanWrite(saved)||!CanBrowse(live)||!CanReadFile(source)||exists(destination)||
+       key(source)!=key(Join(restore?saved:live,name))||key(destination)!=key(Join(restore?live:saved,name)))return false;
+    XboxContentPackage p{};
+    if(!ContentCatalog::ReadHeader(source,p)||p.titleId!=title||p.contentType!=0xb0000u||p.volumeType!=0)return false;
+    return renameNoReplace(source,destination);
+}
 bool FileWorkspace::PublishCommonContent(const std::string& temporary,const std::string& destination,unsigned title,unsigned type) const {
     if(!title||(type!=2u&&type!=0xb0000u)||workspaces_.empty()||roots_.empty())return false;
     std::ifstream marker(Join(roots_[0],"enable-content-install.txt").c_str());std::string enabled;

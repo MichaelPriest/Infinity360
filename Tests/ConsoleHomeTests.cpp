@@ -71,7 +71,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     menu.Press(ConsoleHome::Accept);ok=save("02-biblioteca",menu)&&ok;
     menu.Press(ConsoleHome::Accept);ok=save("03-detalhes",menu)&&ok;
     menu.Press(ConsoleHome::PageDown);ok=save("10-conteudo-tu",menu)&&ok;
-    for(const char* name:{"11-dlc","12-saves","13-trainers","14-tu-baixadas","15-backups","16-tu-arquivadas"}){
+    for(const char* name:{"11-dlc","12-saves","13-trainers","14-tu-baixadas","15-backups","16-tu-arquivadas","26-tu-retiradas"}){
         menu.Press(ConsoleHome::Right);ok=save(name,menu)&&ok;
     }
     ConsoleHome apps(dir,roots);apps.Load();apps.Press(ConsoleHome::Down);apps.Press(ConsoleHome::Accept);
