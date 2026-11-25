@@ -1,5 +1,6 @@
 #include "XsdkDownload.h"
 #include "UnityStage.h"
+#include "ArtImport.h"
 #include "DownloadRange.h"
 #include <cctype>
 #include <curl/curl.h>
@@ -162,7 +163,7 @@ static std::string fetchMetadata(const std::string& url,unsigned long long limit
     std::ifstream opt((root+"enable-https-store.txt").c_str());std::string marker;
     if(!std::getline(opt,marker)||marker!="ENABLE-HTTPS-STORE")return "HTTPS bloqueado.";
     StoreItem source{};source.url=url;
-    if(!limit||limit>256*1024||!StoreNativeSource(source,root))return "Host ou limite recusado.";
+    if(!limit||limit>4*1024*1024||!StoreNativeSource(source,root))return "Host ou limite recusado.";
     const std::string ca="game:/cacert.pem";
     {std::ifstream file(ca.c_str(),std::ios::binary|std::ios::ate);
      if(!file||file.tellg()<1024||file.tellg()>1024*1024)return "CA bundle ausente ou invalido.";}
@@ -280,4 +281,21 @@ std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& s
         return result==CURLE_OK&&code==200&&t.done==item.bytes;
     },progress,error);
     return success?"TU verificada em UserFiles/TitleUpdates; nao ativada.":error;
+}
+
+std::string XsdkUnityCover(unsigned title,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
+    success=false;std::ifstream opt((root+"enable-xboxunity.txt").c_str());std::string marker;
+    if(!std::getline(opt,marker)||marker!="ENABLE-XBOXUNITY")return "Habilite enable-xboxunity.txt.";
+    if(!title)return "Title ID desconhecido.";
+    FileWorkspace ws(root);const auto personal=FileWorkspace::Join(root,"UserFiles");
+    if(!ws.CanWrite(personal))return "Habilite escrita na area pessoal.";
+    std::string data;bool fetched=false;
+    auto error=fetchMetadata(UnityCatalog::CoversUrl(title),256*1024,false,root,progress,data,fetched);
+    if(!fetched)return error;
+    std::vector<unsigned> images;
+    if(!UnityCatalog::ParseCovers(data,title,images)||images.empty())return "Nenhuma capa valida para este Title ID.";
+    error=fetchMetadata(UnityCatalog::CoverUrl(images.front()),4*1024*1024,false,root,progress,data,fetched);
+    if(!fetched)return error;
+    success=ArtImport::Save(ws,root,title,true,data,error);
+    return success?"Capa XboxUnity salva na area pessoal.":error;
 }

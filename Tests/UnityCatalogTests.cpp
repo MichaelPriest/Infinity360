@@ -3,6 +3,10 @@
 int main(){
     XboxExecutionInfo info{};info.titleId=0x4d5307e6;info.baseVersion=0x20010002;
     assert(UnityCatalog::UpdatesUrl(info)=="https://xboxunity.net/api/tu/4D5307E6/20010002");
+    std::vector<unsigned> covers;
+    assert(UnityCatalog::CoversUrl(0x4D5307E6)=="https://xboxunity.net/api/Covers/4D5307E6");
+    assert(UnityCatalog::ParseCovers(R"([{"titleid":1,"imageid":7},{"titleid":2,"imageid":8}])",1,covers)&&covers.size()==1&&covers[0]==7);
+    assert(!UnityCatalog::ParseCovers(R"([{"titleid":1,"imageid":7,"imageid":8}])",1,covers));
     info.baseVersion=0;assert(UnityCatalog::UpdatesUrl(info).empty());
     std::vector<UnityUpdate> rows;
     assert(UnityCatalog::ParseUpdates(R"([{"TitleUpdateID":7,"version":"2","filesize":"12345","url":"http://untrusted.example/a","other":{"x":[1,2]}}])",rows));

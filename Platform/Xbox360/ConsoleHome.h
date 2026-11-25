@@ -10,6 +10,8 @@
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
+#include "ContentBackup.h"
+#include "ConsoleStatus.h"
 #include "ResidentPlugins.h"
 #include "FtpServer.h"
 #include <map>
@@ -29,6 +31,10 @@ public:
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
     bool TakeUnityRequest(XboxExecutionInfo& info);
+    bool TakeArtRequest(unsigned& title,bool& cover,bool& remote);
+    void ArtResult(const std::string& message,bool success);
+    bool TakeBackupRequest(XboxContentPackage& selected);
+    void BackupResult(const std::string& message,bool success);
     bool TakeUnityDownload(XboxExecutionInfo& info,UnityUpdate& update);
     void UnityDownloadResult(const std::string& message,bool success);
     void UnityResult(const std::vector<UnityUpdate>& updates,const std::string& message,bool success);
@@ -140,6 +146,13 @@ private:
     std::string searchTerm_, searchDraft_, pickerGame_;
     void ApplySearch();
     bool contentActive_, contentKnown_;
+    bool backupConfirm_=false,backupPending_=false;
+    XboxContentPackage backupItem_{};
+    std::vector<XboxContentPackage> stagedItems_;
+    bool artPending_=false,artRemote_=false,artCover_=true;
+    unsigned artTitle_=0;
+    ConsoleStatus status_;
+    void DrawConsoleStatus(HomeCanvas& c) const;
     bool unityActive_=false,unityPending_=false,unityDownloadPending_=false,unityConfirm_=false;
     UnityUpdate unityDownload_;
     int unityRow_=0;

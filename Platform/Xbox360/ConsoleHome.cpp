@@ -1,5 +1,6 @@
 ﻿#include "ConsoleHome.h"
 #include "DiscIdentity.h"
+#include "ArtImport.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
 #include "ContentCatalog.h"
@@ -684,7 +685,10 @@ std::string ConsoleHome::ArtPath(const Game& game,bool cover) const {
     const std::string id=folder.substr(folder.size()-9,8);
     const std::map<std::string,std::string>::const_iterator it=artChoices_.find(id);
     const char choice=it==artChoices_.end()?'0':it->second[cover?0:1];
-    return artFile(folder,cover,choice);
+    const auto local=artFile(folder,cover,choice);
+    if(choice!='0'||local.empty()||fileExists(local))return local;
+    const std::string idPath=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Art"),id);
+    return FileWorkspace::Join(idPath,cover?"cover.rgba":"background.rgba");
 }
 void ConsoleHome::RefreshTitleMetadata() {
     detailMetadata_=XboxTitleMetadata();
@@ -698,7 +702,7 @@ void ConsoleHome::OpenContent() {
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
-    contentItems_.clear();trainers_.clear();trainerConfirm_=false;
+    contentItems_.clear();stagedItems_.clear();trainers_.clear();trainerConfirm_=false;backupConfirm_=false;backupPending_=false;
     contentTab_=0;
     contentRow_=0;
     notice_.clear();
@@ -713,10 +717,12 @@ void ConsoleHome::OpenContent() {
     contentInfo_.discCount=detailMetadata_.discCount;
     contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
     trainers_=TrainerCatalog::Scan(dir_,contentInfo_.titleId);
+    stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
 }
 
 size_t ConsoleHome::ContentCount() const {
     if(contentTab_==3)return trainers_.size();
+    if(contentTab_==4)return stagedItems_.size();
     const unsigned types[]={0x000b0000u,2u,1u};
     size_t count=0;
     for(size_t i=0;i<contentItems_.size();++i)
@@ -725,6 +731,7 @@ size_t ConsoleHome::ContentCount() const {
 }
 const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
     if(contentTab_==3)return 0;
+    if(contentTab_==4)return index<stagedItems_.size()?&stagedItems_[index]:nullptr;
     const unsigned types[]={0x000b0000u,2u,1u};
     for(size_t i=0;i<contentItems_.size();++i) {
         if(contentItems_[i].contentType!=types[contentTab_])continue;
@@ -824,7 +831,7 @@ bool ConsoleHome::TakeStoreInstallRequest(StoreItem& item){
     storeInstallPending_=false;item=storeInstallItem_;return true;
 }
 void ConsoleHome::StoreInstallResult(const std::string& message,bool success){
-    notice_=message;RecordEvent(success?"XEX autorizado instalado":"Instalacao interrompida");
+    if(success)Reload();notice_=message;RecordEvent(success?"Pacote autorizado instalado":"Instalacao interrompida");
 }
 bool ConsoleHome::TakeProviderRequest(StoreProvider& provider){
     if(!providerPending_)return false;
@@ -892,6 +899,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(storeManageRow_==0){ok=store_.ArchiveInstalled(item,detail);notice_=ok?"Aplicativo removido da biblioteca; backup preservado.":"Backup recusado; pasta indisponivel ou limite atingido.";}
                 else if(storeManageRow_==1){ok=store_.RestoreInstalled(item,detail);notice_=ok?"Backup restaurado; versao anterior preservada.":detail;}
                 else{ok=store_.ArchivePackage(item,detail);notice_=ok?"Pacote anterior arquivado. START baixa novo pacote.":"Pacote indisponivel ou limite de backups.";}
+                if(ok){const auto status=notice_;Reload();notice_=status;}
                 RecordEvent(ok?"Gerenciamento Store concluido":"Gerenciamento Store recusado");
             }
 #endif
@@ -1011,6 +1019,15 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(artEditing_) {
+#if defined(INFINITY_XSDK_HTTPS)
+        if(key==Guide||key==Search){
+            if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+            unsigned title=0;for(char ch:artEditId_)title=(title<<4)|(ch<='9'?ch-'0':ch-'A'+10);
+            if(!title){notice_="Title ID invalido.";return "";}
+            if(key==Guide&&artEditRow_!=0){notice_="XboxUnity: capa online; fundo via R3 importa JPG/PNG.";return "";}
+            artTitle_=title;artCover_=artEditRow_==0;artRemote_=key==Guide;artPending_=true;return "";
+        }
+#endif
         if(key==Back) {artEditing_=false;notice_="Alteracoes de arte canceladas.";return "";}
         if(key==Up || key==Down)artEditRow_=1-artEditRow_;
         if(key==Left || key==Right || key==Accept) {
@@ -1064,6 +1081,12 @@ std::string ConsoleHome::Press(Key key) {
 #endif
             return "";
         }
+        if(backupConfirm_){
+            backupConfirm_=false;
+            if(key==Accept&&!TransferRunning()){backupPending_=true;notice_="Preparando backup de conteudo.";}
+            else notice_="Backup cancelado.";
+            return "";
+        }
         if(trainerConfirm_) {
             trainerConfirm_=false;
             if(key!=Accept) {notice_="Lancamento cancelado.";return "";}
@@ -1085,9 +1108,16 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back) {contentActive_=false;notice_.clear();return "";}
         if(key==Refresh) {const int tab=contentTab_;OpenContent();contentTab_=tab;return "";}
         if(key==Left && contentTab_>0) {--contentTab_;contentRow_=0;}
-        if(key==Right && contentTab_<3) {++contentTab_;contentRow_=0;}
+        if(key==Right && contentTab_<4) {++contentTab_;contentRow_=0;}
         if(key==Up && contentRow_>0)--contentRow_;
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
+#if defined(INFINITY_XSDK_HTTPS)
+        if(key==PageDown&&contentTab_!=3&&!TransferRunning()){
+            const auto* item=ContentAt(contentRow_);
+            if(item){backupItem_=*item;backupConfirm_=true;notice_="A confirma backup sem modificar a origem; B cancela.";}
+            return "";
+        }
+#endif
         if(key==Accept && contentTab_==3 && static_cast<size_t>(contentRow_)<trainers_.size()) {
             if(TransferRunning() || detailMetadata_.package ||
                trainers_[contentRow_].Compatibility(contentInfo_)!=TrainerEntry::HeaderMatches) {
@@ -1357,6 +1387,7 @@ std::string ConsoleHome::Press(Key key) {
             }
             else if(systemTab_==4) {RefreshResidentPlugins();notice_="Configuracao de plugins consultada.";}
             else if(systemTab_==5)notice_="Historico local dos ultimos 64 eventos.";
+            else if(systemTab_==7){status_=ConsoleStatus::Read();notice_="Perfis e configuracoes consultados.";}
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
@@ -1439,12 +1470,13 @@ std::string ConsoleHome::Press(Key key) {
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
-            if(key==Right && systemTab_<6) ++systemTab_;
+            if(key==Right && systemTab_<7) ++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1)RefreshNetwork();
                 else if(systemTab_==4)RefreshResidentPlugins();
                 else if(systemTab_==6){discMode_=0;discDestination_=0;RefreshDiscInstall();}
+                else if(systemTab_==7)status_=ConsoleStatus::Read();
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -1835,6 +1867,18 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
     c.Text(48,600,trainerConfirm_?"A Confirmar saida para trainer | B Cancelar":
         "A Abrir utilitario independente | Y Atualizar | B Voltar",18,Lime,1175);
 }
+bool ConsoleHome::TakeArtRequest(unsigned& title,bool& cover,bool& remote){
+    if(!artPending_)return false;artPending_=false;title=artTitle_;cover=artCover_;remote=artRemote_;return true;
+}
+void ConsoleHome::ArtResult(const std::string& message,bool success){
+    artDirty_=true;notice_=message;RecordEvent(success?"Arte importada":"Importacao de arte recusada");
+}
+bool ConsoleHome::TakeBackupRequest(XboxContentPackage& selected){
+    if(!backupPending_)return false;backupPending_=false;selected=backupItem_;return true;
+}
+void ConsoleHome::BackupResult(const std::string& message,bool success){
+    notice_=message;RecordEvent(success?"Backup de conteudo verificado":"Backup recusado");
+}
 bool ConsoleHome::TakeUnityRequest(XboxExecutionInfo& info){
     if(!unityPending_)return false;
     unityPending_=false;info=contentInfo_;return true;
@@ -1876,11 +1920,11 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(45,135,"Title ID: "+hexId(contentInfo_.titleId)+"    Media ID: "+
            hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
            21,Muted,1180);
-    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers"};
-    for(int i=0;i<4;++i) {
-        const int x=45+i*299;
-        panel(c,x,183,287,47,Panel,i==contentTab_);
-        c.Text(x+16,191,tabs[i],23,i==contentTab_?Lime:White,257);
+    const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas"};
+    for(int i=0;i<5;++i) {
+        const int x=45+i*239;
+        panel(c,x,183,228,47,Panel,i==contentTab_);
+        c.Text(x+12,191,tabs[i],21,i==contentTab_?Lime:White,208);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+" pacotes encontrados - somente leitura",20,Muted,1175);
@@ -1893,15 +1937,15 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         panel(c,45,y,1189,55,Panel,i==contentRow_);
         c.Text(62,y+6,item->name,23,White,700);
         std::string status;
-        if(contentTab_==0) {
+        if(contentTab_==0||contentTab_==4) {
             status=(!contentInfo_.mediaId || !item->mediaId)?"Media ID desconhecido":
                 item->mediaId==contentInfo_.mediaId?"Media ID igual":"Media ID diferente";
-            c.Text(62,y+31,"Versao: "+hexId(item->version),17,Muted,690);
+            c.Text(62,y+31,"Versao: "+hexId(item->version)+(contentTab_==4?" | NAO ATIVADA":""),17,Muted,690);
         } else if(contentTab_==1)status="Marketplace / DLC";
         else status="Save localizado";
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,contentTab_==0?"A Caminho | START XboxUnity | Y Atualizar | B Voltar":"A Caminho | Y Atualizar | B Voltar | Nenhuma ativacao automatica",18,Lime,1175);
+    c.Text(48,601,backupConfirm_?"A Confirmar backup | B Cancelar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar | Sem ativacao",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){
@@ -1957,6 +2001,16 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
 #else
     c.Text(48,400,"Instalador DVD disponivel no XSDK.",22,Muted,1170);
 #endif
+}
+void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    c.Text(45,349,"Console | Perfis conectados",27,White,1170);
+    c.Text(48,389,"Hora local: "+status_.clock+" | Idioma: "+status_.language+" | Locale: "+status_.country,21,Muted,1170);
+    for(int i=0;i<4;++i){
+        const int x=45+(i%2)*600,y=430+(i/2)*65;
+        panel(c,x,y,585,58,Panel,false);
+        c.Text(x+12,y+10,"Controle "+number(i+1)+" | "+(status_.users[i].empty()?"Sem perfil":status_.users[i]),23,White,560);
+    }
+    c.Text(48,590,"Y Atualizar | B Voltar | Somente leitura; sem alterar conta Xbox",19,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
@@ -2071,7 +2125,8 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
         const int x=i?430:45, w=i?805:370;
         panel(c,x,180,w,375,Panel,i==artEditRow_);
         c.Text(x+16,190,i?"Fundo":"Capa",27,White,w-32);
-        const std::string file=artFile(artEditFolder_,i==0,artDraft_[i]);
+        std::string file=artFile(artEditFolder_,i==0,artDraft_[i]);
+        if(artDraft_[i]=='0'&&!fileExists(file))file=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Art"),artEditId_),i?"background.rgba":"cover.rgba");
         const bool drawn=!file.empty() && (i?
             c.LocalArt(file,false,x+190,244,400,225):
             c.LocalArt(file,true,x+105,244,150,225));
@@ -2082,7 +2137,7 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
             (artDraft_[i]=='1'?"cover-alt.rgba":"cover.rgba"),17,Muted,w-32);
     }
     c.Text(46,570,"Cima/Baixo Selecionar | Esquerda/Direita ou A Alterar | RB Recarregar",19,White,1180);
-    c.Text(46,604,"X Restaurar principal | Y Salvar | B Cancelar",19,Lime,1180);
+    c.Text(46,604,"START Capa XboxUnity | R3 Importar JPG/PNG | Y Salvar | B Cancelar",19,Lime,1180);
 }
 void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     c.Text(45,145,"Acoes do arquivo",31,White,1180);
@@ -2149,11 +2204,11 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(section_==System) {
         static const char* const titles[]={
-            "Armazenamento","Rede e FTP","Temperaturas","Downloads","Plugins","Historico","DVD"
+            "Discos","Rede/FTP","Temperaturas","Downloads","Plugins","Historico","DVD","Console"
         };
-        static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG","DVD"};
+        static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG","DVD","SYS"};
         static const char* const summaries[]={
-            "Jogos e discos","Servicos de rede","Telemetria SMC","Tarefas locais","Residentes","Eventos locais","Instalar disco"
+            "Jogos e discos","Rede local","Telemetria","Tarefas locais","Residentes","Eventos","Instalar disco","Perfis e hora"
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
@@ -2162,11 +2217,12 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Transferencias locais; downloads de internet pendentes.",
             "Diagnostico somente leitura do launch.ini.",
             "Historico de operacoes da dashboard.",
-            "Instalacao dos arquivos acessiveis pelo leitor DVD."
+            "Instalacao dos arquivos acessiveis pelo leitor DVD.",
+            "Perfis Xbox, idioma e relogio do console."
         };
-        for(int i=0;i<7;++i) {
-            const int x=42+i*171;
-            panel(c,x,166,161,166,Panel,i==systemTab_);
+        for(int i=0;i<8;++i) {
+            const int x=42+i*150;
+            panel(c,x,166,140,166,Panel,i==systemTab_);
             c.Text(x+10,184,marks[i],20,i==systemTab_?Lime:Muted,96);
             c.Text(x+10,222,titles[i],19,White,172);
             c.Text(x+10,284,summaries[i],16,Muted,172);
@@ -2177,6 +2233,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(page_==Details && systemTab_==4) {DrawResidentPlugins(c);return;}
         if(page_==Details && systemTab_==5) {DrawEvents(c);return;}
         if(page_==Details && systemTab_==6) {DrawDiscInstall(c);return;}
+        if(page_==Details && systemTab_==7) {DrawConsoleStatus(c);return;}
         if(page_==Details) {
             c.Box(42,369,1196,220,Panel,12);
             c.Text(68,391,titles[systemTab_],34,White,1120);

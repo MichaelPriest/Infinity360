@@ -18,6 +18,7 @@ public:
     bool CanBrowse(const std::string& path) const;
     bool CanWrite(const std::string& directory) const;
     bool CanReadPersonalFile(const std::string& path) const;
+    bool CanReadFile(const std::string& path) const;
 #ifdef __XSDK__
     // Publish an exclusive staging file, never replacing a destination.
     bool PublishStaged(const std::string& temporary,const std::string& destination) const;

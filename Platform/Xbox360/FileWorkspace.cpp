@@ -200,6 +200,14 @@ bool FileWorkspace::CanBrowse(const std::string& path) const {
 bool FileWorkspace::CanWrite(const std::string& path) const {
     return Allowed(path,workspaces_) && directory(path);
 }
+bool FileWorkspace::CanReadFile(const std::string& path) const {
+    if(!Allowed(path,roots_)||!exists(path)||directory(path))return false;
+#ifndef _XBOX
+    std::error_code ec;return fs::is_regular_file(path,ec)&&!ec;
+#else
+    return true;
+#endif
+}
 bool FileWorkspace::CanReadPersonalFile(const std::string& path) const {
     if(!Allowed(path,workspaces_) || !exists(path) || directory(path))return false;
 #ifndef _XBOX

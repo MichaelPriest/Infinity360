@@ -16,3 +16,5 @@ std::string XsdkUnityUpdates(const XboxExecutionInfo& info,const std::string& ro
 
 std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& selected,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
+
+std::string XsdkUnityCover(unsigned title,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);

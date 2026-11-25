@@ -104,3 +104,35 @@ bool UnityCatalog::ParseUpdates(const std::string& data,std::vector<UnityUpdate>
     if(at!=n||result.size()!=static_cast<size_t>(tokens[0].size))return false;
     updates.swap(result);return true;
 }
+
+std::string UnityCatalog::CoversUrl(unsigned title){
+    if(!title)return "";char url[72];std::sprintf(url,"https://xboxunity.net/api/Covers/%08X",title);return url;
+}
+std::string UnityCatalog::CoverUrl(unsigned image){
+    return image?"https://xboxunity.net/api/boxartfront/"+std::to_string(image):"";
+}
+bool UnityCatalog::ParseCovers(const std::string& data,unsigned title,std::vector<unsigned>& images){
+    images.clear();if(!title||data.empty()||data.size()>256*1024||data.find('\0')!=std::string::npos)return false;
+    std::vector<jsmntok_t> tokens(16384);jsmn_parser parser;jsmn_init(&parser);
+    const int n=jsmn_parse(&parser,data.data(),data.size(),tokens.data(),tokens.size());
+    if(n<1||tokens[0].type!=JSMN_ARRAY||tokens[0].size>256||
+       data.find_first_not_of(" \t\r\n",tokens[0].end)!=std::string::npos)return false;
+    std::vector<unsigned> result;std::set<unsigned> ids;
+    int at=1;size_t count=0;
+    while(at<n&&tokens[at].start<tokens[0].end){
+        const auto row=tokens[at++];if(row.type!=JSMN_OBJECT||row.size>64)return false;++count;
+        unsigned long long tid=0,image=0;std::set<std::string> keys;
+        while(at<n&&tokens[at].start<row.end){
+            const auto key=tokens[at++];if(key.type!=JSMN_STRING||at>=n)return false;
+            const auto field=raw(data,key);if(!keys.insert(field).second)return false;
+            const auto value=tokens[at++];
+            if(field=="titleid"||field=="imageid"){
+                if(!scalar(value)||!decimal(raw(data,value),0xffffffffULL,field=="titleid"?tid:image))return false;
+            }
+            while(at<n&&tokens[at].start<value.end)++at;
+        }
+        if(tid==title&&image&&ids.insert(static_cast<unsigned>(image)).second)result.push_back(static_cast<unsigned>(image));
+    }
+    if(at!=n||count!=static_cast<size_t>(tokens[0].size))return false;
+    images.swap(result);return true;
+}

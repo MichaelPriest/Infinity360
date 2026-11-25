@@ -13,6 +13,8 @@
 #endif
 #include "DiscInstaller.h"
 #include "StorageInfo.h"
+#include "ArtImport.h"
+#include "ContentBackup.h"
 #include <chrono>
 #endif
 #include "xsdk/xam.h"
@@ -190,7 +192,9 @@ int main(){
     uint16_t previous=0;
     bool ok=true,dirty=true,systemExit=false;
     // Longer than the minimal GPU probe, but still bounded.
+    std::string clock;
     for(unsigned frame=0;frame<3600;++frame){
+        if(frame%60==0){const auto now=std::time(nullptr);char value[8]{};if(auto* local=std::localtime(&now))std::strftime(value,sizeof value,"%H:%M",local);if(clock!=value){clock=value;dirty=true;}}
         INPUT_STATE input{};
         uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
         if(input.gamepad.thumb_lx < -16000)buttons|=INPUT_GAMEPAD_DPAD_LEFT;
@@ -220,6 +224,38 @@ int main(){
             StoreItem pending;
 #ifdef INFINITY_XSDK_HTTPS
             if(menu.TakeDiscSystemExit()){systemExit=true;break;}
+            unsigned artTitle=0;bool artCover=false,artRemote=false;
+            XboxContentPackage backup{};
+            if(menu.TakeArtRequest(artTitle,artCover,artRemote)){
+                menu.StopFtp();bool success=false,videoFailed=false;std::string result;
+                auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                auto progress=[&](unsigned long long done,unsigned long long total){
+                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
+                    canvas.Background();canvas.Text(48,100,"INFINITY | Importar arte",36,WHITE,1180);
+                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
+                    canvas.Text(48,560,"B Cancelar | Sem sobrescrita",22,LIME,1180);
+                    if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
+                };
+                if(artRemote)result=XsdkUnityCover(artTitle,dir,progress,success);
+                else{FileWorkspace ws(dir);success=ArtImport::Local(ws,dir,artTitle,artCover,result);if(success)result="Arte local importada.";}
+                menu.ArtResult(result,success);if(videoFailed){ok=false;break;}
+            }
+            if(menu.TakeBackupRequest(backup)){
+                menu.StopFtp();bool videoFailed=false;auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
+                auto progress=[&](unsigned long long done,unsigned long long total){
+                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
+                    canvas.Background();canvas.Text(48,100,"INFINITY | Backup de conteudo",36,WHITE,1180);
+                    canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
+                    canvas.Box(48,370,1180,22,0xff28413au,5);if(total)canvas.Box(48,370,static_cast<int>(1180.0*done/total),22,LIME,5);
+                    canvas.Text(48,560,"B Cancelar | Origem intacta | SHA-256",22,LIME,1180);
+                    if(!p.Show(canvas,true)){videoFailed=true;return false;}return true;
+                };
+                FileWorkspace ws(dir);std::string result;const bool success=ContentBackup::Archive(ws,dir,backup,progress,result);
+                menu.BackupResult(success?"Backup verificado em UserFiles/ContentBackups.":result,success);
+                if(videoFailed){ok=false;break;}
+            }
             XboxExecutionInfo unityInfo{};
             if(menu.TakeUnityRequest(unityInfo)){
                 menu.StopFtp();bool success=false,videoFailed=false;
@@ -383,7 +419,7 @@ int main(){
         if(!ok||systemExit)break;
         if(menu.Tick())dirty=true;
         if(dirty){
-            menu.Draw(canvas,"XSDK");
+            menu.Draw(canvas,clock.empty()?"--:--":clock);
             canvas.Box(895,13,180,45,0xff102923u,5);
             canvas.Text(905,20,"ALPHA TESTE",20,LIME,170);
             if(!launchNotice.empty()){
