@@ -883,6 +883,18 @@ bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     return false;
 }
 std::string ConsoleHome::Press(Key key) {
+    if(updateActive_){
+        if(key==Back){if(updateConfirm_)updateConfirm_=false;else updateActive_=false;notice_.clear();return "";}
+        if(key==Refresh){RefreshDashboardUpdate();return "";}
+#if defined(INFINITY_STORE_ZIP)
+        if(key==Accept){
+            if(TransferRunning()||!updateKnown_||!DashboardUpdate::Enabled(dir_)){notice_="Manifesto, permissao ou transferencia ativa.";return "";}
+            if(!updateConfirm_){updateConfirm_=true;notice_="A confirma instalar em pasta separada; versao atual intacta.";return "";}
+            updateConfirm_=false;updatePending_=true;
+        }
+#endif
+        return "";
+    }
     if(discSetActive_){
         if(key==Back){discSetActive_=false;notice_.clear();return "";}
         if(key==Up&&discSetRow_>0)--discSetRow_;
@@ -1460,6 +1472,7 @@ std::string ConsoleHome::Press(Key key) {
     }
     if(section_==System && page_!=Home) {
         if(page_==Details&&systemTab_==7){
+            if(key==Search){updateActive_=true;RefreshDashboardUpdate();return "";}
 #if defined(INFINITY_XSDK_HTTPS)
             if(key==Guide&&!TransferRunning()){
                 if(!coverBatchConfirm_){
@@ -1969,6 +1982,30 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
 bool ConsoleHome::TakeArtRequest(unsigned& title,bool& cover,bool& remote){
     if(!artPending_)return false;artPending_=false;title=artTitle_;cover=artCover_;remote=artRemote_;return true;
 }
+void ConsoleHome::RefreshDashboardUpdate(){
+    updateConfirm_=false;updateKnown_=DashboardUpdate::Read(dir_,updateItem_);
+    notice_=updateKnown_?"Manifesto local lido; confira SHA-256 da Release.":"Copie infinity360-update.tsv da Release para MenuPreview.";
+}
+bool ConsoleHome::TakeDashboardUpdate(StoreItem& item){
+    if(!updatePending_)return false;updatePending_=false;item=updateItem_;return true;
+}
+void ConsoleHome::DashboardUpdateResult(const std::string& message,bool success){
+    notice_=message;RecordEvent(success?"Dashboard candidata instalada":"Atualizacao recusada");
+}
+void ConsoleHome::DrawDashboardUpdate(HomeCanvas& c) const{
+    c.Text(44,78,"INFINITY | Atualizar dashboard",38,White,1170);
+    c.Text(48,142,"Instalacao lado a lado. Nao altera a versao em execucao nem launch.ini.",21,Muted,1170);
+    if(updateKnown_){
+        c.Text(48,205,updateItem_.name+" | "+StorageInfo::FormatBytes(updateItem_.bytes),30,White,1170);
+        c.Text(48,255,"SHA-256: "+updateItem_.sha256,18,Muted,1170);
+        c.Text(48,310,"Origem: UserFiles/Store/"+updateItem_.id+".pkg",20,White,1170);
+        c.Text(48,355,"Destino: UserFiles/DashboardVersions/"+updateItem_.id,20,White,1170);
+        c.Text(48,405,store_.InstalledFolder(updateItem_)?"Pasta candidata presente. Inicie default.xex externamente.":"Pacote ainda nao instalado neste destino.",22,Lime,1170);
+    }else c.Text(48,250,"Nenhum manifesto valido. Consulte a Release no GitHub.",24,White,1170);
+    c.Text(48,490,"Requer escrita, instalador ZIP e enable-dashboard-update.txt.",20,Muted,1170);
+    c.Text(48,535,"Versao anterior preservada; retorno manual pelo gerenciador externo.",20,Muted,1170);
+    c.Text(48,600,updateConfirm_?"A Confirmar | B Cancelar":"A Instalar candidata | Y Consultar | B Voltar",19,Lime,1170);
+}
 void ConsoleHome::PrepareCoverBatch(){
     coverBatch_.clear();std::set<unsigned> seen;
     // Limit each manually initiated batch to 32 missing titles; skip hidden titles and existing artwork.
@@ -2143,7 +2180,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     }
     const char* themes[]={"Verde Infinity","Azul","Ambar"};
     c.Text(48,565,std::string("Tema: < ")+themes[theme_]+" > | Esq/Dir Alterar",19,Lime,1170);
-    c.Text(48,600,"START Capas em lote | Y Atualizar | B Voltar",19,Lime,1170);
+    c.Text(48,600,"START Capas em lote | R3 Atualizar dashboard | Y Atualizar | B Voltar",19,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
@@ -2301,6 +2338,7 @@ void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
     c.Text(48,590,"A Selecionar XEX | Y Revalidar | B Voltar | Sem troca automatica",19,Lime,1170);
 }
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
+    if(updateActive_){DrawDashboardUpdate(c);return;}
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}

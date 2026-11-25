@@ -1,4 +1,5 @@
 #include "StoreZipInstaller.h"
+#include "DashboardUpdate.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -11,10 +12,20 @@ int main(int argc,char** argv){
     item.bytes=fs::file_size(fs::path(root)/"UserFiles/Store/fixture.pkg");
     FileWorkspace workspace(root);
     const bool expected=std::string(argv[3])=="ok",cancel=std::string(argv[4])=="cancel";
+    const bool dashboard=std::string(argv[4])=="dashboard";
+    if(dashboard){
+        assert(DashboardUpdate::Read(root,item));
+        assert(item.category=="dashboard");
+    }
     std::string error;
     bool success=StoreInstallPackage(workspace,item,root,[&](unsigned long long done,unsigned long long total){return !cancel||done<total/2;},error);
     if(success!=expected){std::cerr<<error;return 1;}
     StoreCatalog cat(root);
+    if(dashboard){
+        assert(cat.Installed(item)==expected);
+        if(expected)assert(!StoreInstallManaged(workspace,item,root,[](auto,auto){return true;},error));
+        return 0;
+    }
     if(expected){
         assert(cat.Installed(item));
         assert(fs::exists(fs::path(root)/"UserFiles/Homebrew/fixture/data/resource.bin"));

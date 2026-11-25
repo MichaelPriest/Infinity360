@@ -1,5 +1,7 @@
 #include "StoreZipInstaller.h"
 #include "StoreInstallPath.h"
+#include "DashboardUpdate.h"
+#include "ContentCatalog.h"
 #include "StorageInfo.h"
 #include "XexLaunchCheck.h"
 #include "miniz.h"
@@ -163,6 +165,12 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     const Progress& progress,std::string& error){
     error.clear();
     auto reject=[&](const char* reason){error=reason;return false;};
+    const bool dashboard=item.category=="dashboard";
+    if(dashboard){
+        StoreItem approved{};
+        if(!DashboardUpdate::Enabled(root)||!DashboardUpdate::Read(root,approved)||approved.id!=item.id||approved.sha256!=item.sha256||approved.bytes!=item.bytes||approved.version!=item.version)
+            return reject("Manifesto de atualizacao ausente, alterado ou nao autorizado.");
+    }
     const std::string folder=StoreInstallPath::Folder(root,item);
     if(folder.empty()||item.bytes<4||item.bytes>MaxPackage||item.rights.empty()||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos)
@@ -182,6 +190,14 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     if(!progress(0,1)||!a.Open(r))return reject("ZIP invalido ou limite de memoria.");
     std::map<std::string,Node> nodes;unsigned long long expanded=0,xexSize=0;
     if(!plan(a,nodes,expanded,xexSize))return reject("ZIP recusado: caminhos, duplicatas, tamanho ou default.xex.");
+    if(dashboard){
+        const auto required=[&](const char* key,unsigned long long min,unsigned long long max){auto it=nodes.find(key);return it!=nodes.end()&&!it->second.directory&&it->second.size>=min&&it->second.size<=max;};
+        if(expanded>128ULL*1024*1024||!required("home.tga",18,8*1024*1024)||!required("cacert.pem",1024,1024*1024)||!required("menupreview/infinity-preview.txt",24,64))return reject("Recursos obrigatorios da dashboard ausentes.");
+        for(const auto& entry:nodes){const auto& key=entry.first;
+            if(key=="default.xex"||key=="home.tga"||key=="cacert.pem"||key=="leia-me.txt"||key=="menupreview"||key=="menupreview/infinity-preview.txt"||key=="menupreview/userfiles"||key=="licenses"||key.compare(0,9,"licenses/")==0)continue;
+            return reject("Arquivo inesperado no pacote de atualizacao.");
+        }
+    }
     const unsigned long long total=item.bytes*2+expanded;
     if(!digest(r,item,progress,0,total))return reject("SHA-256 divergente ou cancelado.");
     const auto capacity=StorageInfo::Read(personal);
@@ -215,6 +231,14 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     if(!digest(r,item,progress,done,total))return fail("Pacote alterado durante extracao ou cancelado.");
     {std::ifstream xex(FileWorkspace::Join(stage,"default.xex").c_str(),std::ios::binary);
      if(!XexLaunchCheck::Header(xex))return fail("default.xex invalido.");}
+    if(dashboard){
+        XboxExecutionInfo info{};
+        if(!ContentCatalog::ReadExecutionInfo(FileWorkspace::Join(stage,"default.xex"),info)||info.titleId!=0x494E4633u)return fail("Title ID da dashboard divergente.");
+        std::ifstream marker(FileWorkspace::Join(FileWorkspace::Join(stage,"MenuPreview"),"infinity-preview.txt").c_str());std::string line,extra;
+        if(!std::getline(marker,line)||line!="INFINITY360-XSDK-PREVIEW"||std::getline(marker,extra))return fail("Marcador da dashboard invalido.");
+        std::ifstream atlas(FileWorkspace::Join(stage,"home.tga").c_str(),std::ios::binary);unsigned char header[18];
+        if(!atlas.read(reinterpret_cast<char*>(header),18)||header[1]!=0||header[2]!=10||header[16]!=32)return fail("Atlas TGA invalido.");
+    }
     const std::string receipt=FileWorkspace::Join(stage,"infinity-install.txt");
     int fd=exclusive(receipt);
     if(fd<0)return fail("Falha ao criar registro de instalacao.");
@@ -229,6 +253,7 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
 
 bool StoreInstallManaged(const FileWorkspace& ws,const StoreItem& item,const std::string& root,
     const Progress& progress,std::string& error){
+    if(item.category=="dashboard")return StoreInstallPackage(ws,item,root,progress,error);
     StoreCatalog catalog(root);
     if(catalog.Installed(item)){error="Versao atual ja instalada.";return false;}
     std::string saved;

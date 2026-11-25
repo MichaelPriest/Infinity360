@@ -409,7 +409,8 @@ int main(){
                 menu.DiscInstallResult(success?"DVD instalado e verificado: "+installed:error,success);
                 if(videoFailed){ok=false;break;}
             }
-            if(menu.TakeStoreInstallRequest(pending)){
+            const bool dashboardUpdate=menu.TakeDashboardUpdate(pending);
+            if(dashboardUpdate||menu.TakeStoreInstallRequest(pending)){
                 menu.StopFtp();
                 FileWorkspace workspace(dir);
                 bool videoFailed=false;
@@ -421,7 +422,7 @@ int main(){
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
-                    canvas.Text(48,100,"INFINITY Store | Instalar pacote",36,WHITE,1180);
+                    canvas.Text(48,100,dashboardUpdate?"INFINITY | Instalar nova versao":"INFINITY Store | Instalar pacote",36,WHITE,1180);
                     canvas.Text(48,210,pending.name,28,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
                     canvas.Box(48,370,1180,22,0xff28413au,5);
@@ -436,7 +437,8 @@ int main(){
 #else
                 const bool success=StoreInstallXex(workspace,pending,dir,progress,error);
 #endif
-                menu.StoreInstallResult(success?"Pacote instalado. Abra Apps, Homebrew ou Emuladores.":error,success);
+                if(dashboardUpdate)menu.DashboardUpdateResult(success?"Candidata instalada. Inicie default.xex por gerenciador externo.":error,success);
+                else menu.StoreInstallResult(success?"Pacote instalado. Abra Apps, Homebrew ou Emuladores.":error,success);
                 if(videoFailed){ok=false;break;}
             }
 #endif

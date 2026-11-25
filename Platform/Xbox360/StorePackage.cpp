@@ -188,6 +188,7 @@ bool StoreInstallXex(const FileWorkspace& workspace,const StoreItem& item,const 
     std::ifstream opt(FileWorkspace::Join(root,"enable-store-install.txt").c_str());
     std::string signature;
     if(!std::getline(opt,signature)||signature!="ENABLE-STORE-INSTALL")return reject("Instalacao bloqueada: habilite enable-store-install.txt.");
+    if(item.category=="dashboard")return reject("Atualizacao da dashboard exige ZIP verificado.");
     const std::string folder=StoreInstallPath::Folder(root,item);
     if(folder.empty()||item.bytes<4096||item.bytes>512ULL*1024*1024||
        item.sha256.size()!=64||item.sha256.find_first_not_of("0123456789abcdef")!=std::string::npos||item.rights.empty())
