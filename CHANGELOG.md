@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.28 — em desenvolvimento (sem build XEX)
+
+- Variante SMB experimental de menu com credenciais temporárias, navegador, destino HDD/USB, dupla confirmação, progresso e cancelamento.
+- Staging exclusivo com FileWorkspace/PublishStaged, opt-in de sessão/escrita e Title ID separado.
+- Sem compilação, testes ou captura; dashboard padrão preservada.
+
 ## V0.2.27 — em desenvolvimento (sem build XEX)
 
 - Modelo portátil de navegador SMB e seleção de arquivos, validação de nomes e tamanho FATX.

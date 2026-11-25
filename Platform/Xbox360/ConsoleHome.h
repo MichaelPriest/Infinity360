@@ -11,6 +11,10 @@
 #include "LanPeerProbe.h"
 #include "LanPeerConfig.h"
 #include "SmbProbe.h"
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+#include "SmbReadSession.h"
+#include "SmbConsoleStage.h"
+#endif
 #include "TrainerCatalog.h"
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
@@ -154,6 +158,25 @@ private:
     unsigned smbOctet_=0;
     LanPeerConfig::Octets smbDraft_{{192,168,1,2}};
     void DrawSmb(HomeCanvas& c)const;
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    enum SmbUi { SmbClosed,SmbCredentials,SmbConnecting,SmbBrowsing,SmbDestination,SmbCopying,SmbError };
+    SmbUi smbUi_=SmbClosed;
+    SmbConsoleStage smbStage_;
+    SmbReadSession smbSession_;
+    SmbBrowser smbBrowser_;
+    SmbBrowser::CopyPlan smbPlan_;
+    std::string smbCredentials_[4];
+    unsigned smbField_=0,smbChar_=0,smbDest_=0;
+    bool smbConfirm_=false;
+    std::vector<std::string> smbDestinations_;
+    std::string smbMessage_;
+    void CloseSmbSession();
+    void PressSmbSession(Key key);
+    bool TickSmbSession();
+    void DrawSmbSession(HomeCanvas& c)const;
+    bool SmbEnabled(bool writes=false)const;
+    void WipeSmbCredentials();
+#endif
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;
     bool telemetryVideo_=false,thermalPage_=false;

@@ -513,7 +513,10 @@ void ConsoleHome::MovePin(int direction) {
 }
 bool ConsoleHome::Tick() {
     const bool peerChanged=peerProbe_.Tick();
-    const bool smbChanged=smbProbe_.Tick();
+    bool smbChanged=smbProbe_.Tick();
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    smbChanged=TickSmbSession()||smbChanged;
+#endif
     const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
@@ -926,6 +929,9 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
     }
 }
 std::string ConsoleHome::Press(Key key) {
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
+#endif
     if(quickGuideOpen_){
         if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();}else quickGuideOpen_=false;notice_.clear();return "";}
         if(key==Up&&quickGuideRow_>0)--quickGuideRow_;
@@ -1625,6 +1631,12 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(key==Favorite){smbProbe_.Stop();return "";}
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+        if(key==Search&&!smbProbe_.Running()){
+            if(PowerBusy()||!SmbEnabled()){notice_="Encerre operacoes e habilite enable-smb-session.txt.";return "";}
+            CloseSmbSession();smbUi_=SmbCredentials;smbField_=smbChar_=0;notice_.clear();return "";
+        }
+#endif
         if(key==Guide&&!smbProbe_.Running()){
             if(TransferRunning()||ftp_.Running()){notice_="Encerre FTP e transferencias antes de editar.";return "";}
             smbDraft_={{192,168,1,2}};LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",smbDraft_);
@@ -2667,6 +2679,9 @@ void ConsoleHome::DrawCooling(HomeCanvas& c)const{
     c.Text(48,607,"A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria",18,Lime,1170);
 }
 bool ConsoleHome::PowerBusy()const{
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    if(smbUi_!=SmbClosed)return true;
+#endif
     return TransferRunning()||ftp_.Running()||peerProbe_.Running()||smbProbe_.Running()||
         nativeStorePending_||nativeBatch_||storeInstallPending_||providerPending_||
         discPending_||discSystemExit_||packageImportPending_||backupPending_||
@@ -2749,6 +2764,9 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
 void ConsoleHome::DrawSmb(HomeCanvas& c)const{
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    if(smbUi_!=SmbClosed){DrawSmbSession(c);return;}
+#endif
     c.Text(45,349,"Rede | SMB2/3 experimental",27,White,1170);
     if(smbEditing_){
         c.Text(48,392,"IPv4 privado do servidor SMB",23,White,1170);
@@ -2770,7 +2788,11 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
     c.Text(48,579,smbProbe_.Status()==SmbProbe::Negotiated?
         std::string(result.preauthSha512?"SHA-512 selecionado | ":"")+"Token de seguranca: "+number(result.securityTokenBytes)+" bytes | Sessao nao autenticada":
         "SMB 2.0.2 a 3.1.1 | Sem SMB1 ou acesso anonimo.",17,Muted,1170);
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    c.Text(48,607,"A Testar | X Cancelar | START IP | R3 Sessao | B Voltar",18,Lime,1170);
+#else
     c.Text(48,607,"A Testar | X Cancelar | START Configurar | B Voltar",18,Lime,1170);
+#endif
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     if(smbPage_){DrawSmb(c);return;}
@@ -3201,3 +3223,199 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
     buttonHint(c,632,"Y",(artEditing_ || (page_==Home && homeEditing_))?"Salvar":"Atualizar",0xffb3820du);
 }
+
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+namespace {
+int smbConsoleEntropy(void* buffer,size_t size){
+    auto* p=static_cast<unsigned char*>(buffer);
+    while(size){
+        const size_t n=size>256?256:size;
+        if(getentropy(p,n)!=0)return errno?errno:EIO;
+        // Detect the known constant-byte emulator entropy stub; not a general
+        // entropy quality test. Real credentials must never be used in Xenia.
+        if(n>=8){bool same=true;for(size_t i=1;i<n;++i)if(p[i]!=p[0])same=false;if(same)return EIO;}
+        p+=n;size-=n;
+    }
+    return 0;
+}
+}
+bool ConsoleHome::SmbEnabled(bool writes)const{
+    std::ifstream in((dir_+"enable-smb-session.txt").c_str());std::string token;
+    if(!std::getline(in,token)||token!="ENABLE-SMB-SESSION")return false;
+    if(!writes)return true;
+    std::ifstream out((dir_+"enable-file-writes.txt").c_str());
+    return std::getline(out,token)&&token=="ENABLE-FILE-WRITES";
+}
+void ConsoleHome::WipeSmbCredentials(){
+    for(auto& field:smbCredentials_){
+        volatile char* p=field.empty()?nullptr:&field[0];
+        for(size_t i=0;i<field.size();++i)p[i]=0;
+        field.clear();
+    }
+}
+void ConsoleHome::CloseSmbSession(){
+    smbSession_.Cancel();smbStage_.Cancel();WipeSmbCredentials();
+    smbBrowser_.Reset();smbDestinations_.clear();smbPlan_={};smbConfirm_=false;
+    smbUi_=SmbClosed;smbMessage_.clear();
+}
+bool ConsoleHome::TickSmbSession(){
+    if(smbUi_==SmbClosed||smbUi_==SmbCredentials||smbUi_==SmbError)return false;
+    if(!SmbEnabled(smbUi_==SmbCopying)){
+        CloseSmbSession();smbUi_=SmbError;smbMessage_="Permissao SMB ou escrita removida.";return true;
+    }
+    const bool changed=smbSession_.Tick();
+    if(smbSession_.Status()==SmbReadSession::Failed){
+        const auto reason=smbSession_.Label();CloseSmbSession();smbUi_=SmbError;smbMessage_=reason;return true;
+    }
+    if(smbUi_==SmbConnecting&&smbSession_.Status()==SmbReadSession::Ready){
+        if(!smbBrowser_.BeginRoot()||!smbSession_.Open("")){
+            CloseSmbSession();smbUi_=SmbError;smbMessage_="Falha ao consultar a raiz.";return true;
+        }
+        smbUi_=SmbBrowsing;return true;
+    }
+    if(smbUi_==SmbBrowsing&&smbBrowser_.Pending()&&smbSession_.Status()==SmbReadSession::Ready){
+        std::vector<SmbBrowser::Entry> entries;
+        for(const auto& e:smbSession_.Entries())entries.push_back({e.name,e.size,e.directory});
+        smbBrowser_.Commit(std::move(entries),smbSession_.Truncated());return true;
+    }
+    if(smbUi_==SmbCopying&&smbSession_.CopyComplete()){
+        const bool ok=SmbEnabled(true)&&smbStage_.Publish(fileWorkspace_);
+        smbStage_.Cancel();smbUi_=SmbBrowsing;
+        smbMessage_=ok?"Copia publicada no workspace.":"Copia nao publicada; destino ocupado ou indisponivel.";
+        return true;
+    }
+    return changed||smbUi_==SmbCopying;
+}
+void ConsoleHome::PressSmbSession(Key key){
+    if(key==Back){
+        if(smbUi_==SmbDestination){smbUi_=SmbBrowsing;smbConfirm_=false;return;}
+        if(smbUi_==SmbBrowsing&&!smbBrowser_.Pending()&&smbBrowser_.BeginParent()){
+            if(!smbSession_.Open(smbBrowser_.Requested()))smbBrowser_.Abort();
+            return;
+        }
+        CloseSmbSession();return;
+    }
+    if(smbUi_==SmbError)return;
+    if(smbUi_==SmbCredentials){
+        auto& field=smbCredentials_[smbField_];
+        const size_t limits[]={80,128,128,256};
+        // 95 printable ASCII characters, case and punctuation preserved.
+        if(key==Left)smbChar_=(smbChar_+94)%95;
+        if(key==Right)smbChar_=(smbChar_+1)%95;
+        if(key==Up)smbChar_=(smbChar_+85)%95;
+        if(key==Down)smbChar_=(smbChar_+10)%95;
+        if(key==PageUp)smbField_=(smbField_+3)%4;
+        if(key==PageDown)smbField_=(smbField_+1)%4;
+        if(key==Accept&&field.size()<limits[smbField_])field+=char(32+smbChar_);
+        if(key==Favorite&&!field.empty()){field.back()=0;field.pop_back();}
+        if(key==Refresh){
+            LanPeerConfig::Octets ip{};
+            if(!SmbEnabled()||!LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",ip)){
+                smbMessage_="Configure IPv4 e habilite sessao primeiro.";return;
+            }
+            RefreshNetwork();
+            const auto server=LanPeerConfig::Format(ip);
+            if(!LanPeerProbe::Private(network_.ipv4)||server==network_.ipv4){
+                smbMessage_="IPv4 local ou servidor invalido.";return;
+            }
+            smb2_set_random_provider(smbConsoleEntropy);
+            const bool ok=smbSession_.Start(server,smbCredentials_[0],smbCredentials_[1],smbCredentials_[2],smbCredentials_[3]);
+            WipeSmbCredentials();
+            smbUi_=ok?SmbConnecting:SmbError;smbMessage_=ok?"":smbSession_.Label();
+        }
+        return;
+    }
+    if(smbUi_==SmbConnecting||smbUi_==SmbCopying){if(key==Favorite)CloseSmbSession();return;}
+    if(smbUi_==SmbBrowsing){
+        if(smbBrowser_.Pending())return;
+        const auto n=smbBrowser_.Rows().size(),row=smbBrowser_.Row();
+        if(key==Up&&row>0)smbBrowser_.Select(row-1);
+        if(key==Down&&row+1<n)smbBrowser_.Select(row+1);
+        if(key==PageUp)smbBrowser_.Select(row>=4?row-4:0);
+        if(key==PageDown&&n)smbBrowser_.Select(std::min(n-1,row+4));
+        if(key==Refresh&&smbBrowser_.BeginRefresh()){
+            if(!smbSession_.Open(smbBrowser_.Requested()))smbBrowser_.Abort();
+        }
+        if(key==Accept&&row<n){
+            if(smbBrowser_.Rows()[row].directory){
+                if(smbBrowser_.BeginChild()&&!smbSession_.Open(smbBrowser_.Requested()))smbBrowser_.Abort();
+            }else if(!SmbEnabled(true)||!smbBrowser_.Plan(smbPlan_)){
+                smbMessage_="Escrita desabilitada ou arquivo incompatível com FATX.";
+            }else{
+                smbDestinations_.clear();
+                for(const auto& root:fileWorkspace_.Roots()){
+                    if(root!="hdd:/"&&root!="usb0:/"&&root!="usb1:/"&&root!="usb2:/")continue;
+                    if(fileWorkspace_.CanWrite(fileWorkspace_.WorkspaceFor(root)))smbDestinations_.push_back(root);
+                }
+                if(smbDestinations_.empty())smbMessage_="Crie Infinity360Files no HDD/USB autorizado primeiro.";
+                else{smbDest_=0;smbConfirm_=false;smbUi_=SmbDestination;smbMessage_.clear();}
+            }
+        }
+        return;
+    }
+    if(smbUi_==SmbDestination){
+        if(key==Left&&smbDest_>0){--smbDest_;smbConfirm_=false;}
+        if(key==Right&&smbDest_+1<smbDestinations_.size()){++smbDest_;smbConfirm_=false;}
+        if(key==Accept){
+            if(!smbConfirm_){smbConfirm_=true;return;}
+            smbConfirm_=false;
+            if(!SmbEnabled(true)||!smbStage_.Start(fileWorkspace_,smbDestinations_[smbDest_],smbPlan_)){
+                smbStage_.Cancel();smbUi_=SmbBrowsing;smbMessage_="Destino ocupado, indisponivel ou sem permissao.";return;
+            }
+            if(!smbSession_.ReadFile(smbPlan_,[this](const uint8_t* data,size_t n){return smbStage_.Write(data,n);})){
+                smbStage_.Cancel();smbUi_=SmbBrowsing;smbMessage_="Leitura remota nao iniciada.";return;
+            }
+            smbUi_=SmbCopying;smbMessage_.clear();
+        }
+    }
+}
+void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
+    c.Text(45,349,"SMB 3.1.1 | Sessao experimental",27,White,1170);
+    if(smbUi_==SmbCredentials){
+        const char* labels[]={"Compartilhamento","Usuario","Dominio (opcional)","Senha"};
+        for(unsigned i=0;i<4;++i){
+            const int x=48+(i%2)*600,y=386+(i/2)*61;
+            panel(c,x,y,582,55,Panel,i==smbField_);
+            const std::string value=i==3?std::string(smbCredentials_[i].size(),'*'):smbCredentials_[i];
+            c.Text(x+10,y+3,labels[i],16,Muted,550);
+            c.Text(x+10,y+24,value.empty()?"--":value,19,White,550);
+        }
+        c.Text(48,515,std::string("Caractere selecionado: [")+char(32+smbChar_)+"] | A adiciona | X apaga",20,Lime,1170);
+        c.Text(48,550,smbMessage_.empty()?"Credenciais em RAM; use conta de teste. Nunca use senha real no emulador.":smbMessage_,17,Muted,1170);
+        c.Text(48,607,"Direcoes Caractere | LB/RB Campo | Y Conectar | B Cancelar",18,Lime,1170);return;
+    }
+    if(smbUi_==SmbBrowsing){
+        c.Text(48,386,"/"+smbBrowser_.Current(),20,White,1170);
+        if(smbBrowser_.Pending())c.Text(48,434,"Consultando diretorio...",22,Muted,1170);
+        else{
+            const auto& rows=smbBrowser_.Rows();const auto first=(smbBrowser_.Row()/4)*4;
+            for(size_t i=first;i<rows.size()&&i<first+4;++i){
+                const auto& e=rows[i];const int y=416+int(i-first)*33;
+                panel(c,48,y,1184,30,Panel,i==smbBrowser_.Row());
+                c.Text(57,y+3,(e.directory?"[DIR] ":"[FILE] ")+e.name,18,White,930);
+                if(!e.directory)c.Text(1000,y+3,number(e.size)+" B",17,Muted,220);
+            }
+            if(rows.empty())c.Text(48,434,"Diretorio vazio.",22,Muted,1170);
+        }
+        c.Text(48,561,smbMessage_.empty()?(smbBrowser_.Truncated()?"Listagem limitada a 512 itens.":"Somente leitura remota; arquivos copiados apenas em workspace."):smbMessage_,17,Muted,1170);
+        c.Text(48,607,"A Abrir/Copiar | Y Atualizar | LB/RB Pagina | B Voltar",18,Lime,1170);return;
+    }
+    if(smbUi_==SmbDestination){
+        c.Text(48,395,smbPlan_.name+" | "+number(smbPlan_.bytes)+" B",22,White,1170);
+        c.Text(48,447,"Destino: "+fileWorkspace_.WorkspaceFor(smbDestinations_[smbDest_]),22,Lime,1170);
+        c.Text(48,503,smbConfirm_?"A novamente confirma a copia sem sobrescrever.":"Esquerda/Direita escolhe HDD ou USB.",20,Muted,1170);
+        c.Text(48,607,"A Confirmar | B Cancelar",18,Lime,1170);return;
+    }
+    if(smbUi_==SmbCopying){
+        const auto done=smbSession_.Done(),total=smbSession_.Total();
+        const unsigned percent=total?unsigned(done*100/total):0;
+        c.Text(48,395,smbPlan_.name,23,White,1170);
+        c.Box(48,450,1180,24,Panel,5);c.Box(48,450,int(1180*percent/100),24,Lime,5);
+        c.Text(48,488,number(done)+" / "+number(total)+" B | "+number(percent)+"%",21,White,1170);
+        c.Text(48,549,smbSession_.Label(),18,Muted,1170);
+        c.Text(48,607,"X/B Cancelar sessao e remover parcial",18,Lime,1170);return;
+    }
+    c.Text(48,418,smbUi_==SmbError?smbMessage_:smbSession_.Label(),23,White,1170);
+    c.Text(48,607,"B Voltar",18,Lime,1170);
+}
+#endif
