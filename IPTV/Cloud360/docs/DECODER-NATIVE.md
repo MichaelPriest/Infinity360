@@ -103,3 +103,7 @@ O CI 45689057229 compilou ambos os XEX e passou no relink, mas o upload falhou p
 ### Controles de reprodução FFmpeg
 
 CloudPlaybackControls desacopla bordas de botões e relógio de pausa do XSDK. A alterna pausa/retomada apenas em arquivo local; X alterna mute; LB/RB ajustam ganho em passos de 10%, B/Back cancelam. Painel sobreposto indica estado e volume. O relógio exclui o tempo pausado antes de compensar bloqueios de leitura, sem consumir novos pacotes ou quadros durante a pausa. Áudio já enfileirado no hardware ainda pode tocar brevemente; não há seek nem pausa de HLS live. Teste determinístico cobre botão já pressionado, limites, mute, relógio e recusa de pausa remota. CI e hardware precisam validar o player.
+
+### Navegação temporal MP4 local
+
+CI 45691019530 aprovou a dashboard experimental e o pacote de probes. A API de seek só permite MP4 indexado local de duração conhecida até uma hora; usa av_seek_frame no vídeo com AVSEEK_FLAG_BACKWARD, limpa codecs/pacotes e reinicia a fila. D-pad esquerda/direita solicita salto de 30 s, limitado à duração; posição mostrada é o PTS real da nova fila. Fecha e reabre a saída de áudio e reinicia o relógio, mantendo volume/mute. Até 32 seeks por sessão e orçamento de leitura/pacotes cumulativo. Não oferece seek remoto, TS, seek frame-accurate ou seek enquanto pausado. Testes host usam keyframes de 2 s e verificam ida e volta, limites e controles. Nova build e hardware pendentes.

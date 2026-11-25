@@ -47,7 +47,9 @@ inline unsigned ControlKeys(unsigned buttons){
     return ((buttons&INPUT_GAMEPAD_A)?CloudPlaybackControls::Pause:0u)|
            ((buttons&INPUT_GAMEPAD_X)?CloudPlaybackControls::Mute:0u)|
            ((buttons&INPUT_GAMEPAD_LEFT_SHOULDER)?CloudPlaybackControls::Quieter:0u)|
-           ((buttons&INPUT_GAMEPAD_RIGHT_SHOULDER)?CloudPlaybackControls::Louder:0u);
+           ((buttons&INPUT_GAMEPAD_RIGHT_SHOULDER)?CloudPlaybackControls::Louder:0u)|
+           ((buttons&INPUT_GAMEPAD_DPAD_LEFT)?CloudPlaybackControls::Backward:0u)|
+           ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
                         const std::function<bool(bool)>& present,bool diagnostic=false){
@@ -90,24 +92,25 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         session=cloud_container_open(local.c_str(),CloudAvStreamQueue::Capture,&timeline,1);
     }
     if(!session)return "Fonte FFmpeg indisponivel ou incompativel.";
-    int rc=1;unsigned prefill=0;
-    while(rc>0&&timeline.WantsInput(0)&&prefill++<4096&&!Cancelled())rc=cloud_container_step(session,1);
-    if(rc==0)timeline.EndInput();
-    if(Cancelled()){cloud_container_close(session);return "Reproducao cancelada.";}
-    if(rc<0||!timeline.Prepare()){cloud_container_close(session);return "Falha ao preparar audio e video FFmpeg.";}
+    int rc=1;
+    auto prepare=[&](){unsigned prefill=0;while(rc>0&&timeline.WantsInput(0)&&prefill++<4096&&!Cancelled())rc=cloud_container_step(session,1);if(rc==0)timeline.EndInput();return !Cancelled()&&rc>=0&&timeline.Prepare();};
+    if(!prepare()){cloud_container_close(session);return Cancelled()?"Reproducao cancelada.":"Falha ao preparar audio e video FFmpeg.";}
+    const int64_t duration=cloud_container_duration(session),mediaStart=cloud_container_start(session);
     bool audioOpen=NT_SUCCESS(xsdk_audio_open(16)),ok=audioOpen,cancelled=false;
     unsigned shown=0,submitted=0;
     using Clock=std::chrono::steady_clock;
-    const auto start=Clock::now();
+    auto start=Clock::now();
     CloudReadClock playbackClock;
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     INPUT_STATE initial{};
     CloudPlaybackControls controls(!remoteSource,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
+    auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
+    auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     auto overlay=[&](){
         canvas.Box(30,620,1220,72,0xff172c28u,6);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
-        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":""),22,0xfff2f7f3u,1160);
-        canvas.Text(46,657,remoteSource?"X Mudo | LB/RB Volume | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
+        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(duration?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):""),22,0xfff2f7f3u,1160);
+        canvas.Text(46,657,remoteSource?"X Mudo | LB/RB Volume | B Sair":duration?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
@@ -127,6 +130,19 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         if(inputOk&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
         const bool changed=inputOk&&controls.Update(ControlKeys(state.gamepad.buttons),wall());
         if(changed){overlay();if(!present(true)){ok=false;break;}}
+        const int seek=controls.TakeSeek();
+        if(seek&&duration&&!controls.Paused()){
+            const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));
+            // A bounded local keyframe seek, not frame-accurate scrubbing.
+            if(audioOpen){xsdk_audio_close();audioOpen=false;}
+            if(cloud_container_seek(session,target)<0){ok=false;break;}
+            timeline.Reset();rc=1;
+            canvas.Box(0,0,1280,720,0xff000000u);canvas.Text(45,80,"Cloud360 | Buscando quadro-chave",28,0xfff2f7f3u,1180);
+            if(!present(true)||!prepare()){ok=false;break;}
+            audioOpen=NT_SUCCESS(xsdk_audio_open(16));if(!audioOpen){ok=false;break;}
+            controls.ResetClock();playbackClock=CloudReadClock{};start=Clock::now();
+            continue;
+        }
         if(controls.Paused()){if(!present(false)){ok=false;break;}continue;}
         auto elapsed=playbackClock.Elapsed(controls.Clock(wall()));
         if(timeline.Finished(elapsed))break;

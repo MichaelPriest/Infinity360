@@ -89,7 +89,7 @@ struct CloudContainerSession {
     AVFrame* frame;
     Sink vs,as;
     CloudContainerReport report;
-    unsigned count,max_packets;
+    unsigned count,max_packets,seeks;
     int vi,ai,state;
 };
 void cloud_container_close(CloudContainerSession* s){
@@ -140,6 +140,29 @@ fail:
 CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended);}
 CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
+int64_t cloud_container_duration(const CloudContainerSession* s){
+    if(!s||s->input.read||!s->fmt||!s->fmt->iformat||
+       strcmp(s->fmt->iformat->name,"mov,mp4,m4a,3gp,3g2,mj2")||
+       s->fmt->start_time==AV_NOPTS_VALUE||s->fmt->duration<=0||
+       s->fmt->duration>3600000000LL)return 0;
+    return s->fmt->duration;
+}
+int64_t cloud_container_start(const CloudContainerSession* s){
+    return cloud_container_duration(s)?s->fmt->start_time:0;
+}
+int cloud_container_seek(CloudContainerSession* s,int64_t position){
+    const int64_t duration=cloud_container_duration(s);
+    if(!duration||position<0||position>=duration||s->state<0||s->seeks>=32||
+       s->input.failed||s->fmt->start_time>INT64_MAX-position)return AVERROR(EINVAL);
+    ++s->seeks;
+    const int64_t ts=av_rescale_q(s->fmt->start_time+position,AV_TIME_BASE_Q,s->vs.timebase);
+    int rc=av_seek_frame(s->fmt,s->vi,ts,AVSEEK_FLAG_BACKWARD);
+    if(rc<0||s->input.failed){s->state=rc<0?rc:AVERROR(EIO);return s->state;}
+    avcodec_flush_buffers(s->video);avcodec_flush_buffers(s->audio);
+    av_packet_unref(s->pkt);av_frame_unref(s->frame);
+    memset(&s->report,0,sizeof s->report);
+    s->state=1;return 0;
+}
 int cloud_container_step(CloudContainerSession* s,unsigned packet_budget){
     if(!s||!packet_budget||packet_budget>64)return AVERROR(EINVAL);
     if(s->state<=0)return s->state;

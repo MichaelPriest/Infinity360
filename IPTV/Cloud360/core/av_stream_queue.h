@@ -46,6 +46,8 @@ public:
         peak_=std::max(peak_,used_);return true;
     }
     bool Ready() const{return ready_;}
+    int64_t Origin() const{return origin_;}
+    void Reset(){*this=CloudAvStreamQueue{};}
     bool Prepare(){
         if(ready_||video_.empty()||audio_.empty())return false;
         origin_=std::min(video_.front().pts,audio_.front().pts);

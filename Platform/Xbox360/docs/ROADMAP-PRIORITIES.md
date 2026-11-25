@@ -126,3 +126,7 @@ Relink dos probes aprovado no CI 45689057229; correção do nome do ZIP. Player 
 ### P1 — Controles FFmpeg compartilhados
 
 Pausa local com relógio congelado, mute, volume LB/RB, painel de comandos e testes determinísticos. Sem seek/pausa remota; áudio previamente enfileirado pode continuar brevemente. Cross-build e homologação física pendentes.
+
+### P1 — Seek MP4 local
+
+Dashboard FFmpeg integrada aprovada no CI 45691019530. Seek por quadro-chave, D-pad +/-30 s, reinicialização da fila/áudio/relógio, posição e duração; teste de ida/volta. Sem seek de TS/HLS; validação da revisão e hardware pendentes.

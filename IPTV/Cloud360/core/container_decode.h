@@ -21,6 +21,12 @@ typedef struct CloudContainerSession CloudContainerSession;
 typedef int (*CloudContainerRead)(void* user,uint8_t* buffer,unsigned capacity);
 CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user);
 CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended);
+/* Local indexed MP4 only. Time is relative to the container start in us.
+ * A successful seek lands at a preceding keyframe; caller must discard
+ * previously queued frames. A failed demux seek is terminal. */
+int64_t cloud_container_duration(const CloudContainerSession* session);
+int64_t cloud_container_start(const CloudContainerSession* session);
+int cloud_container_seek(CloudContainerSession* session,int64_t position_us);
 int cloud_container_step(CloudContainerSession* session,unsigned packet_budget);
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* session);
 void cloud_container_close(CloudContainerSession* session);
