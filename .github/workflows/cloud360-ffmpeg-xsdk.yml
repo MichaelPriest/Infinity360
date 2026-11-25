@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/cloud360-ffmpeg-xsdk.yml'
       - 'IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh'
+      - 'IPTV/Cloud360/tools/package_ffmpeg_probe.py'
+      - 'IPTV/Cloud360/tools/relink_ffmpeg_probe.py'
       - 'IPTV/Cloud360/native/**'
       - 'IPTV/Cloud360/core/**'
   workflow_dispatch:
@@ -86,6 +88,19 @@ jobs:
                   assert len(data)>4096 and data[:4]==b"XEX2", name
                   out.write(f"{hashlib.sha256(data).hexdigest()}  {name}\n")
           PY
+      - name: Stage candidate with LGPL source and verified relink
+        run: |
+          python3 IPTV/Cloud360/tools/package_ffmpeg_probe.py \
+            --build "$RUNNER_TEMP/av-native" --ffmpeg "$HOME/ffmpeg" \
+            --ffbuild "$RUNNER_TEMP/ffmpeg-build" --sdk "$HOME/xsdk" --toolchain "$HOME/xsdk-gcc" \
+            --tls "$HOME/mbedtls-xenon" --curl "$HOME/curl-xenon" --repo "$GITHUB_WORKSPACE" \
+            --stage "$RUNNER_TEMP/Cloud360-FFmpeg-XSDK-0.5.11-candidate"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Cloud360-FFmpeg-XSDK-0.5.11-candidate
+          path: ${{ runner.temp }}/Cloud360-FFmpeg-XSDK-0.5.11-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Collect configure and linker diagnostics
         if: always()
         run: |

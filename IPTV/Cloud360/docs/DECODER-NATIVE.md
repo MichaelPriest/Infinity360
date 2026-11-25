@@ -91,3 +91,7 @@ CloudReadClock mede o tempo de cada step remoto. Bloqueios acima de 50 ms são d
 ### Cross-build: bibliotecas compiladas, link em validação (0.5.11)
 
 Run 45686402200 confirmou configuração newlib big-endian, compilação e instalação das três bibliotecas estáticas FFmpeg LGPL, demuxers MOV/MPEG-TS e decoders H.264/AAC/MPEG2/MP3/AC3. O link do cloud360_container_probe falhou apenas no símbolo `times` referenciado por `_times_r` da newlib; o segundo alvo não chegou ao link. `xsdk_ffmpeg_compat.c` fornece implementação restrita aos dois diagnósticos, retornando -1/ENOSYS porque o SDK não oferece contabilidade POSIX de CPU. Não substitui clock_gettime, não simula tempo de CPU e não modifica o SDK. Novo CI precisa confirmar link e XEX2; execução física e eventual impacto de clock() ainda precisam ser avaliados. Testes host e Alpha do mesmo commit passaram.
+
+### Cross-build aprovado e pacote candidato
+
+Run 45687637748 concluiu o link e verificação XEX2 dos dois probes. O pipeline agora prepara candidato com fontes FFmpeg exatas, configuração, objetos, arquivos de link, licenças, fonte dos componentes, clips sintéticos e script de relink com biblioteca FFmpeg substituível. Exige um relink real antes de disponibilizar o candidato como artefato de CI. Não equivale a aprovação jurídica de distribuição: a publicação pública em Releases depende de revisar termos LGPL e demais componentes. Nenhum teste físico realizado.
