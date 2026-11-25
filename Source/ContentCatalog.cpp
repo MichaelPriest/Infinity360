@@ -37,6 +37,8 @@ unsigned hexValue(const std::string& name) {
 }
 bool safeFile(const std::string& name) {
     if(name.empty() || name.size()>64 || name=="." || name=="..") return false;
+    std::string prefix=name.substr(0,7);for(char& c:prefix)c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if(prefix=="axcopy-")return false;
     for(size_t i=0;i<name.size();++i) {
         const unsigned char ch=(unsigned char)name[i];
         if(!(std::isalnum(ch) || ch=='.' || ch=='_' || ch=='-')) return false;

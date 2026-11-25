@@ -40,7 +40,7 @@ inline bool Capture(std::istream& file,Ticket& out){
     out.bytes=static_cast<uint64_t>(size);out.fingerprint=hash;return true;
 }
 inline bool Same(const Ticket& a,const Ticket& b){return a.bytes>=4096&&a.bytes==b.bytes&&a.fingerprint==b.fingerprint;}
-inline bool OwnTitle(unsigned title){return title>=0x494E4631u&&title<=0x494E4633u;}
+inline bool OwnTitle(unsigned title){return (title>=0x494E4631u&&title<=0x494E4633u)||title==0x41555831u||title==0x43333630u||title==0x43333631u;}
 inline std::string Path(const std::string& raw) {
     const std::string path=XsdkPaths::Normalize(raw);
     const std::string key=XsdkPaths::Key(path);

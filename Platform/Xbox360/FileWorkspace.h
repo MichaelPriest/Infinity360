@@ -22,6 +22,8 @@ public:
 #ifdef __XSDK__
     // Publish an exclusive staging file, never replacing a destination.
     bool PublishStaged(const std::string& temporary,const std::string& destination) const;
+    // Narrow opt-in exception for verified TU/DLC installer only; no generic system writes.
+    bool PublishCommonContent(const std::string& temporary,const std::string& destination,unsigned title,unsigned type) const;
 #endif
     bool MovePersonalExclusive(const std::string& from,const std::string& to,bool directory) const;
     bool BeginDiscStage(const std::string& parent,const std::string& finalName,std::string& stage) const;

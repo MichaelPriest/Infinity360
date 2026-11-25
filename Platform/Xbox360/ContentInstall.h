@@ -1,0 +1,20 @@
+#pragma once
+#include "ContentCatalog.h"
+#include "FileWorkspace.h"
+#include <functional>
+namespace ContentInstall {
+struct Request {
+    XboxContentPackage package{};
+    std::string filename,sha256;
+    unsigned long long bytes=0;
+};
+inline bool Filename(unsigned type,const std::string& name){
+    if(type==0xb0000u)return name.size()==19&&name.compare(0,2,"tu")==0&&name[10]=='_'&&
+        name.substr(2,8).find_first_not_of("0123456789abcdefABCDEF")==std::string::npos&&
+        name.substr(11).find_first_not_of("0123456789abcdefABCDEF")==std::string::npos;
+    return type==2u&&name.size()>=16&&name.size()<=42&&name.find_first_not_of("0123456789abcdefABCDEF")==std::string::npos;
+}
+bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error);
+bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error);
+}

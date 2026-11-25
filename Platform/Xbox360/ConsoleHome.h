@@ -11,6 +11,7 @@
 #include "StoreCatalog.h"
 #include "UnityCatalog.h"
 #include "ContentBackup.h"
+#include "ContentInstall.h"
 #include "DiscSet.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
@@ -40,6 +41,8 @@ public:
     void CoverBatchResult(unsigned saved,unsigned failed,bool cancelled);
     void ArtResult(const std::string& message,bool success);
     bool TakeBackupRequest(XboxContentPackage& selected);
+    bool TakeContentInstall(ContentInstall::Request& item,XboxExecutionInfo& game);
+    void ContentInstallResult(const std::string& message,bool success);
     bool TakeRecoverRequest(ContentBackup::Record& selected);
     void RecoverResult(const std::string& message,bool success);
     void BackupResult(const std::string& message,bool success);
@@ -157,6 +160,10 @@ private:
     bool contentActive_, contentKnown_;
     bool backupConfirm_=false,backupPending_=false,recoverConfirm_=false,recoverPending_=false,archiveTuConfirm_=false;
     ContentBackup::Record recoverItem_;
+    bool contentInstallActive_=false,contentInstallConfirm_=false,contentInstallPending_=false,contentInstallKnown_=false;
+    ContentInstall::Request contentInstallItem_{};
+    void RefreshContentInstall();
+    void DrawContentInstall(HomeCanvas& c) const;
     std::vector<ContentBackup::Record> backups_;
     bool pruneQueueConfirm_=false;
     XboxContentPackage backupItem_{};

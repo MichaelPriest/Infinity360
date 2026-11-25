@@ -9,6 +9,7 @@
 #endif
 #ifdef __XSDK__
 #include "XsdkPaths.h"
+#include "ContentInstall.h"
 #include "xsdk/kernel.h"
 #include <cstdlib>
 #include <sys/stat.h>
@@ -218,6 +219,17 @@ bool FileWorkspace::CanReadPersonalFile(const std::string& path) const {
 #endif
 }
 #ifdef __XSDK__
+bool FileWorkspace::PublishCommonContent(const std::string& temporary,const std::string& destination,unsigned title,unsigned type) const {
+    if(!title||(type!=2u&&type!=0xb0000u)||workspaces_.empty()||roots_.empty())return false;
+    std::ifstream marker(Join(roots_[0],"enable-content-install.txt").c_str());std::string enabled;
+    if(!std::getline(marker,enabled)||enabled!="ENABLE-CONTENT-INSTALL")return false;
+    char id[9],kind[9];std::sprintf(id,"%08X",title);std::sprintf(kind,"%08X",type);
+    const auto folder=Join(Join("hdd:/Content/0000000000000000",id),kind);
+    const auto name=destination.substr(destination.find_last_of("/\\")+1);
+    if(!ContentInstall::Filename(type,name)||key(temporary)!=key(Join(folder,"AXCOPY-CONTENT.part"))||
+       key(destination)!=key(Join(folder,name))||!CanReadFile(temporary)||!CanBrowse(folder)||exists(destination))return false;
+    return renameNoReplace(temporary,destination);
+}
 bool FileWorkspace::PublishStaged(const std::string& temporary,const std::string& destination) const {
     const size_t a=temporary.find_last_of("/\\"),b=destination.find_last_of("/\\");
     if(a==std::string::npos||b==std::string::npos)return false;

@@ -703,7 +703,7 @@ void ConsoleHome::RefreshTitleMetadata() {
 }
 
 void ConsoleHome::OpenContent() {
-    contentActive_=true;
+    contentActive_=true;contentInstallActive_=false;contentInstallConfirm_=false;contentInstallPending_=false;
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
@@ -1100,6 +1100,20 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(contentActive_) {
+        if(contentInstallActive_){
+            if(key==Back){if(contentInstallConfirm_)contentInstallConfirm_=false;else contentInstallActive_=false;notice_.clear();return "";}
+            if(key==Refresh){RefreshContentInstall();return "";}
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Accept&&contentInstallKnown_&&!TransferRunning()){
+                if(!contentInstallConfirm_){contentInstallConfirm_=true;notice_="A confirma instalar conteudo autorizado no HDD; sem sobrescrita.";return "";}
+                contentInstallConfirm_=false;contentInstallPending_=true;
+            }
+#endif
+            return "";
+        }
+        if(!unityActive_&&key==Search&&(contentTab_==0||contentTab_==1||contentTab_==4)&&contentKnown_&&!detailMetadata_.package){
+            contentInstallActive_=true;RefreshContentInstall();return "";
+        }
         if(unityActive_){
             if(key==Back){if(unityConfirm_)unityConfirm_=false;else unityActive_=false;notice_.clear();return "";}
             if(key!=Accept)unityConfirm_=false;
@@ -2075,7 +2089,41 @@ void ConsoleHome::DrawUnity(HomeCanvas& c) const{
     }
     c.Text(48,590,unityConfirm_?"A Confirmar download | B Cancelar":"A Baixar TU verificada | Y Consultar | B Voltar | Sem ativacao",19,Lime,1175);
 }
+void ConsoleHome::RefreshContentInstall(){
+    contentInstallConfirm_=false;std::string error;
+    contentInstallKnown_=ContentInstall::Read(fileWorkspace_,dir_,contentInfo_,contentInstallItem_,error);
+    notice_=contentInstallKnown_?"Pacote local identificado. Confira origem e SHA-256.":error;
+}
+bool ConsoleHome::TakeContentInstall(ContentInstall::Request& item,XboxExecutionInfo& game){
+    if(!contentInstallPending_)return false;contentInstallPending_=false;
+    XboxExecutionInfo current{};
+    if(!Count()||!ContentCatalog::ReadExecutionInfo(visible_[row_]->executable,current)||
+       current.titleId!=contentInfo_.titleId||current.mediaId!=contentInfo_.mediaId||current.baseVersion!=contentInfo_.baseVersion){
+        notice_="Jogo alterado; selecione novamente.";return false;
+    }
+    item=contentInstallItem_;game=current;return true;
+}
+void ConsoleHome::ContentInstallResult(const std::string& message,bool success){
+    if(success)contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
+    notice_=message;RecordEvent(success?"Conteudo copiado e verificado":"Instalacao de conteudo recusada");
+}
+void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
+    c.Text(44,78,"Instalar TU / DLC autorizada",36,White,1170);
+    c.Text(48,135,"Title "+hexId(contentInfo_.titleId)+" | Media "+hexId(contentInfo_.mediaId),21,Muted,1170);
+    if(contentInstallKnown_){
+        const auto& i=contentInstallItem_;
+        c.Text(48,205,i.package.contentType==2?"DLC local":"Title Update moderno",28,White,1170);
+        c.Text(48,251,i.filename+" | "+StorageInfo::FormatBytes(i.bytes),22,White,1170);
+        c.Text(48,295,"SHA-256 "+i.sha256,18,Muted,1170);
+        c.Text(48,350,"HDD/Content/0000000000000000/"+hexId(i.package.titleId)+"/"+hexId(i.package.contentType),19,Lime,1170);
+    }else c.Text(48,215,"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.",20,White,1170);
+    c.Text(48,425,"Requer enable-content-install.txt e enable-file-writes.txt.",20,Muted,1170);
+    c.Text(48,470,"Somente copia verificada. Nao altera licencas, nao remove outras TUs.",20,Muted,1170);
+    c.Text(48,515,"Ativacao e reconhecimento pelo Xbox permanecem nao confirmados.",20,Muted,1170);
+    c.Text(48,600,contentInstallConfirm_?"A Confirmar | B Cancelar":"A Instalar | Y Consultar | B Voltar",19,Lime,1170);
+}
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
+    if(contentInstallActive_){DrawContentInstall(c);return;}
     if(unityActive_){DrawUnity(c);return;}
     c.Text(44,78,"Conteudo instalado",40,White,1170);
     if(!contentKnown_) {
@@ -2094,7 +2142,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         c.Text(x+12,191,tabs[i],21,i==contentTab_?Lime:White,168);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
-    c.Text(48,241,number(ContentCount())+" pacotes encontrados - somente leitura",20,Muted,1175);
+    c.Text(48,241,number(ContentCount())+" pacotes encontrados"+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
     if(ContentCount()==0)c.Text(48,305,"Nenhum pacote encontrado neste local.",24,White,1170);
     const int first=(contentRow_/5)*5;
     for(int i=first;i<first+5;++i) {
@@ -2137,7 +2185,7 @@ bool ConsoleHome::TakeDiscSystemExit(){
     const bool requested=discSystemExit_;discSystemExit_=false;return requested;
 }
 void ConsoleHome::DiscInstallResult(const std::string& message,bool success){
-    if(success)ScanLibrary();
+    if(success){ScanLibrary();Rebuild();}
     RefreshDiscInstall();notice_=message;RecordEvent(success?"DVD copiado e verificado":"Instalacao DVD interrompida");
 }
 void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
