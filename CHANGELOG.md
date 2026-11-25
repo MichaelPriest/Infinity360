@@ -151,3 +151,7 @@ A lista reúne mudanças desde V0.2.10. A última revisão ainda depende de CI e
 - Builds experimentais XSDK com testes e checksums.
 
 Consulte as Releases por commit para identificar as revisões efetivamente compiladas.
+
+### Correção V0.2.33 (rebuild)
+
+- Cancelamento de edição do guia rápido restaura a seleção original. Rebuild solicitada; gate CTest preservado.

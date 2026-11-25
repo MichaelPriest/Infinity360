@@ -282,3 +282,7 @@ Adicionadas 178 chaves PT-BR/EN/ES ao catálogo, aplicadas explicitamente nas te
 ### V0.2.33 — Personalização avançada
 
 Sistema > Console > Marcos locais > X abre editor de aparência com prévia: sete paletas existentes, gradiente/fundo sólido/papel de parede, escurecimento 60/75/90% e preferência de capas/fundos (início e detalhes). Y salva no perfil existente, X restaura valores padrão no rascunho, B cancela, START recarrega a imagem. Wallpaper local opcional `UserFiles/wallpaper.rgba` (RGBA bruto 640x360, exatamente 921600 bytes, ordem de linhas superior para inferior, alfa ignorado), cache de uma imagem, fallback ao gradiente em caso de ausência/formato inválido. Conversão em PC, por exemplo `ffmpeg -i foto.jpg -vf scale=640:360 -frames:v 1 -f rawvideo -pix_fmt rgba wallpaper.rgba`. Sem conversão JPEG/PNG no console ou editor de paleta RGB livre. Testes e captura 53 preparados, não executados; 53 telas preparadas/28 publicadas. Nenhuma build, CI ou nova captura.
+
+#### Correção de homologação V0.2.33
+
+A tentativa 2 da [build](https://github.com/MichaelPriest/Infinity360/actions/runs/45716765176) produziu XEX2 e artefato, mas 24/25 testes passaram: console_home falhou no cancelamento/reedição do guia rápido. Corrigido o retorno à seleção original ao cancelar e solicitada nova build padrão, mantendo os testes obrigatórios. Resultado da nova execução pendente.

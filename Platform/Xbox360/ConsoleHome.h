@@ -99,6 +99,7 @@ private:
     LaunchStatistics launchStats_;
     bool quickGuideOpen_=false,quickGuideEditing_=false;
     int quickGuideRow_=0;
+    int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);
     void DrawQuickGuide(HomeCanvas& c)const;

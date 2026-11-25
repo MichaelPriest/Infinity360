@@ -936,7 +936,7 @@ std::string ConsoleHome::Press(Key key) {
     if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
 #endif
     if(quickGuideOpen_){
-        if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();}else quickGuideOpen_=false;notice_.clear();return "";}
+        if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();quickGuideRow_=quickGuideEditStartRow_;}else quickGuideOpen_=false;notice_.clear();return "";}
         if(key==Up&&quickGuideRow_>0)--quickGuideRow_;
         if(key==Down&&quickGuideRow_<QuickGuide::Count-1)++quickGuideRow_;
         if(quickGuideEditing_){
@@ -949,7 +949,7 @@ std::string ConsoleHome::Press(Key key) {
             }
         }else{
             if(key==Search){quickGuideOpen_=false;notice_.clear();}
-            if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditing_=true;notice_.clear();}
+            if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditStartRow_=quickGuideRow_;quickGuideEditing_=true;notice_.clear();}
             if(key==Accept)OpenQuickGuideAction(static_cast<unsigned>(quickGuideOrder_[quickGuideRow_]-'0'));
         }
         return "";
