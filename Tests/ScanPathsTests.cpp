@@ -1,4 +1,5 @@
 #include "GameScanner.h"
+#include "XsdkPaths.h"
 
 #include <cassert>
 #include <chrono>
@@ -10,6 +11,16 @@
 namespace fs = std::filesystem;
 
 int main() {
+    assert(XsdkPaths::Normalize("HDD1:\\Games\\Halo")=="hdd:/Games/Halo");
+    assert(XsdkPaths::Normalize("USB:/Games/")=="usb0:/Games");
+    assert(XsdkPaths::Key("MU:/SAVE")==XsdkPaths::Key("mu0:/save"));
+    assert(XsdkPaths::Normalize("flash:/system").empty());
+    assert(XsdkPaths::Normalize("hdd:/Games/../secret").empty());
+    assert(XsdkPaths::Normalize("hdd:/Games/usb1:/secret").empty());
+    assert(XsdkPaths::Normalize("hdd:/").empty());
+    assert(XsdkPaths::Inside("usb2:/Games","usb2:/"));
+    assert(!XsdkPaths::Inside("game:/MenuPreviewOther","game:/MenuPreview"));
+    assert(!XsdkPaths::Inside("game:/MenuPreview/hdd:/Games","game:/MenuPreview"));
     const fs::path root=fs::temp_directory_path()/
         ("aurorax-scanner-"+std::to_string(
             std::chrono::steady_clock::now().time_since_epoch().count()));

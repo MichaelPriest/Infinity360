@@ -115,6 +115,9 @@ std::vector<std::string> PluginRegistry::DefaultRoots(const std::string& appDire
     roots.push_back("HDD1:\\AuroraX\\Plugins");
     roots.push_back("USB0:\\AuroraX\\Plugins");
     roots.push_back("USB1:\\AuroraX\\Plugins");
+#elif defined(__XSDK__)
+    const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+    for(const char* drive:drives){roots.push_back(std::string(drive)+"Infinity360/Plugins");roots.push_back(std::string(drive)+"AuroraX/Plugins");}
 #endif
     return roots;
 }

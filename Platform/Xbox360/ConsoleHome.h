@@ -63,6 +63,7 @@ private:
     std::vector<std::string> events_;
     void DrawEvents(HomeCanvas& c) const;
     std::vector<StorageVolume> storageVolumes_;
+    size_t storagePage_;
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
     NetworkSnapshot network_;

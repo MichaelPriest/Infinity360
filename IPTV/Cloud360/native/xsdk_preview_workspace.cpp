@@ -1,13 +1,15 @@
 // Conservative read-only explorer adapter for the XSDK menu preview.
 // No writes, copies, moves, deletes or hard-link emulation on unverified FATX.
 #include "FileWorkspace.h"
+#include "XsdkPaths.h"
 #include <filesystem>
 #include <cctype>
 namespace fs=std::filesystem;
-namespace {
-std::string trim(std::string p){while(p.size()>1&&(p.back()=='/'||p.back()=='\\'))p.pop_back();return p;}
+FileWorkspace::FileWorkspace(const std::string& appDirectory){
+    roots_.push_back(appDirectory);
+    const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/","mu0:/","mu1:/","dvd:/"};
+    roots_.insert(roots_.end(),drives,drives+7);
 }
-FileWorkspace::FileWorkspace(const std::string& appDirectory){roots_.push_back(appDirectory);}
 bool FileWorkspace::ValidName(const std::string& name){
     if(name.empty()||name.size()>42||name=="."||name==".."||name.front()==' '||name.back()==' '||name.back()=='.')return false;
     for(unsigned char ch:name)if(!(std::isalnum(ch)||ch==' '||ch=='.'||ch=='-'||ch=='_'))return false;
@@ -17,10 +19,7 @@ std::string FileWorkspace::Join(const std::string& parent,const std::string& nam
     return parent.empty()?name:parent+(parent.back()=='/'||parent.back()=='\\'?"":"/")+name;
 }
 bool FileWorkspace::Allowed(const std::string& path,const std::vector<std::string>& roots)const{
-    if(path.empty()||path.size()>240||path.find('\\')!=std::string::npos)return false;
-    for(const auto& part:fs::path(path))if(part=="."||part=="..")return false;
-    for(const auto& root:roots){const std::string r=trim(root);
-        if(trim(path)==r||path.compare(0,r.size()+1,r+"/")==0)return true;}
+    for(const auto& root:roots)if(XsdkPaths::Inside(path,root))return true;
     return false;
 }
 bool FileWorkspace::CanBrowse(const std::string& path)const{

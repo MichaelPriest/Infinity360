@@ -161,7 +161,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
-      fileWorkspace_(dataDir),ftp_(fileWorkspace_),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
+      fileWorkspace_(dataDir),ftp_(fileWorkspace_),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),storagePage_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
       focus_(0),row_(0),subtab_(0),systemTab_(0),gameSort_(0),searchCursor_(0),
       homeOrder_(DefaultHomeOrder),homeDraft_(DefaultHomeOrder),homeEditSlot_(0),homeEditing_(false),storeActive_(false),storeDetails_(false),storeConfirm_(false),storeTab_(0),storeRow_(0),store_(dataDir),storeTranslationMatch_(false),nativeStorePending_(false),importPreview_(false),
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
@@ -519,6 +519,7 @@ std::string ConsoleHome::TakeMovie() {
 }
 void ConsoleHome::RefreshStorage() {
     storageVolumes_=StorageInfo::ReadAll(fileWorkspace_.Roots());
+    if(storagePage_*4>=storageVolumes_.size())storagePage_=0;
 }
 void ConsoleHome::RefreshResidentPlugins() {
     residentConfig_.clear();residentPlugins_.clear();
@@ -1211,6 +1212,11 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
+        if(page_==Details && systemTab_==0 && (key==PageUp||key==PageDown)) {
+            const size_t pages=(storageVolumes_.size()+3)/4;
+            if(pages)storagePage_=(storagePage_+pages+(key==PageDown?1:pages-1))%pages;
+            return "";
+        }
         if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details && systemTab_==3 && key==PageDown) {
             storeDownloads_=!storeDownloads_;storeDownloadRow_=0;
@@ -1634,12 +1640,13 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
 
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,"Dispositivos e espaco disponivel",27,White,1170);
-    for(size_t i=0;i<storageVolumes_.size() && i<4;++i) {
-        const StorageVolume& v=storageVolumes_[i];
+    for(size_t i=0;i<4 && storagePage_*4+i<storageVolumes_.size();++i) {
+        const size_t index=storagePage_*4+i;
+        const StorageVolume& v=storageVolumes_[index];
         const int x=42+(static_cast<int>(i)%2)*602;
         const int y=391+(static_cast<int>(i)/2)*106;
         c.Box(x,y,589,97,Panel,10);
-        const std::string label=i==0?"Pasta INFINITY 360":v.path;
+        const std::string label=index==0?"Pasta INFINITY 360":v.path;
         c.Text(x+14,y+7,label,22,White,550);
         if(!v.available) {
             c.Text(x+14,y+44,"Indisponivel / capacidade nao informada",18,Muted,552);
@@ -1652,7 +1659,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         if(percent)c.Box(x+14,y+63,static_cast<int>(551*percent/100),10,Lime,5);
         c.Text(x+14,y+76,number(percent)+"% ocupado",15,White,550);
     }
-    c.Text(45,610,"Y Atualizar | B Voltar | Caminhos podem compartilhar o mesmo disco.",18,Muted,1180);
+    c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(45,349,"Diagnostico de rede local",27,White,1170);

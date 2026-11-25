@@ -1,4 +1,7 @@
 #include "GameScanner.h"
+#ifdef __XSDK__
+#include "XsdkPaths.h"
+#endif
 
 #include <algorithm>
 #include <cctype>
@@ -28,7 +31,9 @@ std::string compactRoot(std::string input) {
     return input;
 }
 std::string canonicalKey(std::string root) {
-#if defined(_XBOX) || defined(__XSDK__)
+#ifdef __XSDK__
+    return XsdkPaths::Key(root);
+#elif defined(_XBOX)
     for(size_t i=0;i<root.size();++i) {
         if(root[i]=='/') root[i]='\\';
         root[i]=(char)std::tolower((unsigned char)root[i]);
@@ -81,7 +86,7 @@ bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries) {
     std::error_code ec;
     for (fs::directory_iterator it(path, ec), end; !ec && it!=end; it.increment(ec)) {
         FolderEntry entry = {it->path().filename().string(), it->is_directory(ec)};
-        if (!ec) entries.push_back(entry);
+        if (!ec && entry.name!="." && entry.name!="..") entries.push_back(entry);
     }
     if (ec) return false;
 #endif
@@ -91,7 +96,11 @@ bool ReadFolder(const std::string& path, std::vector<FolderEntry>& entries) {
 GameScanner::GameScanner(const std::vector<std::string>& roots) : roots_(roots) {}
 std::string GameScanner::ValidRoot(const std::string& path) {
     const std::string candidate=compactRoot(path);
+#ifdef __XSDK__
+    return allowedRoot(candidate)?XsdkPaths::Normalize(candidate):"";
+#else
     return allowedRoot(candidate)?candidate:"";
+#endif
 }
 bool GameScanner::SameRoot(const std::string& a,const std::string& b) {
     return canonicalKey(compactRoot(a))==canonicalKey(compactRoot(b));
@@ -111,9 +120,12 @@ std::vector<std::string> GameScanner::DefaultRoots() {
         "USB1:\\Xbox Original"
     };
 #elif defined(__XSDK__)
-    // Newlib accepts device prefixes with forward slashes. Only the launch
-    // folder is confirmed by upstream; external volume adapters come later.
-    const char* paths[] = {"game:/Games"};
+    // XSDK resolves these aliases without mounting or changing system links.
+    const char* paths[] = {"game:/Games",
+        "hdd:/Games","hdd:/XBOX 360","hdd:/XBLA","hdd:/Xbox Original",
+        "usb0:/Games","usb0:/XBOX 360","usb0:/XBLA","usb0:/Xbox Original",
+        "usb1:/Games","usb1:/XBOX 360","usb1:/XBLA","usb1:/Xbox Original",
+        "usb2:/Games","usb2:/XBOX 360","usb2:/XBLA","usb2:/Xbox Original"};
 #else
     const char* paths[] = {"Games", "USB/Games"};
 #endif
@@ -126,7 +138,7 @@ std::vector<std::string> GameScanner::LoadRoots(
     std::vector<std::string> roots;
     std::set<std::string> seen;
     for(size_t i=0;i<defaults.size() && roots.size()<MaxRoots;++i) {
-        const std::string candidate=compactRoot(defaults[i]);
+        const std::string candidate=ValidRoot(defaults[i]);
         if(allowedRoot(candidate) && seen.insert(canonicalKey(candidate)).second)
             roots.push_back(candidate);
     }
@@ -137,7 +149,7 @@ std::vector<std::string> GameScanner::LoadRoots(
     while(roots.size()<MaxRoots && std::getline(file,line)) {
         bytes+=line.size()+1;
         if(bytes>MaxConfigBytes || line.size()>255) break;
-        const std::string candidate=compactRoot(line);
+        const std::string candidate=ValidRoot(line);
         if(candidate.empty() || candidate[0]=='#' || !allowedRoot(candidate)) continue;
         if(seen.insert(canonicalKey(candidate)).second)
             roots.push_back(candidate);
@@ -202,7 +214,11 @@ std::vector<Game> GameScanner::Scan() const {
                 const fs::path absolute=fs::weakly_canonical(path,ec);
                 if(ec || !seenGames.insert(absolute.string()).second)continue;
 #endif
+#ifdef __XSDK__
+                const std::string device=root.substr(0,root.find(':')+1);
+#else
                 const std::string device=root;
+#endif
 #else
                 if(!seenGames.insert(canonicalKey(path)).second)continue;
                 const std::string device=current.path.substr(0,current.path.find_first_of("\\/"));

@@ -120,7 +120,7 @@ void draw(HomeCanvas& c,unsigned page,unsigned focus,size_t row,const std::vecto
 int main(){
     HomeCanvas canvas;
     if(!canvas.LoadArt("game:/home.tga")){xsdk_log_write("FAIL: canvas atlas");return 1;}
-    auto games=GameScanner().Scan();
+    auto games=GameScanner(std::vector<std::string>{"game:/Games"}).Scan();
     TvCatalog tv;tv.Load("game:/playlist.m3u");
     Presenter p;
     if(!p.Open()){xsdk_log_write("FAIL: canvas presenter open");p.Close();return 2;}
@@ -140,7 +140,7 @@ int main(){
             size_t count=page==1?games.size():tv.Items().size();
             if(edge&INPUT_GAMEPAD_DPAD_UP && row){--row;dirty=true;}
             if(edge&INPUT_GAMEPAD_DPAD_DOWN && row+1<count){++row;dirty=true;}
-            if(edge&INPUT_GAMEPAD_Y){if(page==1)games=GameScanner().Scan();else tv.Load("game:/playlist.m3u");row=0;dirty=true;}
+            if(edge&INPUT_GAMEPAD_Y){if(page==1)games=GameScanner(std::vector<std::string>{"game:/Games"}).Scan();else tv.Load("game:/playlist.m3u");row=0;dirty=true;}
         }
         if(dirty)draw(canvas,page,focus,row,games,tv);
         if(!p.Show(canvas,dirty)){ok=false;break;}

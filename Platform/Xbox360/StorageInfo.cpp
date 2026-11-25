@@ -3,6 +3,9 @@
 #include <sstream>
 #ifdef _XBOX
 #include <xtl.h>
+#elif defined(__XSDK__)
+#include <sys/statvfs.h>
+#include <limits>
 #else
 #include <filesystem>
 #endif
@@ -24,6 +27,12 @@ StorageVolume StorageInfo::Read(const std::string& path) {
     v.capacity=total.QuadPart;
     v.freeBytes=free.QuadPart;
     v.writableBytes=writable.QuadPart;
+#elif defined(__XSDK__)
+    struct statvfs info={};
+    if(statvfs(path.c_str(),&info)!=0)return v;
+    const unsigned long long unit=info.f_frsize?info.f_frsize:info.f_bsize;
+    if(!unit||info.f_blocks>std::numeric_limits<unsigned long long>::max()/unit||info.f_bfree>info.f_blocks||info.f_bavail>info.f_bfree)return v;
+    v.capacity=unit*info.f_blocks;v.freeBytes=unit*info.f_bfree;v.writableBytes=unit*info.f_bavail;
 #else
     std::error_code ec;
     if(!std::filesystem::is_directory(path,ec) || ec)return v;

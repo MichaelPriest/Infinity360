@@ -112,6 +112,11 @@ std::vector<std::string> ContentCatalog::DefaultRoots(
     roots.push_back("HDD1:\\Content\\0000000000000000");
     roots.push_back("USB0:\\Content\\0000000000000000");
     roots.push_back("USB1:\\Content\\0000000000000000");
+#elif defined(__XSDK__)
+    roots.push_back("hdd:/Content/0000000000000000");
+    roots.push_back("usb0:/Content/0000000000000000");
+    roots.push_back("usb1:/Content/0000000000000000");
+    roots.push_back("usb2:/Content/0000000000000000");
 #endif
     return roots;
 }
