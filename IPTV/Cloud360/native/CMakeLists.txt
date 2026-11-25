@@ -111,3 +111,17 @@ xsdk_add_xex(infinity_menu_preview TITLE_ID 0x494E4633 NAME "INFINITY 360 Menu P
 add_executable(infinity_launch_target infinity_launch_target.c)
 set_target_properties(infinity_launch_target PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON)
 xsdk_add_xex(infinity_launch_target TITLE_ID 0x494E4634 NAME "INFINITY 360 Launch Test" VERSION 0.1.5.0)
+
+# Independent opt-in diagnostic: do not link FFmpeg into the production menu.
+if(DEFINED CLOUD360_CONTAINER_FFMPEG_ROOT)
+  set(FFROOT "${CLOUD360_CONTAINER_FFMPEG_ROOT}")
+  foreach(lib avformat avcodec avutil)
+    if(NOT EXISTS "${FFROOT}/lib/lib${lib}.a")
+      message(FATAL_ERROR "Missing experimental FFmpeg static library: ${lib}")
+    endif()
+  endforeach()
+  add_executable(cloud360_container_probe container_probe.c ../core/container_decode.c)
+  target_include_directories(cloud360_container_probe PRIVATE ../core "${FFROOT}/include")
+  target_link_libraries(cloud360_container_probe PRIVATE "${FFROOT}/lib/libavformat.a" "${FFROOT}/lib/libavcodec.a" "${FFROOT}/lib/libavutil.a" m)
+  xsdk_add_xex(cloud360_container_probe TITLE_ID 0x43333632 NAME "Cloud360 Container Probe" VERSION 0.5.3.0)
+endif()

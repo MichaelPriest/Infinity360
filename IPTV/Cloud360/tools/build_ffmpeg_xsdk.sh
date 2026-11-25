@@ -27,7 +27,7 @@ cd "$BUILD"
   --disable-shared --enable-static --enable-small \
   --disable-programs --disable-doc \
   --disable-everything --disable-autodetect \
-  --disable-avdevice --disable-avfilter --disable-avformat \
+  --disable-avdevice --disable-avfilter --enable-avformat --enable-demuxer=mov,mpegts \
   --disable-network --disable-postproc --disable-swresample --disable-swscale \
   --disable-pthreads --disable-w32threads --disable-os2threads \
   --disable-asm --disable-runtime-cpudetect --disable-iconv \
@@ -37,6 +37,7 @@ cd "$BUILD"
   --extra-cflags="-mcpu=cell -fno-pic -O2 -fno-strict-aliasing"
 make -j2
 make install
+test -s "$DEST/lib/libavformat.a"
 test -s "$DEST/lib/libavcodec.a"
 test -s "$DEST/lib/libavutil.a"
 echo "FFmpeg static libraries installed in $DEST"

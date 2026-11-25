@@ -66,3 +66,7 @@ Seleção local/HDD/USB na Store, preferência persistente e filas por dispositi
 ### P1 — Cloud360 player
 
 Correção de proporção de pixel, mute por X e pausa/retomada local por A no player MPEG-PS XSDK. Streams remotos não oferecem pausa/DVR. HLS/MP4 nativos e integração do FFmpeg continuam pendentes; conversor LAN permanece alternativa. Teste portátil de apresentação adicionado.
+
+### P1 — Demux FFmpeg experimental
+
+Adicionado diagnóstico local MP4/MPEG-TS com H.264/AAC e limites explícitos, testes CI com mídia sintética e configuração opcional de alvo XSDK separado. Cross-compilação, saída A/V, sincronização, HLS e integração ao player principal continuam pendentes.

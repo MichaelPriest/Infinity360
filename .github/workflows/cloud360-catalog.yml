@@ -28,7 +28,7 @@ jobs:
       - name: Install FFmpeg native development libraries
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg libavcodec-dev libavutil-dev pkg-config
+          sudo apt-get install -y -qq ffmpeg libavformat-dev libavcodec-dev libavutil-dev pkg-config
       - name: Create original video/audio test streams
         run: |
           set -eu
@@ -39,6 +39,8 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a aac -f adts fixtures/generated/test.aac
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a libmp3lame -f mp3 fixtures/generated/test.mp3
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 0.5 -c:a ac3 -f ac3 fixtures/generated/test.ac3
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=5" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 1 -c:v libx264 -pix_fmt yuv420p -preset ultrafast -threads 1 -c:a aac fixtures/generated/test.mp4
+          ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fixtures/generated/test.ts
       - name: Build and run actual libavcodec decoder tests on host
         run: |
           cmake -S IPTV/Cloud360 -B /tmp/cloud360-decode -DCLOUD360_WITH_HOST_FFMPEG=ON

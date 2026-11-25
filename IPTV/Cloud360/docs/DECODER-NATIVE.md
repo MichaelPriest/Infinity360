@@ -43,3 +43,7 @@ are incorporated here. Test only streams with authorized external access.
 ## Player MPEG-PS da dashboard
 
 O player XSDK existente usa pl_mpeg para MPEG-1/MP2, com apresentação RGB e áudio XSDK. A revisão adiciona correção de proporção de pixel (PAR) na apresentação, X alterna mute e A pausa/retoma arquivos locais; B encerra. A pausa de streams remotos não é habilitada, pois não existe buffer DVR. O decoder FFmpeg experimental permanece separado: HLS/TS/MP4 diretos ainda não são reproduzidos por esta build. Use o conversor autorizado quando necessário. Teste portátil da geometria e homologação física pendente.
+
+## Diagnóstico de contêineres MP4/MPEG-TS
+
+O componente container_decode usa libavformat com AVIO local limitado a 8 MiB por arquivo e orçamento de leitura de 32 MiB, demux restrito a MOV/MP4 e MPEG-TS, bloqueio de abertura de fontes secundárias e decodificação H.264/AAC real. Os testes CI geram arquivos próprios e conferem quadros de vídeo, amostras de áudio e dimensões. Playlist é recusada. O cross-build experimental passa a incluir libavformat e os demuxers mov/mpegts. Um alvo independente cloud360_container_probe é configurável via -DCLOUD360_CONTAINER_FFMPEG_ROOT=/caminho/das/libs, com test.mp4 e test.ts no game:/. A compilação XEX desse alvo não foi comprovada; não é integrado à dashboard nem publicado automaticamente. Não há renderização, áudio físico, sincronização A/V ou HLS nesse diagnóstico. Respeitar as obrigações de licença do FFmpeg antes da distribuição.
