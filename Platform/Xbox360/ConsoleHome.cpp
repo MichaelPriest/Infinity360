@@ -213,8 +213,9 @@ void ConsoleHome::Load() {
 void ConsoleHome::ScanLibrary() {
     artFolders_.clear();artDirty_=true;
     games_=GameScanner(roots_).Scan();
-    const std::vector<XboxContentPackage> packages=
-        ContentCatalog(ContentCatalog::DefaultRoots(dir_)).Scan();
+    auto packageRoots=ContentCatalog::DefaultRoots(dir_);
+    const auto managed=PackageImport::Roots(dir_);packageRoots.insert(packageRoots.end(),managed.begin(),managed.end());
+    const std::vector<XboxContentPackage> packages=ContentCatalog(packageRoots).Scan();
     for(size_t i=0;i<packages.size();++i) {
         const XboxContentPackage& pkg=packages[i];
         std::string kind="Pacote Xbox 360";
@@ -1516,7 +1517,13 @@ std::string ConsoleHome::Press(Key key) {
             }
             if(key==Accept){
                 if(TransferRunning()){notice_="Conclua ou cancele a copia ativa.";return "";}
-                if(discMode_==1){discConfirm_=false;notice_="GOD: provider de conversao ainda nao integrado.";return "";}
+                if(discMode_==1){
+                    PackageLaunch::Ticket current;std::string error;
+                    if(!PackageImport::Read(fileWorkspace_,dir_,current,error)){discConfirm_=false;notice_=error;return "";}
+                    if(!discConfirm_||!PackageLaunch::Same(packageImportTicket_,current)){packageImportTicket_=current;discConfirm_=true;notice_="A confirma importar "+current.package.name+"; original preservado.";}
+                    else{discConfirm_=false;packageImportPending_=true;}
+                    return "";
+                }
                 if(discMode_==2){
                     if(!discConfirm_){discConfirm_=true;notice_="A confirma sair para a dashboard do sistema.";}
                     else{discConfirm_=false;discSystemExit_=true;}
@@ -2191,6 +2198,12 @@ bool ConsoleHome::TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& i
     static const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
     mount=drives[discDestination_];identity=discIdentity_;return true;
 }
+bool ConsoleHome::TakePackageImport(PackageLaunch::Ticket& ticket){
+    if(!packageImportPending_)return false;packageImportPending_=false;ticket=packageImportTicket_;return true;
+}
+void ConsoleHome::PackageImportResult(const std::string& message,bool success){
+    if(success){ScanLibrary();Rebuild();}notice_=message;RecordEvent(success?"Pacote GOD/XBLA importado":"Importacao recusada");
+}
 bool ConsoleHome::TakeDiscSystemExit(){
     const bool requested=discSystemExit_;discSystemExit_=false;return requested;
 }
@@ -2201,7 +2214,7 @@ void ConsoleHome::DiscInstallResult(const std::string& message,bool success){
 void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
     c.Text(45,349,"Instalar a partir do DVD",28,White,1170);
 #if defined(INFINITY_XSDK_HTTPS)
-    static const char* modes[]={"DVD Extract (XEX)","Games on Demand","NXE / Sistema"};
+    static const char* modes[]={"DVD Extract (XEX)","Importar GOD/XBLA","NXE / Sistema"};
     for(int i=0;i<3;++i){
         const int x=45+i*396;
         panel(c,x,389,385,43,Panel,i==discMode_);
@@ -2216,8 +2229,8 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
         c.Text(48,486,std::string("Destino: < ")+drives[discDestination_]+" > | "+(discVolume_.available?StorageInfo::FormatBytes(discVolume_.writableBytes)+" livres":"Indisponivel"),22,White,1170);
         c.Text(48,520,"Copia verificada de arquivos; sem sobrescrita.",18,Muted,1170);
     }else if(discMode_==1){
-        c.Text(48,486,"Conversor GOD nativo ainda indisponivel.",22,White,1170);
-        c.Text(48,520,"Pacotes existentes sao catalogados pela biblioteca, sem alterar licencas.",18,Muted,1170);
+        c.Text(48,486,"Importa pacote existente de UserFiles/PackageImport.",22,White,1170);
+        c.Text(48,520,"Informe nome em infinity360-package-import.txt | Conversao DVD ainda pendente.",18,Muted,1170);
     }else{
         c.Text(48,486,"Retornar ao sistema para instalar pelo recurso oficial.",22,White,1170);
         c.Text(48,520,"Nao inicia instalacao automaticamente; destino depende da configuracao de boot.",18,Muted,1170);

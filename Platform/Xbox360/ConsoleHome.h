@@ -12,6 +12,7 @@
 #include "UnityCatalog.h"
 #include "ContentBackup.h"
 #include "ContentInstall.h"
+#include "PackageImport.h"
 #include "DiscSet.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
@@ -52,6 +53,8 @@ public:
     void ProviderResult(const std::string& message,bool success);
     bool TakeStoreInstallRequest(StoreItem& item);
     bool TakeDiscInstallRequest(std::string& mount,XboxExecutionInfo& identity);
+    bool TakePackageImport(PackageLaunch::Ticket& ticket);
+    void PackageImportResult(const std::string& message,bool success);
     bool TakeDiscSystemExit();
     void DiscInstallResult(const std::string& message,bool success);
     void StoreInstallResult(const std::string& message,bool success);
@@ -97,6 +100,8 @@ private:
     void RefreshStorage();
     void DrawStorage(HomeCanvas& c) const;
     void DrawDiscInstall(HomeCanvas& c) const;
+    bool packageImportPending_=false;
+    PackageLaunch::Ticket packageImportTicket_{};
     int discDestination_=0,discMode_=0;
     bool discConfirm_=false,discPending_=false,discSystemExit_=false,discKnown_=false;
     XboxExecutionInfo discIdentity_{};

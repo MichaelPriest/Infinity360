@@ -4,3 +4,5 @@ P0 — Sessao estavel, XEX, GOD/XBLA (provider real pendente), DVD Extract/GOD, 
 
 
 P0 0.2.8: provider de montagem GOD/XBLA experimental integrado; ativacao opt-in, CI e hardware pendentes. DVD-to-GOD: conversor SVOD nativo ainda pendente, sem substituir por copia XEX.
+
+P0 0.2.9: importador local GOD/XBLA integrado, sem conversao DVD nativa. Validacao fisica ao final.

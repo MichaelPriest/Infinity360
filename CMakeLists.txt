@@ -26,7 +26,7 @@ endif()
 
 # Exercise the same menu, artwork loader and M3U code used by the XDK presenter.
 add_executable(console_home_tests Tests/ConsoleHomeTests.cpp Platform/Xbox360/ConsoleHome.cpp
-    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/ArtImport.cpp Platform/Xbox360/ContentBackup.cpp Platform/Xbox360/ContentInstall.cpp Platform/Xbox360/UnityCatalog.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
+    Platform/Xbox360/HomeCanvas.cpp Platform/Xbox360/ArtImport.cpp Platform/Xbox360/ContentBackup.cpp Platform/Xbox360/ContentInstall.cpp Platform/Xbox360/PackageImport.cpp Platform/Xbox360/UnityCatalog.cpp Platform/Xbox360/StoreCatalog.cpp Platform/Xbox360/CollectionStore.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp Platform/Xbox360/NetworkInfo.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/TvCatalog.cpp Platform/Xbox360/TvGuide.cpp
     Platform/Xbox360/CloudTv.cpp Platform/Xbox360/MediaUrl.cpp Platform/Xbox360/third_party/yxml/yxml.c IPTV/Cloud360/core/cloud360.c)
 target_include_directories(console_home_tests PRIVATE Platform/Xbox360 IPTV/Cloud360/core)
 target_link_libraries(console_home_tests PRIVATE aurorax_core)
@@ -125,4 +125,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(content_install_tests PRIVATE Platform/Xbox360 Source)
     target_link_libraries(content_install_tests PRIVATE aurorax_core)
     add_test(NAME content_install COMMAND content_install_tests)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(package_import_tests Tests/PackageImportTests.cpp Platform/Xbox360/PackageImport.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp)
+    target_include_directories(package_import_tests PRIVATE Platform/Xbox360 Source)
+    target_link_libraries(package_import_tests PRIVATE aurorax_core)
+    add_test(NAME package_import COMMAND package_import_tests)
 endif()
