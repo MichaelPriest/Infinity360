@@ -122,7 +122,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
             {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
-            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
+            system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Favorite);ok=save("53-aparencia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
     fs::remove_all(root);
@@ -1151,6 +1151,18 @@ int main(int argc,char** argv) {
         palette.SetTheme(999);palette.Box(0,0,1,1,0xff9dec31u);assert(palette.Pixels()[0]==0xff9dec31u);
         const unsigned char video[]={0,255,0};palette.SetTheme(4);palette.VideoRgb(video,1,1);
         assert(palette.Pixels()[360*1280+640]==0xff00ff00u);
+    }
+    // Appearance: invalid profile values leave the old preferences intact.
+    {
+        AppearanceSettings a;
+        assert(a.Encode()=="0:1:0"&&a.ShowCover()&&a.ShowBackdrop());
+        assert(AppearanceSettings::Parse("2:0:3",a)&&!a.ShowCover()&&!a.ShowBackdrop());
+        assert(!AppearanceSettings::Parse("2:3:0",a)&&a.Encode()=="2:0:3");
+        HomeCanvas canvas;canvas.SetAppearance(a,"");canvas.Background();
+        assert(canvas.Pixels()[0]==0xff031310u);
+        assert(!canvas.WallpaperReady());
+        a.background=AppearanceSettings::Solid;canvas.SetAppearance(a,"");canvas.Background();
+        assert(canvas.Pixels()[0]==canvas.Pixels()[1280*720-1]);
     }
     // Safe area: zero-copy default and explicit border/scale.
     {

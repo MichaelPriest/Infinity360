@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "UiLanguage.h"
+#include "AppearanceSettings.h"
 
 class HomeCanvas {
 public:
@@ -10,6 +11,9 @@ public:
     bool LoadArt(const char* path);
     const unsigned* Pixels() const { return &frame_[0]; }
     void Background();
+    void SetAppearance(const AppearanceSettings& appearance,const std::string& wallpaper);
+    void ClearWallpaper(){wallpaperPath_.clear();wallpaperTried_=false;wallpaper_.clear();}
+    bool WallpaperReady()const{return !wallpaper_.empty();}
     enum { ThemeCount=7 };
     void SetTheme(unsigned theme){theme_=theme<ThemeCount?theme:0;}
     void SetLanguage(unsigned language){language_=language<UiLanguage::Count?language:0;}
@@ -33,5 +37,9 @@ private:
     std::vector<ArtEntry> localArt_;
     std::vector<unsigned> frame_, art_;
     unsigned theme_=0,language_=0;
+    AppearanceSettings appearance_;
+    std::string wallpaperPath_;
+    bool wallpaperTried_=false;
+    std::vector<unsigned char> wallpaper_;
     unsigned ThemeColor(unsigned color) const;
 };

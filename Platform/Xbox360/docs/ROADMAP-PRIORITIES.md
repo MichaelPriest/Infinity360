@@ -262,3 +262,7 @@ Leitura de cópias GPD exportadas, resumo e detalhes, sem modificar perfil ou si
 ### V0.2.32 — P3 Internacionalização
 
 Catálogo ampliado para módulos recentes e aplicação de chaves na interface. Cobertura completa de mensagens dinâmicas e módulos antigos ainda pendente; sem build/CI/capturas.
+
+### V0.2.33 — P3 Personalização visual
+
+Editor de paleta, fundo, escurecimento e arte do início/detalhes com rascunho e persistência, wallpaper RGBA fixo e cache. Atalhos e arte individual reaproveitam editores existentes. Conversão local de formatos no console e layout P4 pendentes. Sem build/CI; 53 capturas preparadas.

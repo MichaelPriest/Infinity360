@@ -111,7 +111,37 @@ void HomeCanvas::Box(int x,int y,int w,int h,unsigned color,int radius) {
         if (start<end) std::fill(frame_.begin()+(y+j)*Width+start,frame_.begin()+(y+j)*Width+end,color);
     }
 }
+void HomeCanvas::SetAppearance(const AppearanceSettings& appearance,const std::string& path){
+    appearance_=appearance.Valid()?appearance:AppearanceSettings{};
+    if(path!=wallpaperPath_){ClearWallpaper();wallpaperPath_=path;}
+    if(appearance_.background!=AppearanceSettings::Wallpaper||wallpaperTried_)return;
+    wallpaperTried_=true;
+    if(path.empty())return;
+    FILE* file=std::fopen(path.c_str(),"rb");
+    if(!file)return;
+    std::vector<unsigned char> data(640*360*4);
+    const bool ok=std::fread(data.data(),1,data.size(),file)==data.size()&&std::fgetc(file)==EOF&&!std::ferror(file);
+    std::fclose(file);
+    if(ok)wallpaper_.swap(data);
+}
 void HomeCanvas::Background() {
+    if(appearance_.background==AppearanceSettings::Solid){
+        std::fill(frame_.begin(),frame_.end(),ThemeColor(0xff031310u));return;
+    }
+    if(appearance_.background==AppearanceSettings::Wallpaper&&!wallpaper_.empty()){
+        const unsigned light=100-AppearanceSettings::Darkness(appearance_.dim);
+        // Fixed 640x360 RGBA, nearest 2x upscaling. Alpha ignored by design.
+        for(int y=0;y<360;++y){
+            auto* row=&frame_[y*2*Width];
+            for(int x=0;x<640;++x){
+                const auto* p=&wallpaper_[(y*640+x)*4];
+                const unsigned color=0xff000000u|((unsigned(p[0])*light/100)<<16)|((unsigned(p[1])*light/100)<<8)|(unsigned(p[2])*light/100);
+                row[x*2]=row[x*2+1]=color;
+            }
+            std::copy(row,row+Width,row+Width);
+        }
+        return;
+    }
     for(int y=0; y<Height; ++y) {
         const unsigned amount = 52*(Height-y)/Height;
         unsigned* row=&frame_[y*Width];

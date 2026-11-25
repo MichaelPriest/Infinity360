@@ -183,6 +183,7 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
+    appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
@@ -193,6 +194,7 @@ void ConsoleHome::Load() {
         const std::string file=line.substr(2);
         if(line[0]=='O' && validHomeOrder(file)) homeOrder_=file;
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
+        if(line[0]=='W')AppearanceSettings::Parse(file,appearance_);
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='L')UiLanguage::Parse(file,language_);
@@ -256,6 +258,7 @@ bool ConsoleHome::SaveProfile() const {
     std::ofstream out(tmp.c_str(),std::ios::trunc);
     out<<"O\t"<<homeOrder_<<"\n";
     out<<"T\t"<<theme_<<"\n";
+    out<<"W\t"<<appearance_.Encode()<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
     out<<"I\t"<<idleMinutes_<<"\n";
     out<<"L\t"<<language_<<"\n";
@@ -921,7 +924,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;achievementsPage_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
+            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;achievementsPage_=false;appearanceEditor_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1594,6 +1597,7 @@ std::string ConsoleHome::Press(Key key) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
     }
+    if(appearanceEditor_&&section_==System&&systemTab_==7&&page_==Details){PressAppearance(key);return "";}
     if(achievementsPage_&&section_==System&&systemTab_==7&&page_==Details){PressAchievements(key);return "";}
     if(saveCenter_&&section_==System&&systemTab_==7&&page_==Details){PressSaveCenter(key);return "";}
     // Modal power panel consumes every input; Back cancels before leaving.
@@ -1700,7 +1704,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}return "";}
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;themeDraft_=theme_;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -1915,7 +1919,7 @@ std::string ConsoleHome::Press(Key key) {
                 else if(systemTab_==4){localPlugins_=false;RefreshResidentPlugins();RefreshLocalPlugins();}
                 else if(systemTab_==5){eventRow_=0;eventFilter_=NotificationCenter::All;}
                 else if(systemTab_==6){discMode_=ExtractDvd;discDestination_=0;RefreshDiscInstall();}
-                else if(systemTab_==7){localMilestones_=false;saveCenter_=false;achievementsPage_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
+                else if(systemTab_==7){localMilestones_=false;saveCenter_=false;achievementsPage_=false;appearanceEditor_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();}
                 else if(systemTab_==3) {storeDownloads_=false;storeDownloadRow_=0;}
                 page_=Details;
             }
@@ -2319,13 +2323,13 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
             c.Box(left,504,cardWidth,126,Panel,8);
             const std::string backFile=ArtPath(*g,false), coverFile=ArtPath(*g,true);
             c.Box(left+1,505,cardWidth-2,84,0xff194739u,6);
-            const bool backdrop=!backFile.empty() && c.LocalArt(backFile,false,left+1,505,cardWidth-2,84);
-            const bool cover=!coverFile.empty() && c.LocalArt(coverFile,true,left+(cardWidth-56)/2,505,56,84);
+            const bool backdrop=appearance_.ShowBackdrop() && !backFile.empty() && c.LocalArt(backFile,false,left+1,505,cardWidth-2,84);
+            const bool cover=appearance_.ShowCover() && !coverFile.empty() && c.LocalArt(coverFile,true,left+(cardWidth-56)/2,505,56,84);
             if(!backdrop && !cover) {
                 int sx=600,sy=66;
                 if(g->name=="Halo 3") sx=742;
                 else if(g->name=="Gears of War 3") sy=132;
-                if(g->name=="Forza Horizon" || g->name=="Halo 3" || g->name=="Gears of War 3")
+                if(appearance_.ShowBackdrop() && (g->name=="Forza Horizon" || g->name=="Halo 3" || g->name=="Gears of War 3"))
                     c.Image(sx,sy,140,64,left+1,505,cardWidth-2,84);
                 else c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
             }
@@ -2718,6 +2722,7 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
     c.Text(48,607,std::string(c.Tr("Esq/Dir Selecionar | A Confirmar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
+    if(appearanceEditor_){DrawAppearance(c);return;}
     if(achievementsPage_){DrawAchievements(c);return;}
     if(saveCenter_){DrawSaveCenter(c);return;}
     if(powerPage_){DrawPower(c);return;}
@@ -2755,7 +2760,7 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
     }
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
     c.Text(48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
-    c.Text(48,606,std::string(c.Tr("START Central de saves | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
+    c.Text(48,606,std::string(c.Tr("START Central de saves | X Aparencia | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
@@ -3101,8 +3106,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         const std::string backFile=section_==Files?"":ArtPath(*visible_[row_],false);
         const std::string coverFile=section_==Files?"":ArtPath(*visible_[row_],true);
-        const bool backdrop=!backFile.empty() && c.LocalArt(backFile,false,842,202,360,202);
-        const bool cover=!coverFile.empty() && c.LocalArt(coverFile,true,1090,406,100,150);
+        const bool backdrop=appearance_.ShowBackdrop() && !backFile.empty() && c.LocalArt(backFile,false,842,202,360,202);
+        const bool cover=appearance_.ShowCover() && !coverFile.empty() && c.LocalArt(coverFile,true,1090,406,100,150);
         const int textWidth=(backdrop || cover)?740:1100;
         c.Text(76,219,title,36,White,textWidth);
         c.Text(77,283,sub,20,Muted,textWidth);
@@ -3217,7 +3222,10 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
-    c.SetTheme(theme_);c.SetLanguage(language_);c.Background();
+    if(wallpaperDirty_){c.ClearWallpaper();wallpaperDirty_=false;}
+    c.SetTheme(appearanceEditor_?themeDraft_:theme_);c.SetLanguage(language_);
+    c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
+    c.Background();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
@@ -3579,4 +3587,40 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
     if(achievementLoaded_&&!count)c.Text(48,432,std::string(c.Tr("Nenhuma entrada de conquista reconhecida.")),21,Muted,1170);
     c.Text(48,555,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
     c.Text(48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
+}
+
+void ConsoleHome::PressAppearance(Key key){
+    if(key==Back){appearanceEditor_=false;notice_.clear();return;}
+    if(key==Up)appearanceRow_=(appearanceRow_+3)%4;
+    if(key==Down)appearanceRow_=(appearanceRow_+1)%4;
+    if(key==Left||key==Right||key==Accept){
+        auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
+        if(appearanceRow_==0)cycle(themeDraft_,HomeCanvas::ThemeCount);
+        if(appearanceRow_==1)cycle(appearanceDraft_.background,AppearanceSettings::BackgroundCount);
+        if(appearanceRow_==2)cycle(appearanceDraft_.dim,AppearanceSettings::DimCount);
+        if(appearanceRow_==3)cycle(appearanceDraft_.artwork,AppearanceSettings::ArtworkCount);
+    }
+    if(key==Favorite){appearanceDraft_={};themeDraft_=0;notice_.clear();}
+    if(key==Guide){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";}
+    if(key==Refresh){
+        const auto previous=appearance_;const auto previousTheme=theme_;
+        appearance_=appearanceDraft_;theme_=themeDraft_;
+        if(SaveProfile()){appearanceEditor_=false;notice_="Aparencia salva.";}
+        else{appearance_=previous;theme_=previousTheme;notice_="Falha ao salvar aparencia.";}
+    }
+}
+void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
+    c.Text(45,349,c.Tr("Personalizar aparencia"),27,White,1170);
+    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos"};
+    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork))};
+    for(unsigned i=0;i<4;++i){
+        const int x=48+(i%2)*600,y=389+(i/2)*70;
+        panel(c,x,y,582,62,Panel,i==appearanceRow_);
+        c.Text(x+12,y+4,c.Tr(labels[i]),17,Muted,550);
+        c.Text(x+12,y+25,"< "+values[i]+" >",22,Lime,550);
+    }
+    if(appearanceDraft_.background==AppearanceSettings::Wallpaper)
+        c.Text(48,535,c.Tr(c.WallpaperReady()?"Imagem local carregada.":"Imagem ausente/invalida: fundo padrao aplicado."),19,White,1170);
+    c.Text(48,565,c.Tr("UserFiles/wallpaper.rgba | RGBA 640x360 | START Recarregar"),17,Muted,1170);
+    c.Text(48,607,c.Tr("Direcoes Ajustar | A Alternar | X Padrao | Y Salvar | B Cancelar"),18,Lime,1170);
 }

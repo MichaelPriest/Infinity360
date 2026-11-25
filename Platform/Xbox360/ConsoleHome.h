@@ -281,6 +281,12 @@ private:
     unsigned artTitle_=0;
     ConsoleStatus status_;
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
+    AppearanceSettings appearance_,appearanceDraft_;
+    unsigned themeDraft_=0,appearanceRow_=0;
+    bool appearanceEditor_=false;
+    mutable bool wallpaperDirty_=true;
+    void PressAppearance(Key key);
+    void DrawAppearance(HomeCanvas& c)const;
     bool sessionExitConfirm_=false;
     void DrawConsoleStatus(HomeCanvas& c) const;
     void DrawLocalMilestones(HomeCanvas& c)const;

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.33 — em desenvolvimento (sem build XEX)
+
+- Editor de aparência com prévia, 7 paletas, 3 fundos, escurecimento e preferência de arte dos jogos.
+- Papel de parede RGBA local com cache e fallback; persistência, cancelamento e restauração de padrões.
+- Testes e captura 53 preparados; nenhuma build executada.
+
 ## V0.2.32 — em desenvolvimento (sem build XEX)
 
 - 178 chaves PT-BR/EN/ES para módulos recentes, incluindo legendas e controles.
