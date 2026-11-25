@@ -19,11 +19,13 @@ bool enabled(const std::string& root){
     return bool(std::getline(flag,line))&&line=="ENABLE-CONTENT-INSTALL";
 }
 bool same(const XboxContentPackage& a,const XboxContentPackage& b){
-    return a.titleId==b.titleId&&a.mediaId==b.mediaId&&a.version==b.version&&a.contentType==b.contentType&&a.volumeType==b.volumeType;
+    return a.titleId==b.titleId&&a.mediaId==b.mediaId&&a.version==b.version&&a.contentType==b.contentType&&a.volumeType==b.volumeType&&
+        a.baseVersion==b.baseVersion&&a.discNumber==b.discNumber&&a.discCount==b.discCount&&
+        a.sizeBytes==b.sizeBytes&&a.dataFileCount==b.dataFileCount;
 }
 bool compatible(const XboxExecutionInfo& game,const XboxContentPackage& pkg){
     if(!game.titleId||pkg.titleId!=game.titleId||pkg.volumeType!=0)return false;
-    return pkg.contentType==2u||(pkg.contentType==0xb0000u&&game.mediaId&&pkg.mediaId==game.mediaId);
+    return pkg.contentType==2u||CompatibleUpdate(game,pkg);
 }
 }
 bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error){
@@ -49,7 +51,7 @@ bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInf
     std::ifstream input(path.c_str(),std::ios::binary|std::ios::ate);
     if(!input||input.tellg()<0||static_cast<unsigned long long>(input.tellg())!=bytes)return reject("Tamanho do pacote divergente.");
     XboxContentPackage pkg{};
-    if(!ContentCatalog::ReadHeader(path,pkg)||pkg.contentType!=code||!compatible(game,pkg))return reject("Title ID, Media ID ou tipo incompativel.");
+    if(!ContentCatalog::ReadHeader(path,pkg)||pkg.contentType!=code||!compatible(game,pkg))return reject("Title ID, Media ID, Base Version ou tipo incompativel.");
     out.package=pkg;out.filename=name;out.sha256=sha;out.bytes=bytes;return true;
 }
 bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error){

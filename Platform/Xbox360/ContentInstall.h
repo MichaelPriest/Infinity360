@@ -14,6 +14,13 @@ inline bool Filename(unsigned type,const std::string& name){
         name.substr(11).find_first_not_of("0123456789abcdefABCDEF")==std::string::npos;
     return type==2u&&name.size()>=16&&name.size()<=42&&name.find_first_not_of("0123456789abcdefABCDEF")==std::string::npos;
 }
+// Missing base-version metadata is common in legacy packages. Never claim
+// compatibility if the known base versions disagree; missing values remain unknown.
+inline bool CompatibleUpdate(const XboxExecutionInfo& game,const XboxContentPackage& pkg){
+    return game.titleId && game.mediaId && pkg.titleId==game.titleId &&
+        pkg.mediaId==game.mediaId && pkg.contentType==0xb0000u && pkg.volumeType==0 &&
+        (!game.baseVersion || !pkg.baseVersion || game.baseVersion==pkg.baseVersion);
+}
 bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error);
 // A downloaded TU is eligible only with its locally generated receipt and exact game identity.
 bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error);

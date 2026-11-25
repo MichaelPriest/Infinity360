@@ -13,10 +13,10 @@ int main(){
     assert(ContentInstall::Filename(0xb0000,"tu00000002_00000000"));
     assert(!ContentInstall::Filename(0xb0000,"TU_123456789"));
     assert(!ContentInstall::Filename(2,"../../test"));
-    auto build=[&](unsigned type,const std::string& name,unsigned media){
+    auto build=[&](unsigned type,const std::string& name,unsigned media,unsigned baseVersion=0){
         std::string raw(0x1800,'\0');raw.replace(0,4,"LIVE");
         auto put=[&](size_t at,unsigned value){for(int i=3;i>=0;--i){raw[at+i]=static_cast<char>(value&255);value>>=8;}};
-        put(0x344,type);put(0x360,game.titleId);put(0x354,media);
+        put(0x344,type);put(0x360,game.titleId);put(0x354,media);put(0x35c,baseVersion);
         auto file=base/"UserFiles/ContentImport"/name;
         {std::ofstream f(file,std::ios::binary);f.write(raw.data(),raw.size());}
         StoreSha256 sha;sha.Update(reinterpret_cast<const unsigned char*>(raw.data()),raw.size());
@@ -43,9 +43,17 @@ int main(){
     assert(fs::exists(base/"Content/0000000000000000/494E4650/00000002"/dlc));
     // Verify the receipt-based path independently of the manual manifest.
     game.baseVersion=0x10002;
+    // Reject known incompatible base versions even when Title ID and Media ID match.
+    build(0xb0000,name,game.mediaId,game.baseVersion+1);
+    assert(!ContentInstall::Read(ws,root,game,selected,error));
+    build(0xb0000,name,game.mediaId,game.baseVersion);
+    assert(ContentInstall::Read(ws,root,game,selected,error));
+    assert(ContentInstall::CompatibleUpdate(game,selected.package));
+    auto changed=selected.package;changed.baseVersion++;
+    assert(!ContentInstall::CompatibleUpdate(game,changed));
     const auto stage=base/"UserFiles/TitleUpdates/494E4650";fs::create_directories(stage);
     const std::string original="tu00000003_00000000",staged="11223344-42.tu";
-    build(0xb0000,original,game.mediaId);
+    build(0xb0000,original,game.mediaId,game.baseVersion);
     fs::copy_file(base/"UserFiles/ContentImport"/original,stage/staged);
     std::ifstream data(stage/staged,std::ios::binary);std::string raw((std::istreambuf_iterator<char>(data)),{});
     StoreSha256 sha;sha.Update(reinterpret_cast<const unsigned char*>(raw.data()),raw.size());
@@ -56,6 +64,12 @@ int main(){
     auto other=game;other.baseVersion++;
     ContentInstall::Request wrong;assert(!ContentInstall::ReadStaged(ws,root,other,staged,wrong,error));
     assert(!ContentInstall::ReadStaged(ws,root,game,"../"+staged,wrong,error));
+    // Receipt alone cannot establish the payload's base-version compatibility.
+    build(0xb0000,original,game.mediaId,game.baseVersion+1);
+    fs::copy_file(base/"UserFiles/ContentImport"/original,stage/staged,fs::copy_options::overwrite_existing);
+    assert(!ContentInstall::ReadStaged(ws,root,game,staged,wrong,error));
+    build(0xb0000,original,game.mediaId,game.baseVersion);
+    fs::copy_file(base/"UserFiles/ContentImport"/original,stage/staged,fs::copy_options::overwrite_existing);
     assert(ContentInstall::Install(ws,root,game,selected,go,error));
     assert(fs::exists(base/"Content/0000000000000000/494E4650/000B0000"/original));
     assert(fs::exists(stage/staged));

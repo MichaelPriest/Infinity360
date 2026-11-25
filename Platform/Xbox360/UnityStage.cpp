@@ -56,8 +56,7 @@ bool UnityStageUpdate(const FileWorkspace& ws,const XboxExecutionInfo& info,cons
     const bool synced=fsync(fd)==0;const bool closed=close(fd)==0;fd=-1;
     if(!synced||!closed)return fail("Falha ao sincronizar TU.");
     XboxContentPackage package{};
-    if(!ContentCatalog::ReadHeader(temp,package)||package.contentType!=0xb0000||package.titleId!=info.titleId||
-       package.mediaId!=info.mediaId||package.volumeType!=0)return fail("TU incompativel com Title ID, Media ID ou formato.");
+    if(!ContentCatalog::ReadHeader(temp,package)||!ContentInstall::CompatibleUpdate(info,package))return fail("TU incompativel com Title ID, Media ID, Base Version ou formato.");
 #ifdef __XSDK__
     if(!ws.PublishStaged(temp,dest))return fail("Falha ao publicar sem sobrescrever.");
 #else
