@@ -6,7 +6,7 @@
 #include <cstring>
 #include <string>
 #if defined(__XSDK__) || defined(__linux__)
-#include <sys/select.h>
+#include <poll.h>
 #endif
 
 // Diagnostic only: one direct-hosted SMB2 NEGOTIATE, no authentication or share access.
@@ -14,24 +14,30 @@
 class SmbProbe {
 public:
     enum State { Idle, Connecting, Sending, Receiving, Negotiated, Rejected, Failed, Cancelled };
-    struct Result { unsigned dialect=0; bool signingRequired=false; uint32_t status=0; };
+    struct Result { unsigned dialect=0; bool signingRequired=false,preauthSha512=false; uint32_t status=0; unsigned securityTokenBytes=0; };
     static unsigned U16(const unsigned char* b){return unsigned(b[0])|(unsigned(b[1])<<8);}
     static uint32_t U32(const unsigned char* b){return U16(b)|(uint32_t(U16(b+2))<<16);}
     static void Put16(unsigned char* b,unsigned v){b[0]=v&255;b[1]=(v>>8)&255;}
-    static bool Offered(unsigned d){return d==0x0202||d==0x0210||d==0x0300||d==0x0302;}
+    static bool Offered(unsigned d){return d==0x0202||d==0x0210||d==0x0300||d==0x0302||d==0x0311;}
     static const char* Dialect(unsigned d){
-        switch(d){case 0x0202:return "SMB 2.0.2";case 0x0210:return "SMB 2.1";case 0x0300:return "SMB 3.0";case 0x0302:return "SMB 3.0.2";default:return "--";}
+        switch(d){case 0x0202:return "SMB 2.0.2";case 0x0210:return "SMB 2.1";case 0x0300:return "SMB 3.0";case 0x0302:return "SMB 3.0.2";case 0x0311:return "SMB 3.1.1";default:return "--";}
     }
-    static std::array<unsigned char,112> Request(){
-        std::array<unsigned char,112> b{};
-        b[3]=108; // four-byte direct TCP framing, 64 + 36 + 4 dialects
+    static std::array<unsigned char,130> Request(){
+        std::array<unsigned char,130> b{};
+        b[3]=126; // 64 + 36 + 5 dialects + alignment + 14 byte context
+        // No salt is required for this NEGOTIATE-only diagnostic. No session is
+        // established; future authenticated implementation must hash transcript
+        // and use fresh entropy rather than reusing this diagnostic packet.
         auto* p=b.data()+4;p[0]=0xfe;p[1]='S';p[2]='M';p[3]='B';
         Put16(p+4,64);Put16(p+14,1); // one requested credit, negotiate command 0
-        Put16(p+64,36);Put16(p+66,4);Put16(p+68,1); // signing enabled
+        Put16(p+64,36);Put16(p+66,5);Put16(p+68,1); // signing enabled
         // Fixed diagnostic client GUID, not a console or account identifier.
         const unsigned char guid[16]={0x49,0x4e,0x46,0x49,0x4e,0x49,0x54,0x59,0x33,0x36,0x30,0x2d,0x53,0x4d,0x42,0x32};
         std::memcpy(p+76,guid,sizeof guid);
-        Put16(p+100,0x0202);Put16(p+102,0x0210);Put16(p+104,0x0300);Put16(p+106,0x0302);
+        p[92]=112;Put16(p+96,1); // one context at SMB header-relative offset 112
+        Put16(p+100,0x0202);Put16(p+102,0x0210);Put16(p+104,0x0300);Put16(p+106,0x0302);Put16(p+108,0x0311);
+        Put16(p+112,1);Put16(p+114,6); // PREAUTH_INTEGRITY_CAPABILITIES
+        Put16(p+120,1);Put16(p+122,0);Put16(p+124,1); // SHA-512, optional salt omitted
         return b;
     }
     static State Parse(const unsigned char* p,size_t n,Result& result){
@@ -46,7 +52,27 @@ public:
         if(!Offered(dialect)||!(security&1)||(security&~3u))return Failed;
         const unsigned offset=U16(p+120),length=U16(p+122);
         if(length&&(offset<128||offset>n||length>n-offset))return Failed;
-        result.dialect=dialect;result.signingRequired=(security&2)!=0;return Negotiated;
+        if(dialect==0x0311){
+            const unsigned count=U16(p+70);
+            size_t pos=U32(p+124);
+            if(!count||count>32||pos<128||pos%8||pos>n||(length&&pos<offset+length))return Failed;
+            bool preauth=false;
+            for(unsigned i=0;i<count;++i){
+                if(pos>n||n-pos<8)return Failed;
+                const unsigned type=U16(p+pos),bytes=U16(p+pos+2);
+                const size_t data=pos+8;
+                if(bytes>n-data)return Failed;
+                if(type==1){
+                    if(preauth||bytes<6||U16(p+data)!=1||U16(p+data+4)!=1||U16(p+data+2)!=bytes-6)return Failed;
+                    preauth=true;
+                }
+                const size_t end=data+bytes;
+                if(i+1<count){pos=(end+7)&~size_t(7);if(pos>n)return Failed;}
+            }
+            if(!preauth)return Failed;
+            result.preauthSha512=true;
+        }
+        result.dialect=dialect;result.signingRequired=(security&2)!=0;result.securityTokenBytes=length;return Negotiated;
     }
     SmbProbe()=default;
     ~SmbProbe(){Close();}
@@ -69,7 +95,7 @@ public:
         if(fd_<0){Finish(Failed,"Socket TCP indisponivel.");return false;}
         const int flags=fcntl(fd_,F_GETFL,0);
         sockaddr_in src{},dst{};src.sin_family=dst.sin_family=AF_INET;dst.sin_port=htons(445);
-        if(fd_>=FD_SETSIZE||flags<0||fcntl(fd_,F_SETFL,flags|O_NONBLOCK)!=0||
+        if(flags<0||fcntl(fd_,F_SETFL,flags|O_NONBLOCK)!=0||
            inet_pton(AF_INET,local.c_str(),&src.sin_addr)!=1||inet_pton(AF_INET,server.c_str(),&dst.sin_addr)!=1||
            bind(fd_,reinterpret_cast<sockaddr*>(&src),sizeof src)!=0){
             Finish(Failed,"Falha ao preparar TCP local.");return false;
@@ -91,10 +117,12 @@ public:
         const auto now=Now();
         if(now<start_||now-start_>=8000){Finish(Failed,"Tempo limite SMB atingido.");return true;}
         if(state_==Connecting){
-            fd_set writable;FD_ZERO(&writable);FD_SET(fd_,&writable);timeval timeout{};
-            const int rc=select(fd_+1,nullptr,&writable,nullptr,&timeout);
+            pollfd writable{};writable.fd=fd_;writable.events=POLLOUT;
+            const int rc=poll(&writable,1,0);
             if(rc<0){if(errno==EINTR)return false;Finish(Failed,"Falha no teste TCP.");return true;}
             if(!rc)return false;
+            if(writable.revents&(POLLERR|POLLHUP|POLLNVAL)){Finish(Failed,"Conexao TCP recusada ou encerrada.");return true;}
+            if(!(writable.revents&POLLOUT))return false;
             int error=0;socklen_t len=sizeof error;
             if(getsockopt(fd_,SOL_SOCKET,SO_ERROR,&error,&len)!=0||error){
                 Finish(Failed,"Conexao TCP 445 recusada ou indisponivel.");return true;
@@ -142,6 +170,6 @@ private:
     void Finish(State s,const char* label){Close();state_=s;label_=label;}
     int fd_=-1;State state_=Idle;Result info_;std::string label_="Teste nao iniciado.",peer_;
     uint64_t start_=0;size_t sent_=0,received_=0,expected_=4;
-    std::array<unsigned char,112> request_{};
+    std::array<unsigned char,130> request_{};
     std::array<unsigned char,65540> response_{};
 };

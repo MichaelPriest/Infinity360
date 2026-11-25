@@ -1246,8 +1246,9 @@ int main(int argc,char** argv) {
      assert(ConsolePower::Routine(ConsolePower::Shutdown)==5&&ConsolePower::Routine(ConsolePower::Reboot)==6);
      assert(ConsolePower::Invoke(ConsolePower::Shutdown)==ConsolePower::Unavailable);}
     {const auto req=SmbProbe::Request();
-     assert(req.size()==112&&req[3]==108&&req[4]==0xfe&&SmbProbe::U16(req.data()+68)==36);
-     assert(SmbProbe::U16(req.data()+70)==4&&SmbProbe::U16(req.data()+110)==0x0302);
+     assert(req.size()==130&&req[3]==126&&req[4]==0xfe&&SmbProbe::U16(req.data()+68)==36);
+     assert(SmbProbe::U16(req.data()+70)==5&&SmbProbe::U16(req.data()+112)==0x0311);
+     assert(SmbProbe::U32(req.data()+96)==112&&SmbProbe::U16(req.data()+116)==1&&SmbProbe::U16(req.data()+128)==1);
      unsigned char response[132]={0xfe,'S','M','B',64};
      response[16]=1;response[64]=65;response[66]=3;response[68]=2;response[69]=3;
      SmbProbe::Put16(response+120,128);SmbProbe::Put16(response+122,4);
@@ -1257,7 +1258,18 @@ int main(int argc,char** argv) {
      response[68]=0x11;assert(SmbProbe::Parse(response,sizeof response,result)==SmbProbe::Failed);
      response[8]=0xbb;assert(SmbProbe::Parse(response,64,result)==SmbProbe::Rejected&&result.status==0xbb);
      response[24]=1;assert(SmbProbe::Parse(response,64,result)==SmbProbe::Failed);
-     SmbProbe probe;assert(!probe.Start("192.168.1.1","8.8.8.8")&&!probe.Running());}
+     SmbProbe probe;assert(!probe.Start("192.168.1.1","8.8.8.8")&&!probe.Running());
+     unsigned char modern[150]={0xfe,'S','M','B',64};
+     modern[16]=1;modern[64]=65;modern[66]=3;modern[68]=0x11;modern[69]=3;modern[70]=1;
+     modern[120]=128;modern[122]=4;modern[124]=136;
+     modern[136]=1;modern[138]=6;modern[144]=1;modern[148]=1;
+     assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Negotiated&&result.preauthSha512&&result.securityTokenBytes==4);
+     assert(SmbProbe::Parse(modern,149,result)==SmbProbe::Failed);
+     modern[148]=2;assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Failed);
+     modern[148]=1;modern[70]=2;assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Failed);
+     modern[70]=1;modern[124]=128;assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Failed);
+     modern[124]=136;modern[146]=1;assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Failed);
+     modern[146]=0;modern[70]=0;assert(SmbProbe::Parse(modern,sizeof modern,result)==SmbProbe::Failed);}
     // Kernel counters remain separate; invalid or unavailable snapshots fail closed.
     const auto mem=SystemTelemetry::FromPages(131072,2048,16384,32768,8192,1024,128,512);
     assert(mem.available&&mem.physical==512ULL*1024*1024&&mem.titleAvailable==128ULL*1024*1024);

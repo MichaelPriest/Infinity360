@@ -226,3 +226,7 @@ Leitura do alvo percentual SMC pela resposta 0x07, validação de faixa, aviso d
 ### V0.2.23 — P2 SMB fase 1
 
 Diagnóstico TCP 445 e negociação SMB2-only de quatro dialetos, interface de configuração por controle, timeout e cancelamento, leitura explícita do wire format. Autenticação com assinatura, SMB 3.1.1, enumeração, leitura/cópia e integração com explorador permanecem pendentes. Sem CI/hardware. Galeria 49 preparada.
+
+### V0.2.24 — P2 SMB 3.1.1 e portabilidade TCP
+
+NEGOTIATE diagnóstico com contexto SHA-512, validação de contexto e token de segurança, poll não bloqueante compatível com o header do XSDK fixado. Sem hash de transcript ou SESSION_SETUP; cliente autenticado exige provider de criptografia, assinatura e autenticação. Testes preparados. Nenhuma build/CI; galeria 49 preparada.

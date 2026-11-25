@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.24 — em desenvolvimento (sem build XEX)
+
+- Negociação diagnóstica SMB 3.1.1 com validação de contexto SHA-512 e tamanho do token de segurança.
+- Compatibilidade de socket com poll do XSDK fixado, testes de resposta truncada, desalinhada e algoritmo inválido.
+- Sem sessão autenticada, assinatura, criptografia ou transferência; nenhuma build executada.
+
 ## V0.2.23 — em desenvolvimento (sem build XEX)
 
 - Diagnóstico TCP/SMB2 NEGOTIATE para servidor privado escolhido, editor IPv4 e prazo/cancelamento.
