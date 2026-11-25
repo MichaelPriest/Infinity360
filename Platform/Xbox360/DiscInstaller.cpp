@@ -17,15 +17,16 @@ namespace {
 struct Entry {std::string relative;bool directory;unsigned long long bytes;};
 std::string lower(std::string value){for(char& ch:value)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));return value;}
 bool plan(const FileWorkspace& ws,const std::string& source,const std::string& relative,
-          unsigned depth,std::vector<Entry>& entries,std::set<std::string>& names,unsigned long long& total){
-    if(depth>16)return false;
+          unsigned depth,std::vector<Entry>& entries,std::set<std::string>& names,unsigned long long& total,
+          const std::function<bool(unsigned long long,unsigned long long)>& progress){
+    if(depth>16||!progress(0,1))return false;
     const std::string folder=relative.empty()?source:FileWorkspace::Join(source,relative);
     if(!ws.CanBrowse(folder))return false;
     std::vector<FolderEntry> children;
     if(!ReadFolder(folder,children))return false;
     for(const auto& child:children){
         if(child.name=="."||child.name=="..")continue;
-        if(entries.size()>=16384||!FileWorkspace::ValidName(child.name))return false;
+        if(entries.size()>=16384||!FileWorkspace::ValidName(child.name)||!progress(0,1))return false;
         const std::string rel=relative.empty()?child.name:relative+"/"+child.name;
         if(rel.size()>140||!names.insert(lower(rel)).second)return false;
         const std::string path=FileWorkspace::Join(source,rel);
@@ -35,7 +36,7 @@ bool plan(const FileWorkspace& ws,const std::string& source,const std::string& r
         if(child.directory){
             if(!fs::is_directory(st))return false;
             entries.push_back({rel,true,0});
-            if(!plan(ws,source,rel,depth+1,entries,names,total))return false;
+            if(!plan(ws,source,rel,depth+1,entries,names,total,progress))return false;
         }else{
             if(!fs::is_regular_file(st))return false;
             auto bytes=fs::file_size(path,ec);
@@ -76,7 +77,7 @@ bool InstallDiscFiles(const FileWorkspace& ws,const std::string& appRoot,
     if(expected&&!DiscIdentity::Same(info,*expected))return reject("DVD mudou desde a confirmacao. Atualize e confirme novamente.");
     std::vector<Entry> entries;std::set<std::string> names;unsigned long long total=0;
     if(!progress(0,1))return reject("Instalacao cancelada.");
-    if(!plan(ws,source,"",0,entries,names,total)||!total||!names.count("default.xex"))
+    if(!plan(ws,source,"",0,entries,names,total,progress)||!total||!names.count("default.xex"))
         return reject("DVD ilegivel ou arvore/nome/tamanho incompativel com FATX.");
     const auto space=StorageInfo::Read(mount);
     // Reserve conservative metadata/allocation overhead in addition to bytes.
@@ -147,6 +148,13 @@ bool InstallDiscFiles(const FileWorkspace& ws,const std::string& appRoot,
         if(verify.peek()!=std::char_traits<char>::eof()||verify.bad()||readback.Finish()!=copied.Finish())
             return fail("Copia divergente.");
     }
+    std::vector<Entry> finalEntries;std::set<std::string> finalNames;unsigned long long finalTotal=0;
+    auto verifyProgress=[&](unsigned long long,unsigned long long){return progress(done,total*2);};
+    if(!plan(ws,source,"",0,finalEntries,finalNames,finalTotal,verifyProgress)||finalTotal!=total||finalNames!=names||finalEntries.size()!=entries.size())
+        return fail("Arvore do DVD mudou ou verificacao cancelada.");
+    for(size_t i=0;i<entries.size();++i)
+        if(entries[i].relative!=finalEntries[i].relative||entries[i].bytes!=finalEntries[i].bytes||entries[i].directory!=finalEntries[i].directory)
+            return fail("Arquivo do DVD mudou.");
     XboxExecutionInfo current{},copy{};
     if(!execution(defaultXex,current)||!execution(FileWorkspace::Join(stage,"default.xex"),copy)||
        !DiscIdentity::Same(current,info)||!DiscIdentity::Same(copy,info))

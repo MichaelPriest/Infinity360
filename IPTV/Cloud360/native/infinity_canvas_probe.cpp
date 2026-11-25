@@ -183,7 +183,15 @@ int main(){
     std::string launchSignature;
     const bool launchEnabled=bool(std::getline(launchMarker,launchSignature)) && launchSignature=="ENABLE-XEX-LAUNCH";
     launchMarker.close();
-    std::string pendingLaunch,confirmedLaunch,launchNotice;
+    std::string pendingLaunch,launchNotice;
+    XexLaunchCheck::Ticket launchTicket{};
+    std::ifstream sessionMarker((dir+"enable-continuous-session.txt").c_str());std::string sessionSignature;
+    const bool continuous=bool(std::getline(sessionMarker,sessionSignature))&&sessionSignature=="ENABLE-CONTINUOUS-SESSION";sessionMarker.close();
+    auto captureLaunch=[](const std::string& path,XexLaunchCheck::Ticket& ticket){
+        std::error_code ec;if(path.empty()||!std::filesystem::is_regular_file(path,ec)||ec)return false;
+        XboxExecutionInfo info{};if(ContentCatalog::ReadExecutionInfo(path,info)&&XexLaunchCheck::OwnTitle(info.titleId))return false;
+        std::ifstream input(path.c_str(),std::ios::binary);return XexLaunchCheck::Capture(input,ticket);
+    };
     Presenter p;
     if(!p.Open()){xsdk_log_write("FAIL: menu presenter open");p.Close();return 3;}
     const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
@@ -194,7 +202,7 @@ int main(){
     bool ok=true,dirty=true,systemExit=false;
     // Longer than the minimal GPU probe, but still bounded.
     std::string clock;
-    for(unsigned frame=0;frame<3600;++frame){
+    for(unsigned frame=0;continuous||frame<3600;++frame){
         if(frame%60==0){const auto now=std::time(nullptr);char value[8]{};if(auto* local=std::localtime(&now))std::strftime(value,sizeof value,"%H:%M",local);if(clock!=value){clock=value;dirty=true;}}
         INPUT_STATE input{};
         uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
@@ -203,23 +211,38 @@ int main(){
         if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
         const uint16_t edge=buttons&~previous;previous=buttons;
-        if(edge&INPUT_GAMEPAD_BACK)break;
+        if(edge&INPUT_GAMEPAD_BACK){if(menu.TransferRunning()){launchNotice="Conclua ou cancele as copias antes de sair.";dirty=true;}else break;}
         if(!pendingLaunch.empty()){
             if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
-            else if(edge&INPUT_GAMEPAD_A){confirmedLaunch=pendingLaunch;break;}
+            else if(edge&INPUT_GAMEPAD_A){
+                const auto path=pendingLaunch;pendingLaunch.clear();
+                XexLaunchCheck::Ticket current{};
+                if(menu.TransferRunning()||!captureLaunch(path,current)||!XexLaunchCheck::Same(launchTicket,current)){
+                    launchNotice="Executavel mudou ou copia ativa. Selecione novamente.";dirty=true;
+                }else{
+                    menu.StopFtp();
+                    if(!p.Close()){ok=false;break;}
+                    XexLaunchCheck::Ticket last{};
+                    if(captureLaunch(path,last)&&XexLaunchCheck::Same(launchTicket,last)){
+                        menu.RecordLaunchAttempt(path);
+                        xsdk_log_write("XEX launch confirmed");
+                        (void)xsdk_launch(path.c_str(),nullptr,0);
+                        xsdk_log_write("XEX launch returned errno=%d",errno);
+                        launchNotice="O console recusou o executavel. Retornando ao menu.";
+                    }else launchNotice="Midia alterada antes do lancamento.";
+                    p=Presenter{};
+                    if(!p.Open()){p.Close();ok=false;break;}
+                    dirty=true;
+                }
+            }
         }else for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
             launchNotice.clear();
             const std::string launch=menu.Press(static_cast<ConsoleHome::Key>(i));
             if(!launch.empty()){
                 const std::string path=XexLaunchCheck::Path(launch);
-                std::error_code ec;
                 if(!launchEnabled)launchNotice="XEX bloqueado: habilite o teste em MenuPreview.";
-                else if(path.empty()||!std::filesystem::is_regular_file(path,ec)||ec)launchNotice="XEX invalido ou indisponivel.";
-                else {
-                    std::ifstream file(path.c_str(),std::ios::binary);
-                    if(!XexLaunchCheck::Header(file))launchNotice="Cabecalho XEX2 invalido ou incompleto.";
-                    else pendingLaunch=path;
-                }
+                else if(!captureLaunch(path,launchTicket))launchNotice="XEX invalido, indisponivel ou da propria dashboard.";
+                else pendingLaunch=path;
             }
             const auto movie=menu.TakeMovie();
             if(!movie.empty()){
@@ -437,7 +460,7 @@ int main(){
         if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
             canvas.Box(895,13,180,45,0xff102923u,5);
-            canvas.Text(905,20,"ALPHA TESTE",20,LIME,170);
+            canvas.Text(905,20,continuous?"ALPHA SESSAO":"ALPHA TESTE",20,LIME,170);
             if(!launchNotice.empty()){
                 canvas.Box(40,590,1200,38,0xff102923u,6);
                 canvas.Text(54,593,launchNotice,22,LIME,1160);
@@ -459,17 +482,6 @@ int main(){
     if(systemExit){
         xsdk_log_write("NXE handoff requested; normal title exit, not automatic installation.");
         return ok&&restored?0:4;
-    }
-    if(ok&&restored&&!confirmedLaunch.empty()){
-        // Recheck after shutting down GPU: removable storage may have changed.
-        std::error_code ec;
-        if(!std::filesystem::is_regular_file(confirmedLaunch,ec)||ec)return 5;
-        {std::ifstream file(confirmedLaunch.c_str(),std::ios::binary);
-         if(!XexLaunchCheck::Header(file))return 5;}
-        xsdk_log_write("XEX launch requested: %s",confirmedLaunch.c_str());
-        (void)xsdk_launch(confirmedLaunch.c_str(),nullptr,0);
-        xsdk_log_write("FAIL: xsdk_launch returned, errno=%d",errno);
-        return 6;
     }
     return ok&&restored?0:4;
 }

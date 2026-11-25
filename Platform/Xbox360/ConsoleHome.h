@@ -50,6 +50,7 @@ public:
     bool TransferRunning() const { return transfer_.Status()==FileTransfer::Running || !copyQueue_.empty(); }
     void PlayerMessage(const std::string& text) { tv_.PlayerMessage(text); }
     void LaunchFailed();
+    void RecordLaunchAttempt(const std::string& path);
 private:
     enum Section { Library, Iptv, Apps, Emulators, Files, System, Recent, Favorites };
     enum Page { Home, Listing, Details };

@@ -102,6 +102,8 @@ int main(){
     assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,go,installed,error));
     {std::ofstream marker(root/"enable-dvd-install.txt");marker<<"ENABLE-DVD-INSTALL\n";}
     assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,[](unsigned long long,unsigned long long){return false;},installed,error));
+    unsigned scans=0;
+    assert(!InstallDiscFiles(workspace,base,(root/"disc").string(),base,[&](unsigned long long,unsigned long long){return ++scans<3;},installed,error));
     XboxExecutionInfo expected{};
     assert(ContentCatalog::ReadExecutionInfo((root/"disc/default.xex").string(),expected));
     XboxExecutionInfo wrongDisc=expected;wrongDisc.discNumber=2;

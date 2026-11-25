@@ -27,6 +27,13 @@ int main() {
     std::string image(8192,0);
     image.replace(0,4,"XEX2");image[10]=16;image[19]=32;
     {std::istringstream stream(image);assert(XexLaunchCheck::Header(stream));}
+    XexLaunchCheck::Ticket ticketA{},ticketB{};
+    {std::istringstream stream(image);assert(XexLaunchCheck::Capture(stream,ticketA));}
+    {std::istringstream stream(image);assert(XexLaunchCheck::Capture(stream,ticketB)&&XexLaunchCheck::Same(ticketA,ticketB));}
+    image.back()='x';
+    {std::istringstream stream(image);assert(XexLaunchCheck::Capture(stream,ticketB)&&!XexLaunchCheck::Same(ticketA,ticketB));}
+    image.back()=0;
+    assert(XexLaunchCheck::OwnTitle(0x494E4633u)&&!XexLaunchCheck::OwnTitle(0x494E4634u));
     {std::istringstream stream("XEX2");assert(!XexLaunchCheck::Header(stream));}
     image[10]=64;
     {std::istringstream stream(image);assert(!XexLaunchCheck::Header(stream));}

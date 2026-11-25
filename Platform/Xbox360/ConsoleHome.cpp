@@ -748,6 +748,14 @@ const XboxContentPackage* ConsoleHome::ContentAt(size_t index) const {
     }
     return 0;
 }
+void ConsoleHome::RecordLaunchAttempt(const std::string& path){
+    if(!Installed(path))return;
+    if(launched_.size()<4096&&!contains(launched_,path))launched_.push_back(path);
+    history_.erase(std::remove(history_.begin(),history_.end(),path),history_.end());
+    history_.insert(history_.begin(),path);
+    if(history_.size()>HistoryLimit)history_.resize(HistoryLimit);
+    if(!SaveProfile())notice_="Historico desta sessao; falha ao salvar.";
+}
 void ConsoleHome::LaunchFailed() { notice_="O console não iniciou o título. Confira se o dispositivo está conectado."; RecordEvent("Falha de lancamento"); }
 
 void ConsoleHome::PreviewAuroraProfile() {
@@ -1653,6 +1661,7 @@ std::string ConsoleHome::Press(Key key) {
                 notice_="Conclua ou cancele a copia antes de iniciar outro executavel.";
                 return "";
             }
+#ifndef __XSDK__
             if(section_==Library || section_==Favorites || section_==Recent) {
                 if(launched_.size()<4096 && !contains(launched_,path))
                     launched_.push_back(path);
@@ -1663,6 +1672,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(!SaveProfile())
                     notice_="Historico desta sessao. Nao foi possivel salvar.";
             }
+#endif
             return path;
         }
     } else {
