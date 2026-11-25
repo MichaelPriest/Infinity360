@@ -79,3 +79,7 @@ O leitor aceita live TS não criptografado quando autorizado explicitamente pelo
 ## CI de cross-build PowerPC
 
 O workflow `.github/workflows/cloud360-ffmpeg-xsdk.yml` tenta compilar FFmpeg 7.1.3 (commit f46e514491172d15bd74b4abb1814cd2f05a763e), usando o mesmo XSDK e cache de compilador da Alpha. Linka cloud360_container_probe e cloud360_av_probe com a pilha TLS existente e verifica os cabeçalhos XEX2 e SHA-256. Logs de configuração/compilação/link são preservados mesmo em caso de falha. Não publica binários FFmpeg em Releases nem no artefato até revisar as obrigações LGPL de distribuição estática, incluindo fontes/configuração e materiais de relink. O CI é independente da build Alpha. Um XEX2 compilado não prova execução no console.
+
+### Diagnóstico da primeira tentativa PowerPC
+
+Run 45685380748: XSDK, compilador e checkout FFmpeg passaram; libavformat falhou em `libavutil/libm.h` por redefinição de `erf` e `hypot`, declarados pela newlib. A revisão usa o linker script `xsdk.ld`, libxsdk.a e grupo de bibliotecas da regra CMake do XSDK nas verificações de configure. Um teste ELF força referências reais a ambas as funções e a configuração precisa confirmar HAVE_ERF/HAVE_HYPOT; não há execução em host, alteração manual de config.h ou garantia de que não surgirão outros erros. A nova execução é necessária antes de afirmar que os XEX foram compilados.

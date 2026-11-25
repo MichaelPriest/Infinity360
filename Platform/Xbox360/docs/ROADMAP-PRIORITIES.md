@@ -102,3 +102,7 @@ Atualização de janela por sequência, início próximo à borda live, proteç�
 ### P1 — Cross-build FFmpeg
 
 CI PowerPC experimental independente, FFmpeg 7.1.3 fixado por commit, verificação de dois XEX2 e preservação de logs. Primeira execução pendente. Distribuição de binários FFmpeg depende de revisão LGPL e testes físicos; Releases Alpha continuam no workflow normal.
+
+### P1 — Correção do primeiro cross-build
+
+Primeira tentativa FFmpeg PPC falhou em erf/hypot. Adicionado teste de link real e regra de link XSDK no configure, sem forçar macros de disponibilidade. Novo CI pendente; dashboard Alpha e testes host anteriores aprovados.

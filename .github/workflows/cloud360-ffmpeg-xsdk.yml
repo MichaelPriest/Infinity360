@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          FFMPEG_SOURCE="$HOME/ffmpeg" XSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
+          FFMPEG_SOURCE="$HOME/ffmpeg" XSDK_ROOT="$HOME/xsdk" XSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             CLOUD360_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" FFMPEG_BUILD_DIR="$RUNNER_TEMP/ffmpeg-build" \
             bash IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh 2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/ffmpeg-build.log"
       - name: Pin TLS and curl ports
