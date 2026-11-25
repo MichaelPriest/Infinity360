@@ -1,4 +1,5 @@
 #include "ContentInstall.h"
+#include "ContentBackup.h"
 #include "StorageInfo.h"
 #include "StoreSha256.h"
 #include <algorithm>
@@ -78,6 +79,19 @@ bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecut
     if(!ContentCatalog::ReadHeader(payload,package)||package.contentType!=0xb0000u||!compatible(game,package))return reject("TU incompativel.");
     out.package=package;out.filename=name;out.sha256=sha;out.bytes=size;out.staged=staged;return true;
 }
+bool ReadBackup(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& slot,Request& out,std::string& error){
+    out={};error.clear();
+    ContentBackup::Record record;
+    if(!ContentBackup::ReadRecord(ws,root,game.titleId,slot,record)){error="Backup ou recibo invalido.";return false;}
+    if(!compatible(game,record.package)){error="Backup nao e TU/DLC compativel; recupere apenas copia pessoal.";return false;}
+    const auto pos=record.original.find_last_of("/\\");
+    const auto filename=record.original.substr(pos==std::string::npos?0:pos+1);
+    if(!Filename(record.package.contentType,filename)||!FileWorkspace::ValidName(filename)){
+        error="Nome original nao identificado; recupere copia pessoal.";return false;
+    }
+    out.package=record.package;out.filename=filename;out.sha256=record.sha256;out.bytes=record.bytes;out.backupSlot=slot;
+    return true;
+}
 bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error){
     error.clear();
@@ -87,9 +101,11 @@ bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecution
     auto reject=[&](const char* msg){error=msg;return false;};
     Request current;
     if(!enabled(root)||!ws.CanWrite(FileWorkspace::Join(root,"UserFiles")))return reject("Habilite escrita e enable-content-install.txt.");
-    if(selected.staged.empty()? !Read(ws,root,game,current,error):!ReadStaged(ws,root,game,selected.staged,current,error))return false;
+    if(!selected.backupSlot.empty()){
+        if(!ReadBackup(ws,root,game,selected.backupSlot,current,error))return false;
+    }else if(selected.staged.empty()? !Read(ws,root,game,current,error):!ReadStaged(ws,root,game,selected.staged,current,error))return false;
     if(current.filename!=selected.filename||current.sha256!=selected.sha256||current.bytes!=selected.bytes||
-       current.package.path!=selected.package.path||current.staged!=selected.staged||!same(current.package,selected.package))return reject("Manifesto ou pacote mudou; confirme novamente.");
+       current.package.path!=selected.package.path||current.staged!=selected.staged||current.backupSlot!=selected.backupSlot||!same(current.package,selected.package))return reject("Manifesto ou pacote mudou; confirme novamente.");
 #ifdef __XSDK__
     const std::string common="hdd:/Content/0000000000000000",volume="hdd:/";
 #else

@@ -30,3 +30,7 @@ A instalação local, o recibo de staging e o download XboxUnity compartilham ag
 ### P1 — Recuperação de TU arquivada
 
 A aba TU Arquivadas lista os pacotes pessoais e permite recuperá-los para TitleUpdates com dupla confirmação, preservação do recibo e bloqueio de sobrescrita. O inventário informa Media ID e Base Version incompatíveis, metadados inconclusivos e identidade compatível; isso não comprova ativação. Testes de colisão, recuperação e recibo acrescentados. CI e hardware pendentes nesta revisão.
+
+### P1 — Reinstalação de backup TU/DLC
+
+Na aba Backups, R3 abre a reinstalação do pacote autorizado quando o recibo conserva um nome original válido e os metadados correspondem ao jogo. A instalação reutiliza a validação de SHA-256, releitura, espaço disponível, confirmação e publicação sem sobrescrita. A continua recuperando cópia pessoal. Saves e nomes não reconhecidos permanecem somente para recuperação pessoal. Não há ativação nem alteração de licenças. Testes de cancelamento, colisão, corrupção e compatibilidade adicionados; CI e console devem confirmar.

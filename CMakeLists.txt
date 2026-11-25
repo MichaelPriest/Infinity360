@@ -124,7 +124,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    add_executable(content_install_tests Tests/ContentInstallTests.cpp Platform/Xbox360/ContentInstall.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp)
+    add_executable(content_install_tests Tests/ContentInstallTests.cpp Platform/Xbox360/ContentInstall.cpp Platform/Xbox360/ContentBackup.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp)
     target_include_directories(content_install_tests PRIVATE Platform/Xbox360 Source)
     target_link_libraries(content_install_tests PRIVATE aurorax_core)
     add_test(NAME content_install COMMAND content_install_tests)

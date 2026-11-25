@@ -1,4 +1,5 @@
 #include "ContentInstall.h"
+#include "ContentBackup.h"
 #include "StoreSha256.h"
 #include <filesystem>
 #include <fstream>
@@ -74,6 +75,29 @@ int main(){
     assert(fs::exists(base/"Content/0000000000000000/494E4650/000B0000"/original));
     assert(fs::exists(stage/staged));
     assert(!ContentInstall::Install(ws,root,game,selected,go,error));
+    // Backup of an installed package can be reinstalled without modifying the backup.
+    {std::ofstream marker(base/"enable-content-backup.txt");marker<<"ENABLE-CONTENT-BACKUP\n";}
+    const auto installed=base/"Content/0000000000000000/494E4650/000B0000"/original;
+    XboxContentPackage installedPackage{};
+    assert(ContentCatalog::ReadHeader(installed.string(),installedPackage));
+    assert(ContentBackup::Archive(ws,root,installedPackage,go,error));
+    const auto backups=ContentBackup::List(ws,root,game.titleId);
+    assert(backups.size()==1);
+    assert(ContentInstall::ReadBackup(ws,root,game,backups[0].slot,selected,error));
+    assert(selected.filename==original&&selected.sha256==digest);
+    assert(!ContentInstall::Install(ws,root,game,selected,go,error)); // collision
+    fs::remove(installed);
+    assert(!ContentInstall::Install(ws,root,game,selected,[](auto done,auto){return done==0;},error));
+    assert(!fs::exists(installed));
+    assert(ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(fs::exists(installed)&&fs::exists(backups[0].package.path));
+    assert(!ContentInstall::ReadBackup(ws,root,game,"../000B0000-0000",wrong,error));
+    auto incompatible=game;incompatible.baseVersion++;
+    assert(!ContentInstall::ReadBackup(ws,root,incompatible,backups[0].slot,wrong,error));
+    fs::remove(installed);
+    {std::fstream corrupt(backups[0].package.path,std::ios::binary|std::ios::in|std::ios::out);corrupt.seekp(0x17ff);corrupt.put('x');}
+    assert(!ContentInstall::Install(ws,root,game,selected,go,error));
+    assert(!fs::exists(installed)&&fs::exists(backups[0].package.path));
     for(const auto& e:fs::recursive_directory_iterator(base))assert(e.path().filename()!="AXCOPY-CONTENT.part");
     fs::remove_all(base);
 }

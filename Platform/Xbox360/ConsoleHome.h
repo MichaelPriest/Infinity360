@@ -170,7 +170,7 @@ private:
     ContentBackup::Record recoverItem_;
     bool contentInstallActive_=false,contentInstallConfirm_=false,contentInstallPending_=false,contentInstallKnown_=false;
     ContentInstall::Request contentInstallItem_{};
-    std::string contentInstallStaged_;
+    std::string contentInstallStaged_,contentInstallBackup_;
     void RefreshContentInstall();
     void DrawContentInstall(HomeCanvas& c) const;
     std::vector<ContentBackup::Record> backups_;

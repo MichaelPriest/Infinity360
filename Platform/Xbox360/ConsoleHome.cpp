@@ -704,7 +704,7 @@ void ConsoleHome::RefreshTitleMetadata() {
 }
 
 void ConsoleHome::OpenContent() {
-    contentActive_=true;contentInstallActive_=false;contentInstallConfirm_=false;contentInstallPending_=false;contentInstallStaged_.clear();
+    contentActive_=true;contentInstallActive_=false;contentInstallConfirm_=false;contentInstallPending_=false;contentInstallStaged_.clear();contentInstallBackup_.clear();
     unityActive_=false;unityPending_=false;unityDownloadPending_=false;unityConfirm_=false;unityUpdates_.clear();unityRow_=0;
     contentKnown_=false;
     contentInfo_=XboxExecutionInfo();
@@ -1116,7 +1116,7 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(!unityActive_&&key==Search&&(contentTab_==0||contentTab_==1||contentTab_==4)&&contentKnown_&&!detailMetadata_.package){
-            contentInstallStaged_.clear();contentInstallActive_=true;RefreshContentInstall();return "";
+            contentInstallStaged_.clear();contentInstallBackup_.clear();contentInstallActive_=true;RefreshContentInstall();return "";
         }
         if(unityActive_){
             if(key==Back){if(unityConfirm_)unityConfirm_=false;else unityActive_=false;notice_.clear();return "";}
@@ -1195,10 +1195,13 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Down && static_cast<size_t>(contentRow_+1)<ContentCount())++contentRow_;
 #if defined(INFINITY_XSDK_HTTPS)
         if(key==Accept&&contentTab_==4&&!TransferRunning()&&!detailMetadata_.package&&static_cast<size_t>(contentRow_)<stagedItems_.size()){
-            contentInstallStaged_=stagedItems_[contentRow_].name;contentInstallActive_=true;RefreshContentInstall();return "";
+            contentInstallBackup_.clear();contentInstallStaged_=stagedItems_[contentRow_].name;contentInstallActive_=true;RefreshContentInstall();return "";
         }
         if(key==Accept&&contentTab_==6&&!TransferRunning()&&static_cast<size_t>(contentRow_)<archivedItems_.size()){
             backupItem_=archivedItems_[contentRow_];restoreArchivedConfirm_=true;notice_="A confirma recuperar TU arquivada; B cancela.";return "";
+        }
+        if(key==Search&&contentTab_==5&&!TransferRunning()&&!detailMetadata_.package&&static_cast<size_t>(contentRow_)<backups_.size()){
+            contentInstallStaged_.clear();contentInstallBackup_=backups_[contentRow_].slot;contentInstallActive_=true;RefreshContentInstall();return "";
         }
         if(key==Accept&&contentTab_==5&&!TransferRunning()&&static_cast<size_t>(contentRow_)<backups_.size()){
             recoverItem_=backups_[contentRow_];recoverConfirm_=true;notice_="A confirma recuperar para area pessoal, sem ativacao.";return "";
@@ -2120,7 +2123,7 @@ void ConsoleHome::DrawUnity(HomeCanvas& c) const{
 }
 void ConsoleHome::RefreshContentInstall(){
     contentInstallConfirm_=false;std::string error;
-    contentInstallKnown_=contentInstallStaged_.empty()?ContentInstall::Read(fileWorkspace_,dir_,contentInfo_,contentInstallItem_,error):ContentInstall::ReadStaged(fileWorkspace_,dir_,contentInfo_,contentInstallStaged_,contentInstallItem_,error);
+    contentInstallKnown_=!contentInstallBackup_.empty()?ContentInstall::ReadBackup(fileWorkspace_,dir_,contentInfo_,contentInstallBackup_,contentInstallItem_,error):contentInstallStaged_.empty()?ContentInstall::Read(fileWorkspace_,dir_,contentInfo_,contentInstallItem_,error):ContentInstall::ReadStaged(fileWorkspace_,dir_,contentInfo_,contentInstallStaged_,contentInstallItem_,error);
     notice_=contentInstallKnown_?"Pacote local identificado. Confira origem e SHA-256.":error;
 }
 bool ConsoleHome::TakeContentInstall(ContentInstall::Request& item,XboxExecutionInfo& game){
@@ -2141,11 +2144,11 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
     c.Text(48,135,"Title "+hexId(contentInfo_.titleId)+" | Media "+hexId(contentInfo_.mediaId),21,Muted,1170);
     if(contentInstallKnown_){
         const auto& i=contentInstallItem_;
-        c.Text(48,205,i.package.contentType==2?"DLC local":"Title Update moderno",28,White,1170);
+        c.Text(48,205,!contentInstallBackup_.empty()?"Reinstalar backup TU / DLC":i.package.contentType==2?"DLC local":"Title Update moderno",28,White,1170);
         c.Text(48,251,i.filename+" | "+StorageInfo::FormatBytes(i.bytes),22,White,1170);
         c.Text(48,295,"SHA-256 "+i.sha256,18,Muted,1170);
         c.Text(48,350,"HDD/Content/0000000000000000/"+hexId(i.package.titleId)+"/"+hexId(i.package.contentType),19,Lime,1170);
-    }else c.Text(48,215,contentInstallStaged_.empty()?"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.":"TU sem recibo valido. Use importacao manual (R3) com nome original.",20,White,1170);
+    }else c.Text(48,215,!contentInstallBackup_.empty()?"Backup nao elegivel para instalacao; use copia pessoal.":contentInstallStaged_.empty()?"Manifesto infinity360-content-import.tsv e pacote original em UserFiles/ContentImport.":"TU sem recibo valido. Use importacao manual (R3) com nome original.",20,White,1170);
     c.Text(48,425,"Requer enable-content-install.txt e enable-file-writes.txt.",20,Muted,1170);
     c.Text(48,470,"Somente copia verificada. Nao altera licencas, nao remove outras TUs.",20,Muted,1170);
     c.Text(48,515,"Ativacao e reconhecimento pelo Xbox permanecem nao confirmados.",20,Muted,1170);
@@ -2192,7 +2195,7 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
         else status="Save localizado";
         c.Text(780,y+14,status,20,Muted,430);
     }
-    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Recuperar copia pessoal | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
+    c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_?"A Confirmar | B Cancelar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia pessoal | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
 void ConsoleHome::RefreshDiscInstall(){

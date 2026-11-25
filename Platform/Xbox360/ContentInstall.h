@@ -5,7 +5,7 @@
 namespace ContentInstall {
 struct Request {
     XboxContentPackage package{};
-    std::string filename,sha256,staged;
+    std::string filename,sha256,staged,backupSlot;
     unsigned long long bytes=0;
 };
 inline bool Filename(unsigned type,const std::string& name){
@@ -24,6 +24,8 @@ inline bool CompatibleUpdate(const XboxExecutionInfo& game,const XboxContentPack
 bool Read(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,Request& out,std::string& error);
 // A downloaded TU is eligible only with its locally generated receipt and exact game identity.
 bool ReadStaged(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& staged,Request& out,std::string& error);
+// Reinstall a verified backup using its original, validated package filename.
+bool ReadBackup(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const std::string& slot,Request& out,std::string& error);
 bool Install(const FileWorkspace& ws,const std::string& root,const XboxExecutionInfo& game,const Request& selected,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& error);
 }

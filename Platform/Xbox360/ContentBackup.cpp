@@ -45,8 +45,11 @@ bool record(const FileWorkspace& ws,const std::string& root,unsigned title,const
     if(!ContentCatalog::ReadHeader(file,p)||p.titleId!=title||p.volumeType!=0||
        (p.contentType!=1&&p.contentType!=2&&p.contentType!=0xb0000))return false;
     char type[9];std::sprintf(type,"%08X",p.contentType);if(slot.substr(0,8)!=type)return false;
-    out.package=p;out.package.name=slot+" | "+p.name;out.slot=slot;out.sha256=sha;out.bytes=count;return true;
+    out.package=p;out.package.name=slot+" | "+p.name;out.slot=slot;out.sha256=sha;out.original=original;out.bytes=count;return true;
 }
+}
+bool ReadRecord(const FileWorkspace& ws,const std::string& root,unsigned title,const std::string& slot,Record& out){
+    out={};return record(ws,root,title,slot,out);
 }
 std::vector<Record> List(const FileWorkspace& ws,const std::string& root,unsigned title){
     std::vector<Record> result;std::vector<FolderEntry> rows;
