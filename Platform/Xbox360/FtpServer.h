@@ -2,18 +2,19 @@
 #include "FileWorkspace.h"
 #include <string>
 
-// Nonblocking, single-client passive FTP adapter. Read-only.
+// Nonblocking, single-client passive FTP adapter; write access opt-in.
 // No automatic startup, no active mode, no external network services.
 class FtpServer {
 public:
     explicit FtpServer(const FileWorkspace& workspace);
     ~FtpServer();
     bool Start(const std::string& root,const std::string& address,unsigned port,
-               const std::string& user,const std::string& password);
+               const std::string& user,const std::string& password,bool allowUpload=false);
     void Stop();
     bool Tick();
     bool Running() const;
     bool Connected() const;
+    bool UploadEnabled() const;
     unsigned Port() const;
     const std::string& Error() const {return error_;}
 private:

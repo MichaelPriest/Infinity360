@@ -19,6 +19,7 @@ const Sock Invalid=INVALID_SOCKET;
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
 typedef int Sock;
@@ -100,6 +101,116 @@ bool listEntry(FtpSession& ftp,const std::string& name,bool names,std::string& r
     result+=name+"\r\n";
     return result.size()<=65536;
 }
+// Exact-size, exclusive upload. Temp names cannot be accessed through FTP.
+class Upload {
+public:
+    Upload():expected_(0),received_(0)
+#ifdef _XBOX
+        ,handle_(INVALID_HANDLE_VALUE)
+#else
+        ,dir_(-1),handle_(-1)
+#endif
+    {}
+    ~Upload(){Cancel();}
+    bool Open(FtpSession& ftp,const std::string& argument,unsigned long long expected) {
+        Cancel();
+        const size_t slash=argument.find_last_of('/');
+        const std::string name=slash==std::string::npos?argument:argument.substr(slash+1);
+        relative_=slash==std::string::npos?".":slash==0?"/":argument.substr(0,slash);
+        if(!FileWorkspace::ValidName(name)||!ftp.DataDirectory(relative_,parent_))return false;
+        target_=name;expected_=expected;received_=0;
+#ifdef _XBOX
+        const std::string destination=FileWorkspace::Join(parent_,target_);
+        if(GetFileAttributesA(destination.c_str())!=INVALID_FILE_ATTRIBUTES)return false;
+#else
+        dir_=open(parent_.c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW);
+        if(dir_<0)return false;
+        struct stat st;
+        if(fstatat(dir_,target_.c_str(),&st,AT_SYMLINK_NOFOLLOW)==0||errno!=ENOENT){Cancel();return false;}
+#endif
+        for(unsigned i=0;i<32;++i) {
+            char candidate[32];std::sprintf(candidate,"AXCOPY-FTP-%04u.part",i);
+#ifdef _XBOX
+            handle_=CreateFileA(FileWorkspace::Join(parent_,candidate).c_str(),GENERIC_WRITE,0,0,
+                                CREATE_NEW,FILE_ATTRIBUTE_NORMAL,0);
+            if(handle_==INVALID_HANDLE_VALUE)continue;
+#else
+            handle_=openat(dir_,candidate,O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW,0600);
+            if(handle_<0)continue;
+#endif
+            temp_=candidate;return true;
+        }
+        Cancel();return false;
+    }
+    bool Write(const char* bytes,unsigned n) {
+        if(n>expected_-received_)return false;
+#ifdef _XBOX
+        DWORD wrote=0;
+        if(!WriteFile(handle_,bytes,n,&wrote,0)||wrote!=n)return false;
+#else
+        size_t at=0;
+        while(at<n) {
+            const ssize_t result=write(handle_,bytes+at,n-at);
+            if(result<0&&errno==EINTR)continue;
+            if(result<=0)return false;
+            at+=static_cast<size_t>(result);
+        }
+#endif
+        received_+=n;return true;
+    }
+    bool Publish(FtpSession& ftp) {
+        std::string current;
+        if(received_!=expected_||!ftp.DataDirectory(relative_,current)||current!=parent_)return false;
+#ifdef _XBOX
+        const bool flushed=FlushFileBuffers(handle_)!=0;
+        const bool closed=CloseHandle(handle_)!=0;handle_=INVALID_HANDLE_VALUE;
+        if(!flushed||!closed)return false;
+        if(!MoveFileA(FileWorkspace::Join(parent_,temp_).c_str(),
+                      FileWorkspace::Join(parent_,target_).c_str()))return false;
+        temp_.clear();return true;
+#else
+        const bool flushed=fsync(handle_)==0;
+        const bool closed=close(handle_)==0;handle_=-1;
+        if(!flushed||!closed)return false;
+        struct stat held,actual;
+        if(fstat(dir_,&held)!=0||stat(current.c_str(),&actual)!=0||
+           held.st_dev!=actual.st_dev||held.st_ino!=actual.st_ino)return false;
+        if(linkat(dir_,temp_.c_str(),dir_,target_.c_str(),0)!=0)return false;
+        unlinkat(dir_,temp_.c_str(),0);temp_.clear();return true;
+#endif
+    }
+    void Cancel() {
+#ifdef _XBOX
+        if(handle_!=INVALID_HANDLE_VALUE){CloseHandle(handle_);handle_=INVALID_HANDLE_VALUE;}
+        if(!temp_.empty())DeleteFileA(FileWorkspace::Join(parent_,temp_).c_str());
+#else
+        if(handle_>=0){close(handle_);handle_=-1;}
+        if(dir_>=0){if(!temp_.empty())unlinkat(dir_,temp_.c_str(),0);close(dir_);dir_=-1;}
+#endif
+        temp_.clear();parent_.clear();target_.clear();relative_.clear();
+        expected_=received_=0;
+    }
+private:
+    Upload(const Upload&);
+    Upload& operator=(const Upload&);
+    std::string parent_,target_,temp_,relative_;
+    unsigned long long expected_,received_;
+#ifdef _XBOX
+    HANDLE handle_;
+#else
+    int dir_,handle_;
+#endif
+};
+bool parseUploadSize(const std::string& text,unsigned long long& result) {
+    result=0;
+    if(text.empty()||text.size()>8)return false;
+    for(size_t i=0;i<text.size();++i) {
+        if(text[i]<'0'||text[i]>'9')return false;
+        result=result*10+static_cast<unsigned>(text[i]-'0');
+        if(result>32ULL*1024*1024)return false;
+    }
+    return true;
+}
 bool directoryListing(FtpSession& ftp,const std::string& path,bool names,std::string& result) {
     unsigned count=0;
 #ifdef _XBOX
@@ -128,21 +239,23 @@ struct FtpServer::Impl {
     Sock server,control,passive,data;
     unsigned long address,peer;
     unsigned port,last,disconnected;
-    bool network,sockets,binary,closing,transferring,listing;
+    bool network,sockets,binary,closing,transferring,listing,uploadEnabled,uploading,allocated;
+    unsigned long long uploadSize;
+    Upload upload;
     FtpSession* session;
     std::string root,user,password,input,reply,payload;
     std::ifstream file;
     size_t offset;
     Impl():server(Invalid),control(Invalid),passive(Invalid),data(Invalid),address(0),peer(0),
         port(0),last(0),disconnected(0),network(false),sockets(false),binary(false),closing(false),
-        transferring(false),listing(false),session(0),offset(0){}
+        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),session(0),offset(0){}
     void clearData() {
         closeSock(passive);closeSock(data);file.close();file.clear();
-        payload.clear();offset=0;transferring=false;listing=false;
+        payload.clear();offset=0;transferring=false;listing=false;uploading=false;upload.Cancel();
     }
     void clearClient() {
         clearData();closeSock(control);delete session;session=0;input.clear();reply.clear();
-        closing=false;binary=false;disconnected=ticks();
+        closing=false;binary=false;allocated=false;disconnected=ticks();
     }
     ~Impl() {
         clearClient();closeSock(server);
@@ -162,7 +275,7 @@ struct FtpServer::Impl {
         for(size_t i=0;i<line.size();++i)if((unsigned char)line[i]<32||(unsigned char)line[i]>126)valid=false;
         if(!valid){respond("500 Invalid command");return;}
         if(!session->Authenticated()||verb=="USER"||verb=="PASS"||verb=="QUIT") {
-            clearData();binary=false;respond(session->Command(line));closing=session->Closed();return;
+            clearData();binary=false;allocated=false;respond(session->Command(line));closing=session->Closed();return;
         }
         if(verb=="TYPE") {
             if(arg=="A"||arg=="I"){binary=arg=="I";respond("200 Type set");}
@@ -177,6 +290,20 @@ struct FtpServer::Impl {
                 "227 Entering Passive Mode ("+num((a>>24)&255)+","+num((a>>16)&255)+","+
                 num((a>>8)&255)+","+num(a&255)+","+num(p/256)+","+num(p%256)+")");
             return;
+        }
+        if(verb=="ALLO"&&uploadEnabled) {
+            allocated=parseUploadSize(arg,uploadSize);
+            respond(allocated?"200 Exact size reserved":"552 Invalid size or limit exceeded");return;
+        }
+        if(verb=="STOR"&&uploadEnabled) {
+            const bool valid=allocated&&binary;allocated=false;
+            if(!valid||passive==Invalid) {
+                clearData();respond("550 Binary upload requires ALLO and passive mode");return;
+            }
+            if(!upload.Open(*session,arg,uploadSize)) {
+                clearData();respond("550 Invalid or occupied destination");return;
+            }
+            uploading=true;transferring=true;respond("150 Opening data connection");return;
         }
         if(verb=="SIZE") {
             std::string path;
@@ -206,6 +333,16 @@ struct FtpServer::Impl {
             if(a.sin_addr.s_addr!=peer||!nonblocking(s)){closeSock(s);return;}
             data=s;closeSock(passive);last=ticks();
         }
+        if(uploading) {
+            char buffer[32768];
+            const int n=recv(data,buffer,sizeof buffer,0);
+            if(n>0) {
+                if(!upload.Write(buffer,static_cast<unsigned>(n)))finish(false);
+                else last=ticks();
+            } else if(n==0)finish(upload.Publish(*session));
+            else if(!pending())finish(false);
+            return;
+        }
         if(offset==payload.size()) {
             payload.clear();offset=0;
             if(listing){finish(true);return;}
@@ -224,9 +361,10 @@ FtpServer::~FtpServer(){Stop();}
 void FtpServer::Stop(){delete impl_;impl_=0;}
 bool FtpServer::Running()const{return impl_!=0;}
 bool FtpServer::Connected()const{return impl_&&impl_->control!=Invalid;}
+bool FtpServer::UploadEnabled()const{return impl_&&impl_->uploadEnabled;}
 unsigned FtpServer::Port()const{return impl_?impl_->port:0;}
 bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned port,
-                      const std::string& user,const std::string& password) {
+                      const std::string& user,const std::string& password,bool allowUpload) {
     Stop();error_.clear();
     if(!workspace_.CanWrite(root)||!FtpSession::ValidCredentials(user,password)||port>65535) {
         error_="Workspace ou credenciais invalidos.";return false;
@@ -243,7 +381,7 @@ bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned p
     if(WSAStartup(MAKEWORD(2,2),&wsa)!=0){delete p;error_="Winsock indisponivel.";return false;}
     p->sockets=true;
 #endif
-    p->address=ip;p->root=root;p->user=user;p->password=password;
+    p->address=ip;p->root=root;p->user=user;p->password=password;p->uploadEnabled=allowUpload;
     p->server=listener(ip,port,p->port);
     if(p->server==Invalid){delete p;error_="Nao foi possivel abrir porta FTP.";return false;}
     p->disconnected=ticks()-2000;impl_=p;return true;
@@ -288,12 +426,13 @@ bool FtpServer::Tick() {
 #else
 FtpServer::FtpServer(const FileWorkspace& workspace):impl_(0),workspace_(workspace){}
 FtpServer::~FtpServer(){}
-bool FtpServer::Start(const std::string&,const std::string&,unsigned,const std::string&,const std::string&){
+bool FtpServer::Start(const std::string&,const std::string&,unsigned,const std::string&,const std::string&,bool){
     error_="Provider FTP indisponivel nesta plataforma.";return false;
 }
 void FtpServer::Stop(){}
 bool FtpServer::Tick(){return false;}
 bool FtpServer::Running()const{return false;}
 bool FtpServer::Connected()const{return false;}
+bool FtpServer::UploadEnabled()const{return false;}
 unsigned FtpServer::Port()const{return 0;}
 #endif

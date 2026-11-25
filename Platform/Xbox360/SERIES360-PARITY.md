@@ -364,3 +364,8 @@ CI da transição 45516747993/45516748020 aprovadas. Sistema > Downloads alterna
 ## FTP LAN experimental
 
 Novo transporte não bloqueante passivo somente leitura (`FtpServer`) integrado a Sistema > Rede e FTP, ativação manual, credenciais próprias, UserFiles, IPv4 privado, 2121, um cliente, sem alteração de segurança de rede. Teste real Linux do mesmo adapter; XDK/hardware e upload nativo pendentes. CI do Manager 45518143726 aprovada. Ver MANAGER.md.
+
+
+## FTP bidirecional experimental (prioridade console)
+
+CI do transporte anterior 45523560632 aprovada. A inicia somente leitura, X inicia leitura/upload com ALLO exato, 32 MiB máximo por arquivo, temporário exclusivo e publicação sem substituir destino; testes de tamanho, colisão, traversal, links, limpeza. Sem escrita fora de UserFiles, sem REST/retomada nesta revisão. Windows/GUI/companion adicionais adiados até finalizar recursos Xbox. XDK e hardware pendentes.

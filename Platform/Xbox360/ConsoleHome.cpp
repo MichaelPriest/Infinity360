@@ -537,9 +537,10 @@ void ConsoleHome::RefreshResidentPlugins() {
     }
     residentPlugins_.clear();
 }
-void ConsoleHome::ToggleFtp() {
+void ConsoleHome::ToggleFtp(bool allowUpload) {
     if(ftp_.Running()){ftp_.Stop();notice_="FTP encerrado.";RecordEvent("FTP encerrado");return;}
 #ifndef _XBOX
+    (void)allowUpload;
     notice_="FTP nativo: somente no Xbox; teste de transporte separado no PC.";
 #else
     RefreshNetwork();
@@ -556,8 +557,8 @@ void ConsoleHome::ToggleFtp() {
     }
     if(!user.empty()&&user[user.size()-1]=='\r')user.erase(user.size()-1);
     if(!password.empty()&&password[password.size()-1]=='\r')password.erase(password.size()-1);
-    const bool started=ftp_.Start(FileWorkspace::Join(dir_,"UserFiles"),network_.ipv4,2121,user,password);
-    notice_=started?"FTP LAN somente leitura iniciado na porta 2121.":ftp_.Error();
+    const bool started=ftp_.Start(FileWorkspace::Join(dir_,"UserFiles"),network_.ipv4,2121,user,password,allowUpload);
+    notice_=started?(allowUpload?"FTP LAN leitura/upload (ALLO) iniciado.":"FTP LAN somente leitura iniciado."):ftp_.Error();
     RecordEvent(started?"FTP iniciado":"Falha ao iniciar FTP");
 #endif
 }
@@ -1191,7 +1192,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(section_==System && page_!=Home) {
-        if(page_==Details && systemTab_==1 && key==Accept) {ToggleFtp();return "";}
+        if(page_==Details && systemTab_==1 && (key==Accept||key==Favorite)) {ToggleFtp(key==Favorite);return "";}
         if(page_==Details && systemTab_==3 && key==PageDown) {
             storeDownloads_=!storeDownloads_;storeDownloadRow_=0;
             if(storeDownloads_)store_.Load();
@@ -1648,10 +1649,10 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
            "Ethernet: leitura indisponivel",19,Muted,550);
     c.Box(644,391,594,190,Panel,10);
     c.Text(660,404,"Servicos de rede",25,White,558);
-    c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado (somente leitura)",21,ftp_.Running()?Lime:Muted,558);
-    c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | UserFiles":"A Iniciar FTP LAN na porta 2121",20,Muted,558);
+    c.Text(660,447,ftp_.Running()?(ftp_.Connected()?"FTP: cliente conectado":"FTP: aguardando cliente"):"FTP: desligado",21,ftp_.Running()?Lime:Muted,558);
+    c.Text(660,486,ftp_.Running()?"Porta "+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?"Leitura/upload":"Somente leitura"):"A Leitura | X Leitura/upload (ALLO)",20,Muted,558);
     c.Text(660,534,"Internet e Xbox Live: nao testados",19,Muted,558);
-    c.Text(45,607,"A Iniciar/Parar FTP | Y Atualizar | B Voltar | Use rede local confiavel.",18,Muted,1180);
+    c.Text(45,607,"A Leitura | X Leitura/upload | A ou X Parar | Y Atualizar | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     c.Text(45,349,"Historico operacional (ultimos 64)",27,White,1170);
@@ -1803,7 +1804,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         };
         static const char* const details[]={
             "Capacidade e espaco livre dos dispositivos.",
-            "FTP LAN somente leitura; ativacao manual.",
+            "FTP LAN: leitura e upload opcional; ativacao manual.",
             "Temperaturas e ventoinha: leitura SMC ainda nao implementada.",
             "Transferencias locais; downloads de internet pendentes.",
             "Diagnostico somente leitura do launch.ini.",

@@ -42,7 +42,7 @@ private:
     CollectionStore collections_;
     FileWorkspace fileWorkspace_;
     FtpServer ftp_;
-    void ToggleFtp();
+    void ToggleFtp(bool allowUpload=false);
     FileTransfer transfer_;
     std::vector<WorkspaceCopyStep> copyQueue_;
     std::string activeCopyTarget_;

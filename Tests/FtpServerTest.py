@@ -44,4 +44,33 @@ with tempfile.TemporaryDirectory() as directory:
         assert (personal/"sample.bin").read_bytes()==payload
     finally:
         proc.terminate();proc.wait(timeout=5)
-print("Nonblocking FTP transport passed")
+    proc=subprocess.Popen([sys.argv[1],str(root),"upload"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+    try:
+        proc.stdin.write(password+"\n");proc.stdin.flush()
+        port=int(proc.stdout.readline())
+        with ftplib.FTP() as ftp:
+            ftp.connect("127.0.0.1",port,timeout=5);ftp.login("owner",password)
+            reject(lambda:ftp.storbinary("STOR missing-allo.bin",io.BytesIO(b"x")))
+            ftp.voidcmd("ALLO "+str(len(payload)))
+            ftp.storbinary("STOR new.bin",io.BytesIO(payload))
+            assert (personal/"new.bin").read_bytes()==payload
+            ftp.voidcmd("ALLO 3")
+            reject(lambda:ftp.storbinary("STOR new.bin",io.BytesIO(b"bad")))
+            assert (personal/"new.bin").read_bytes()==payload
+            ftp.voidcmd("ALLO 9")
+            reject(lambda:ftp.storbinary("STOR incomplete.bin",io.BytesIO(b"abc")))
+            ftp.voidcmd("ALLO 2")
+            reject(lambda:ftp.storbinary("STOR excess.bin",io.BytesIO(b"abc")))
+            ftp.voidcmd("ALLO 3")
+            reject(lambda:ftp.storbinary("STOR ../private.txt",io.BytesIO(b"abc")))
+            reject(lambda:ftp.sendcmd("ALLO 33554433"))
+            ftp.voidcmd("ALLO 3")
+            reject(lambda:ftp.storbinary("STOR link.txt",io.BytesIO(b"abc")))
+            assert not (personal/"incomplete.bin").exists()
+            assert not (personal/"excess.bin").exists()
+            assert not list(personal.glob("AXCOPY-FTP-*.part"))
+            assert (root/"private.txt").read_text()=="private"
+            ftp.quit()
+    finally:
+        proc.terminate();proc.wait(timeout=5)
+print("Nonblocking FTP transport and opt-in upload passed")
