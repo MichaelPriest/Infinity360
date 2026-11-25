@@ -130,3 +130,7 @@ Pausa local com relógio congelado, mute, volume LB/RB, painel de comandos e tes
 ### P1 — Seek MP4 local
 
 Dashboard FFmpeg integrada aprovada no CI 45691019530. Seek por quadro-chave, D-pad +/-30 s, reinicialização da fila/áudio/relógio, posição e duração; teste de ida/volta. Sem seek de TS/HLS; validação da revisão e hardware pendentes.
+
+### P1 — Seleção HLS compatível
+
+Filtro de variantes por resolução/codecs/rendições, limite configurável 100 kbps–4 Mbps, fallback inicial até três playlists elegíveis, painel de bitrate declarado e teste determinístico. ABR dinâmico e homologação física pendentes.

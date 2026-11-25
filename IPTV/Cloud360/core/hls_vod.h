@@ -10,7 +10,7 @@
 
 namespace CloudHls {
 constexpr size_t MaxPlaylist=128*1024,MaxSegments=4096,MaxSegment=32*1024*1024;
-struct Variant {std::string url;unsigned bandwidth;};
+struct Variant {std::string url;unsigned bandwidth=0,width=0,height=0;bool compatible=true;};
 struct List {std::vector<Variant> variants;std::vector<std::string> segments;bool ended=false,hasSequence=false;uint64_t sequence=0;unsigned target=0;};
 inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Extension(const std::string& url,const std::string& ext){
@@ -37,27 +37,60 @@ inline bool Resolve(const std::string& base,const std::string& uri,std::string& 
     while(std::getline(parts,part,'/'))if(part=="."||part=="..")return false;
     return true;
 }
-inline unsigned Bandwidth(const std::string& attrs){
-    // Parse attributes, respecting quoted comma-separated CODECS.
-    std::string field;bool quoted=false;unsigned result=0;
+inline bool Number(const std::string& text,uint64_t limit,uint64_t& value){
+    value=0;if(text.empty())return false;
+    for(char c:text){if(c<'0'||c>'9'||uint64_t(c-'0')>limit||value>(limit-uint64_t(c-'0'))/10)return false;value=value*10+c-'0';}
+    return value<=limit;
+}
+constexpr unsigned DefaultBitrate=2000000,MinBitrate=100000,MaxBitrate=4000000;
+inline bool BitrateCap(const std::string& text,unsigned& cap){
+    uint64_t value=0;if(!Number(text,MaxBitrate,value)||value<MinBitrate)return false;
+    cap=static_cast<unsigned>(value);return true;
+}
+inline bool SupportedCodecs(const std::string& value){
+    if(value.size()<2||value.front()!='"'||value.back()!='"')return false;
+    std::istringstream in(Lower(value.substr(1,value.size()-2)));
+    std::string codec;bool video=false,audio=false;
+    while(std::getline(in,codec,',')){
+        if(codec=="avc1"||codec=="avc3"||codec.compare(0,5,"avc1.")==0||codec.compare(0,5,"avc3.")==0){
+            if(video)return false;video=true;
+        }else if(codec=="mp4a"||codec=="mp4a.40.2"||codec=="mp4a.40.5"||codec=="mp4a.40.29"){
+            if(audio)return false;audio=true;
+        }else return false;
+    }
+    return video&&audio;
+}
+// Unknown codec/resolution metadata is inconclusive, not verified. The decoder
+// still independently enforces H.264/AAC, actual frame size and timestamps.
+inline bool ParseVariant(const std::string& attrs,Variant& variant){
+    variant=Variant{};
+    std::string field;bool quoted=false,codecs=false,resolution=false;
     for(size_t i=0;i<=attrs.size();++i){
         const char c=i==attrs.size()?',':attrs[i];
         if(c=='"')quoted=!quoted;
         if(c==','&&!quoted){
-            if(field.compare(0,10,"BANDWIDTH=")==0){
-                if(result||field.size()==10||field.size()>19)return 0;
-                for(char x:field.substr(10)){if(x<'0'||x>'9')return 0;result=result*10+x-'0';}
-                if(!result||result>100000000)return 0;
+            const auto eq=field.find('=');
+            if(eq==std::string::npos||eq==0||eq+1==field.size())return false;
+            const auto key=field.substr(0,eq),value=field.substr(eq+1);
+            if(key=="BANDWIDTH"){
+                uint64_t n=0;if(variant.bandwidth||!Number(value,100000000,n)||!n)return false;
+                variant.bandwidth=static_cast<unsigned>(n);
+            }else if(key=="RESOLUTION"){
+                const auto x=value.find('x');uint64_t w=0,h=0;
+                if(resolution||x==std::string::npos||!Number(value.substr(0,x),16384,w)||!Number(value.substr(x+1),16384,h)||!w||!h)return false;
+                resolution=true;variant.width=static_cast<unsigned>(w);variant.height=static_cast<unsigned>(h);
+                if(w>1280||h>720)variant.compatible=false;
+            }else if(key=="CODECS"){
+                if(codecs||value.front()!='"'||value.back()!='"')return false;
+                codecs=true;if(!SupportedCodecs(value))variant.compatible=false;
+            }else if(key=="AUDIO"||key=="VIDEO"||key=="SUBTITLES"){
+                // Alternate renditions require separate synchronized streams.
+                variant.compatible=false;
             }
             field.clear();
         }else field+=c;
     }
-    return quoted?0:result;
-}
-inline bool Number(const std::string& text,uint64_t limit,uint64_t& value){
-    value=0;if(text.empty())return false;
-    for(char c:text){if(c<'0'||c>'9'||value>(limit-uint64_t(c-'0'))/10)return false;value=value*10+c-'0';}
-    return value<=limit;
+    return !quoted&&variant.bandwidth>0;
 }
 inline bool Parse(const std::string& base,const std::string& text,List& result,bool allowLive=false){
     result=List{};
@@ -66,16 +99,16 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
     if(!std::getline(in,line))return false;
     if(!line.empty()&&line.back()=='\r')line.pop_back();
     if(line!="#EXTM3U")return false;
-    unsigned bandwidth=0;bool duration=false;
+    Variant variant;bool duration=false;
     while(std::getline(in,line)){
         if(!line.empty()&&line.back()=='\r')line.pop_back();
         if(line.empty())continue;
         if(line.size()>4096||result.ended)return false;
         if(line.compare(0,18,"#EXT-X-STREAM-INF:")==0){
-            if(bandwidth||duration||!result.segments.empty())return false;
-            bandwidth=Bandwidth(line.substr(18));if(!bandwidth)return false;
+            if(variant.bandwidth||duration||!result.segments.empty())return false;
+            if(!ParseVariant(line.substr(18),variant))return false;
         }else if(line.compare(0,8,"#EXTINF:")==0){
-            if(duration||bandwidth||!result.variants.empty())return false;
+            if(duration||variant.bandwidth||!result.variants.empty())return false;
             const auto comma=line.find(',',8);
             if(comma==std::string::npos||comma==8)return false;
             bool digit=false,dot=false;double value=0,scale=1;
@@ -96,7 +129,7 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
             if(result.target||duration||!result.segments.empty()||!Number(line.substr(22),120,value)||!value)return false;
             result.target=static_cast<unsigned>(value);
         }else if(line=="#EXT-X-ENDLIST"){
-            if(bandwidth||duration||!result.variants.empty())return false;result.ended=true;
+            if(variant.bandwidth||duration||!result.variants.empty())return false;result.ended=true;
         }else if(line.compare(0,11,"#EXT-X-KEY:")==0){
             if(line!="#EXT-X-KEY:METHOD=NONE")return false;
         }else if(line[0]=='#'){
@@ -108,21 +141,21 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
                line!="#EXT-X-INDEPENDENT-SEGMENTS")return false;
         }else{
             std::string url;if(!Resolve(base,line,url))return false;
-            if(bandwidth){
+            if(variant.bandwidth){
                 if(result.variants.size()>=32||!Extension(url,".m3u8"))return false;
-                result.variants.push_back({url,bandwidth});bandwidth=0;
+                variant.url=url;result.variants.push_back(variant);variant=Variant{};
             }else if(duration){
                 if(result.segments.size()>=MaxSegments||!Extension(url,".ts"))return false;
                 result.segments.push_back(url);duration=false;
             }else return false;
         }
     }
-    return !bandwidth&&!duration&&((!result.variants.empty()&&result.segments.empty())||
+    return !variant.bandwidth&&!duration&&((!result.variants.empty()&&result.segments.empty())||
         ((result.ended||(allowLive&&result.hasSequence&&result.target))&&!result.segments.empty()&&result.variants.empty()));
 }
 inline std::string Choose(const List& list,unsigned cap){
     const Variant* best=nullptr;
-    for(const auto& v:list.variants)if(v.bandwidth<=cap&&(!best||v.bandwidth>best->bandwidth))best=&v;
+    for(const auto& v:list.variants)if(v.compatible&&v.bandwidth<=cap&&(!best||v.bandwidth>best->bandwidth))best=&v;
     return best?best->url:"";
 }
 // Sequential VOD or opt-in live TS. A sliding window must preserve sequence
@@ -138,14 +171,25 @@ public:
         playlist_=url;
         List list;if(!Fetch(playlist_,list))return false;
         if(!list.variants.empty()){
-            playlist_=Choose(list,cap);
-            if(playlist_.empty()||!Fetch(playlist_,list)||!list.variants.empty())return false;
+            auto candidates=list.variants;
+            std::stable_sort(candidates.begin(),candidates.end(),[](const Variant& a,const Variant& b){return a.bandwidth>b.bandwidth;});
+            bool selected=false;unsigned attempts=0;
+            for(const auto& v:candidates){
+                if(!v.compatible||v.bandwidth>cap)continue;
+                if(++attempts>3)break;
+                List media;
+                if(!Fetch(v.url,media)||!media.variants.empty()||media.segments.empty()||
+                    (!media.ended&&(!allowLive_||!wait_)))continue;
+                playlist_=v.url;list=std::move(media);selectedBitrate_=v.bandwidth;selected=true;break;
+            }
+            if(!selected)return false;
         }
         if(list.segments.empty()||(!list.ended&&(!allowLive_||!wait_)))return false;
         next_=list.sequence;
         if(!list.ended&&list.segments.size()>3)next_+=list.segments.size()-3;
         list_=std::move(list);valid_=true;return true;
     }
+    unsigned SelectedBitrate()const{return selectedBitrate_;}
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
         unsigned refreshes=0,attempts=0;
@@ -198,7 +242,7 @@ private:
     int Fail(){failed_=true;reader_.reset();return -1;}
     Open open_;Wait wait_;std::unique_ptr<Reader> reader_;
     std::string playlist_;List list_;
-    uint64_t next_=0;size_t bytes_=0;
+    uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false;
 };
 }

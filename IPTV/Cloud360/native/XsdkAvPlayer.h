@@ -58,6 +58,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     CloudAvStreamQueue timeline;
     CloudContainerSession* session=nullptr;
     MediaUrl url;bool remoteSource=url.Parse(path);
+    unsigned selectedBitrate=0;
 #ifdef INFINITY_AV_NETWORK
     XsdkMpeg::RemoteReader remote;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
@@ -77,7 +78,13 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     if(remoteSource){
         if(!Enabled(root))return "Habilite enable-iptv-playback.txt.";
         if(CloudHls::Extension(path,".m3u8")){
-            if(!hls.Start(path,2000000,true))return "Playlist HLS recusada ou indisponivel.";
+            unsigned cap=CloudHls::DefaultBitrate;
+            std::ifstream quality((root+"infinity360-iptv-bitrate.txt").c_str(),std::ios::binary);
+            if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
+                if(!value.empty()&&value.back()=='\r')value.pop_back();
+                if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
+            if(!hls.Start(path,cap,true))return "Playlist HLS recusada ou indisponivel.";
+            selectedBitrate=hls.SelectedBitrate();
             session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);},&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             if(!remote.Open(path,root,true))return "Fonte MPEG-TS nao autorizada.";
@@ -109,7 +116,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     auto overlay=[&](){
         canvas.Box(30,620,1220,72,0xff172c28u,6);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
-        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(duration?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):""),22,0xfff2f7f3u,1160);
+        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(duration?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):""),22,0xfff2f7f3u,1160);
         canvas.Text(46,657,remoteSource?"X Mudo | LB/RB Volume | B Sair":duration?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
