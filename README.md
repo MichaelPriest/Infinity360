@@ -49,7 +49,7 @@ A versão nativa possui tela inicial em 720p, navegação por controle, consulta
 O [workflow INFINITY 360 first XEX - XSDK visual alpha](.github/workflows/aurorax-xsdk-alpha.yml)
 foi configurado para compilar um teste gráfico real do INFINITY 360 em XEX2 com
 a toolchain aberta XSDK no GitHub Actions. Um build bem-sucedido publica o
-artifact `AuroraX-Alpha-XSDK-0.1.0` com `default.xex` e um diagnóstico
+artifact `Infinity360-Alpha-XSDK-0.1.0` com `default.xex` e um diagnóstico
 sem GPU. Consulte [instruções e segurança](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md).
 
 **Limitações:** esta Alpha é somente para testar inicialização, navegação,
@@ -78,7 +78,7 @@ O arquivo `Series360.zip` **0.12.69** foi auditado pelos executáveis,
 manual, localizações e cenas XUR. A [matriz de paridade](Platform/Xbox360/SERIES360-PARITY.md)
 organiza **46 recursos** e distingue o que tem código nativo, o que só existe
 na prévia web e o que falta. O escopo está acompanhado na
-[issue #8](https://github.com/MichaelPriest/AuroraX/issues/8).
+[issue #8](https://github.com/MichaelPriest/Infinity360/issues/8).
 
 Nesta etapa, a biblioteca nativa passou a reconhecer pastas extras de jogos
 extraídos (`XBOX 360`, `XBLA`, `Xbox Original`), aceitar caminhos adicionais

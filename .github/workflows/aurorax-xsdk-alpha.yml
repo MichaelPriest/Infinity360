@@ -1,4 +1,4 @@
-name: AuroraX first XEX - XSDK visual alpha
+name: INFINITY 360 first XEX - XSDK visual alpha
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
           cd "$HOME/xsdk"
           make -j4 build/libxsdk.a
           test -s build/libxsdk.a
-      - name: Compile isolated AuroraX Alpha and no-GPU probe
+      - name: Compile isolated INFINITY 360 Alpha and no-GPU probe
         run: |
           cmake -S IPTV/Cloud360/native -B IPTV/Cloud360/native/build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" \
@@ -73,9 +73,9 @@ jobs:
               raw = path.read_bytes()
               if len(raw) < 4096 or raw[:4] != b"XEX2":
                   raise SystemExit(f"INVALID XEX2: {title}")
-          dest = Path("IPTV/Cloud360/AuroraX-Alpha-XSDK-0.1.0.zip")
+          dest = Path("IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.0.zip")
           note = (
-              "AuroraX XSDK Alpha 0.1.0 - GPU / navigation diagnostic ONLY\n"
+              "INFINITY 360 XSDK Alpha 0.1.0 - GPU / navigation diagnostic ONLY\n"
               "This is not the full XDK dashboard nor the finished PDF UI.\n"
               "No game launch, no IPTV playback, no themes, no autoboot.\n"
               "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
@@ -98,10 +98,10 @@ jobs:
               assert archive.read("default.xex")[:4] == b"XEX2"
           print("Build XEX2 packaged:", dest)
           PY
-      - name: Upload actual first AuroraX XEX package
+      - name: Upload actual first INFINITY 360 XEX package
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraX-Alpha-XSDK-0.1.0
-          path: IPTV/Cloud360/AuroraX-Alpha-XSDK-0.1.0.zip
+          name: Infinity360-Alpha-XSDK-0.1.0
+          path: IPTV/Cloud360/Infinity360-Alpha-XSDK-0.1.0.zip
           retention-days: 14
           if-no-files-found: error

@@ -1,4 +1,4 @@
-name: AuroraX Alpha - build and package Xbox 360 XEX
+name: INFINITY 360 Alpha - build and package Xbox 360 XEX
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraX-portable-test-results
+          name: Infinity360-portable-test-results
           path: |
             build/test-results.xml
             build/test-inventory.txt
@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Build integrated AuroraX with XDK
+      - name: Build integrated INFINITY 360 with XDK
         shell: cmd
         run: |
           if not defined XEDK exit /b 1
@@ -89,14 +89,14 @@ jobs:
           call build-xex.bat
           if errorlevel 1 exit /b 1
           popd
-      - name: Package genuine XEX and approved AuroraX art
+      - name: Package genuine XEX and approved INFINITY 360 art
         shell: cmd
         run: |
-          py -3 Platform\Xbox360\tools\package_alpha.py --xex dist\Xbox360\default.xex --art dist\Xbox360\home.tga --out dist\Xbox360\AuroraX-Alpha-0.1.0-Xbox360.zip
+          py -3 Platform\Xbox360\tools\package_alpha.py --xex dist\Xbox360\default.xex --art dist\Xbox360\home.tga --out dist\Xbox360\Infinity360-Alpha-0.1.0-Xbox360.zip
       - name: Upload package to GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraX-Alpha-0.1.0-Xbox360
-          path: dist/Xbox360/AuroraX-Alpha-0.1.0-Xbox360.zip
+          name: Infinity360-Alpha-0.1.0-Xbox360
+          path: dist/Xbox360/Infinity360-Alpha-0.1.0-Xbox360.zip
           retention-days: 14
           if-no-files-found: error

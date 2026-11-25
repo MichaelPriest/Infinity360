@@ -503,19 +503,6 @@ void ConsoleHome::RefreshResidentPlugins() {
     }
     residentPlugins_.clear();
 }
-void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
-    c.Text(47,349,"Plugins residentes / DashLaunch",27,White,1170);
-    c.Text(47,385,residentConfig_.empty()?"Nenhum launch.ini legivel":residentConfig_,18,Muted,1170);
-    for(size_t i=0;i<residentPlugins_.size();++i) {
-        const ResidentPluginSlot& slot=residentPlugins_[i];
-        const int y=415+static_cast<int>(i)*32;
-        c.Text(51,y,"Slot "+number(i+1),18,White,110);
-        c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,840);
-        c.Text(1025,y,slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"",17,Lime,195);
-    }
-    c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
-    c.Text(47,610,"Y Atualizar | B Voltar",18,Lime,1170);
-}
 void ConsoleHome::RefreshNetwork() {
     network_=NetworkInfo::Read();
 }
@@ -1335,6 +1322,19 @@ void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned 
 }
 }
 
+void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
+    c.Text(47,349,"Plugins residentes / DashLaunch",27,White,1170);
+    c.Text(47,385,residentConfig_.empty()?"Nenhum launch.ini legivel":residentConfig_,18,Muted,1170);
+    for(size_t i=0;i<residentPlugins_.size();++i) {
+        const ResidentPluginSlot& slot=residentPlugins_[i];
+        const int y=415+static_cast<int>(i)*32;
+        c.Text(51,y,"Slot "+number(i+1),18,White,110);
+        c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,840);
+        c.Text(1025,y,slot.duplicate?"Ambiguo":isLiveEmulationReference(slot.path)?"LiveEmulation":"",17,Lime,195);
+    }
+    c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
+    c.Text(47,610,"Y Atualizar | B Voltar",18,Lime,1170);
+}
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     c.Text(44,82,"Personalizar inicio",40,White,1190);
     c.Text(46,150,"Organize os quatro atalhos da segunda fileira.",24,Muted,1180);

@@ -5,5 +5,5 @@ Identidade: verde-lima, fundo escuro e símbolo de dois laços, preservando o la
 A interface nativa, prévia web, retorno IPTV, README e saída portátil foram atualizados.
 Por compatibilidade, arquivos aurorax-*, AuroraXFiles, chaves localStorage, identificadores de manifesto, workflows, nomes de projetos e binários mantêm temporariamente os nomes anteriores. O catálogo de plugins busca primeiro as novas pastas, mantendo as antigas.
 A referência ao dashboard Aurora original e aos documentos históricos não deve ser renomeada.
-Cloud360 IPTV não muda. O repositório continua com o slug MichaelPriest/AuroraX até renomeação administrativa; não criar um repositório separado nem perder histórico.
+Cloud360 IPTV não muda. O repositório foi renomeado para https://github.com/MichaelPriest/Infinity360, mantendo o histórico e a branch main.
 A disponibilidade jurídica da marca INFINITY 360 não foi confirmada.

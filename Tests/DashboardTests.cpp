@@ -25,7 +25,7 @@ int main() {
     assert(dashboard.SelectedSection() == "Aplicativos");
     std::ostringstream rendered;
     dashboard.Render(rendered);
-    assert(rendered.str().find("AURORAX") != std::string::npos);
+    assert(rendered.str().find("INFINITY 360") != std::string::npos);
 
     std::filesystem::remove_all(root);
 }
