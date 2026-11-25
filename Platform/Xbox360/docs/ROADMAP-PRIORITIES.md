@@ -62,3 +62,7 @@ Downloads HTTPS da Store e cópias locais apresentam velocidade recente e tempo 
 ### P1 — Destino Store
 
 Seleção local/HDD/USB na Store, preferência persistente e filas por dispositivo. Downloads, parciais, instalação XEX/ZIP e backups usam o workspace selecionado, bibliotecas consultam os dispositivos. Testes de validação e isolamento adicionados; CI e hardware pendentes.
+
+### P1 — Cloud360 player
+
+Correção de proporção de pixel, mute por X e pausa/retomada local por A no player MPEG-PS XSDK. Streams remotos não oferecem pausa/DVR. HLS/MP4 nativos e integração do FFmpeg continuam pendentes; conversor LAN permanece alternativa. Teste portátil de apresentação adicionado.

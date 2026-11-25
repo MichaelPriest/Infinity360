@@ -39,3 +39,7 @@ FFmpeg licensing (LGPL or GPL) depends on build options. Static
 distribution of linked FFmpeg requires respecting the applicable
 relinking/source/notice requirements. No Orbita or proprietary XDK binaries
 are incorporated here. Test only streams with authorized external access.
+
+## Player MPEG-PS da dashboard
+
+O player XSDK existente usa pl_mpeg para MPEG-1/MP2, com apresentação RGB e áudio XSDK. A revisão adiciona correção de proporção de pixel (PAR) na apresentação, X alterna mute e A pausa/retoma arquivos locais; B encerra. A pausa de streams remotos não é habilitada, pois não existe buffer DVR. O decoder FFmpeg experimental permanece separado: HLS/TS/MP4 diretos ainda não são reproduzidos por esta build. Use o conversor autorizado quando necessário. Teste portátil da geometria e homologação física pendente.

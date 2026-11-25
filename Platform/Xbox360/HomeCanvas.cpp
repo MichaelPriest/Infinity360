@@ -70,11 +70,14 @@ unsigned HomeCanvas::ThemeColor(unsigned color) const {
     if(theme_==1)return (color&0xff000000u)|(r<<16)|(b<<8)|g;
     return (color&0xff000000u)|(g<<16)|(r<<8)|b;
 }
-void HomeCanvas::VideoRgb(const unsigned char* rgb,unsigned width,unsigned height){
+void HomeCanvas::VideoRgb(const unsigned char* rgb,unsigned width,unsigned height,double pixelAspect){
     if(!rgb||!width||!height||width>1280||height>720)return;
     std::fill(frame_.begin(),frame_.end(),0xff000000u);
+    if(!(pixelAspect>=0.25&&pixelAspect<=4.0))pixelAspect=1.0;
+    const double aspect=width*pixelAspect/height;
     unsigned w=Width,h=Height;
-    if(width*Height>height*Width)h=Width*height/width;else w=Height*width/height;
+    if(aspect>double(Width)/Height)h=std::max(1u,static_cast<unsigned>(Width/aspect));
+    else w=std::max(1u,static_cast<unsigned>(Height*aspect));
     const unsigned x0=(Width-w)/2,y0=(Height-h)/2;
     for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x){
         const auto* p=rgb+3*((y*height/h)*width+x*width/w);

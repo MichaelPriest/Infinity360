@@ -104,11 +104,14 @@ class Output:public MpegOutput{
     std::vector<unsigned char> rgb_;
     float pcm_[2][256]{};
     unsigned count_=0,phase_=0,rate_=0;
-    bool audio_=false;
+    bool audio_=false,muted_=false;
+    double aspect_=1.0;
 public:
     bool dirty=false;
     explicit Output(HomeCanvas& c):canvas_(c){}
     ~Output(){if(audio_)xsdk_audio_close();}
+    void SetAspect(double aspect){aspect_=aspect;}
+    void SetMuted(bool muted){muted_=muted;}
     bool Start(int rate){
         if(!rate)return true;
         if(rate<8000||rate>48000)return false;
@@ -118,7 +121,7 @@ public:
         if(Cancelled()||!frame.width||!frame.height||frame.width>1280||frame.height>720)return false;
         rgb_.resize(frame.width*frame.height*3);
         plm_frame_to_rgb(&frame,rgb_.data(),frame.width*3);
-        canvas_.VideoRgb(rgb_.data(),frame.width,frame.height);dirty=true;return true;
+        canvas_.VideoRgb(rgb_.data(),frame.width,frame.height,aspect_);dirty=true;return true;
     }
     bool Audio(const plm_samples_t& samples) override{
         if(!audio_||!rate_)return false;
@@ -126,7 +129,7 @@ public:
             phase_+=48000;
             while(phase_>=rate_){
                 phase_-=rate_;
-                for(unsigned ch=0;ch<2;++ch)pcm_[ch][count_]=std::max(-1.0f,std::min(1.0f,samples.interleaved[i*2+ch]));
+                for(unsigned ch=0;ch<2;++ch)pcm_[ch][count_]=muted_?0.0f:std::max(-1.0f,std::min(1.0f,samples.interleaved[i*2+ch]));
                 if(++count_==256){
                     if(Cancelled())return false;
                     float* frame=nullptr;if(!NT_SUCCESS(xsdk_audio_next_frame(250,&frame))||!frame)return false;
@@ -139,13 +142,28 @@ public:
         return true;
     }
 };
-inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool(bool)>& present){
+inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool(bool)>& present,bool local=false){
     Output output(canvas);MpegPlayback player(reader,output);
     if(!player.Open())return player.Error();
+    output.SetAspect(player.PixelAspect());
     if(!output.Start(player.SampleRate()))return "Audio XSDK indisponivel.";
     using Clock=std::chrono::steady_clock;
     auto last=Clock::now();double elapsed=0;
+    bool paused=false,muted=false;
+    INPUT_STATE initial{};unsigned previous=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     while(!Cancelled()){
+        INPUT_STATE input{};
+        if(XamInputGetState(0,0,&input)==ERROR_SUCCESS){
+            const unsigned buttons=input.gamepad.buttons,edge=buttons&~previous;previous=buttons;
+            if(edge&INPUT_GAMEPAD_X){muted=!muted;output.SetMuted(muted);}
+            if(local&&(edge&INPUT_GAMEPAD_A)){paused=!paused;last=Clock::now();}
+        }
+        if(paused){
+            canvas.Box(40,620,520,58,0xff172c28u,6);
+            canvas.Text(56,633,"Pausado | A Retomar | B Sair",23,0xfff2f7f3u,490);
+            if(!present(true))return "Falha GPU.";
+            last=Clock::now();continue;
+        }
         auto now=Clock::now();const double delta=std::chrono::duration<double>(now-last).count();
         if(delta<0.025){if(!present(false))return "Falha GPU.";continue;}
         last=now;elapsed=std::min(0.1,delta);
@@ -171,6 +189,6 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     const auto local=XsdkPaths::Normalize(path);
     if(local.empty()||(!tvEndsWith(local,".mpg")&&!tvEndsWith(local,".mpeg")&&!tvEndsWith(local,".ps")))return "Use MPEG-1/MP2 em MPEG-PS; WMV nao suportado neste XSDK.";
     LocalReader reader(local);if(!reader.Ready())return "Arquivo local indisponivel.";
-    return PlayReader(reader,canvas,present);
+    return PlayReader(reader,canvas,present,true);
 }
 }

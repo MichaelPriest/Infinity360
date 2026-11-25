@@ -119,6 +119,15 @@ int main(int argc,char** argv) {
     menu.Load();
     HomeCanvas canvas;
     assert(canvas.LoadArt(argv[1]));
+    // A 2:1 source with 2:3 pixel aspect displays as 4:3, not stretched.
+    const unsigned char rgb[]={255,0,0,255,0,0};
+    canvas.VideoRgb(rgb,2,1,2.0/3.0);
+    assert(canvas.Pixels()[360*1280+159]==0xff000000u);
+    assert(canvas.Pixels()[360*1280+160]==0xffff0000u);
+    assert(canvas.Pixels()[360*1280+1119]==0xffff0000u);
+    assert(canvas.Pixels()[360*1280+1120]==0xff000000u);
+    canvas.VideoRgb(rgb,2,1,1.0);
+    assert(canvas.Pixels()[360*1280+0]==0xffff0000u);
     menu.Draw(canvas,"19:42");
     assert(canvas.Pixels()[200*1280+42]==0xff9dec31u);
     menu.Press(ConsoleHome::Accept);                 // Library
