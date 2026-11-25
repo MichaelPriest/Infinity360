@@ -1328,7 +1328,7 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
-    c.Text(44,78,"AuroraX Store",40,White,1175);
+    c.Text(44,78,"INFINITY Store",40,White,1175);
     c.Text(48,133,"Catalogos autorizados | Downloads pelo PC nesta versao",21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i) {
@@ -1508,7 +1508,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         const int x=42+(static_cast<int>(i)%2)*602;
         const int y=391+(static_cast<int>(i)/2)*106;
         c.Box(x,y,589,97,Panel,10);
-        const std::string label=i==0?"Pasta AuroraX":v.path;
+        const std::string label=i==0?"Pasta INFINITY 360":v.path;
         c.Text(x+14,y+7,label,22,White,550);
         if(!v.available) {
             c.Text(x+14,y+44,"Indisponivel / capacidade nao informada",18,Muted,552);
@@ -1679,7 +1679,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.Text(69,470,details[systemTab_],23,Muted,1122);
             c.Text(69,543,"B para voltar aos paineis.",20,Lime,1120);
         } else {
-            c.Text(47,369,"Resumo AuroraX",29,White,1100);
+            c.Text(47,369,"Resumo INFINITY 360",29,White,1100);
             c.Box(42,422,1196,165,Panel,12);
             c.Text(67,443,"Jogos encontrados    "+number(games_.size()),25,White,1120);
             c.Text(67,494,"Catalogo IPTV local   "+number(tv_.Count())+" itens",23,Muted,1120);
@@ -1797,11 +1797,14 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
     c.Background();
-    c.Image(814,0,64,64,44,17,46,46); c.Text(103,16,"AURORA",32,White,145);
-    c.Text(240,16,"X",32,Lime,44);
+    // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
+    c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
+    c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
+    c.Text(105,16,"INFINITY",32,White,220);
+    c.Text(282,16,"360",32,Lime,84);
     c.Text(1088,19,clock,26,White,90);
     c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
-    c.Text(1199,25,"AX",19,White,32);
+    c.Text(1197,26,"360",16,White,37);
     if(page_!=Home && section_==Iptv) {
         tv_.Draw(c,now<0?static_cast<int64_t>(std::time(0)):now);
         return;

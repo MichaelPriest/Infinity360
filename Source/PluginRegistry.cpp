@@ -108,6 +108,10 @@ std::vector<std::string> PluginRegistry::DefaultRoots(const std::string& appDire
     std::vector<std::string> roots;
     roots.push_back(join(appDirectory,"Plugins"));
 #ifdef _XBOX
+    roots.push_back("HDD1:\\Infinity360\\Plugins");
+    roots.push_back("USB0:\\Infinity360\\Plugins");
+    roots.push_back("USB1:\\Infinity360\\Plugins");
+    // Legacy locations remain readable.
     roots.push_back("HDD1:\\AuroraX\\Plugins");
     roots.push_back("USB0:\\AuroraX\\Plugins");
     roots.push_back("USB1:\\AuroraX\\Plugins");

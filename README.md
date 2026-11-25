@@ -1,4 +1,7 @@
-# AuroraX
+# INFINITY 360
+
+> Nova identidade do projeto anteriormente chamado INFINITY 360. A estrutura de arquivos e as chaves de configuração legadas são preservadas para compatibilidade; Cloud360 IPTV mantém sua marca.
+
 
 Protótipo open-source de uma dashboard para Xbox 360 com interface portátil para desenvolvimento no PC. O núcleo já oferece navegação por controle, biblioteca com varredura recursiva de `default.xex`, favoritos, atualização, detalhes, configurações, sistema e gerenciador de arquivos.
 
@@ -16,13 +19,13 @@ Crie jogos de teste como `Games/Nome do jogo/default.xex`. Comandos: `left`, `ri
 
 ## Interface gráfica
 
-Na raiz do repositório, execute `python -m http.server 8080` e abra `http://localhost:8080/Web/`. No Linux, use `python3` se necessário. O bloco **Cloud360 IPTV** abre o player existente no navegador. O link **← AuroraX** retorna com o foco no mesmo bloco.
+Na raiz do repositório, execute `python -m http.server 8080` e abra `http://localhost:8080/Web/`. No Linux, use `python3` se necessário. O bloco **Cloud360 IPTV** abre o player existente no navegador. O link **← INFINITY 360** retorna com o foco no mesmo bloco.
 
 A tela inicial reúne Biblioteca, IPTV, quatro atalhos e as fileiras Recentes e Favoritos. O direcional ou as setas movem o foco, A ou Enter seleciona e B ou Esc volta. Os jogos da prévia são demonstrativos. Abrir um deles pelo botão Jogar atualiza o histórico deste navegador. Na versão de console, as fileiras usam os jogos encontrados nos dispositivos.
 
 A demonstração inclui tela inicial, biblioteca pesquisável, filtros reais (todos, favoritos, recentes e instalados), ordenação, favoritos persistentes, detalhes, tamanhos, aplicativos, emuladores, arquivos, sistema, menu Guide, status de downloads/FTP e preferências persistentes de tema, perfil, som e movimento. Use `G` ou o botão Guide para abrir o Guide, `B`/`Esc` para voltar, `X` para favoritar o item focado e `Y` para atualizar.
 
-As categorias Xbox 360, Arcade, Kinect, Homebrew e Aplicativos possuem filtros e exemplos próprios. A Loja AuroraX resgata a ideia de catálogo comunitário presente em dashboards clássicas, mas usa pacotes demonstrativos locais e não distribui jogos nem conteúdo protegido. O módulo de clima permite selecionar cidade e Celsius/Fahrenheit nas configurações. As configurações também incluem layout da biblioteca, FTP automático, atualizações e confirmação de execução.
+As categorias Xbox 360, Arcade, Kinect, Homebrew e Aplicativos possuem filtros e exemplos próprios. A Loja INFINITY 360 resgata a ideia de catálogo comunitário presente em dashboards clássicas, mas usa pacotes demonstrativos locais e não distribui jogos nem conteúdo protegido. O módulo de clima permite selecionar cidade e Celsius/Fahrenheit nas configurações. As configurações também incluem layout da biblioteca, FTP automático, atualizações e confirmação de execução.
 
 As demais telas também são interativas: Aplicativos permite iniciar utilitários e consultar atualizações; Emuladores organiza sistemas e simula a varredura de ROMs; Arquivos navega entre HDD1, USB0 e rede e oferece ações de pasta/colagem; Sistema possui painéis de sensores, armazenamento, rede, energia e controle de ventoinha. Essas operações usam providers demonstrativos no navegador e estão estruturadas para posterior substituição pelas APIs do console.
 
@@ -43,8 +46,8 @@ A versão nativa possui tela inicial em 720p, navegação por controle, consulta
 
 ## Primeira build XEX via GitHub Actions (Alpha XSDK)
 
-O [workflow AuroraX first XEX - XSDK visual alpha](.github/workflows/aurorax-xsdk-alpha.yml)
-foi configurado para compilar um teste gráfico real do AuroraX em XEX2 com
+O [workflow INFINITY 360 first XEX - XSDK visual alpha](.github/workflows/aurorax-xsdk-alpha.yml)
+foi configurado para compilar um teste gráfico real do INFINITY 360 em XEX2 com
 a toolchain aberta XSDK no GitHub Actions. Um build bem-sucedido publica o
 artifact `AuroraX-Alpha-XSDK-0.1.0` com `default.xex` e um diagnóstico
 sem GPU. Consulte [instruções e segurança](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md).
@@ -55,7 +58,7 @@ a versão integrada em `Platform/Xbox360`, que ainda depende de compilação
 com XDK e testes no hardware para entregar as telas do PDF de referência.
 Um sucesso do workflow comprova a geração de XEX2, não segurança no console.
 
-## Plugins locais da AuroraX
+## Plugins locais da INFINITY 360
 
 A primeira arquitetura de extensões v1 está integrada às seções **Aplicativos** e
 **Emuladores** da versão XDK. O arquivo `plugin.axplugin` descreve um XEX

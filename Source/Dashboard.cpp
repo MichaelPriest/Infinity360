@@ -46,7 +46,7 @@ void Dashboard::Update(const Input& input) {
 
 void Dashboard::Render(std::ostream& out) const {
     const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    out << "\n=== AURORAX === " << std::put_time(std::localtime(&now), "%H:%M") << "\n";
+    out << "\n=== INFINITY 360 === " << std::put_time(std::localtime(&now), "%H:%M") << "\n";
     if (view_ == View::Home) {
         out << "Inicio  |  Biblioteca: " << games_.size() << " titulo(s)\n\n";
         for (std::size_t i = 0; i < sections_.size(); ++i)

@@ -265,7 +265,7 @@ WORD buttons() {
 
 int main() {
     HomeCanvas canvas;
-    if(!canvas.LoadArt("game:\\home.tga")) { OutputDebugStringA("AuroraX: home.tga ausente ou invalido.\n"); return 1; }
+    if(!canvas.LoadArt("game:\\home.tga")) { OutputDebugStringA("INFINITY 360: home.tga ausente ou invalido.\n"); return 1; }
     Presenter video;
     if(!video.Open()) return 2;
     ConsoleHome menu("game:\\",GameScanner::DefaultRoots()); menu.Load();
