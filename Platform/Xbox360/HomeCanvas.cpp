@@ -222,3 +222,46 @@ void HomeCanvas::Text(int x,int y,const std::string& text,int size,unsigned colo
         x+=advance;
     }
 }
+
+void HomeCanvas::Stroke(int x0,int y0,int x1,int y1,unsigned color,int width){
+    const int dx=std::abs(x1-x0),sx=x0<x1?1:-1,dy=-std::abs(y1-y0),sy=y0<y1?1:-1;int error=dx+dy;
+    for(;;){Box(x0-width/2,y0-width/2,width,width,color,width/2);if(x0==x1&&y0==y1)break;
+        const int e=2*error;if(e>=dy){error+=dy;x0+=sx;}if(e<=dx){error+=dx;y0+=sy;}}
+}
+void HomeCanvas::Shade(int x,int y,int w,int h,unsigned color,unsigned a,unsigned b){
+    if(w<=0||h<=0)return;color=ThemeColor(color);a=std::min(a,255u);b=std::min(b,255u);
+    for(int j=std::max(0,-y);j<h&&y+j<Height;++j)
+        for(int i=std::max(0,-x);i<w&&x+i<Width;++i){
+            unsigned alpha=unsigned((int(a)*(w-i)+int(b)*i)/w);
+            auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,alpha);
+        }
+}
+void HomeCanvas::Glass(int x,int y,int w,int h,bool focused){
+    if(focused){
+        Box(x-4,y-4,w+8,h+8,0xff244715u,15);Box(x-2,y-2,w+4,h+4,0xff548d1cu,13);
+    }
+    Box(x,y,w,h,focused?0xffa8ff00u:0xff404a45u,12);
+    Box(x+2,y+2,w-4,h-4,0xff101715u,10);
+    for(int j=0;j<h-10;++j){
+        const unsigned value=unsigned(24*(h-10-j)/std::max(1,h-10));
+        Box(x+5,y+5+j,w-10,1,0xff101715u+(value<<16)+(value<<8)+value);
+    }
+    if(focused)Box(x+8,y+h-5,w-16,3,0xffa8ff00u,1);
+}
+void HomeCanvas::NeonBackground(){
+    // Respect explicit solid/wallpaper preferences; default gradient becomes
+    // graphite with luminous curved ribbons, computed without external art.
+    if(appearance_.background!=AppearanceSettings::Gradient)return;
+    for(int y=0;y<Height;++y)for(int x=0;x<Width;++x){
+        int wave=Height-36-(x-Width/2)*(x-Width/2)/4600;
+        int d=std::abs(y-wave),d2=std::abs(y-wave+27+x/50);
+        int glow=std::max(0,36-d)*2+std::max(0,21-d2)*3;
+        int glint=std::max(0,3-d)*30;
+        unsigned g=unsigned(std::min(255,18+glow+glint)),rr=unsigned(std::min(255,9+glow/5+glint/2)),bb=unsigned(12+glow/12);
+        frame_[y*Width+x]=ThemeColor(0xff000000u|(rr<<16)|(g<<8)|bb);
+    }
+}
+void HomeCanvas::CenterText(int x,int y,int w,const std::string& text,int size,unsigned color){
+    int width=0;for(size_t i=0;i<text.size();){unsigned cp=nextGlyph(text,i);if(cp<32)cp=' ';width+=(glyphWidths[cp-32]*size+11)/22;}
+    Text(x+std::max(0,(w-width)/2),y,text,size,color,w-std::max(0,(w-width)/2));
+}

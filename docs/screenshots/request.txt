@@ -1,3 +1,2 @@
-V0.2.43 native renderer gallery requested
-Baseline 23f5be633a8c7fac65a45c39be382e34c6c20832
-69 captures; verify actual renderer.
+V0.2.44 approved Top Icons renderer visual check
+Baseline 4376598d10a0ee5831cf942c8542845f0c2f0c8e

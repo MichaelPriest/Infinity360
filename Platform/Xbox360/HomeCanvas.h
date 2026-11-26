@@ -22,6 +22,11 @@ public:
     static const char* ThemeName(unsigned theme);
     void VideoRgb(const unsigned char* pixels,unsigned width,unsigned height,double pixelAspect=1.0);
     void Box(int x, int y, int w, int h, unsigned color, int radius = 0);
+    void Glass(int x,int y,int w,int h,bool focused=false);
+    void Stroke(int x0,int y0,int x1,int y1,unsigned color,int width=3);
+    void NeonBackground();
+    void Shade(int x,int y,int w,int h,unsigned color,unsigned leftAlpha,unsigned rightAlpha);
+    void CenterText(int x,int y,int w,const std::string& text,int size,unsigned color);
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
     bool Logo(const std::string& file, int x, int y, int w, int h);
     // Fixed-size local RGBA files, cached including failed reads until refresh.

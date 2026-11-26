@@ -1,6 +1,7 @@
 ﻿#include "ConsoleHome.h"
 #include "DashboardLayout.h"
 #include "GameGrid.h"
+#include "ApprovedHome.h"
 #include "StoreSourceDirectory.h"
 #include "InfinityVersion.h"
 #include "DiscIdentity.h"
@@ -226,6 +227,7 @@ void ConsoleHome::Load() {
         if(!contains(launched_,history_[i])) launched_.push_back(history_[i]);
     ScanLibrary();
     Rebuild();
+    if(layout_==DashboardLayout::TopIcons){RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();}
 }
 void ConsoleHome::ScanLibrary() {
     artFolders_.clear();artDirty_=true;
@@ -1952,7 +1954,7 @@ std::string ConsoleHome::Press(Key key) {
             {0,1,0,2},{0,1,1,4},{2,3,0,6},{2,4,0,6},
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
-        if(key<=Down) { focus_=layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
+        if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
         if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
@@ -1968,6 +1970,7 @@ std::string ConsoleHome::Press(Key key) {
             return "";
         }
         if(key==Accept) {
+            if(layout_==DashboardLayout::TopIcons){OpenApprovedSlot();return "";}
             if(layout_&&focus_==8){storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();return "";}
             if(layout_&&focus_==9){section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;return "";}
             const int destination=(focus_>=Apps && focus_<=System)?
@@ -3274,6 +3277,8 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.SetTheme(appearanceEditor_?themeDraft_:theme_);c.SetLanguage(language_);
     c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
     c.Background();
+    const bool approved=page_==Home&&layout_==DashboardLayout::TopIcons&&!storeActive_&&!homeEditing_&&!importPreview_;
+    if(approved)c.NeonBackground();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
@@ -3289,6 +3294,8 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
+    if(approved){c.Box(1105,15,130,48,0xff101715u,5);c.Text(1120,17,clock,26,White,112);}
+
     if(quickGuideOpen_){DrawQuickGuide(c);return;}
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
         c.Text(690,71,(copyPaused_?std::string("Fila pausada"):std::string("Copia ")+number(transfer_.Percent())+"%")+
@@ -3678,6 +3685,7 @@ void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
 }
 
 void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const{
+    if(style==DashboardLayout::TopIcons){DrawApprovedHome(c,preview);return;}
     const auto g=DashboardLayout::Get(style);
     const auto& appearance=preview?appearanceDraft_:appearance_;
     for(int i=0;i<DashboardLayout::Slots;++i){
@@ -3866,4 +3874,123 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
         c.Text(45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
         c.Text(45,608,c.Tr("LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar"),18,Muted,1170);
     }
+}
+
+namespace {
+void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
+    auto line=[&](int a,int b,int d,int e){c.Stroke(x+a*size/32,y+b*size/32,x+d*size/32,y+e*size/32,color,std::max(2,size/12));};
+    auto rect=[&](int a,int b,int d,int e){line(a,b,d,b);line(d,b,d,e);line(d,e,a,e);line(a,e,a,b);};
+    switch(kind){
+    case 0:line(3,15,16,3);line(16,3,29,15);line(7,13,7,29);line(25,13,25,29);line(7,29,13,29);line(19,29,25,29);line(13,29,13,20);line(19,29,19,20);line(13,20,19,20);break;
+    case 1:case 12:line(6,10,26,10);line(6,10,2,23);line(26,10,30,23);line(2,23,7,28);line(30,23,25,28);line(7,28,13,21);line(25,28,19,21);line(13,21,19,21);line(8,12,8,20);line(4,16,12,16);line(21,15,21,15);line(25,18,25,18);break;
+    case 2:rect(4,4,13,13);rect(19,4,28,13);rect(4,19,13,28);rect(19,19,28,28);break;
+    case 3:case 16:rect(3,6,29,24);line(16,24,16,29);line(9,29,23,29);if(kind==16){line(13,10,13,20);line(13,10,22,15);line(13,20,22,15);}break;
+    case 4:case 17:rect(5,10,27,29);line(11,10,11,5);line(11,5,21,5);line(21,5,21,10);break;
+    case 5:line(16,3,16,21);line(8,14,16,22);line(24,14,16,22);line(4,24,4,29);line(4,29,28,29);line(28,29,28,24);break;
+    case 6:case 10:for(int i=0;i<3;++i){int yy=6+i*10;line(3,yy,29,yy);int xx=(i==1?20:10);c.Box(x+(xx-3)*size/32,y+(yy-3)*size/32,std::max(5,size/5),std::max(5,size/5),color,2);}break;
+    case 7:case 15:rect(12,2,20,10);rect(2,22,10,30);rect(22,22,30,30);line(16,10,16,16);line(6,16,26,16);line(6,16,6,22);line(26,16,26,22);break;
+    case 8:rect(12,3,20,12);line(12,14,6,20);line(20,14,26,20);line(6,20,6,29);line(26,20,26,29);line(6,29,26,29);break;
+    case 9:case 18:rect(9,3,23,18);line(9,6,3,6);line(3,6,3,13);line(3,13,9,17);line(23,6,29,6);line(29,6,29,13);line(29,13,23,17);line(16,18,16,27);line(9,29,23,29);break;
+    case 11:line(16,2,16,15);line(8,6,3,12);line(3,12,3,22);line(3,22,9,29);line(9,29,23,29);line(23,29,29,22);line(29,22,29,12);line(29,12,24,6);break;
+    case 13:rect(5,5,27,27);rect(13,13,19,19);line(5,5,13,13);line(19,19,27,27);break;
+    case 14:line(2,9,2,28);line(2,9,13,9);line(13,9,17,13);line(17,13,29,13);line(29,13,26,28);line(26,28,2,28);break;
+    default:rect(4,4,28,28);break;
+    }
+}
+}
+std::vector<const Game*> ConsoleHome::ApprovedShelf()const{
+    std::vector<const Game*> out;
+    auto add=[&](const Game* game){if(game&&out.size()<10&&!contains(hidden_,game->executable)&&std::find(out.begin(),out.end(),game)==out.end())out.push_back(game);};
+    for(const auto& path:history_)add(Installed(path));
+    for(const auto& game:games_)add(&game);
+    return out;
+}
+void ConsoleHome::OpenApprovedSlot(){
+    using namespace ApprovedHome;
+    const int selected=focus_;const auto shelf=ApprovedShelf();
+    if(selected==Home)return;
+    if(selected==Hero||selected>=FirstCover){
+        const size_t i=selected==Hero?0:static_cast<size_t>(selected-FirstCover);
+        if(i>=shelf.size()){Enter(Library);return;}
+        const std::string path=shelf[i]->executable;Enter(Library);
+        for(size_t j=0;j<visible_.size();++j)if(visible_[j]->executable==path){row_=static_cast<int>(j);page_=Details;RefreshTitleMetadata();return;}
+        return;
+    }
+    if(selected==ApprovedHome::Games){Enter(Library);return;}
+    if(selected==ApprovedHome::Apps){Enter(ConsoleHome::Apps);return;}
+    if(selected==ApprovedHome::Iptv||selected==Tv){Enter(ConsoleHome::Iptv);return;}
+    if(selected==ApprovedHome::Files){Enter(ConsoleHome::Files);return;}
+    if(selected==Store||selected==Shop){storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;storeSource_="*";store_.Load();RebuildStore();return;}
+    if(selected==ApprovedHome::System){Enter(ConsoleHome::System);return;}
+    Enter(ConsoleHome::System);
+    systemTab_=selected==Downloads?3:selected==Network||selected==Link?1:selected==Disc?6:7;
+    // Reuse the established system-panel entry checks and initialization.
+    Press(Accept);
+    if(selected==Link){networkPeer_=true;}
+    if(selected==Achievements||selected==Awards){localMilestones_=true;achievementsPage_=true;RefreshAchievements();}
+    if(selected==Settings){localMilestones_=true;appearanceDraft_=appearance_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;}
+    if(selected==Power){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();}
+}
+void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
+    using namespace ApprovedHome;
+    const auto& appearance=preview?appearanceDraft_:appearance_;
+    const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
+    const unsigned accent=0xffa8ff00u;
+    c.NeonBackground();
+    c.Box(0,0,1280,78,0xff0d1311u);
+    // Continuous figure-eight logo, drawn from original strokes.
+    const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
+    for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
+    c.Text(116,12,"INFINITY",30,White,172);c.Text(280,12,"360",30,accent,70);
+    c.Text(117,47,"Xbox 360 Dashboard",16,Muted,233);
+    c.Glass(397,12,627,52,false);
+    c.Text(411,17,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),17,White,282);
+    c.Text(411,39,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),15,Muted,300);
+    const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
+    c.Text(709,17,storage==storageVolumes_.end()?"HDD / USB -":StorageInfo::FormatBytes(storage->freeBytes)+" livres",17,White,300);
+    c.Text(709,39,"V" INFINITY360_VERSION,15,Muted,280);
+    const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
+    c.Box(0,79,1280,82,0xff111915u);
+    for(int i=0;i<Hero;++i){
+        const auto a=Geometry(i);if(i==active)c.Glass(a.x,a.y,a.w,a.h,true);
+        approvedIcon(c,i,a.x+(a.w-29)/2,a.y+7,29,i==active?accent:White);
+        c.CenterText(a.x,a.y+43,a.w,c.Tr(names[i]),16,i==active?accent:White);
+    }
+    c.Box(0,161,1280,1,0xff315b1bu);c.Box(570,160,140,3,accent,1);
+    const auto hero=Geometry(ApprovedHome::Hero);c.Glass(hero.x,hero.y,hero.w,hero.h,active==Hero);
+    bool art=false;
+    if(!shelf.empty()&&appearance.ShowBackdrop()){
+        auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+4,hero.y+4,hero.w-8,hero.h-8);
+    }
+    if(art)c.Shade(hero.x+4,hero.y+4,hero.w-8,hero.h-8,0xff070c0au,235,15);
+    else if(!shelf.empty()&&appearance.ShowCover()){
+        auto cover=ArtPath(*shelf.front(),true);if(!cover.empty())c.LocalArt(cover,true,hero.x+430,hero.y+12,142,201);
+    }
+    c.Text(hero.x+20,hero.y+14,"XBOX 360  |  "+std::string(c.Tr("Destaque")),17,accent,hero.w-40);
+    c.Text(hero.x+20,hero.y+61,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,36,White,390);
+    c.Text(hero.x+20,hero.y+113,shelf.empty()?"Adicione jogos ao HDD ou USB":shelf.front()->device,19,White,390);
+    c.Glass(hero.x+20,hero.y+158,190,46,active==Hero);c.CenterText(hero.x+20,hero.y+166,190,shelf.empty()?"A  Biblioteca":"A  Detalhes",21,accent);
+    const char* quick[]={"Instalador","Gerenciador","System Link","IPTV","Loja Infinity","Conquistas"};
+    const char* desc[]={"DVD / GOD","Arquivos e dispositivos","Rede local","Canais e conteudos","Apps e extras","Gamerscore"};
+    for(int i=Disc;i<FirstCover;++i){
+        const auto a=Geometry(i);c.Glass(a.x,a.y,a.w,a.h,i==active);
+        approvedIcon(c,i-Disc+13,a.x+13,a.y+17,35,accent);
+        c.Text(a.x+56,a.y+13,quick[i-Disc],20,White,a.w-63);
+        c.Text(a.x+56,a.y+46,desc[i-Disc],15,Muted,a.w-63);
+        c.Box(a.x+10,a.y+a.h-12,a.w-20,2,0xff466b26u,1);
+    }
+    c.Text(29,412,"Meus Jogos ("+number(games_.size())+")",25,White,850);
+    c.Text(1087,417,"Ver biblioteca >",17,accent,161);
+    for(size_t i=0;i<shelf.size();++i){
+        const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[i];
+        c.Glass(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
+        bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+4,a.y+4,a.w-8,a.h-8);}
+        if(cover)c.Shade(a.x+4,a.y+a.h-29,a.w-8,25,0xff090f0bu,185,185);
+        else {approvedIcon(c,1,a.x+37,a.y+54,42,Muted);c.CenterText(a.x+3,a.y+7,a.w-6,"XBOX 360",14,Muted);}
+        c.CenterText(a.x+4,a.y+a.h-29,a.w-8,game.name,15,White);
+        if(Starred(game))c.Text(a.x+9,a.y+8,"*",21,accent,30);
+    }
+    if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
+    if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
+    else c.Text(30,634,"R3 Guia rapido | RB Loja | LB Notificacoes | START Atalhos",16,Muted,1190);
 }

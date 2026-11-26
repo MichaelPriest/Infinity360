@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.44 — Reconstrução visual Top Icons (sem build XEX)
+
+- Composição do mockup aprovado: barra de 12 ícones, hero, seis atalhos e até dez capas verticais.
+- Painéis grafite/neon, ondas, ícones vetoriais originais e navegação espacial real.
+- Capturas do renderer solicitadas; revisão visual e outras telas pendentes.
+
 ## V0.2.43 — Build com player e layout moderno
 
 - Clipe local MPEG-PS sintético de 5 segundos no ZIP padrão, com áudio e vídeo; remove entrada inválida de demonstração.

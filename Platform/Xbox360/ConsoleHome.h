@@ -294,6 +294,9 @@ private:
     void DrawModernStore(HomeCanvas& c)const;
     bool layoutPreview_=false;
     void DrawModernHome(HomeCanvas& c,unsigned style,bool preview=false)const;
+    void DrawApprovedHome(HomeCanvas& c,bool preview=false)const;
+    std::vector<const Game*> ApprovedShelf()const;
+    void OpenApprovedSlot();
     unsigned themeDraft_=0,appearanceRow_=0;
     bool appearanceEditor_=false;
     mutable bool wallpaperDirty_=true;
