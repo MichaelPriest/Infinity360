@@ -6,6 +6,7 @@
 #include "DashboardLayout.h"
 #include "GameGrid.h"
 #include "ApprovedHome.h"
+#include "InfinityIcons.h"
 #include "StoreSourceDirectory.h"
 #include "InfinityVersion.h"
 #include "DiscIdentity.h"
@@ -2190,14 +2191,13 @@ std::string ConsoleHome::Press(Key key) {
 namespace {
 const unsigned White=0xfff2f7f3u, Muted=0xffb7c9c1u, Lime=0xff9dec31u, Panel=0xff172c28u;
 void panel(HomeCanvas& c,int x,int y,int w,int h,unsigned bg,bool active) {
-    c.Box(x,y,w,h,active?Lime:0xff2e4842u,11);
-    int inset=active?4:1;
-    c.Box(x+inset,y+inset,w-2*inset,h-2*inset,bg,10-inset/2);
+    c.SeriesTile(x,y,w,h,active,220);
+    if(bg!=Panel&&w>20&&h>20)c.Translucent(x+3,y+3,w-6,h-6,bg,34,8);
 }
 void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned color) {
     c.Box(x,674,29,29,color,14);
-    c.Text(x+7,673,key,21,White,26);
-    c.Text(x+38,672,c.Tr(action),20,White,150);
+    c.CenterText(x,673,29,key,20,0xff101710u);
+    c.TextFit(x+38,672,c.Tr(action),19,White,150);
 }
 }
 
@@ -2273,7 +2273,7 @@ void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     for(int i=0;i<4;++i) {
         const int x=42+i*302, item=homeDraft_[i]-'0';
         panel(c,x,282,289,168,Panel,i==homeEditSlot_);
-        c.Image(600+item*52,0,52,52,x+112,303,60,60);
+        InfinityIcons::Draw(c, (item==0?2:item==1?1:item==2?14:10),x+112,303,60,White);
         c.Text(x+16,374,c.Tr(labels[Apps+item]),26,i==homeEditSlot_?Lime:White,258);
         c.Text(x+16,414,"Posicao "+number(i+1),18,Muted,252);
     }
@@ -2325,7 +2325,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
     if(layout_&&!storeManage_){DrawModernStore(c);return;}
-    c.Text(44,78,"INFINITY Store",40,White,1175);
+    InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
     c.Text(48,133,StoreSourceLabel()+" | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i) {
@@ -2382,7 +2382,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
     panel(c,728,140,510,196,0xff003e33u,focus_==Iptv);
     c.Image(0,0,342,222,436,150,260,173);
     c.Image(344,0,254,222,1035,155,183,163);
-    c.Image(652,0,52,52,70,160,47,43,Lime);
+    InfinityIcons::Draw(c,23,70,160,43,Lime);
     c.Text(69,214,c.Tr("Biblioteca"),43,White,350);
     c.Text(70,278,c.Tr("Jogos instalados"),23,Muted,350);
     c.Text(752,219,"Cloud360 IPTV",35,White,283);
@@ -2391,7 +2391,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
         int x=42+i*302;
         panel(c,x,357,289,75,Panel,focus_==Apps+i);
         const int item=homeOrder_[i]-'0';
-        c.Image(600+item*52,0,52,52,x+24,376,39,38);
+        InfinityIcons::Draw(c,item==0?2:item==1?1:item==2?14:10,x+24,376,38,White);
         c.Text(x+80,375,c.Tr(labels[Apps+item]),23,White,205);
     }
     c.Box(767,456,1,174,0xff355148u);
@@ -2416,7 +2416,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
                 else if(g->name=="Gears of War 3") sy=132;
                 if(appearance_.ShowBackdrop() && (g->name=="Forza Horizon" || g->name=="Halo 3" || g->name=="Gears of War 3"))
                     c.Image(sx,sy,140,64,left+1,505,cardWidth-2,84);
-                else c.Image(652,0,52,52,left+cardWidth/2-20,525,40,40,Muted);
+                else InfinityIcons::Draw(c,1,left+cardWidth/2-20,525,40,Muted);
             }
             c.Text(left+8,594,g->name,16,White,cardWidth-16);
             if(side && contains(pinned_,paths[i])) c.Text(left+8,508,c.Tr("FIXADO"),14,Lime,cardWidth-16);
@@ -3085,7 +3085,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
-    c.Text(44,78,c.Tr(labels[section_]),43,White,1190);
+    const int sectionIcons[]={23,3,2,1,14,10,20,21};
+    InfinityIcons::Draw(c,sectionIcons[section_],46,91,32,White);
+    c.TextFit(91,78,c.Tr(labels[section_]),40,White,1140);
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
@@ -3136,7 +3138,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         static const char* const titles[]={
             "Discos","Rede/FTP","Telemetria","Downloads","Plugins","Historico","DVD","Console"
         };
-        static const char* const marks[]={"HDD","NET","SMC","DL","PLG","LOG","DVD","SYS"};
+        static const int marks[]={14,7,26,5,2,20,13,8};
         static const char* const summaries[]={
             "Jogos e discos","Rede local","Telemetria","Tarefas locais","Residentes","Eventos","Instalar disco","Perfis e hora"
         };
@@ -3153,9 +3155,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         for(int i=0;i<8;++i) {
             const int x=42+i*150;
             panel(c,x,166,140,166,Panel,i==systemTab_);
-            c.Text(x+10,184,marks[i],20,i==systemTab_?Lime:Muted,96);
-            c.Text(x+10,222,c.Tr(titles[i]),19,White,172);
-            c.Text(x+10,284,c.Tr(summaries[i]),16,Muted,172);
+            InfinityIcons::Draw(c,marks[i],x+12,181,30,White);
+            c.TextFit(x+10,222,c.Tr(titles[i]),18,White,120);
+            c.TextFit(x+10,284,c.Tr(summaries[i]),15,Muted,120);
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
@@ -3327,7 +3329,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
         social_.gamerscoreKnown?"Gamerscore: "+number(social_.gamerscore):"Gamerscore: indisponível",
         "Avatar: ícone neutro","Chat Xbox: indisponível","Amigos e mensagens: integração pendente"
     };
-    const int icons[]={1,9,8,19,8};
+    const int icons[]={1,9,27,19,8};
     for(int row=0;row<5;++row){
         const int y=274+row*42;
         approvedIcon(c,icons[row],611,y+6,24,White);
@@ -3350,9 +3352,9 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
     c.DimBackdrop();
     c.SeriesTile(235,87,332,552,false,244);
-    approvedIcon(c,2,260,111,30,White);
+    approvedIcon(c,24,260,111,30,White);
     c.TextFit(301,105,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rápido"),28,White,250);
-    const int icons[]={2,20,21,3,22,5,10,4};
+    const int icons[]={23,20,21,3,22,5,10,4};
     for(int i=0;i<QuickGuide::Count;++i){
         const unsigned action=static_cast<unsigned>(order[i]-'0');
         const int y=165+i*46;
@@ -3378,10 +3380,10 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
     c.Background();
     const bool approved=ApprovedHeader()&&!weatherPanel_;
-    if(approved)c.SeriesBackground();
+    c.SeriesBackground();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
-    c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
-    c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
+    const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
+    for(unsigned k=1;k<sizeof logo/sizeof logo[0];++k)c.Stroke(31+logo[k-1][0],19+logo[k-1][1],31+logo[k][0],19+logo[k][1],Lime,5);
     c.Text(105,16,"INFINITY",32,White,220);
     c.Text(282,16,"360",32,Lime,84);
     c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
@@ -3408,7 +3410,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         c.Box(40,628,1200,35,0xff102923u,6);
         c.Text(51,630,c.Tr(notice_.c_str()),18,Lime,1170);
     }
-    if(approved){c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);}else c.Box(0,663,1280,57,0xff061915u);
+    c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
     buttonHint(c,429,"X",page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
@@ -3797,22 +3799,12 @@ void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const
         const bool active=i==(preview?0:focus_);
         const char* name=destination==8?"Loja":destination==9?"Downloads":destination==Library?"Jogos":destination==Iptv?"IPTV":labels[destination];
         panel(c,rect.x,rect.y,rect.w,rect.h,Panel,active);
-        int icon=-1;
-        if(destination==Library)icon=1;
-        else if(destination>=Apps&&destination<=System)icon=destination-Apps;
-        // Existing atlas icon art; store/download/recent/favorite use a simple
-        // original geometric pictogram instead of assuming atlas coordinates.
+        const int icons[]={1,3,2,1,14,10,20,21,4,5};
+        const int icon=destination>=0&&destination<10?icons[destination]:0;
         const int size=rect.h>=70?30:24;
         const int ix=rect.w<=120?rect.x+(rect.w-size)/2:rect.x+12;
         const int iy=rect.w<=120?rect.y+8:rect.y+(rect.h-size)/2;
-        if(icon>=0)c.Image(600+icon*52,0,52,52,ix,iy,size,size,active?Lime:White);
-        else{
-            c.Box(ix,iy,size,size,active?Lime:Muted,5);
-            c.Box(ix+3,iy+3,size-6,size-6,Panel,3);
-            if(destination==9){c.Box(ix+size/2-2,iy+4,4,size-12,Lime);c.Box(ix+7,iy+size-8,size-14,3,Lime);}
-            else if(destination==8){c.Box(ix+size/4,iy+size/3,size/2,size/2,Lime,2);}
-            else{c.Box(ix+size/3,iy+size/3,size/3,size/3,Lime,3);}
-        }
+        InfinityIcons::Draw(c,icon,ix,iy,size,White);
         const int tx=rect.w<=120?rect.x+5:rect.x+size+22;
         const int ty=rect.w<=120?rect.y+43:rect.y+(rect.h-22)/2;
         c.Text(tx,ty,c.Tr(name),rect.w<=120?15:20,active?Lime:White,rect.x+rect.w-tx-5);
@@ -3850,7 +3842,7 @@ void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const
         const auto cover=ArtPath(game,true),back=ArtPath(game,false);
         bool drawn=appearance.ShowCover()&&!cover.empty()&&c.LocalArt(cover,true,x+(cw-std::min(cw-8,(height-27)*2/3))/2,y+3,std::min(cw-8,(height-27)*2/3),height-27);
         if(!drawn&&appearance.ShowBackdrop()&&!back.empty())drawn=c.LocalArt(back,false,x+3,y+3,cw-6,height-27);
-        if(!drawn)c.Image(652,0,52,52,x+cw/2-15,y+10,30,30,Muted);
+        if(!drawn)InfinityIcons::Draw(c,1,x+cw/2-15,y+10,30,Muted);
         c.Text(x+5,y+height-24,game.name,15,White,cw-10);++shown;
     };
     for(const auto& path:history_){if(shown>=cols)break;const auto* item=Installed(path);if(item)card(*item);}
@@ -3877,7 +3869,7 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
             bool art=false;
             if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+50,y+7,90,135);
             if(!art&&appearance_.ShowBackdrop()&&!back.empty())art=c.LocalArt(back,false,x+7,y+19,cw-14,99);
-            if(!art)c.Image(652,0,52,52,x+67,y+44,56,56,Muted);
+            if(!art)InfinityIcons::Draw(c,1,x+67,y+44,56,Muted);
             if(Starred(game))c.Text(x+10,y+7,"*",23,Lime,25);
             if(contains(pinned_,game.executable))c.Text(x+cw-57,y+7,c.Tr("FIXADO"),12,Lime,50);
             c.Box(x+5,y+143,cw-10,26,0xff102923u,4);
@@ -3896,7 +3888,7 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     if(appearance_.ShowBackdrop()&&!back.empty())c.LocalArt(back,false,637,149,594,238);
     c.Box(52,152,577,232,0xff102923u,8);
     bool art=appearance_.ShowCover()&&!cover.empty()&&c.LocalArt(cover,true,65,166,136,204);
-    if(!art)c.Image(652,0,52,52,107,224,52,52,Muted);
+    if(!art)InfinityIcons::Draw(c,1,107,224,52,Muted);
     c.Text(219,165,game.name,31,White,398);
     c.Text(219,211,game.device,18,Muted,398);
     c.Text(219,241,m.package?(m.volumeType==0?"STFS / GOD / XBLA":"SVOD"):"XEX",21,Lime,398);
@@ -3982,28 +3974,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
 
 namespace {
 void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
-    auto line=[&](int a,int b,int d,int e){c.Stroke(x+a*size/32,y+b*size/32,x+d*size/32,y+e*size/32,color,std::max(2,size/12));};
-    auto rect=[&](int a,int b,int d,int e){line(a,b,d,b);line(d,b,d,e);line(d,e,a,e);line(a,e,a,b);};
-    switch(kind){
-    case 0:line(3,15,16,3);line(16,3,29,15);line(7,13,7,29);line(25,13,25,29);line(7,29,13,29);line(19,29,25,29);line(13,29,13,20);line(19,29,19,20);line(13,20,19,20);break;
-    case 1:case 12:line(6,10,26,10);line(6,10,2,23);line(26,10,30,23);line(2,23,7,28);line(30,23,25,28);line(7,28,13,21);line(25,28,19,21);line(13,21,19,21);line(8,12,8,20);line(4,16,12,16);line(21,15,21,15);line(25,18,25,18);break;
-    case 2:rect(4,4,13,13);rect(19,4,28,13);rect(4,19,13,28);rect(19,19,28,28);break;
-    case 3:case 16:rect(3,6,29,24);line(16,24,16,29);line(9,29,23,29);if(kind==16){line(13,10,13,20);line(13,10,22,15);line(13,20,22,15);}break;
-    case 4:case 17:rect(5,10,27,29);line(11,10,11,5);line(11,5,21,5);line(21,5,21,10);break;
-    case 5:line(16,3,16,21);line(8,14,16,22);line(24,14,16,22);line(4,24,4,29);line(4,29,28,29);line(28,29,28,24);break;
-    case 6:case 10:for(int i=0;i<3;++i){int yy=6+i*10;line(3,yy,29,yy);int xx=(i==1?20:10);c.Box(x+(xx-3)*size/32,y+(yy-3)*size/32,std::max(5,size/5),std::max(5,size/5),color,2);}break;
-    case 7:case 15:rect(12,2,20,10);rect(2,22,10,30);rect(22,22,30,30);line(16,10,16,16);line(6,16,26,16);line(6,16,6,22);line(26,16,26,22);break;
-    case 8:rect(12,3,20,12);line(12,14,6,20);line(20,14,26,20);line(6,20,6,29);line(26,20,26,29);line(6,29,26,29);break;
-    case 9:case 18:rect(9,3,23,18);line(9,6,3,6);line(3,6,3,13);line(3,13,9,17);line(23,6,29,6);line(29,6,29,13);line(29,13,23,17);line(16,18,16,27);line(9,29,23,29);break;
-    case 11:line(16,2,16,15);line(8,6,3,12);line(3,12,3,22);line(3,22,9,29);line(9,29,23,29);line(23,29,29,22);line(29,22,29,12);line(29,12,24,6);break;
-    case 13:for(int k=0;k<12;++k){const int pts[][2]={{16,2},{23,4},{28,9},{30,16},{28,23},{23,28},{16,30},{9,28},{4,23},{2,16},{4,9},{9,4}};line(pts[k][0],pts[k][1],pts[(k+1)%12][0],pts[(k+1)%12][1]);}rect(14,14,18,18);break;
-    case 14:line(2,9,2,28);line(2,9,13,9);line(13,9,17,13);line(17,13,29,13);line(29,13,26,28);line(26,28,2,28);break;
-    case 19:rect(4,5,28,22);line(11,22,11,29);line(11,29,19,22);break;
-    case 20:line(16,3,24,5);line(24,5,29,13);line(29,13,27,23);line(27,23,19,29);line(19,29,9,27);line(9,27,3,19);line(3,19,5,9);line(5,9,16,3);line(16,8,16,16);line(16,16,23,16);break;
-    case 21:line(16,3,20,12);line(20,12,30,13);line(30,13,22,20);line(22,20,25,29);line(25,29,16,24);line(16,24,7,29);line(7,29,10,20);line(10,20,2,13);line(2,13,12,12);line(12,12,16,3);break;
-    case 22:line(7,24,25,24);line(7,24,10,18);line(10,18,10,9);line(10,9,16,4);line(16,4,22,9);line(22,9,22,18);line(22,18,25,24);line(13,28,19,28);break;
-    default:rect(4,4,28,28);break;
-    }
+    InfinityIcons::Draw(c,kind,x,y,size,color);
 }
 }
 std::vector<const Game*> ConsoleHome::ApprovedShelf()const{
@@ -4058,9 +4029,10 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     const ThermalTelemetry empty;
     const auto& reading=current?headerThermal_:empty;
     const bool warning=ThermalAdvisory::Evaluate(reading,thermalLimit_)==ThermalAdvisory::Reached;
-    c.TextFit(380,14,"CPU "+reading.CompactCelsius(0)+" | GPU "+reading.CompactCelsius(1),13,warning?0xffffb34du:White,178);
-    c.TextFit(380,31,"EDRAM "+reading.CompactCelsius(2)+" | SYS "+reading.CompactCelsius(3),12,Muted,178);
-    c.TextFit(380,47,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),11,Muted,178);
+    approvedIcon(c,26,378,27,18,White);
+    c.TextFit(401,14,"CPU "+reading.CompactCelsius(0)+" | GPU "+reading.CompactCelsius(1),12,warning?0xffffb34du:White,157);
+    c.TextFit(401,31,"EDRAM "+reading.CompactCelsius(2)+" | SYS "+reading.CompactCelsius(3),11,Muted,157);
+    c.TextFit(401,47,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),11,Muted,157);
     DrawSocialHeader(c,572,12,189);
     c.SeriesTile(772,12,266,52,active==ApprovedHome::Weather);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
@@ -4071,7 +4043,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         else{c.Box(783,33,31,12,wc,6);c.Box(789,25,18,19,wc,9);if(weather_.code>=51){c.Stroke(789,48,786,53,wc,2);c.Stroke(799,48,796,53,wc,2);c.Stroke(809,48,806,53,wc,2);}}
         c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
-    }else{c.Text(785,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,242);c.Text(785,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,242);}
+    }else{approvedIcon(c,25,785,24,26,White);c.TextFit(821,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,209);c.TextFit(821,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,209);}
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
     c.Translucent(0,82,1280,66,0xff161917u,100);
     for(int i=0;i<Hero;++i){
