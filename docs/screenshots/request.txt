@@ -16,3 +16,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 approved raster logo in native shared header and README
 2026-11-26 raster icon atlas shared across native modules; weather and neutral profile images
 2026-11-26 transparent Xbox controller button sprites, shared footer, contextual Home, Guide, details and IPTV
+2026-11-26 replace custom buttons with Microsoft XNA 2007 original controller image pack (MS-PL)

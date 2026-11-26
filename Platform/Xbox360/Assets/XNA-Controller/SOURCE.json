@@ -1,0 +1,66 @@
+{
+  "publisher": "Microsoft / XNA Game Studio",
+  "published": "2007-09-27",
+  "archive": "https://github.com/SimonDarksideJ/XNAGameStudio/tree/archive/Samples/ButtonImages/ButtonImages",
+  "documentation": "https://github.com/SimonDarksideJ/XNAGameStudio/wiki/Xbox-360-Controller-Button-Images",
+  "license": "MS-PL (original RTF retained)",
+  "conversion": "RLE TGA decode, alpha crop, proportional 4x4 area sampling to 48x32 RGBA cells; no redrawing",
+  "images": [
+    {
+      "file": "xboxControllerButtonA.tga",
+      "sha": "7d420a2ac44b5a9324ad8c45165c29bd2afb90be"
+    },
+    {
+      "file": "xboxControllerButtonB.tga",
+      "sha": "f128ff992bda7a06dc4f98a002497ecaddd2caaf"
+    },
+    {
+      "file": "xboxControllerButtonX.tga",
+      "sha": "92f4ce7ef32e7d3e8d94b0b1db8df4f1b4e56dc2"
+    },
+    {
+      "file": "xboxControllerButtonY.tga",
+      "sha": "9fc6072d9872c03c8c24d12dcdb94fd513d69303"
+    },
+    {
+      "file": "xboxControllerLeftShoulder.tga",
+      "sha": "e0b35e3afe571402c8bd6f90df4928d8b32ae6ad"
+    },
+    {
+      "file": "xboxControllerRightShoulder.tga",
+      "sha": "ae0b4ba36fa0f6cf581c9c9f3a464b2957d27109"
+    },
+    {
+      "file": "xboxControllerLeftTrigger.tga",
+      "sha": "b9e3f79a70c418c8de14908d8fb7df5059d99f35"
+    },
+    {
+      "file": "xboxControllerRightTrigger.tga",
+      "sha": "6521aac6df5e9cdd752cae460e7d9889c484f381"
+    },
+    {
+      "file": "xboxControllerStart.tga",
+      "sha": "8dcf0fe47b4decca00a95e822ef7ce3cbf0142c2"
+    },
+    {
+      "file": "xboxControllerBack.tga",
+      "sha": "db2910ae4048e41de5b9388173a8e6caceb7b6"
+    },
+    {
+      "file": "xboxControllerLeftThumbstick.tga",
+      "sha": "aeea1b98dbae83c373e66648a57f693f48261522"
+    },
+    {
+      "file": "xboxControllerRightThumbstick.tga",
+      "sha": "aa1f12dc055d268f199ca5db024297dfdef15271"
+    },
+    {
+      "file": "xboxControllerDPad.tga",
+      "sha": "0ec04fcb3d966a28bd44903545d8e7a8e212b34f"
+    },
+    {
+      "file": "xboxControllerButtonGuide.tga",
+      "sha": "5876a473932fabdff25e4da3be4ac435897c5741"
+    }
+  ]
+}

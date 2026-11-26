@@ -60,11 +60,13 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
 
-### Botões do controle Xbox 360
+### Botões oficiais do controle Xbox 360
 
-![Botões rasterizados do controle](Platform/Xbox360/Assets/xbox-buttons.png)
+![Imagens originais Xbox 360, adaptadas do pacote XNA](Platform/Xbox360/Assets/xbox-buttons.png)
 
-14 imagens transparentes (A, B, X, Y, LB, RB, LT, RT, START, BACK, L3, R3, direcional e Guide). Os botões preservam suas cores independentemente do tema. Aplicados ao rodapé compartilhado, destaque da Home, atalhos contextuais, detalhes de jogos, Guide e IPTV. Outros textos de ajuda permanecem como texto. O atlas é incorporado ao renderizador sem leitura de disco; nenhuma mudança nos mapeamentos dos controles.
+14 imagens do pacote Microsoft XNA Game Studio **Xbox 360 Controller Button Images** (2007), arquivado sob Microsoft Permissive License (MS-PL). As texturas TGA originais foram convertidas em atlas com transparência, preservando as proporções e sem redesenhar os símbolos. Os analógicos usam as imagens originais dos thumbsticks. As cores permanecem iguais em todos os temas. Aplicados ao rodapé compartilhado, Home, Guide, detalhes e IPTV; os mapeamentos de entrada permanecem inalterados.
+
+Fonte: [arquivo XNA](https://github.com/SimonDarksideJ/XNAGameStudio/wiki/Xbox-360-Controller-Button-Images). [Licença original](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência dos arquivos](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). A distribuição não implica afiliação ou endosso da Microsoft.
 
 ## Galeria da interface nativa
 

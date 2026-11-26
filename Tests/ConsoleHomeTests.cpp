@@ -244,8 +244,8 @@ int main(int argc,char** argv) {
          bool changed=false;for(int y=80;y<112;++y)for(int x=80;x<80+InfinityButtons::Width(k,32);++x)if(buttons.Pixels()[y*1280+x]!=0xff101010u)changed=true;
          assert(changed&&buttons.Pixels()[80*1280+80]==0xff101010u);
      }
-     buttons.SetTheme(0);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);unsigned green=buttons.Pixels()[106*1280+116];
-     buttons.SetTheme(1);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);assert(buttons.Pixels()[106*1280+116]==green);
+     buttons.SetTheme(0);buttons.Box(100,100,32,32,0xff101010u);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);unsigned green=buttons.Pixels()[106*1280+116];
+     buttons.SetTheme(1);buttons.Box(100,100,32,32,0xff101010u);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);assert(buttons.Pixels()[106*1280+116]==green);
      InfinityButtons::Draw(buttons,InfinityButtons::RB,-10,-10,32);
     }
     // Exercise actual framebuffer composition, not a screenshot mockup.
