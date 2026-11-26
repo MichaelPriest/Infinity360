@@ -3,7 +3,36 @@
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
+static void PutBE32(unsigned char* p, std::uint32_t v) {
+    p[0] = static_cast<unsigned char>(v >> 24);
+    p[1] = static_cast<unsigned char>(v >> 16);
+    p[2] = static_cast<unsigned char>(v >> 8);
+    p[3] = static_cast<unsigned char>(v);
+}
 int main() {
+    unsigned char data[48] = {};
+    const std::uint32_t base = 0x10000;
+    PutBE32(data, 1);
+    PutBE32(data + 4, base + 8);
+    PutBE32(data + 8, 1);
+    PutBE32(data + 16, 2);
+    PutBE32(data + 24, GamerscoreSetting);
+    data[32] = 1;
+    unsigned score = 999;
+    CHECK(ParseGamerscore(data, sizeof(data), base, 2, score) && score == 0);
+    PutBE32(data + 40, 12345);
+    CHECK(ParseGamerscore(data, sizeof(data), base, 2, score) && score == 12345);
+    CHECK(!ParseGamerscore(data, 47, base, 2, score));
+    CHECK(!ParseGamerscore(data, sizeof(data), base, 1, score));
+    CHECK(!ParseGamerscore(data, sizeof(data), base + 4, 2, score));
+    PutBE32(data + 40, 0xffffffffu);
+    CHECK(!ParseGamerscore(data, sizeof(data), base, 2, score));
+    PutBE32(data + 40, 12345);
+    data[32] = 6;
+    CHECK(!ParseGamerscore(data, sizeof(data), base, 2, score));
+    data[32] = 1;
+    PutBE32(data + 8, 0);
+    CHECK(!ParseGamerscore(data, sizeof(data), base, 2, score));
     CHECK(FromXam(0, "stale").state == SignIn::SignedOut);
     CHECK(FromXam(0, "stale").gamertag.empty());
     CHECK(FromXam(1, "Player").state == SignIn::Local);
