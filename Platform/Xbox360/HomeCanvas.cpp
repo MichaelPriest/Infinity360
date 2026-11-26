@@ -175,7 +175,7 @@ bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {
     }
     return true;
 }
-bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h) {
+bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop,int radius) {
     if(file.empty() || w<=0 || h<=0 || x<0 || y<0 || x>=Width || y>=Height ||
        w>Width-x || h>Height-y) return false;
     const int sw=cover?160:640, sh=cover?240:360;
@@ -200,10 +200,20 @@ bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,i
     }
     const std::vector<unsigned char>& data=localArt_[slot].rgba;
     if(data.empty())return false;
-    for(int j=0;j<h;++j) for(int i=0;i<w;++i) {
-        const unsigned char* p=&data[4*((j*sh/h)*sw+i*sw/w)];
-        unsigned& dest=frame_[(y+j)*Width+x+i];
-        if(p[3])dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+    int cw=sw,ch=sh,sx=0,sy=0;
+    if(crop){
+        if(sw*h>w*sh){cw=std::max(1,sh*w/h);sx=(sw-cw)/2;}
+        else {ch=std::max(1,sw*h/w);sy=cover?0:(sh-ch)/2;}
+    }
+    radius=std::max(0,std::min(radius,std::min(w,h)/2));
+    for(int j=0;j<h;++j){
+        int cut=0,edge=std::min(j,h-1-j);
+        if(edge<radius){const int dy=radius-edge-1;while(cut<radius&&(radius-cut-1)*(radius-cut-1)+dy*dy>radius*radius)++cut;}
+        for(int i=cut;i<w-cut;++i){
+            const unsigned char* p=&data[4*((sy+j*ch/h)*sw+sx+i*cw/w)];
+            unsigned& dest=frame_[(y+j)*Width+x+i];
+            if(p[3])dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+        }
     }
     return true;
 }
@@ -283,25 +293,42 @@ void HomeCanvas::Translucent(int x,int y,int w,int h,unsigned color,unsigned opa
 }
 void HomeCanvas::SeriesBackground(){
     if(appearance_.background!=AppearanceSettings::Gradient)return;
-    // Restrained graphite with a broad, soft accent wash, not neon stripes.
     for(int y=0;y<Height;++y)for(int x=0;x<Width;++x){
         const int dx=x-240,dy=y-185;
-        const unsigned glow=unsigned(std::max(0,26-(dx*dx/18000+dy*dy/9500)));
-        const unsigned base=unsigned(16+8*(Height-y)/Height);
-        const unsigned r=base+glow/4,g=base+glow,b=base+glow/3;
-        frame_[y*Width+x]=ThemeColor(0xff000000u|(r<<16)|(g<<8)|b);
+        const int wave=Height+20-x/4+(x-700)*(x-700)/9000;
+        const int distance=std::abs(y-wave);
+        const unsigned glow=unsigned(std::max(0,22-(dx*dx/18000+dy*dy/9500))+std::max(0,45-distance)/2);
+        const unsigned base=unsigned(13+7*(Height-y)/Height);
+        frame_[y*Width+x]=ThemeColor(0xff000000u|((base+glow/5)<<16)|((base+glow)<<8)|(base+glow/4));
     }
+}
+void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
+    if(w<8||h<8)return;
+    Box(x+5,y,w-10,3,0xffa8ff00u,1);
+    Box(x+5,y+h-3,w-10,3,0xffa8ff00u,1);
+    Box(x,y+5,3,h-10,0xffa8ff00u,1);
+    Box(x+w-3,y+5,3,h-10,0xffa8ff00u,1);
 }
 void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacity){
     if(w<8||h<8)return;
-    Translucent(x+1,y+4,w,h,0xff000000u,80,8);
-    Translucent(x,y,w,h,0xff303633u,opacity,8);
-    if(focused){
-        // Four thin inset segments keep the focus readable without a heavy glow.
-        Box(x+3,y,w-6,3,0xffa8ff00u,1);
-        Box(x+3,y+h-3,w-6,3,0xffa8ff00u,1);
-        Box(x,y+3,3,h-6,0xffa8ff00u,1);
-        Box(x+w-3,y+3,3,h-6,0xffa8ff00u,1);
+    Translucent(x+1,y+4,w,h,0xff000000u,80,10);
+    Translucent(x,y,w,h,0xff65736du,140,10);
+    Translucent(x+1,y+1,w-2,h-2,0xff232b28u,opacity,9);
+    // Soft highlight within the upper part of each glass surface.
+    for(int j=0;j<std::min(24,h-6);++j)
+        Translucent(x+7,y+3+j,w-14,1,0xff99afa1u,unsigned((24-j)/2));
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,68,7);SeriesFocus(x,y,w,h);}
+}
+void HomeCanvas::DimBackdrop(){
+    // Bounded three-sample horizontal softening, in place, no additional full-size buffer.
+    for(int y=0;y<Height;++y){
+        unsigned prev=frame_[y*Width];
+        for(int x=0;x<Width;++x){
+            const unsigned current=frame_[y*Width+x];
+            const unsigned next=frame_[y*Width+std::min(x+1,int(Width)-1)];
+            frame_[y*Width+x]=blend(0xff080b09u,blend(current,blend(prev,next,128),128),165);
+            prev=current;
+        }
     }
 }
 void HomeCanvas::TextFit(int x,int y,const std::string& text,int size,unsigned color,int maxWidth){
