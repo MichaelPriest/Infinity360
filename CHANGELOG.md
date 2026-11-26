@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.81 — Política de fontes IPTV
+
+- Módulo compartilhado para autorização de fontes HTTPS e relay LAN, com aviso na interface XSDK antes de iniciar reprodução.
+- Descoberta de playlists também em Andromeda; contagem explícita de referências externas BrazucaPlay sem integração.
+- Testes sintéticos de política de rede; sem build nesta revisão.
+
 ## V0.2.80 — Organização modular e contratos de integração
 
 - Isola o importador Andromeda em Modules/Store, valida os quatro formatos com quantidade exata de campos observada no Nexus Horizon e mantém metadados separados de downloads.

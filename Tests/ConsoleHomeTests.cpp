@@ -9,6 +9,7 @@
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
+#include "../Platform/Xbox360/Modules/IPTV/SourcePolicy.h"
 #include <cassert>
 #include <algorithm>
 #include <chrono>
@@ -457,6 +458,15 @@ int main(int argc,char** argv) {
     assert(url.Parse("http://192.168.1.3:8090/live.mpg") && !url.NeedsConverter());
     assert(url.Parse("https://example.invalid/live.M3U8?token=x") && url.NeedsConverter());
     assert(!url.Parse("brazucaplay:opaque") && !url.Parse("http://host:99999/file"));
+    {const auto policy=root/"IptvPolicy";fs::create_directories(policy);const auto policyRoot=policy.string()+"/";
+     std::ofstream(policy/"infinity360-store-hosts.txt")<<"allowed.example\n";
+     std::ofstream(policy/"infinity360-iptv-relay.txt")<<"192.168.1.10\n";
+     assert(InfinityIptv::NetworkAllowed("https://allowed.example/live.m3u8",policyRoot));
+     assert(!InfinityIptv::NetworkAllowed("https://other.example/live.m3u8",policyRoot));
+     assert(InfinityIptv::NetworkAllowed("http://192.168.1.10:8090/live.ts",policyRoot));
+     assert(!InfinityIptv::NetworkAllowed("http://192.168.1.11:8090/live.ts",policyRoot));
+     assert(InfinityIptv::NetworkAllowed("brazucaplay:opaque",policyRoot));
+     fs::remove_all(policy); }
     assert(!url.Parse("http://host/path\r\nheader") && !url.Parse("http://user:pass@host/"));
 
     const std::string xmlPath=(root/"guide.xml").string();

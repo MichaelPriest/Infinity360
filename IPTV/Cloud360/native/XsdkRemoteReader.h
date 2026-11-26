@@ -1,6 +1,7 @@
 #pragma once
 #include "MpegPlayback.h"
 #include "StoreHostPolicy.h"
+#include "Modules/IPTV/SourcePolicy.h"
 #include "xsdk/xam.h"
 #include <curl/curl.h>
 #include <chrono>
@@ -39,16 +40,8 @@ public:
             const auto path=StoreHostPolicy::lower(url.target.substr(0,url.target.find('?')));
             if(!(transportStream&&path.size()>=3&&path.substr(path.size()-3)==".ts")&&!(playlist&&path.size()>=5&&path.substr(path.size()-5)==".m3u8"))return false;
         }
-        // HTTP only to an explicitly configured LAN relay address. HTTPS uses the existing exact host allowlist.
-        if(!url.secure){
-            std::ifstream relay((root+"infinity360-iptv-relay.txt").c_str());std::string allowed;
-            if(!std::getline(relay,allowed)||allowed!=url.host||url.host.find_first_not_of("0123456789.")!=std::string::npos)return false;
-            unsigned a,b,c,d;char tail;
-            if(std::sscanf(url.host.c_str(),"%u.%u.%u.%u%c",&a,&b,&c,&d,&tail)!=4||a>255||b>255||c>255||d>255||
-               !(a==10||(a==172&&b>=16&&b<=31)||(a==192&&b==168)))return false;
-            if(url.host!=std::to_string(a)+"."+std::to_string(b)+"."+std::to_string(c)+"."+std::to_string(d))return false;
-        }else{
-            if(!StoreHostPolicy::Allowed(address,root))return false;
+        if(!InfinityIptv::NetworkAllowed(address,root))return false;
+        if(url.secure){
             std::ifstream ca("game:/cacert.pem",std::ios::binary|std::ios::ate);if(!ca||ca.tellg()<1024||ca.tellg()>1024*1024)return false;
         }
         if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;global_=true;

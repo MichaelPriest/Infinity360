@@ -4,6 +4,7 @@
 #include "GameScanner.h"
 #include "SavedFile.h"
 #include "MediaUrl.h"
+#include "Modules/IPTV/SourcePolicy.h"
 #ifdef __XSDK__
 #include "XsdkPaths.h"
 #endif
@@ -52,7 +53,12 @@ void moveRow(size_t& row,size_t size,MenuKey key) {
     if(key==MenuUp || key==MenuPageUp) row=row>=step?row-step:0;
     if(key==MenuDown || key==MenuPageDown) row=std::min(row+step,size-1);
 }
-std::string movieTarget(const std::string& playlist,const std::string& uri) {
+std::string movieTarget(const std::string& playlist,const std::string& uri,const std::string& root) {
+#ifdef INFINITY_XSDK_HTTPS
+    if(!InfinityIptv::NetworkAllowed(uri,root))return "";
+#else
+    (void)root;
+#endif
     MediaUrl url;
     if(url.Parse(uri)) {
 #ifdef INFINITY_MENU_FFMPEG
@@ -78,7 +84,12 @@ std::string movieTarget(const std::string& playlist,const std::string& uri) {
 #endif
     return tvLocalMovie(playlist,uri);
 }
-std::string playbackHint(const std::string& uri) {
+std::string playbackHint(const std::string& uri,const std::string& root) {
+#ifdef INFINITY_XSDK_HTTPS
+    if(!InfinityIptv::NetworkAllowed(uri,root))return "Servidor não autorizado. Configure a fonte IPTV.";
+#else
+    (void)root;
+#endif
     MediaUrl url;
     if(url.Parse(uri) && url.NeedsConverter()) return "Use a lista do conversor Cloud360 para este formato.";
     if(tvLower(uri.substr(0,12))=="brazucaplay:") return "Fonte externa sem integração autorizada. Use uma URL de mídia compatível.";
@@ -110,6 +121,7 @@ void CloudTv::Discover() {
     sources_.clear();filesIn(dir_,"",sources_);
     const char slash=(dir_.find('\\')!=std::string::npos)?'\\':'/';
     filesIn(dir_,std::string("Listas")+slash,sources_);
+    filesIn(dir_,std::string("Andromeda")+slash,sources_);
     std::sort(sources_.begin(),sources_.end());
 }
 bool CloudTv::Load(const std::string& source) {
@@ -124,6 +136,7 @@ bool CloudTv::Load(const std::string& source) {
     else if(state==TvGuide::Invalid) notice_="A lista foi carregada. Confira a sintaxe do XMLTV.";
     else if(state==TvGuide::Limited) notice_="Guia parcial. Foram lidos os primeiros 65.536 programas.";
     else if(!Count()) notice_="A lista está vazia ou não contém entradas EXTINF.";
+    else if(InfinityIptv::ExternalReferences(catalog_.Items())) notice_=countText(Count())+" itens; "+countText(InfinityIptv::ExternalReferences(catalog_.Items()))+" referências externas sem integração.";
     return true;
 }
 void CloudTv::Open() {
@@ -223,8 +236,8 @@ bool CloudTv::Press(MenuKey key) {
     if(view_==Details) {
         if(key==MenuFavorite) Toggle(detail_);
         if(key==MenuAccept) {
-            pending_=movieTarget(dir_+source_,catalog_.Items()[detail_].uri);
-            if(pending_.empty()) notice_=playbackHint(catalog_.Items()[detail_].uri);
+            pending_=movieTarget(dir_+source_,catalog_.Items()[detail_].uri,dir_);
+            if(pending_.empty()) notice_=playbackHint(catalog_.Items()[detail_].uri,dir_);
         }
         return true;
     }
@@ -379,9 +392,9 @@ void CloudTv::DrawDetails(HomeCanvas& c,int64_t now) const {
         c.Text(550,353,on?"Agora   "+on->title:"Agora   Sem programação",19,Ink,651);
         if(next)c.Text(550,398,"A seguir   "+localTime(next->start)+"   "+next->title,18,Soft,650);
     }
-    if(!movieTarget(dir_+source_,item.uri).empty()) {
+    if(!movieTarget(dir_+source_,item.uri,dir_).empty()) {
         c.Box(550,470,212,52,Lime,6);c.Text(570,480,c.Tr("Reproduzir"),21,0xff0c190fu,181);
-    } else c.Text(550,467,playbackHint(item.uri),18,Soft,650);
+    } else c.Text(550,467,playbackHint(item.uri,dir_),18,Soft,650);
 }
 void CloudTv::DrawEpisodes(HomeCanvas& c) const {
     c.Text(45,78,c.Tr("Temporadas e episódios"),39,Ink,1160);
@@ -407,7 +420,7 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
         c.Box(44,626,1191,35,0xff132e23u,6);c.Text(57,629,notice_,18,Lime,1160);
     }
     c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
-    const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri).empty();
+    const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri,dir_).empty();
     if(view_!=Details||playable){InfinityButtons::Draw(c,InfinityButtons::A,44,675,24);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
     InfinityButtons::Draw(c,InfinityButtons::B,240,675,24);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
     if(tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::X,390,675,22,c.Tr("Favorito"),120,Ink);
