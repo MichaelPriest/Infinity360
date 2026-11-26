@@ -104,6 +104,13 @@ static int captureScreens(const char* atlas,const char* destination) {
     ConsoleHome approved(dir,roots);approved.Load();assert(approved.ApprovedHeader());
     ok=save("01-inicio",approved)&&ok;
     {ConsoleHome groups(dir,roots);groups.Load();for(int i=0;i<5;++i)groups.Press(ConsoleHome::Right);groups.Press(ConsoleHome::Accept);ok=save("72-home-grupos",groups)&&ok;groups.Press(ConsoleHome::Back);assert(groups.ApprovedHeader());}
+    {using namespace ApprovedHome;
+     ConsoleHome profile(dir,roots);profile.Load();
+     std::vector<std::vector<int>> routes(End);std::vector<bool> seen(End,false);std::vector<int> queue{Home};seen[Home]=true;
+     for(size_t k=0;k<queue.size()&&!seen[Awards];++k)for(int d=0;d<4;++d){int n=Move(queue[k],d,6);if(!seen[n]){seen[n]=true;routes[n]=routes[queue[k]];routes[n].push_back(d);queue.push_back(n);}}
+     assert(seen[Awards]);for(int d:routes[Awards])profile.Press(static_cast<ConsoleHome::Key>(d));
+     profile.Press(ConsoleHome::Accept);profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
+     assert(profile.QuickGuideOpen()&&profile.SocialGuideFocused());ok=save("78-perfis-home",profile)&&ok;}
     approved.Press(ConsoleHome::Search);assert(approved.QuickGuideOpen());ok=save("40-guia-rapido",approved)&&ok;
     approved.Press(ConsoleHome::Favorite);approved.Press(ConsoleHome::PageDown);ok=save("41-guia-edicao",approved)&&ok;
     approved.Press(ConsoleHome::Back);assert(approved.QuickGuideOrder()==QuickGuide::Default());approved.Press(ConsoleHome::Back);assert(!approved.QuickGuideOpen());
@@ -299,7 +306,6 @@ int main(int argc,char** argv) {
      home.Load();go(Awards);home.Press(ConsoleHome::Accept);
      home.Press(ConsoleHome::Down);home.Press(ConsoleHome::Down);home.Press(ConsoleHome::Accept);
      assert(home.QuickGuideOpen()&&home.SocialGuideFocused()&&home.ApprovedHeader());
-     ok=save("78-perfis-home",home)&&ok;
      home.Press(ConsoleHome::Back);assert(!home.QuickGuideOpen()&&home.ApprovedHeader());
      home.Load();go(FirstCover);home.Press(ConsoleHome::PageDown);home.Press(ConsoleHome::Favorite);
      {std::ifstream in(p/"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("F\t")!=std::string::npos&&data.find("Title7")!=std::string::npos);}

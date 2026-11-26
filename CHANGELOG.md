@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.76 — Correção de captura e build Alpha
+
+- Corrige escopo da captura 78, mantendo teste de navegação separado e gerando imagem pelo renderizador de host.
+- Solicita build XSDK e validação portátil; avatar D3D9 permanece experimental e não integrado.
+
 ## V0.2.75 — Fluxo de avatar oficial e preferência visual
 
 - Pass opcional XDK/D3D9 resolve avatar para textura 512×512, alvo de cor/profundidade e tiling, restaurando superfícies; requer host exclusivo e redesenho do EDRAM. Não integrado ao XSDK.
