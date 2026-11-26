@@ -78,7 +78,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**71 capturas nativas** — commit [fc7493c491de](https://github.com/MichaelPriest/Infinity360/commit/fc7493c491dec112714200511140e7cc959c71a5).
+**72 capturas nativas** — commit [2eb951d9c04a](https://github.com/MichaelPriest/Infinity360/commit/2eb951d9c04a5084a58ec73c93f2b35533e8327a).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -90,8 +90,8 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Tela inicial — Series Infinity (layout padrão)** | **Guia rápido — atalhos e painel de perfil** |
 | ![Guia rápido — personalização dos atalhos](docs/screenshots/41-guia-edicao.png) | ![Tela inicial — perfil local de teste](docs/screenshots/70-perfil-teste.png) |
 | **Guia rápido — personalização dos atalhos** | **Tela inicial — perfil local de teste** |
-| ![Guia rápido — perfil de teste e comunicação indisponível](docs/screenshots/71-guia-perfil-teste.png) |  |
-| **Guia rápido — perfil de teste e comunicação indisponível** |  |
+| ![Guia rápido — perfil de teste e comunicação indisponível](docs/screenshots/71-guia-perfil-teste.png) | ![Home — grupo Sistema, com funções secundárias](docs/screenshots/72-home-grupos.png) |
+| **Guia rápido — perfil de teste e comunicação indisponível** | **Home — grupo Sistema, com funções secundárias** |
 
 ### Biblioteca e conteúdo de jogos
 
