@@ -3360,9 +3360,9 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
     if(approved){const int64_t stamp=now<0?static_cast<int64_t>(std::time(nullptr)):now;
-        c.Box(1046,5,227,66,0xff0d1311u,5);c.Text(1063,4,ClockLabel(stamp),28,White,194);
-        c.Text(1064,33,ClockWeather::Date(stamp,clockSettings_.offset),15,Muted,198);
-        c.Text(1064,51,ClockWeather::Zone(clockSettings_.offset),13,Lime,198);}
+        c.SeriesTile(1046,12,206,52,false);c.TextFit(1058,18,ClockLabel(stamp),26,White,97);
+        c.Box(1159,20,1,35,0xff65736du);c.TextFit(1166,16,ClockWeather::Date(stamp,clockSettings_.offset),13,White,79);
+        c.TextFit(1166,38,ClockWeather::Zone(clockSettings_.offset),12,Muted,79);}
 
 
     if(quickGuideOpen_){DrawQuickGuide(c);return;}
@@ -3374,12 +3374,13 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         c.Box(40,628,1200,35,0xff102923u,6);
         c.Text(51,630,c.Tr(notice_.c_str()),18,Lime,1170);
     }
-    c.Box(0,663,1280,57,0xff061915u);
+    if(approved){c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);}else c.Box(0,663,1280,57,0xff061915u);
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     buttonHint(c,254,"B","Voltar",0xffb83c28u);
     buttonHint(c,429,"X",page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
     buttonHint(c,632,"Y",(artEditing_ || (page_==Home && homeEditing_))?"Salvar":"Atualizar",0xffb3820du);
+    if(approved){const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});if(storage!=storageVolumes_.end())c.TextFit(850,679,StorageInfo::FormatBytes(storage->freeBytes)+" livres",16,White,390);}
 }
 
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
@@ -3969,7 +3970,7 @@ void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
 }
 std::vector<const Game*> ConsoleHome::ApprovedShelf()const{
     std::vector<const Game*> out;
-    auto add=[&](const Game* game){if(game&&out.size()<10&&!contains(hidden_,game->executable)&&std::find(out.begin(),out.end(),game)==out.end())out.push_back(game);};
+    auto add=[&](const Game* game){if(game&&out.size()<6&&!contains(hidden_,game->executable)&&std::find(out.begin(),out.end(),game)==out.end())out.push_back(game);};
     for(const auto& path:history_)add(Installed(path));
     for(const auto& game:games_)add(&game);
     return out;
@@ -4007,12 +4008,12 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
     const unsigned accent=0xffa8ff00u;
     c.SeriesBackground();
-    c.Translucent(0,0,1280,78,0xff101211u,190);
+    c.Translucent(0,0,1280,78,0xff101211u,100);
     // Continuous figure-eight logo, drawn from original strokes.
     const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
     for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
-    c.Text(116,12,"INFINITY",30,White,172);c.Text(280,12,"360",30,accent,70);
-    c.Text(117,47,"Xbox 360 Dashboard",16,Muted,233);
+    c.Box(109,18,1,43,0xff65736du);c.Text(121,12,"INFINITY 360",28,White,233);
+    c.Text(122,43,"Xbox 360 Dashboard",16,Muted,233);
     c.SeriesTile(371,12,194,52,false);
     c.Text(380,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),14,White,178);
     c.Text(380,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),13,Muted,178);
@@ -4028,46 +4029,48 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
     }else{c.Text(785,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,242);c.Text(785,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,242);}
-    if(storage!=storageVolumes_.end())c.Text(793,638,StorageInfo::FormatBytes(storage->freeBytes)+" livres",15,Muted,440);
+    if(storage!=storageVolumes_.end())c.TextFit(850,678,StorageInfo::FormatBytes(storage->freeBytes)+" livres",16,Muted,390);
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
-    c.Translucent(0,79,1280,82,0xff161917u,170);
+    c.Translucent(0,82,1280,66,0xff161917u,100);
     for(int i=0;i<Hero;++i){
         const auto a=Geometry(i);if(i==active)c.SeriesTile(a.x,a.y,a.w,a.h,true,210);
-        approvedIcon(c,i,a.x+(a.w-32)/2,a.y+5,32,i==active?accent:White);
-        c.CenterText(a.x,a.y+43,a.w,c.Tr(names[i]),16,i==active?accent:White);
+        approvedIcon(c,i,a.x+7,a.y+12,22,White);
+        c.TextFit(a.x+34,a.y+12,c.Tr(names[i]),14,White,a.w-36);
     }
-    c.Box(28,161,1224,1,0xff414743u);
+    c.Box(28,148,1224,1,0xff414743u);
     const auto hero=Geometry(ApprovedHome::Hero);c.SeriesTile(hero.x,hero.y,hero.w,hero.h,active==Hero);
     bool art=false;
     if(!shelf.empty()&&appearance.ShowBackdrop()){
-        auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+4,hero.y+4,hero.w-8,hero.h-8);
+        auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+2,hero.y+2,hero.w-4,hero.h-4,true,10);
     }
-    if(art)c.Shade(hero.x+4,hero.y+4,hero.w-8,hero.h-8,0xff070c0au,235,15);
+    if(art)c.Shade(hero.x+8,hero.y+8,hero.w-16,hero.h-16,0xff070c0au,240,12);
     else if(!shelf.empty()&&appearance.ShowCover()){
-        auto cover=ArtPath(*shelf.front(),true);if(!cover.empty())c.LocalArt(cover,true,hero.x+430,hero.y+12,142,201);
+        auto cover=ArtPath(*shelf.front(),true);if(!cover.empty())c.LocalArt(cover,true,hero.x+hero.w-155,hero.y+10,145,210);
     }
-    c.Text(hero.x+20,hero.y+14,"XBOX 360  |  "+std::string(c.Tr("Destaque")),17,accent,hero.w-40);
-    c.TextFit(hero.x+24,hero.y+55,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,38,White,390);
-    c.TextFit(hero.x+24,hero.y+112,shelf.empty()?"Adicione jogos ao HDD ou USB":"Biblioteca local | Xbox 360",19,Muted,390);
-    c.SeriesTile(hero.x+20,hero.y+158,190,46,active==Hero);c.CenterText(hero.x+20,hero.y+166,190,shelf.empty()?"A  Biblioteca":"A  Detalhes",21,accent);
+    c.Text(hero.x+30,hero.y+22,"XBOX 360  |  "+std::string(c.Tr("Destaque")),17,White,hero.w-60);
+    c.TextFit(hero.x+30,hero.y+61,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,45,White,435);
+    c.TextFit(hero.x+30,hero.y+124,shelf.empty()?"Adicione jogos ao HDD ou USB":"Biblioteca local | Xbox 360",19,Muted,390);
+    c.Box(hero.x+30,hero.y+177,162,36,accent,8);c.CenterText(hero.x+30,hero.y+181,162,shelf.empty()?"A  Biblioteca":"A  Detalhes",19,0xff101710u);
+    if(active==Hero)c.SeriesFocus(hero.x,hero.y,hero.w,hero.h);
     const char* quick[]={"Instalador","Gerenciador","System Link","IPTV","Loja Infinity","Conquistas"};
     const char* desc[]={"DVD / GOD","HDD e USB","Rede local","TV e video","Apps e extras","Gamerscore"};
     for(int i=Disc;i<FirstCover;++i){
         const auto a=Geometry(i);c.SeriesTile(a.x,a.y,a.w,a.h,i==active);
         approvedIcon(c,i-Disc+13,a.x+14,a.y+12,29,i==active?accent:White);
-        c.TextFit(a.x+14,a.y+44,quick[i-Disc],21,White,a.w-28);
+        c.TextFit(a.x+14,a.y+44,quick[i-Disc],19,White,a.w-28);
         c.TextFit(a.x+14,a.y+75,desc[i-Disc],14,Muted,a.w-28);
     }
-    c.Text(29,412,"Meus Jogos ("+number(games_.size())+")",25,White,850);
-    c.Text(1087,417,"Ver biblioteca >",17,accent,161);
+    c.Box(30,410,3,22,accent,1);c.Text(44,403,"Meus Jogos ("+number(games_.size())+")",25,White,850);
+    c.Text(1087,410,"Ver biblioteca >",17,White,161);
     for(size_t i=0;i<shelf.size();++i){
         const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[i];
         c.SeriesTile(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
-        bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+4,a.y+4,a.w-8,a.h-8);}
-        if(cover)c.Shade(a.x+4,a.y+a.h-29,a.w-8,25,0xff090f0bu,185,185);
-        else {approvedIcon(c,1,a.x+37,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,"Sem capa",13,Muted);}
-        c.TextFit(a.x+8,a.y+a.h-29,game.name,15,White,a.w-16);
+        bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
+        if(cover){for(int dy=0;dy<55;++dy)c.Translucent(a.x+5,a.y+a.h-60+dy,a.w-10,1,0xff090f0bu,unsigned(80+dy*3));}
+        else {approvedIcon(c,1,a.x+(a.w-42)/2,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,"Sem capa",13,Muted);}
+        c.TextFit(a.x+12,a.y+a.h-32,game.name,17,White,a.w-24);
         if(Starred(game))c.Text(a.x+9,a.y+8,"*",21,accent,30);
+        if(active==FirstCover+static_cast<int>(i))c.SeriesFocus(a.x,a.y,a.w,a.h);
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
