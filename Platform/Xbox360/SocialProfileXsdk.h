@@ -28,13 +28,21 @@ inline Snapshot ReadXsdkProfiles() {
     Snapshot result;
     for (std::uint32_t i = 0; i < XSDK_XAM_USERS && i < result.slots.size(); ++i) {
         auto state = XamUserGetSigninState(i);
-        char name[XSDK_XAM_GAMERTAG_BYTES] = {};
-        if ((state == 1 || state == 2) &&
-            XamUserGetName(i, name, sizeof(name)) != 0) name[0] = '\0';
-        name[sizeof(name)-1] = '\0';
-        // Do not associate a name with a slot whose state changed during sampling.
-        if (state != XamUserGetSigninState(i)) continue;
-        result.slots[i] = FromXam(state, name);
+        if (state == 0) {
+            if (XamUserGetSigninState(i) == 0) result.slots[i] = FromXam(0, "");
+            continue;
+        }
+        if (state != 1 && state != 2) continue;
+        USER_SIGNIN_INFO first{}, second{};
+        if (XamUserGetSigninInfo(i, 0, &first) != 0 ||
+            first.signin_state != state || first.xuid == 0) continue;
+        if (XamUserGetSigninInfo(i, 0, &second) != 0 ||
+            second.signin_state != state || second.xuid != first.xuid ||
+            XamUserGetSigninState(i) != state) continue;
+        // Identity is compared in memory only; never retained, logged or displayed.
+        std::size_t length = 0;
+        while (length < sizeof(second.name) && second.name[length] != '\0') ++length;
+        result.slots[i] = FromXam(state, std::string(second.name, length));
     }
     return result;
 }
