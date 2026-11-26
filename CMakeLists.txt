@@ -157,3 +157,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND AND TARGET O
     target_link_libraries(disc_god_probe PRIVATE aurorax_core OpenSSL::Crypto)
     add_test(NAME disc_god COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/DiscGodTests.py $<TARGET_FILE:disc_god_probe>)
 endif()
+
+# Portable active profile and chat capability contract (no network calls).
+add_executable(social_profile_tests Tests/SocialProfileTests.cpp)
+target_include_directories(social_profile_tests PRIVATE Platform/Xbox360)
+add_test(NAME social_profile COMMAND social_profile_tests)
