@@ -25,6 +25,10 @@ public:
     void Glass(int x,int y,int w,int h,bool focused=false);
     void Stroke(int x0,int y0,int x1,int y1,unsigned color,int width=3);
     void NeonBackground();
+    void SeriesBackground();
+    void SeriesTile(int x,int y,int w,int h,bool focused=false,unsigned opacity=232);
+    void TextFit(int x,int y,const std::string& text,int size,unsigned color,int maxWidth);
+    void Translucent(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius=0);
     void Shade(int x,int y,int w,int h,unsigned color,unsigned leftAlpha,unsigned rightAlpha);
     void CenterText(int x,int y,int w,const std::string& text,int size,unsigned color);
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
