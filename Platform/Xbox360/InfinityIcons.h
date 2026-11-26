@@ -68,7 +68,7 @@ inline void Draw(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
     case 25: // cloud
         p.curve({8,25},{-1,25},{-1,14},{8,14});p.curve({8,14},{8,3},{24,3},{24,14});p.curve({24,14},{34,13},{34,25},{25,25});p.path({{25,25},{8,25}});break;
     case 26: // CPU chip
-        p.box(7,7,25,25,2);for(int n=10;n<=22;n+=6){p.path({{n,2},{n,7}});p.path({{n,25},{n,30}});p.path({{2,n},{7,n}});p.path({{25,n},{30,n}});}break;
+        p.box(7,7,25,25,2);for(float n=10;n<=22;n+=6){p.path({{n,2},{n,7}});p.path({{n,25},{n,30}});p.path({{2,n},{7,n}});p.path({{25,n},{30,n}});}break;
     case 27: // single avatar
         p.circle(16,9,5);p.curve({5,28},{5,15},{27,15},{27,28});p.path({{27,28},{5,28}});break;
     default:break;
