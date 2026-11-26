@@ -1,0 +1,23 @@
+# Perfil ativo, avatar e comunicação — contrato inicial
+
+Este módulo portátil é uma etapa isolada, baseada na main V0.2.46. A sessão Work mais recente relatou mudanças adicionais não presentes nessa base; integrar somente após reconciliar os arquivos dessa sessão. Não é uma nova build nem uma confirmação de funcionamento do Xbox Live.
+
+## Contrato
+
+- O adapter do console entrega um Snapshot com os quatro slots de controle, estado de login, origem, identificação de convidado, gamertag, asset de avatar e Gamerscore opcional.
+- Resolve seleciona o controle preferido se estiver autenticado, ou o primeiro perfil autenticado. Ausência de dados não equivale a logout confirmado.
+- O cabeçalho deve mostrar explicitamente a origem de teste; Gamerscore desconhecido aparece como indisponível (zero confirmado é válido). Avatar ausente usa ícone neutro. O asset é um identificador local, não um caminho externo.
+- Chat::LocalOnly identifica comunicação local e não pode ser anunciado como Xbox Live. Chat::XboxService depende de sessão online real, não convidada e confirmação do provider de serviço. O modelo não envia mensagens, não realiza login e não autentica serviços.
+
+## Integração a fazer após recuperar o Work
+
+1. Conectar provider XAM/XDK ou XSDK autorizado e consultar os quatro slots, sem inventar suporte a APIs ausentes; testar mudanças de sessão/controle.
+2. Conectar Header ao cabeçalho e ao Guide preservando todos os temas, transparência e atalhos atuais. Identificar perfis de teste visualmente.
+3. Integrar gamer picture/avatar autorizado com cache limitado e ícone genérico quando ausente; não extrair conteúdo proprietário da atualização oficial para distribuir.
+4. Expor ação Chat e distinguir chat de texto, voz, mensagens e serviço Xbox. Enquanto não houver provider funcional, informar indisponibilidade; não apresentar mensagens de teste como Xbox Live.
+5. Validar permissões do perfil/controle parental e estados offline/convidado. Testar hardware antes de anunciar suporte oficial.
+6. Reconciliar versão, README e galeria do Work antes de incorporar na main.
+
+## Teste portátil
+
+O alvo CTest social_profile cobre seleção de controle, ausência de provider, saída de sessão, convidado, origem de teste, Gamerscore zero, identificador de avatar inválido e habilitação de chat condicionada. Os testes foram adicionados, mas não houve execução de CI ou compilação XEX nesta revisão.
