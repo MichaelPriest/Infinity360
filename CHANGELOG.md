@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.48 — Consistência da identidade XAM (sem build)
+
+- Consulta duplicada de USER_SIGNIN_INFO verifica identidade e estado antes de publicar o perfil.
+- XUID comparado somente em memória; não persistido nem exibido.
+- Testes de regressão para logout parcial e invalidação visual completa atualizados, não executados.
+- Gamerpic, Gamerscore e comunicação reais ainda pendentes.
+
 ## V0.2.47 — Consistência do perfil na Home e Guide (sem build)
 
 - Consulta parcial dos controles não equivale a logout confirmado.
