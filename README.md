@@ -26,6 +26,10 @@ Revisão do layout horizontal baseada nas duas referências conceituais aprovada
 
 O cabeçalho exibe CPU, GPU, EDRAM e temperatura do chassi (SYS), em Celsius, com consulta automática a cada 10 s na tela inicial quando a variante XSDK experimental SMC estiver habilitada. Amostras vencidas após 30 s ou ausentes mostram --. A consulta é somente leitura, não modifica ventoinha nem firmware; a compilação com opção smc_read e a homologação física ainda são necessárias. Histórico manual permanece independente.
 
+### Critério de fidelidade visual
+
+A referência conceitual aprovada é o alvo visual, não uma captura do programa. A revisão seguinte remove serrilhamento de escala do atlas, suaviza ícones, restaura contorno arredondado contínuo de seleção, refina iluminação acrílica e corrige rótulos truncados. A comparação final exige capturas com capas e fundos autorizados: o executável de testes aceita a variável INFINITY_CAPTURE_ART_DIR apontando para pastas com os nomes dos jogos do cenário e arquivos cover.rgba (160×240 RGBA) e background.rgba (640×360 RGBA). Sem esses arquivos, os cartões declaram falta de capa. Não se publica o mockup como captura nativa. A aparência e o desempenho em hardware ainda não foram verificados.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
