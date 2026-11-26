@@ -1,8 +1,14 @@
 #include "SocialProfile.h"
+#include "SocialProfileXsdk.h"
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
 int main() {
+    CHECK(FromXam(0, "stale").state == SignIn::SignedOut);
+    CHECK(FromXam(0, "stale").gamertag.empty());
+    CHECK(FromXam(1, "Player").state == SignIn::Local);
+    CHECK(FromXam(2, "Player").state == SignIn::Online);
+    CHECK(FromXam(99, "Player").origin == Origin::Unavailable);
     Snapshot s;
     CHECK(Resolve(s, 0).state == SignIn::Unknown);
     CHECK(Resolve(s, 0).chat == Chat::Unavailable);
