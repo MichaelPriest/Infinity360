@@ -5,3 +5,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 Series-inspired graphite and translucent native dashboard
 2026-11-26 approved reference geometry, artwork and thermal header, centered guide
 2026-11-26 reference fidelity pass: antialiased font and icons, curved focus, glass shading and full labels
+2026-11-26 shared vector icons and acrylic styling across all native pages
