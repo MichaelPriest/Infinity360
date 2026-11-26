@@ -976,6 +976,15 @@ std::string ConsoleHome::Press(Key key) {
                 else{quickGuideEditing_=false;notice_="Guia personalizado salvo.";}
             }
         }else{
+            if(key==PageUp){
+                if(TransferRunning()){notice_="Conclua ou cancele as copias antes de trocar perfil.";return "";}
+#if defined(__XSDK__)
+                signinPending_=true;
+#else
+                notice_="Selecao oficial de perfil: disponivel somente no XSDK.";
+#endif
+                return "";
+            }
             if(key==Search){quickGuideOpen_=false;notice_.clear();}
             if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditStartRow_=quickGuideRow_;quickGuideEditing_=true;notice_.clear();}
             if(key==Accept)OpenQuickGuideAction(static_cast<unsigned>(quickGuideOrder_[quickGuideRow_]-'0'));
@@ -3300,6 +3309,13 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.Text(569,334,"Avatar: icone neutro",20,Muted,643);
     c.Text(569,369,"Chat Xbox: indisponivel",21,Lime,643);
     c.Text(569,408,"Amigos e mensagens: integracao pendente",17,Muted,643);
+    c.Glass(545,471,695,92,false);
+    c.Text(569,482,"LB  Selecionar perfil Xbox",23,Lime,643);
+#if defined(__XSDK__)
+    c.Text(569,518,"Abre a interface oficial do sistema.",17,Muted,643);
+#else
+    c.Text(569,518,"Interface oficial disponivel apenas no console.",17,Muted,643);
+#endif
 }
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
