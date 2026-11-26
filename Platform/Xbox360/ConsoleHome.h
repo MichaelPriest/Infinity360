@@ -47,7 +47,7 @@ class ConsoleHome {
 public:
     enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
                Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch };
-    ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots);
+    ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
@@ -309,7 +309,7 @@ private:
     void DrawWeatherPanel(HomeCanvas& c)const;
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     AppearanceSettings appearance_,appearanceDraft_;
-    unsigned layout_=0,layoutDraft_=0;
+    unsigned initialLayout_=1,layout_=1,layoutDraft_=1;
     unsigned gridPreference_=0,gridDraft_=0;
     bool gridFilter_=false;
     bool GridListing()const;
