@@ -1,4 +1,4 @@
-INFINITY 360 V0.2.76
+INFINITY 360 V0.2.77
 Requested: 2026-11-26
-Baseline: f9d72891ce53c8ac2a9a877bd8a15d07ccab768c
-Standard XSDK Alpha build authorized; portable regression gate mandatory.
+Baseline: 748c18dae8de0314e1bb0a5edb35e431248a14bd
+Authorized standard XSDK package and FFmpeg candidate; public IPTV playlist, clean user package, mandatory portable and license gates.
