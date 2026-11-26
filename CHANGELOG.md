@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.66 — Central de comunicação e Xbox Party
+
+- Chat e Party no Guide abre painel com Xbox Party, chat rápido, amigos/convites e mensagens; delegação às interfaces oficiais.
+- Party 0x305 usa ABI de um argumento observada em título homebrew, opt-in separado, verificação de conta e bloqueios existentes. Serviço/voz não confirmados.
+- Não cria sessão de jogo nem invoca parâmetros desconhecidos de convite/voz. Captura 76 e testes portáteis preparados; sem XEX/release.
+
 ## V0.2.65 — Reutilização das interfaces oficiais
 
 - Central de amigos delega cartão do jogador selecionado e composição de mensagem ao XAM (0x2D5/0x2CC), com destinatário validado e confirmação pelo sistema.

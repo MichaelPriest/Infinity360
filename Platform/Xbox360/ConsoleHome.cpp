@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1007,6 +1007,7 @@ std::string ConsoleHome::Press(Key key) {
     if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
 #endif
     if(quickGuideOpen_){
+        if(communicationGuideOpen_){PressCommunicationGuide(key);return "";}
         if(avatarGuideOpen_){
             if(key==Back||key==Left){avatarGuideOpen_=false;notice_.clear();}
             if(key==Refresh){socialPolled_=false;socialArtPolled_=false;notice_="Atualizacao do perfil solicitada.";}
@@ -1032,6 +1033,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(key==Up||key==Down){socialGuideRow_=InfinitySocial::MoveGuideSocial(socialGuideRow_,key==Up?-1:1);notice_.clear();return "";}
                 if(key==Accept){
                     const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
+                    if(action==InfinitySocial::NativeAction::QuickChat){communicationGuideOpen_=true;communicationRow_=0;notice_.clear();return "";}
                     if(action==InfinitySocial::NativeAction::Friends){
                         friendGuideOpen_=true;friendRow_=0;friendFilter_=InfinitySocial::FriendFilter::All;
                         friendRosterPending_=false;notice_.clear();
@@ -2108,7 +2110,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
-        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -3583,6 +3585,45 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
     c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
     c.TextFit(607,594,"A Cartao | Dir Mensagem | B Voltar",15,White,413);
 }
+void ConsoleHome::PressCommunicationGuide(Key key){
+    using namespace InfinitySocial;
+    if(key==Back||key==Left){communicationGuideOpen_=false;notice_.clear();return;}
+    if(key==Up||key==Down){communicationRow_=MoveCommunication(communicationRow_,key==Up?-1:1);notice_.clear();return;}
+    if(key!=Accept)return;
+    if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
+    const auto action=CommunicationAction(communicationRow_);
+#if defined(__XSDK__)
+    if(CanRequestNative(action,social_)){nativeSocialPending_=action;nativeSocialTitle_=0;}
+    else notice_="Comunicacao requer perfil online do console.";
+#else
+    (void)action;notice_="Interface oficial somente no Xbox 360.";
+#endif
+}
+void ConsoleHome::DrawCommunicationGuide(HomeCanvas& c)const{
+    using namespace InfinitySocial;
+    c.SeriesTile(580,87,470,552,false,244);
+    approvedIcon(c,19,606,110,30,White);
+    c.TextFit(644,105,"Comunicacao Xbox",28,White,385);
+    const bool eligible=CanRequestNative(NativeAction::Party,social_);
+    c.TextFit(606,155,eligible?"Perfil online | servico nao confirmado":"Requer perfil online do console",16,Muted,412);
+    const char* labels[]={"Xbox Party","Chat rapido","Amigos e convites","Mensagens"};
+    const char* details[]={"Criar, entrar e gerenciar pelo painel oficial","Conversas pela interface do Xbox",
+        "Convidar pela lista oficial quando disponivel","Caixa de entrada oficial"};
+    const int icons[]={8,19,8,19};
+    for(int i=0;i<CommunicationCount;++i){
+        const int y=192+i*76;
+        c.SeriesTile(601,y,428,67,i==communicationRow_,220);
+        approvedIcon(c,icons[i],615,y+17,27,White);
+        c.TextFit(660,y+7,labels[i],21,White,356);
+        c.TextFit(660,y+34,details[i],13,Muted,356);
+    }
+    c.TextFit(607,508,"Voz e convites dependem do sistema e servico Xbox.",13,Muted,412);
+    c.TextFit(607,536,"Sem sessao de jogo criada pela dashboard.",13,Muted,412);
+    InfinityButtons::Draw(c,InfinityButtons::A,609,571,22);
+    c.TextFit(638,570,"Abrir",16,White,135);
+    InfinityButtons::Draw(c,InfinityButtons::B,805,571,22);
+    c.TextFit(834,570,"Voltar",16,White,155);
+}
 void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
     c.SeriesTile(580,87,470,552,false,244);
@@ -3630,7 +3671,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     approvedIcon(c,1,611,268,20,White);c.TextFit(642,266,controls,16,White,372);
     approvedIcon(c,9,611,290,20,White);c.TextFit(642,289,counters,15,Muted,372);
     c.Box(611,312,403,1,0xff414743u);
-    const char* labels[]={"Cartão do jogador","Amigos Xbox","Mensagens Xbox","Chat Xbox","Editor de avatar","Jogadores recentes"};
+    const char* labels[]={"Cartão do jogador","Amigos Xbox","Mensagens Xbox","Chat e Party","Editor de avatar","Jogadores recentes"};
     const int icons[]={27,8,19,19,27,8};
     for(int row=0;row<GuideSocialCount;++row){
         const int y=315+row*30;
@@ -3681,7 +3722,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     if(quickGuideEditing_)InfinityButtons::Strip(c,259,551,"LB/RB Mover | X Padrão | Y Salvar",13,White,284);
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Y Avatar | A Abrir | Esq Atalhos":"Direita: perfil e amigos"),15,Muted,284);
-    if(!quickGuideEditing_){if(avatarGuideOpen_)DrawAvatarGuide(c);else if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
+    if(!quickGuideEditing_){if(communicationGuideOpen_)DrawCommunicationGuide(c);else if(avatarGuideOpen_)DrawAvatarGuide(c);else if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
     if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {

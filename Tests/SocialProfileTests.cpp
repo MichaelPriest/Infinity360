@@ -331,6 +331,18 @@ int main() {
     CHECK(friends.Set(communication,communication,record,sizeof(record),1));
     CHECK(friends.SelectedTarget(communication,FriendFilter::Requests,0,NativeAction::ComposeMessage)==0);
     CHECK(friends.SelectedTarget(communication,FriendFilter::Requests,0,NativeAction::FriendCard)==77);
+    CHECK(NativeSocialOrdinal(NativeAction::Party)==0x305u);
+    CHECK(CommunicationAction(0)==NativeAction::Party);
+    CHECK(CommunicationAction(1)==NativeAction::QuickChat);
+    CHECK(CommunicationAction(2)==NativeAction::Friends);
+    CHECK(CommunicationAction(3)==NativeAction::Messages);
+    CHECK(CommunicationAction(4)==NativeAction::None);
+    CHECK(MoveCommunication(0,-1)==3&&MoveCommunication(3,1)==0);
+    CHECK(CanRequestNative(NativeAction::Party,communication));
+    auto partyLocal=communication;partyLocal.state=SignIn::Local;
+    CHECK(!CanRequestNative(NativeAction::Party,partyLocal));
+    partyLocal.state=SignIn::Online;partyLocal.guest=true;
+    CHECK(!CanRequestNative(NativeAction::Party,partyLocal));
     std::cout << "social profile checks passed\n";
     return 0;
 }

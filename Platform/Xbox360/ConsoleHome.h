@@ -71,6 +71,7 @@ public:
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
     bool AvatarGuideOpen()const{return quickGuideOpen_&&avatarGuideOpen_;}
+    bool CommunicationGuideOpen()const{return quickGuideOpen_&&communicationGuideOpen_;}
     void SetAvatarCapabilities(const InfinitySocial::AvatarCapabilities& caps){avatarCapabilities_=caps;}
     bool SetAvatarFrame(const InfinitySocial::Header& before,unsigned w,unsigned h,const std::vector<unsigned char>& rgba){
         return avatarPreview_.Set(before,social_,w,h,rgba);
@@ -153,6 +154,10 @@ private:
     int socialGuideRow_=0;
     bool friendGuideOpen_=false,friendRosterPending_=false;
     bool avatarGuideOpen_=false;
+    bool communicationGuideOpen_=false;
+    int communicationRow_=0;
+    void DrawCommunicationGuide(HomeCanvas& c)const;
+    void PressCommunicationGuide(Key key);
     InfinitySocial::AvatarCapabilities avatarCapabilities_;
     InfinitySocial::AvatarPreview avatarPreview_;
     void DrawAvatarGuide(HomeCanvas& c)const;

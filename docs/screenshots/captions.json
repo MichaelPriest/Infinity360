@@ -37,6 +37,10 @@
       {
         "stem": "75-avatar-diagnostico",
         "caption": "Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host"
+      },
+      {
+        "stem": "76-comunicacao-xbox",
+        "caption": "Guide — central de comunicação Xbox, Party, chat e convites (perfil de teste)"
       }
     ]
   },

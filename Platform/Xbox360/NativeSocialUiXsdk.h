@@ -12,6 +12,12 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     std::string line;
     if(!std::getline(flag,line)|| (line!="ENABLE-NATIVE-SOCIAL-UI"&&line!="ENABLE-NATIVE-SOCIAL-UI\r"))
         return "Interface experimental: habilite enable-native-social-ui.txt.";
+    if(action==NativeAction::Party){
+        std::ifstream partyFlag(dir+"enable-native-party-ui.txt");
+        std::string partyLine;
+        if(!std::getline(partyFlag,partyLine)||(partyLine!="ENABLE-NATIVE-PARTY-UI"&&partyLine!="ENABLE-NATIVE-PARTY-UI\r"))
+            return "Party experimental: habilite enable-native-party-ui.txt.";
+    }
     if(action==NativeAction::AvatarEditor){
         std::ifstream avatarFlag(dir+"enable-native-avatar-editor.txt");
         std::string avatarLine;

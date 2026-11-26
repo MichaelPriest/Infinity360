@@ -231,7 +231,14 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
-            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+            assert(profile.CommunicationGuideOpen());
+            ok=save("76-comunicacao-xbox",profile)&&ok;
+            for(int i=0;i<4;++i){
+                profile.Press(ConsoleHome::Accept);
+                assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+                profile.Press(ConsoleHome::Down);
+            }
+            profile.Press(ConsoleHome::Back);assert(!profile.CommunicationGuideOpen());
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
