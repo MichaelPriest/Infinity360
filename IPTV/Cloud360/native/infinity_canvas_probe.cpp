@@ -376,15 +376,6 @@ int main(){
                 menu.CoverBatchResult(saved,failed,cancelled);
                 if(videoFailed){ok=false;break;}
             }
-            unsigned weatherCity=0;
-            if(menu.TakeWeatherRequest(weatherCity)){
-                ClockWeather::Reading reading;bool displayFailed=false;
-                auto progress=[&](unsigned long long,unsigned long long){INPUT_STATE state{};return XamInputGetState(0,0,&state)!=ERROR_SUCCESS||!(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));};
-                canvas.Background();canvas.Text(48,100,"INFINITY | Consultando clima",36,WHITE,1180);
-                canvas.Text(48,560,"B Cancelar | Open-Meteo",22,LIME,1180);
-                if(!p.Show(canvas,true)){ok=false;break;}
-                auto message=XsdkWeather(weatherCity,dir,progress,reading);menu.WeatherResult(reading,message);dirty=true;
-            }
             if(menu.TakeArtRequest(artTitle,artCover,artRemote)){
                 menu.StopFtp();bool success=false,videoFailed=false;std::string result;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
@@ -620,13 +611,25 @@ int main(){
             dirty=true;break;
         }
         if(!ok||systemExit)break;
+#ifdef INFINITY_XSDK_HTTPS
+        if(pendingLaunch.empty()&&!idleScreen.Active()){
+            menu.WeatherAutoDue(std::time(nullptr));
+            unsigned weatherCity=0;
+            if(!menu.TransferRunning()&&menu.TakeWeatherRequest(weatherCity)){
+                ClockWeather::Reading reading;
+                auto progress=[&](unsigned long long,unsigned long long){INPUT_STATE state{};return XamInputGetState(0,0,&state)!=ERROR_SUCCESS||!(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));};
+                auto message=XsdkWeather(weatherCity,dir,progress,reading);menu.WeatherResult(reading,message);dirty=true;
+            }
+        }
+#endif
         if(menu.Tick())dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
         if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
         else if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
-            canvas.Box(895,13,180,45,0xff102923u,5);
-            canvas.Text(905,20,continuous?"ALPHA SESSAO":"ALPHA TESTE",20,LIME,170);
+            if(!menu.ApprovedHeader()){canvas.Box(895,13,180,45,0xff102923u,5);
+                canvas.Text(905,20,continuous?"ALPHA SESSAO":"ALPHA TESTE",20,LIME,170);}
+
             if(!launchNotice.empty()){
                 canvas.Box(40,590,1200,38,0xff102923u,6);
                 canvas.Text(54,593,launchNotice,22,LIME,1160);

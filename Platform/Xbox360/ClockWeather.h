@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <array>
 namespace ClockWeather {
 constexpr int Auto=10000,MinOffset=-720,MaxOffset=840,Step=15;
 struct City{const char* name;const char* latitude;const char* longitude;};
@@ -54,13 +55,15 @@ inline std::string Time(int64_t epoch,int offset){return Format(epoch,offset,"%H
 inline std::string Date(int64_t epoch,int offset){return Format(epoch,offset,"%d/%m/%Y","--/--/----");}
 inline std::string Url(unsigned city){
     if(!city||city>=CityCount)return "";
-    return std::string("https://api.open-meteo.com/v1/forecast?latitude=")+Cities[city].latitude+"&longitude="+Cities[city].longitude+"&current=temperature_2m,weather_code,is_day&timeformat=unixtime&timezone=GMT";
+    return std::string("https://api.open-meteo.com/v1/forecast?latitude=")+Cities[city].latitude+"&longitude="+Cities[city].longitude+"&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&forecast_days=5&timeformat=unixtime&timezone=auto";
 }
 inline bool KnownCode(int code){
     switch(code){case 0:case 1:case 2:case 3:case 45:case 48:case 51:case 53:case 55:case 56:case 57:case 61:case 63:case 65:case 66:case 67:case 71:case 73:case 75:case 77:case 80:case 81:case 82:case 85:case 86:case 95:case 96:case 99:return true;default:return false;}
 }
+struct Day{int64_t epoch=0;double minimum=0,maximum=0;int code=0,rain=-1;};
 struct Reading{
     bool valid=false;unsigned city=0;double celsius=0;int code=0;bool day=true;int64_t observed=0;
+    std::array<Day,5> days{};unsigned dayCount=0;int cityOffsetSeconds=0;
     bool Fresh(int64_t now)const{return valid&&now>=946684800LL&&observed<=now+900&&now-observed<=7200;}
     std::string Temperature()const{char b[20];std::snprintf(b,sizeof b,"%.0f C",celsius);return b;}
     const char* Condition()const{

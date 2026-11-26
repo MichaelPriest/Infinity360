@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.46 — Previsão meteorológica e cabeçalho (sem build XEX)
+
+- Cartão selecionável abre previsão de cinco dias, mínima/máxima e probabilidade de chuva.
+- Consulta automática opt-in pela cidade, intervalo 30 min na Home e timeout limitado.
+- Corrige sobreposição ALPHA no cabeçalho moderno; testes de parser preparados.
+
 ## V0.2.45 — Clima, hora e UTC (sem build)
 
 - Cabeçalho com relógio, data, UTC, cidade e pictogramas de condições atuais.

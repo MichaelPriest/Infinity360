@@ -1206,6 +1206,9 @@ int main(int argc,char** argv) {
         assert(ClockWeather::Date(1704067200,-180)=="31/12/2023");
         ClockWeather::Reading wx;assert(ClockWeather::ParseReading(R"({"current":{"temperature_2m":24.2,"weather_code":2,"is_day":1,"time":1704067200}})",1,wx));
         assert(wx.valid&&wx.city==1&&wx.Fresh(1704069000)&&!wx.Fresh(1704075000));
+        assert(ClockWeather::ParseReading(R"({"utc_offset_seconds":-10800,"current":{"temperature_2m":24.2,"weather_code":2,"is_day":1,"time":1704067200},"daily":{"time":[1704078000,1704164400],"temperature_2m_min":[18,19],"temperature_2m_max":[28,29],"weather_code":[2,61],"precipitation_probability_max":[null,80]}})",1,wx));
+        assert(wx.dayCount==2&&wx.days[0].rain==-1&&wx.days[1].rain==80&&wx.cityOffsetSeconds==-10800);
+        assert(ClockWeather::ParseReading(R"({"utc_offset_seconds":0,"current":{"temperature_2m":24.2,"weather_code":2,"is_day":1,"time":1704067200},"daily":{"time":[1704078000],"temperature_2m_min":[29],"temperature_2m_max":[18],"weather_code":[2],"precipitation_probability_max":[80]}})",1,wx)&&wx.dayCount==0);
         assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":null,"weather_code":2,"is_day":1,"time":1704067200}})",1,wx));
         assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":20,"weather_code":999,"is_day":1,"time":1704067200}})",1,wx));
     }

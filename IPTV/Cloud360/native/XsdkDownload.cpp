@@ -5,6 +5,7 @@
 #include "StoreHostPolicy.h"
 #include "WeatherJson.h"
 #include <cctype>
+#include <algorithm>
 #include <curl/curl.h>
 #include <fstream>
 #include <limits>
@@ -172,7 +173,7 @@ int catalogProgress(void* opaque,curl_off_t,curl_off_t,curl_off_t,curl_off_t){
 }
 }
 static std::string fetchMetadata(const std::string& url,unsigned long long limit,bool exact,const std::string& root,
-    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& data,bool& success){
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,std::string& data,bool& success,long timeout=90){
     success=false;data.clear();
     std::ifstream opt((root+"enable-https-store.txt").c_str());std::string marker;
     if(!std::getline(opt,marker)||marker!="ENABLE-HTTPS-STORE")return "HTTPS bloqueado.";
@@ -196,8 +197,8 @@ static std::string fetchMetadata(const std::string& url,unsigned long long limit
     SET(CURLOPT_CAINFO,ca.c_str());
     SET(CURLOPT_PROXY,"");
     SET(CURLOPT_NETRC,long(CURL_NETRC_IGNORED));
-    SET(CURLOPT_CONNECTTIMEOUT,15L);
-    SET(CURLOPT_TIMEOUT,90L);
+    SET(CURLOPT_CONNECTTIMEOUT,std::min(15L,timeout));
+    SET(CURLOPT_TIMEOUT,timeout);
     SET(CURLOPT_LOW_SPEED_LIMIT,128L);
     SET(CURLOPT_LOW_SPEED_TIME,20L);
     SET(CURLOPT_FAILONERROR,1L);
@@ -316,7 +317,7 @@ std::string XsdkUnityCover(unsigned title,const std::string& root,const std::fun
 
 std::string XsdkWeather(unsigned city,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,ClockWeather::Reading& reading){
     reading={};const auto url=ClockWeather::Url(city);if(url.empty())return "Selecione uma cidade.";
-    std::string data;bool success=false;const auto error=fetchMetadata(url,16384,false,root,progress,data,success);
+    std::string data;bool success=false;const auto error=fetchMetadata(url,16384,false,root,progress,data,success,8);
     if(!success)return "Clima indisponivel | "+error;
     if(!ClockWeather::ParseReading(data,city,reading))return "Resposta meteorologica invalida.";
     return "Clima atualizado | Open-Meteo";

@@ -53,11 +53,13 @@ public:
     unsigned Language()const{return language_;}
     std::string ClockLabel(int64_t epoch)const{return ClockWeather::Time(epoch,clockSettings_.offset);}
     bool TakeWeatherRequest(unsigned& city){if(!weatherPending_)return false;weatherPending_=false;city=clockSettings_.city;return city!=0;}
-    void WeatherResult(const ClockWeather::Reading& reading,const std::string& message){if(reading.valid&&reading.city==clockSettings_.city)weather_=reading;notice_=message;}
+    bool WeatherAutoDue(int64_t now);
+    bool ApprovedHeader()const{return page_==Home&&layout_==1&&!storeActive_&&!homeEditing_&&!importPreview_;}
+    void WeatherResult(const ClockWeather::Reading& reading,const std::string& message){if(reading.valid&&reading.city==clockSettings_.city)weather_=reading;lastWeatherAttempt_=std::time(nullptr);notice_=message;}
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
-    bool IdleEligible()const{return page_==Home&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
+    bool IdleEligible()const{return page_==Home&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
@@ -289,7 +291,9 @@ private:
     ConsoleStatus status_;
     ClockWeather::Settings clockSettings_,clockDraft_;
     ClockWeather::Reading weather_;
-    bool weatherPending_=false;
+    bool weatherPending_=false,weatherPanel_=false;
+    int64_t lastWeatherAttempt_=0;
+    void DrawWeatherPanel(HomeCanvas& c)const;
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     AppearanceSettings appearance_,appearanceDraft_;
     unsigned layout_=0,layoutDraft_=0;

@@ -188,7 +188,7 @@ void ConsoleHome::Load() {
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=0;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
-    clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;
+    clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
@@ -944,6 +944,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
     }
 }
 std::string ConsoleHome::Press(Key key) {
+    if(weatherPanel_){if(key==Back){weatherPanel_=false;notice_.clear();}else if((key==Refresh||key==Accept)&&clockSettings_.city)weatherPending_=true;return "";}
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
     if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
 #endif
@@ -2338,6 +2339,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
     c.Text(48,590,"A Detalhes | LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar",21,Lime,1175);
 }
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
+    if(weatherPanel_){DrawWeatherPanel(c);return;}
     if(storeActive_) {DrawStore(c);return;}
     if(importPreview_) {DrawAuroraProfile(c);return;}
     if(homeEditing_) {DrawHomeEditor(c);return;}
@@ -3281,7 +3283,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.SetTheme(appearanceEditor_?themeDraft_:theme_);c.SetLanguage(language_);
     c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
     c.Background();
-    const bool approved=page_==Home&&layout_==DashboardLayout::TopIcons&&!storeActive_&&!homeEditing_&&!importPreview_;
+    const bool approved=ApprovedHeader()&&!weatherPanel_;
     if(approved)c.NeonBackground();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
@@ -3917,6 +3919,7 @@ void ConsoleHome::OpenApprovedSlot(){
     using namespace ApprovedHome;
     const int selected=focus_;const auto shelf=ApprovedShelf();
     if(selected==Home)return;
+    if(selected==Weather){weatherPanel_=true;notice_.clear();if(clockSettings_.city&&!weather_.valid)weatherPending_=true;return;}
     if(selected==Hero||selected>=FirstCover){
         const size_t i=selected==Hero?0:static_cast<size_t>(selected-FirstCover);
         if(i>=shelf.size()){Enter(Library);return;}
@@ -3955,7 +3958,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.Text(383,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),16,White,370);
     c.Text(383,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),15,Muted,370);
     const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
-    c.Glass(772,12,266,52,false);
+    c.Glass(772,12,266,52,active==ApprovedHome::Weather);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
     const bool fresh=has&&weather_.Fresh(std::time(nullptr));
     if(has){
@@ -4010,4 +4013,37 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
     else c.Text(30,634,"R3 Guia | RB Loja | Y Atualizar | Clima: Open-Meteo",16,Muted,747);
+}
+
+bool ConsoleHome::WeatherAutoDue(int64_t now){
+    if(!clockSettings_.city||!ApprovedHeader()||weatherPanel_||quickGuideOpen_||!IdleEligible()||now<946684800LL)return false;
+    // Selecting a city opts into periodic updates. No polling on other pages,
+    // during transfer or before the clock is valid; failure is also throttled.
+    if(lastWeatherAttempt_&&now>=lastWeatherAttempt_&&now-lastWeatherAttempt_<1800)return false;
+    if(lastWeatherAttempt_&&now<lastWeatherAttempt_)lastWeatherAttempt_=0;
+    lastWeatherAttempt_=now;weatherPending_=true;return true;
+}
+void ConsoleHome::DrawWeatherPanel(HomeCanvas& c)const{
+    c.Text(45,88,"Clima | Previsao de cinco dias",38,White,1180);
+    if(!clockSettings_.city){c.Text(48,200,"Selecione uma cidade em Configurar > Aparencia.",24,Muted,1160);return;}
+    c.Text(48,150,ClockWeather::Cities[clockSettings_.city].name,27,Lime,1170);
+    const auto now=static_cast<int64_t>(std::time(nullptr));
+    if(!weather_.valid||weather_.city!=clockSettings_.city){c.Text(48,235,"Sem leitura meteorologica. Y Consultar.",23,Muted,1160);return;}
+    c.Glass(45,192,1190,112,false);
+    c.Text(65,207,weather_.Temperature(),40,White,300);
+    c.Text(350,208,weather_.Condition(),25,Lime,860);
+    c.Text(350,249,weather_.Fresh(now)?"Condicoes atuais | Open-Meteo":"Dados desatualizados | Y Consultar",19,Muted,860);
+    if(!weather_.dayCount)c.Text(48,352,"Previsao diaria indisponivel.",23,Muted,1160);
+    for(unsigned i=0;i<weather_.dayCount;++i){
+        const auto& day=weather_.days[i];int x=45+240*i;
+        c.Glass(x,327,230,238,false);
+        // Forecast dates use the selected city's offset, not the display clock.
+        c.CenterText(x,341,230,ClockWeather::Format(day.epoch,weather_.cityOffsetSeconds/60,"%d/%m","--/--"),24,White);
+        ClockWeather::Reading condition;condition.code=day.code;condition.day=true;
+        c.CenterText(x,395,230,condition.Condition(),19,Lime);
+        char temps[40];std::snprintf(temps,sizeof temps,"%.0f / %.0f C",day.minimum,day.maximum);
+        c.CenterText(x,441,230,temps,26,White);
+        c.CenterText(x,493,230,day.rain<0?"Chuva -":"Chuva "+number(day.rain)+"%",18,Muted);
+    }
+    c.Text(48,600,"Y Atualizar | B Voltar | Minima / maxima | Fonte: Open-Meteo",18,Lime,1170);
 }

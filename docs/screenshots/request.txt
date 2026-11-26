@@ -1,2 +1,2 @@
-V0.2.45 clock, weather and UTC renderer verification
-Baseline 67966718595731ae36cc65554c83ca922b250c99
+V0.2.46 forecast and header renderer verification
+Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
