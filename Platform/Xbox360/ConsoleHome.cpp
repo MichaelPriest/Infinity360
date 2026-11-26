@@ -1,5 +1,6 @@
 ﻿#include "ConsoleHome.h"
 #include "Modules/Emulators/ToolRoots.h"
+#include "Modules/Emulators/Ps1CoverIndex.h"
 #include "Modules/Patches/FpsCatalog.h"
 #if defined(__XSDK__)
 #define INFINITY_SOCIAL_XSDK 1
@@ -420,6 +421,7 @@ void ConsoleHome::Reload() {
         for(const char* id:{"hdd","usb0","usb1","usb2"}){
             const auto folder=StoreStorage::Personal(dir_,id);if(!folder.empty())roots.push_back(FileWorkspace::Join(folder,section_==Apps?"Apps":"Emulators"));
         }
+        ps1Covers_=section_==Emulators?InfinityPs1::Load(dir_):InfinityPs1::Index();
         tools_=GameScanner(roots).Scan();
         toolKinds_.assign(tools_.size(),1);
         // Installed homebrew plugins are opt-in local XEX applications.
@@ -3441,7 +3443,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.TextFit(x+33,155,c.Tr(tabs[i]),numTabs==9?15:19,White,tabWidth-38);
             if(GridListing()&&gridFilter_&&i==subtab_)c.Box(x+4,185,tabWidth-8,3,Lime);
         }
-        c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,1120);
+        c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,section_==Emulators?530:1120);
+        if(section_==Emulators)c.Text(590,201,ps1Covers_.valid?number(ps1Covers_.names.size())+" capas PS1 indexadas":"Indice PS1 local nao carregado",18,Muted,630);
         if(section_==Library) {
             static const char* const sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
             c.Text(861,201,subtab_==8?c.Tr("Ordem manual"):std::string(c.Tr("RS Ordenar: "))+c.Tr(sorts[gameSort_]),18,Muted,355);

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.86 — Índice local de capas PS1
+
+- Leitor limitado do formato NEXUS_PS1_COVERS_V1, validação de nomes PNG, deduplicação e busca exata por nome de arquivo.
+- Indicador de itens indexados na seção Emuladores e diretório Andromeda/PS1Covers no pacote unificado.
+- Teste portátil com entradas sintéticas; imagens e emuladores externos não incluídos.
+
 ## V0.2.85 — Aplicativos e emuladores no layout unificado
 
 - Busca explícita em Apps, Emulators e Homebrew nas duas raízes de instalação, independentemente das pastas de jogos.

@@ -2,6 +2,7 @@
 #include "GameScanner.h"
 #include "HomeCanvas.h"
 #include "CloudTv.h"
+#include "Modules/Emulators/Ps1CoverIndex.h"
 #include "CollectionStore.h"
 #include "ContentCatalog.h"
 #include "FileWorkspace.h"
@@ -212,6 +213,7 @@ private:
     bool socialPolled_=false,signinPending_=false;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
+    InfinityPs1::Index ps1Covers_;
     std::set<unsigned> translationReferences_;
     std::vector<int> toolKinds_; // 1 = installed, 2 = plugin, 3 = homebrew
     std::vector<const Game*> visible_;

@@ -9,6 +9,7 @@
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
+#include "../Platform/Xbox360/Modules/Emulators/Ps1CoverIndex.h"
 #include "../Platform/Xbox360/Modules/Patches/FpsCatalog.h"
 #include "../Platform/Xbox360/Modules/IPTV/SourcePolicy.h"
 #include <cassert>
@@ -1125,6 +1126,9 @@ int main(int argc,char** argv) {
     assert(InfinityFps::CountFor(trainerRoot.string()+"/",0x4d5307e6)==2);
     assert(InfinityFps::CountFor(trainerRoot.string()+"/",0x12345678)==1);
     assert(InfinityFps::CountFor(trainerRoot.string()+"/",0)==0);
+    fs::create_directories(trainerRoot/"Andromeda");
+    {std::ofstream f(trainerRoot/"Andromeda/Ps1CoverIndex.txt");f<<"NEXUS_PS1_COVERS_V1\nExample (Japan).png\nexample (japan).PNG\nAnother.png\n../escape.png\nfile.exe\n";}
+    {const auto idx=InfinityPs1::Load(trainerRoot.string()+"/");assert(idx.valid&&idx.names.size()==2);assert(idx.Find("EXAMPLE (JAPAN).bin")=="Example (Japan).png");assert(idx.Find("../Example (Japan).bin").empty());}
     const auto trainerItems=TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6);
     assert(trainerItems.size()==1);
     const auto runtime=trainerRoot/"MenuPreview";
