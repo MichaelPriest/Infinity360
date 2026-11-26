@@ -5,3 +5,8 @@ objects.githubusercontent.com
 xboxunity.net
 www.xboxunity.net
 api.open-meteo.com
+
+# Public broadcaster HLS hosts (exact names)
+stream3.camara.gov.br
+tv.senado.leg.br
+tvbrasil-stream.ebc.com.br

@@ -123,43 +123,16 @@ jobs:
           version = os.environ["INFINITY_VERSION"]
           dest = Path(f"IPTV/Cloud360/Infinity360-Alpha-XSDK-{version}.zip")
           note = (
-              f"INFINITY 360 XSDK Alpha {version} - experimental hardware preview ONLY\n"
-              "This is not the full XDK dashboard nor the finished PDF UI.\n"
-              "default.xex now opens the full experimental menu; aurorax_alpha_probe.xex remains the GPU diagnostic. No autoboot.\n"
-              "infinity_core_probe.xex checks production C++ code without GPU.\n"
-              "Run only from an isolated folder after the no-GPU probe.\n"
-              "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
-              "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
-              "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
-              "MPEG-PS IPTV player enabled in fresh ZIP; use authorized sources or local files. FFmpeg candidate is a separate Actions artifact for MP4/TS/HLS.\n"
-              "Fresh full ZIP: Top Icons, continuous menu, HTTPS Store, XboxUnity, workspace writes, XEX launch, app installer and DVD-to-workspace enabled. See MenuPreview/LEIA-ME-RECURSOS.txt.\n"
-              "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
-              "Console clock must be correct. HTTPS only; only allowlisted GitHub release asset redirects for packages; SHA-256 verified.\n"
-              "Homebrew catalogue: see MenuPreview/FONTES.txt. Some packages need manual installation and owned data.\n"
-              "For 1080p output select it in the official Xbox dashboard; the UI framebuffer is 720p scaled by the console.\n"
-              "Sistema > DVD > DVD para GOD: select HDD/USB, then press A twice.\n"
-              "Requires MenuPreview/enable-dvd-install.txt containing ENABLE-DVD-INSTALL and file writes.\n"
-              "Packages are saved under Infinity360Files/PackageLibrary on that device. XAM acceptance is untested.\n"
-              "FTP LAN is opt-in: create MenuPreview/enable-ftp.txt containing ENABLE-FTP-LAN.\n"
-              "Upload: enable-ftp-upload.txt containing ENABLE-FTP-UPLOAD, press X in Network. ALLO exact size <=32 MiB.\n"
-              "Requires enable-file-writes.txt and private credentials in infinity360-ftp.txt (two lines).\n"
-              "Use an isolated trusted LAN; FTP credentials are not encrypted. Never forward port 2121.\n"
-              "Personal workspace writes enabled in fresh full ZIP; remove enable-file-writes.txt to disable.\n"
-              "Write only to MenuPreview/UserFiles or Infinity360Files on HDD/USB. Use disposable test data.\n"
-              "Explicit XEX launch enabled in fresh full ZIP; remove enable-xex-launch.txt to disable.\n"
-              "First launch Games/INFINITY Launch Test/default.xex from the menu; it only logs and exits.\n"
-              "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
-              "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
-              "Follow docs/GPU-RESTORE-v052.md before opening default.xex.\n"
-              "Never overwrite the dashboard currently booting your console.\n"
-              "The XEX requires a homebrew-enabled Xbox 360 console.\n"
+              f"INFINITY 360 {version} - Guia de instalação\n"
+              "Copie o conteúdo para uma pasta separada e abra default.xex.\n"
+              "Mantenha a dashboard atual como opção de recuperação. Não habilite boot automático.\n"
+              "Cloud360: a lista pública HLS requer a variante FFmpeg; MPEG-PS é suportado na versão padrão.\n"
+              "Recursos de rede e armazenamento exigem configuração e confirmações próprias.\n"
+              "A compatibilidade em console físico ainda precisa de homologação.\n"
           )
-          playlist = "#EXTM3U\n"
           with ZipFile(dest, "w", ZIP_DEFLATED) as archive:
-              for title, path in outputs.items():
-                  archive.write(path, title)
-              archive.writestr("playlist.m3u", playlist)
-              archive.writestr("probe-playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV\",INFINITY Probe\nhttps://example.invalid/probe.m3u8\n")
+              archive.write(outputs["default.xex"], "default.xex")
+              archive.write("Platform/Xbox360/ReleaseDefaults/playlist.m3u", "playlist.m3u")
               archive.write("Platform/Xbox360/Assets/home.tga", "home.tga")
               home = Path(os.environ["HOME"])
               archive.write(home / "mbedtls-xenon/programs/xsdk/cacert.pem", "cacert.pem")
@@ -180,8 +153,8 @@ jobs:
                   archive.write("Platform/Xbox360/StoreDefaults/"+filename, "MenuPreview/"+filename)
               archive.writestr("MenuPreview/UserFiles/", "")
               archive.writestr("MenuPreview/UserFiles/ContentImport/", "")
-              archive.write(Path(os.environ["RUNNER_TEMP"])/"infinity-test.mpg", "MenuPreview/UserFiles/test.mpg")
-              archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"Filmes\",Teste local MPEG-PS (5 s)\nUserFiles/test.mpg\n")
+              archive.write(release_defaults/"playlist.m3u", "MenuPreview/playlist.m3u")
+              archive.writestr("MenuPreview/Plugins/", "")
               archive.writestr("MenuPreview/Listas/", "")
               # Store defaults are reviewed real homebrew metadata; no demo item.
               archive.writestr("VERSION.txt", version+"\n")
@@ -189,13 +162,14 @@ jobs:
               archive.writestr("LEIA-ME-SEGURANCA.txt", note)
               archive.writestr("SHA256SUMS.txt", "".join(
                   f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {title}\n"
-                  for title, path in outputs.items()))
+                  for title, path in outputs.items() if title == "default.xex"))
           with ZipFile(dest) as archive:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
               assert archive.read("MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
-              assert archive.getinfo("MenuPreview/UserFiles/test.mpg").file_size > 4096
-              assert b"UserFiles/test.mpg" in archive.read("MenuPreview/playlist.m3u")
+              assert b"#EXTINF:" in archive.read("MenuPreview/playlist.m3u")
+              assert b"example.invalid" not in archive.read("MenuPreview/playlist.m3u")
+              assert not any("probe" in n.lower() or "test.mpg" in n.lower() for n in archive.namelist())
               assert archive.read("MenuPreview/infinity360-iptv-bitrate.txt") == b"2000000\n"
               for name, value in [["enable-file-writes.txt","ENABLE-FILE-WRITES"],["enable-https-store.txt","ENABLE-HTTPS-STORE"],["enable-store-install.txt","ENABLE-STORE-INSTALL"],["enable-xboxunity.txt","ENABLE-XBOXUNITY"],["enable-xex-launch.txt","ENABLE-XEX-LAUNCH"],["enable-continuous-session.txt","ENABLE-CONTINUOUS-SESSION"],["enable-dvd-install.txt","ENABLE-DVD-INSTALL"],["enable-iptv-playback.txt","ENABLE-IPTV-PLAYBACK"]]:
                   assert archive.read("MenuPreview/"+name) == (value+"\n").encode("ascii")
@@ -302,7 +276,7 @@ jobs:
               assert z.read("VERSION.txt")==full.read("VERSION.txt")
               assert z.read("BUILD-COMMIT.txt")==full.read("BUILD-COMMIT.txt")
               assert z.testzip() is None
-              assert z.read("default.xex")==full.read("infinity_menu_preview.xex")
+              assert z.read("default.xex")==full.read("default.xex")
           PY
           tag="xsdk-v${INFINITY_VERSION}-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.77 — Preparação do pacote de uso cotidiano
+
+- Retira executáveis de diagnóstico e mídia sintética do ZIP padrão e mantém a playlist pública no catálogo inicial.
+- Variante FFmpeg usa a mesma lista; reprodução HLS ainda requer homologação. Sem plugins proprietários incluídos.
+- Remove rótulo de sessão de teste do menu; preserva avisos de segurança e confirmações.
+
 ## V0.2.76 — Correção de captura e build Alpha
 
 - Corrige escopo da captura 78, mantendo teste de navegação separado e gerando imagem pelo renderizador de host.

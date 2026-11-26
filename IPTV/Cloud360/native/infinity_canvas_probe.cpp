@@ -333,7 +333,7 @@ int main(){
                 const std::string path=XexLaunchCheck::Path(launch);
                 pendingPackage=false;
                 if(!path.empty()){
-                    if(!launchEnabled)launchNotice="XEX bloqueado: habilite o teste em MenuPreview.";
+                    if(!launchEnabled)launchNotice="XEX bloqueado: habilite a execução nas configurações.";
                     else if(!captureLaunch(path,launchTicket))launchNotice="XEX invalido, indisponivel ou da propria dashboard.";
                     else pendingLaunch=path;
                 }else{
@@ -696,7 +696,7 @@ int main(){
         if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
         else if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
-            if(!menu.ApprovedHeader()){canvas.Text(920,678,continuous?"ALPHA SESSAO":"ALPHA TESTE",16,LIME,300);}
+            if(!menu.ApprovedHeader()){canvas.Text(920,678,"INFINITY 360",16,LIME,300);}
 
             if(!launchNotice.empty()){
                 canvas.Box(40,590,1200,38,0xff102923u,6);

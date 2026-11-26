@@ -122,12 +122,8 @@ def main():
         shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults"/filename,preview)
     (stage/"bin"/"VERSION.txt").write_text(version+"\n")
     (stage/"bin"/"BUILD-COMMIT.txt").write_text(run("git","-C",str(args.repo),"rev-parse","HEAD",text=True))
-    # Deterministic, locally generated synthetic test clip (no service credentials).
-    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-f","lavfi","-i","testsrc2=size=128x72:rate=5","-f","lavfi","-i","sine=frequency=440:sample_rate=48000","-t","2","-c:v","libx264","-threads","1","-pix_fmt","yuv420p","-c:a","aac",str(stage/"bin"/"test.mp4")],check=True)
-    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(stage/"bin"/"test.mp4"),"-c","copy","-bsf:v","h264_mp4toannexb","-f","mpegts",str(stage/"bin"/"test.ts")],check=True)
-    shutil.copy2(stage/"bin"/"test.mp4",preview/"UserFiles"/"test.mp4")
-    shutil.copy2(stage/"bin"/"test.ts",preview/"UserFiles"/"test.ts")
-    (preview/"playlist.m3u").write_text('#EXTM3U\n#EXTINF:-1 group-title="Filmes",Teste local MP4\nUserFiles/test.mp4\n#EXTINF:-1 group-title="TV",Teste local TS\nUserFiles/test.ts\n')
+    shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/playlist.m3u",preview/"playlist.m3u")
+    (preview/"Plugins").mkdir()
     # Prove the staged object files and libraries can actually be relinked.
     subprocess.run([sys.executable,str(linkdir/"relink_ffmpeg_probe.py"),"--toolchain",str(args.toolchain),"--sdk",str(args.sdk),"--ffmpeg-libs",str(linkdir/"ffmpeg-libs")],check=True)
     for name in TARGETS:
@@ -139,7 +135,7 @@ def main():
     (stage/"LEIA-ME.txt").write_text(
         f"INFINITY 360 {version} - FFmpeg experimental full menu and diagnostics, NOT a boot dashboard replacement.\n"
         "No physical-console validation yet. Run the container-only probe first, in a separate folder.\n"
-        "Copy bin/ to an isolated folder. After probes open default.xex, then Cloud360 IPTV and the local MP4/TS test clips.\n"
+        "Copy bin/ to an isolated folder. Open default.xex and select Cloud360 IPTV.\n"
         "HLS/TS remote playback requires explicit approved HTTPS host or a configured private LAN relay. 720p decoder ceiling; no DRM.\n"
         "Do not overwrite the boot dashboard.\n"
         "FFmpeg is LGPL 2.1 or later, statically linked, no GPL/nonfree options.\n"
@@ -147,7 +143,7 @@ def main():
         "Relink: python3 relink/relink_ffmpeg_probe.py --toolchain PATH --sdk PATH --ffmpeg-libs PATH\n"
         "Use the pinned XSDK/compiler and rebuilt ABI-compatible FFmpeg libraries.\n"
         "No public distribution authorized by this packaging step; review all applicable license terms.\n"
-        "Test clips are synthetic; no live IPTV providers or credentials are included.\n",encoding="utf-8")
+        "Public channel playlist included; availability and playback on hardware are not verified. No credentials included.\n",encoding="utf-8")
     (stage/"SHA256SUMS.txt").write_text("".join(f"{digest(path)}  {path.relative_to(stage)}\n" for path in sorted(stage.rglob("*")) if path.is_file()))
     archive=stage.parent / (stage.name+".zip")
     with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
@@ -158,8 +154,8 @@ def main():
         assert z.read("bin/default.xex")[:4] == b"XEX2"
         assert z.read("bin/MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
         assert z.read("bin/MenuPreview/enable-iptv-playback.txt") == b"ENABLE-IPTV-PLAYBACK\n"
-        assert z.getinfo("bin/MenuPreview/UserFiles/test.mp4").file_size>4096
-        assert z.getinfo("bin/MenuPreview/UserFiles/test.ts").file_size>4096
+        assert b"#EXTINF:" in z.read("bin/MenuPreview/playlist.m3u")
+        assert not any(n.startswith("bin/MenuPreview/UserFiles/test.") for n in z.namelist())
     print(archive, digest(archive))
 
 if __name__=="__main__":
