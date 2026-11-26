@@ -2,6 +2,7 @@
 #include "ConsoleHome.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
+#include "ApprovedHome.h"
 #include "InfinityIcons.h"
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
@@ -195,6 +196,13 @@ int main(int argc,char** argv) {
      ConsoleHome migrated(p.string()+"/",noGameRoots);migrated.Load();assert(migrated.ApprovedHeader());
      std::ofstream(p/"aurorax-profile.txt")<<"J\t0\nM\t1\n";
      ConsoleHome explicitClassic(p.string()+"/",noGameRoots);explicitClassic.Load();assert(!explicitClassic.ApprovedHeader());
+    }
+    {using namespace ApprovedHome;
+     assert(Pages(0)==1&&Pages(6)==1&&Pages(7)==2&&Pages(13)==3);
+     assert(Page(99,7)==1&&Visible(0,7)==6&&Visible(1,7)==1&&Visible(2,0)==0);
+     assert(Featured(4,8)==0&&Featured(3,2)==1&&Featured(99,0)==0);
+     assert(ValidOrder("012345")&&ValidOrder("543210")&&!ValidOrder("012344")&&!ValidOrder("01234"));
+     assert(Move(LibraryLink,3,6)>=FirstCover&&Move(LibraryLink,3,6)<Weather);
     }
     fs::create_directories(root/"Games"/"Halo 3");
     const std::string exe=(root/"Games"/"Halo 3"/"default.xex").string();

@@ -42,6 +42,10 @@ Cabeçalho compartilhado com perfil, quatro temperaturas, IP, clima e relógio e
 
 A inicialização agora usa o conceito aprovado (Top Icons / Series Infinity). Perfis antigos em Classic sem marcador de migração passam para Series Infinity; escolhas posteriores de layouts continuam preservadas. A captura principal 01-inicio é produzida pelo construtor padrão de produção, sem recorrer a uma configuração de demonstração. O logotipo vetorial e as faixas verdes foram refinados. As três ilustrações preexistentes do atlas (Halo 3, Forza Horizon, Gears of War 3) são fallback explicitamente marcado, não capas oficiais. Artes pessoais de capa e fundo mantêm prioridade. Demais títulos sem arte continuam sinalizados.
 
+### Home — conclusão dos recursos parciais (lote 1)
+
+Carrossel de até quatro títulos com troca manual X ou automática a cada oito segundos fora do foco do destaque e dos cartões. Biblioteca na Home paginada em seis cartões; LB/RB alterna páginas quando um jogo está selecionado, X alterna favorito e START fixa/desfixa. Recentes, fixados e favoritos têm precedência sobre os demais títulos visíveis. O link Ver biblioteca é selecionável. START fora dos cartões edita a ordem dos seis atalhos; Y salva e B cancela. Y na Home atualiza biblioteca, IP, armazenamento e consulta do clima quando configurado. Dados de hardware e serviços ainda dependem de homologação; arte frente/verso, Gamerpic real, Gamerscore e comunicação seguem pendentes.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
