@@ -202,6 +202,8 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.Press(ConsoleHome::Right);
             assert(profile.SocialGuideFocused());
             profile.Press(ConsoleHome::Refresh);assert(profile.AvatarGuideOpen());
+            profile.Press(ConsoleHome::Favorite);
+            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             ok=save("75-avatar-diagnostico",profile)&&ok;
             profile.Press(ConsoleHome::Back);assert(!profile.AvatarGuideOpen());
             {HomeCanvas frameCanvas;std::vector<unsigned char> frame(32*64*4,255);
@@ -218,6 +220,8 @@ static int captureScreens(const char* atlas,const char* destination) {
             assert(profile.UpdateFriendPresence(0,true,true));
             assert(!profile.TakeFriendRosterRequest()); // auto never arms without a successful native result
             assert(profile.UpdateFriendPresence(0,false,true));
+            profile.Press(ConsoleHome::Accept);profile.Press(ConsoleHome::Right);
+            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             ok=save("73-amigos-xbox",profile)&&ok;
             profile.Press(ConsoleHome::PageDown);profile.Press(ConsoleHome::Refresh);
             assert(!profile.TakeFriendRosterRequest());

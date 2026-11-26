@@ -651,12 +651,12 @@ int main(){
                 std::string("Consulta bloqueada por outra operacao.");
             menu.FriendRosterResult(roster,result,TransferRate::Now());dirty=true;
         }
-        unsigned socialTitle=0;
-        const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle);
+        unsigned socialTitle=0;std::uint64_t socialTarget=0;
+        const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle,&socialTarget);
         if(socialAction!=InfinitySocial::NativeAction::None){
             const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active()&&
                 (socialAction!=InfinitySocial::NativeAction::AvatarEditor||!menu.AvatarLaunchBusy());
-            menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir,socialTitle):
+            menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir,socialTitle,socialTarget):
                 "Interface social bloqueada por outra operacao.");
             dirty=true;
         }

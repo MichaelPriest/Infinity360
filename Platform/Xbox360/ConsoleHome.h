@@ -80,7 +80,23 @@ public:
     bool UpdateFriendPresence(std::uint64_t now,bool autoEnabled,bool allowed);
     bool HasFriendPresence()const{return friendRoster_.KnownFor(social_);}
     std::size_t FriendsPlaying(std::uint32_t title)const{return HasFriendPresence()?InfinitySocial::FriendsPlayingTitle(friendRoster_.Rows(),title):0;}
-    InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr){const auto action=nativeSocialPending_;if(title)*title=nativeSocialTitle_;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;return action;}
+    InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr,std::uint64_t* target=nullptr){
+        auto action=nativeSocialPending_;
+        const auto recipient=nativeSocialTarget_;
+        const auto owner=nativeSocialOwner_;
+        const auto slot=nativeSocialSlot_;
+        if(title)*title=nativeSocialTitle_;
+        if(target)*target=0;
+        nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;
+        nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;
+        if(InfinitySocial::TargetedSocialAction(action)){
+            if(!target||!FriendGuideOpen()||owner!=social_.identity||slot!=social_.controller||
+               !friendFreshness_.Fresh(TransferRate::Now())||!friendRoster_.ContainsTarget(social_,recipient,action))
+                return InfinitySocial::NativeAction::None;
+            *target=recipient;
+        }
+        return action;
+    }
     void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
@@ -150,6 +166,8 @@ private:
     InfinitySocial::AvatarExitConfirmation avatarExitConfirm_;
     InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
     unsigned nativeSocialTitle_=0;
+    std::uint64_t nativeSocialTarget_=0,nativeSocialOwner_=0;
+    int nativeSocialSlot_=-1;
     int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);

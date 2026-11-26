@@ -6,8 +6,8 @@
 #include <fstream>
 
 namespace InfinitySocial {
-inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected,const std::string& dir,std::uint32_t title=0) {
-    if(!CanRequestNative(action,expected,title))return "Perfil nao elegivel para esta interface.";
+inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected,const std::string& dir,std::uint32_t title=0,std::uint64_t target=0) {
+    if(!CanRequestNative(action,expected,title,target))return "Perfil nao elegivel para esta interface.";
     std::ifstream flag(dir+"enable-native-social-ui.txt");
     std::string line;
     if(!std::getline(flag,line)|| (line!="ENABLE-NATIVE-SOCIAL-UI"&&line!="ENABLE-NATIVE-SOCIAL-UI\r"))
@@ -45,6 +45,19 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
         using LaunchEditor=std::int32_t(*)(std::uint32_t,std::uint32_t,const std::uint16_t*);
         const auto status=reinterpret_cast<LaunchEditor>(address)(user,0,nullptr);
         return status==0?"Editor Xbox solicitado; retorno depende do sistema.":"Sistema recusou o editor de avatar.";
+    }
+    // Let the Xbox own the dialog, text entry, permission checks and send confirmation.
+    // The synchronous call takes a single recipient; no supplied message text.
+    if(action==NativeAction::FriendCard){
+        using ShowCard=std::uint32_t(*)(std::uint32_t,std::uint64_t,std::uint32_t);
+        const auto result=reinterpret_cast<ShowCard>(address)(user,target,0);
+        return result==0?"Cartao Xbox solicitado.":"Sistema recusou o cartao.";
+    }
+    if(action==NativeAction::ComposeMessage){
+        using Compose=std::uint32_t(*)(std::uint32_t,const std::uint64_t*,std::uint32_t,const std::uint16_t*);
+        alignas(8) const std::uint64_t recipient=target;
+        const auto result=reinterpret_cast<Compose>(address)(user,&recipient,1,nullptr);
+        return result==0?"Editor de mensagem Xbox solicitado; envio depende do usuario.":"Sistema recusou o editor.";
     }
     const auto result=action==NativeAction::Achievements?
         reinterpret_cast<ShowAchievements>(address)(user,title):reinterpret_cast<ShowUI>(address)(user);

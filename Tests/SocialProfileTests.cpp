@@ -315,6 +315,22 @@ int main() {
     auto changedArt=artHeader;changedArt.identity=99;
     preview.Observe(changedArt);CHECK(!preview.KnownFor(changedArt)&&preview.Pixels().empty());
     CHECK(!preview.Set(artHeader,changedArt,32,64,frame));
+    CHECK(NativeSocialOrdinal(NativeAction::FriendCard)==0x2d5u);
+    CHECK(NativeSocialOrdinal(NativeAction::ComposeMessage)==0x2ccu);
+    CHECK(NativeSocialOrdinal(NativeAction::EditProfile)==0x3bcu);
+    CHECK(CanRequestNative(NativeAction::EditProfile,communication));
+    CHECK(!CanRequestNative(NativeAction::FriendCard,communication,0,communication.identity));
+    CHECK(!CanRequestNative(NativeAction::ComposeMessage,communication));
+    PutBE32(record+4,77);PutBE32(record+0x18,1);
+    CHECK(friends.Set(communication,communication,record,sizeof(record),1));
+    CHECK(friends.SelectedTarget(communication,FriendFilter::All,0,NativeAction::FriendCard)==77);
+    CHECK(friends.SelectedTarget(communication,FriendFilter::Online,0,NativeAction::ComposeMessage)==77);
+    CHECK(friends.SelectedTarget(communication,FriendFilter::All,1,NativeAction::ComposeMessage)==0);
+    CHECK(!friends.ContainsTarget(swapped,77,NativeAction::FriendCard));
+    PutBE32(record+0x18,0x80000000u);
+    CHECK(friends.Set(communication,communication,record,sizeof(record),1));
+    CHECK(friends.SelectedTarget(communication,FriendFilter::Requests,0,NativeAction::ComposeMessage)==0);
+    CHECK(friends.SelectedTarget(communication,FriendFilter::Requests,0,NativeAction::FriendCard)==77);
     std::cout << "social profile checks passed\n";
     return 0;
 }

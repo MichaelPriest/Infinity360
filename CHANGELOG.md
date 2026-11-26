@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.65 — Reutilização das interfaces oficiais
+
+- Central de amigos delega cartão do jogador selecionado e composição de mensagem ao XAM (0x2D5/0x2CC), com destinatário validado e confirmação pelo sistema.
+- X no painel Avatar abre edição oficial de perfil (0x3BC). Mantém o editor de avatar existente; sem reconstruir UI proprietária.
+- IDs de destinatário somente em RAM, vinculados ao perfil, cache válido e seleção. Sem envio automático, sem acesso direto ao serviço. Testes e capturas solicitados; sem XEX/release.
+
 ## V0.2.64 — Painel de avatar e preparação gráfica
 
 - Y no painel social abre visualização de avatar, retrato 2D e diagnóstico de seis exportações XAM; sem chamadas de inicialização não verificadas.

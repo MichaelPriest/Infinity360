@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1010,6 +1010,16 @@ std::string ConsoleHome::Press(Key key) {
         if(avatarGuideOpen_){
             if(key==Back||key==Left){avatarGuideOpen_=false;notice_.clear();}
             if(key==Refresh){socialPolled_=false;socialArtPolled_=false;notice_="Atualizacao do perfil solicitada.";}
+            if(key==Favorite){
+                if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
+#if defined(__XSDK__)
+                if(InfinitySocial::CanRequestNative(InfinitySocial::NativeAction::EditProfile,social_)){
+                    nativeSocialPending_=InfinitySocial::NativeAction::EditProfile;nativeSocialTitle_=0;
+                }else notice_="Edicao requer perfil ativo no console.";
+#else
+                notice_="Edicao oficial somente no Xbox 360.";
+#endif
+            }
             return "";
         }
         if(friendGuideOpen_){PressFriendGuide(key);return "";}
@@ -3523,6 +3533,19 @@ void ConsoleHome::PressFriendGuide(Key key){
         friendFilter_=static_cast<FriendFilter>((static_cast<int>(friendFilter_)+count+(key==PageUp?-1:1))%count);
         friendRow_=0;return;
     }
+    if(key==Accept||key==Right){
+        const auto action=key==Accept?NativeAction::FriendCard:NativeAction::ComposeMessage;
+        if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
+#if defined(__XSDK__)
+        const auto target=friendRoster_.SelectedTarget(social_,friendFilter_,friendRow_,action);
+        if(!friendFreshness_.Fresh(TransferRate::Now())||!target){notice_="Selecione um amigo valido e consulte novamente.";return;}
+        nativeSocialPending_=action;nativeSocialTitle_=0;nativeSocialTarget_=target;
+        nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;
+#else
+        (void)action;notice_="Interface oficial somente no Xbox 360.";
+#endif
+        return;
+    }
     const auto rows=FilterFriends(friendRoster_.Rows(),friendFilter_);
     if(key==Up&&friendRow_>0)--friendRow_;
     if(key==Down&&friendRow_+1<rows.size())++friendRow_;
@@ -3558,7 +3581,7 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
     }
     c.TextFit(607,548,friendAutoEnabled_?"Auto: 30 s enquanto aberto | consulta experimental":"Consulta manual experimental | X gerencia pedidos",13,Muted,413);
     c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
-    c.TextFit(607,594,"Cima/Baixo Navegar | B Voltar",15,White,413);
+    c.TextFit(607,594,"A Cartao | Dir Mensagem | B Voltar",15,White,413);
 }
 void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
@@ -3579,7 +3602,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(795,365,"Exportacao nao comprova suporte.",13,Muted,230);
     c.TextFit(795,399,ValidGamerpic(social_.gamerpic)?"Gamerpic disponivel":"Gamerpic indisponivel",15,Muted,230);
     c.TextFit(608,480,"Corpo inteiro e animacao dependem do backend grafico.",15,Muted,412);
-    c.TextFit(608,523,"Y Atualizar perfil | B Voltar",17,White,412);
+    c.TextFit(608,523,"X Editar perfil | Y Atualizar | B Voltar",16,White,412);
     c.TextFit(608,563,"Editor oficial: volte e selecione Editor de avatar.",14,Muted,412);
 }
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{

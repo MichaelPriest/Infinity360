@@ -7,13 +7,14 @@
 namespace InfinitySocial {
 // Portable reader for the observed Xbox 360 X_ONLINE_FRIEND record.
 // No network call, no persistence, no rich-presence payload, session ID,
-// invitation ID or remote XUID returned. Empty is distinct from unavailable.
+// invitation ID returned. Remote XUID retained only in RAM for selected official UI; never displayed or persisted.
 constexpr std::size_t FriendRecordBytes=0xc4, MaxFriends=100;
 enum class FriendState { Unknown, Offline, Online, Playing, RequestSent, RequestReceived };
 struct FriendRow {
     std::string name;
     FriendState state=FriendState::Unknown;
     std::uint32_t title=0;
+    std::uint64_t target=0; // RAM-only, official friend actions.
 };
 inline std::uint32_t FriendBE32(const unsigned char* p){
     return (std::uint32_t(p[0])<<24)|(std::uint32_t(p[1])<<16)|
@@ -46,7 +47,7 @@ inline bool ParseFriendRoster(const unsigned char* data,std::size_t bytes,std::s
         std::string name(reinterpret_cast<const char*>(p+8),n);
         if(!ValidGamertag(name))return false;
         const auto state=DecodeFriendState(FriendBE32(p+0x18));
-        parsed.push_back({name,state,state==FriendState::Playing?FriendBE32(p+0x24):0});
+        parsed.push_back({name,state,state==FriendState::Playing?FriendBE32(p+0x24):0,xuid});
     }
     rows.swap(parsed);
     return true;
@@ -93,7 +94,7 @@ public:
     bool Expire(std::uint64_t now){if(valid_&&!Fresh(now)){Clear();return true;}return false;}
 };
 // Bind a roster provider result to the exact observed profile. The
-// snapshot contains display-only rows; identity never enters logs or UI.
+// snapshot contains display rows plus RAM-only recipient IDs; identity never enters logs or rendered UI.
 class FriendRoster {
     std::uint64_t identity_=0;
     int slot_=-1;
@@ -109,6 +110,23 @@ public:
         return known_&&Eligible(h)&&identity_==h.identity&&slot_==h.controller;
     }
     const std::vector<FriendRow>& Rows()const{return rows_;}
+    std::uint64_t SelectedTarget(const Header& h,FriendFilter filter,std::size_t row,NativeAction action)const{
+        if(!KnownFor(h)||!TargetedSocialAction(action))return 0;
+        const auto indices=FilterFriends(rows_,filter);
+        if(row>=indices.size())return 0;
+        const auto& selected=rows_[indices[row]];
+        if(action==NativeAction::ComposeMessage&&
+           selected.state!=FriendState::Online&&selected.state!=FriendState::Offline&&selected.state!=FriendState::Playing)return 0;
+        return CanRequestNative(action,h,0,selected.target)?selected.target:0;
+    }
+    bool ContainsTarget(const Header& h,std::uint64_t target,NativeAction action)const{
+        if(!KnownFor(h)||!TargetedSocialAction(action)||!CanRequestNative(action,h,0,target))return false;
+        for(const auto& row:rows_)if(row.target==target){
+            return action==NativeAction::FriendCard||row.state==FriendState::Online||
+                row.state==FriendState::Offline||row.state==FriendState::Playing;
+        }
+        return false;
+    }
     void Observe(const Header& h){if(!KnownFor(h))Clear();}
     bool Set(const Header& before,const Header& after,const unsigned char* data,
              std::size_t bytes,std::size_t count){
