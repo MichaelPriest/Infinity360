@@ -1,4 +1,5 @@
 ﻿#include "CloudTv.h"
+#include "InfinityIcons.h"
 #include "GameScanner.h"
 #include "SavedFile.h"
 #include "MediaUrl.h"
@@ -36,8 +37,7 @@ std::string localTime(int64_t timestamp) {
     char text[16];return local && std::strftime(text,sizeof text,"%H:%M",local) ? text : "--:--";
 }
 void tile(HomeCanvas& c,int x,int y,int w,int h,bool focused) {
-    c.Box(x,y,w,h,focused?Lime:Edge,8);int i=focused?3:1;
-    c.Box(x+i,y+i,w-2*i,h-2*i,focused?0xff254831u:Panel,6);
+    c.SeriesTile(x,y,w,h,focused,220);
 }
 void filesIn(const std::string& dir,const std::string& prefix,std::vector<std::string>& found) {
     std::vector<FolderEntry> items;if(!ReadFolder(dir+prefix,items)) return;
@@ -269,7 +269,7 @@ void CloudTv::DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const 
     if(tvLower(source_)=="playlist.m3u" && c.Logo(dir_+"logos"+slash+file,ax,ay,aw,ah)) return;
     const TvItem& item=catalog_.Items()[index];
     if(item.category==TvLive) {
-        c.Image(344,0,254,222,x+(w-h)/2,y+3,h,h-6);
+        InfinityIcons::Draw(c,3,x+(w-60)/2,y+(h-60)/2,60,Soft);
         return;
     }
     // A filmstrip marks entries whose playlist does not supply an offline cover.
@@ -290,8 +290,8 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     c.Text(944,98,countText(total)+(picking?" listas":" itens"),19,Soft,280);
     for(int i=0;i<TvTabCount;++i) {
         const int x=45+i*150;
-        c.Box(x,146,143,42,i==tab_?Lime:Panel,6);
-        c.Text(x+12,152,c.Tr(tabs[i]),19,i==tab_?0xff102312u:Soft,122);
+        tile(c,x,146,143,42,i==tab_);
+        c.Text(x+12,152,c.Tr(tabs[i]),19,i==tab_?Ink:Soft,122);
     }
     if(!total) {
         c.Text(58,250,picking?c.Tr("Nenhuma lista encontrada."):c.Tr("Nenhum item nesta seção."),26,Soft,1130);
@@ -405,10 +405,10 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     if(!notice_.empty()) {
         c.Box(44,626,1191,35,0xff132e23u,6);c.Text(57,629,notice_,18,Lime,1160);
     }
-    c.Box(0,663,1280,57,0xff061915u);
+    c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
     const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri).empty();
-    c.Text(44,675,view_==Details?(playable?c.Tr("A  Reproduzir"):""):c.Tr("A  Selecionar"),19,Lime,190);
-    c.Text(240,675,c.Tr("B  Voltar"),19,Ink,130);
+    if(view_!=Details||playable){c.Box(44,675,24,24,0xff85d42du,12);c.CenterText(44,674,24,"A",16,0xff102010u);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
+    c.Box(240,675,24,24,0xffe34a35u,12);c.CenterText(240,674,24,"B",16,0xff102010u);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
     if(tab_!=TvSources)c.Text(390,675,c.Tr("X  Favorito"),19,Ink,150);
     c.Text(567,675,c.Tr("Y  Atualizar"),19,Ink,151);
     if(view_!=Details && view_!=Episodes)c.Text(764,675,c.Tr("Start  Guia"),19,Ink,159);
@@ -451,7 +451,7 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
     const bool picking=tab_==TvSources;
     if(picking){DrawList(c,now);return;}
     const size_t total=rows_.size();
-    c.Text(44,76,"Cloud360 IPTV",38,Ink,740);
+    InfinityIcons::Draw(c,3,46,91,32,Ink);c.TextFit(91,76,"Cloud360 IPTV",38,Ink,695);
     c.Text(830,94,countText(total)+" "+c.Tr("itens"),20,Lime,400);
     for(int i=0;i<TvTabCount;++i){
         const int x=45+i*150;
