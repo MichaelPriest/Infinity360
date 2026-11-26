@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.50 — Conquistas no Guide (sem build)
+
+- RB abre a central de conquistas pelo Guide, sem alterar os atalhos configuráveis.
+- Perfil ativo e Gamerscore reportado separados dos totais GPD offline, sem atribuição automática dos arquivos ao usuário.
+- Atalho bloqueado durante transferências; limpeza do indicador de importação ao sair.
+- Sem compilação, testes físicos ou novas capturas.
+
 ## V0.2.49 — Gamerscore reportado pelo XAM (experimental, sem build)
 
 - Leitura somente leitura de XPROFILE_GAMERCARD_CRED por slot autenticado, buffer fixo e validação de ABI big-endian.
