@@ -6,21 +6,26 @@ namespace InfinitySocial {
 // XPROFILE_GAMERCARD_CRED (INT32); XAM returns a 32-bit big-endian ABI.
 // Only accept a single global setting for the requested user, inside the buffer.
 constexpr std::uint32_t GamerscoreSetting = 0x10040006u;
+constexpr std::uint32_t AchievementsSetting = 0x10040013u;
 inline std::uint32_t ProfileBE32(const unsigned char* p) {
     return (std::uint32_t(p[0]) << 24) | (std::uint32_t(p[1]) << 16) |
            (std::uint32_t(p[2]) << 8) | std::uint32_t(p[3]);
 }
-inline bool ParseGamerscore(const unsigned char* data, std::size_t bytes,
-                           std::uint32_t base, std::uint32_t user, unsigned& score) {
+inline bool ParseProfileCounter(const unsigned char* data, std::size_t bytes,
+                           std::uint32_t base, std::uint32_t user, std::uint32_t id,unsigned& score) {
+    if(id!=GamerscoreSetting&&id!=AchievementsSetting)return false;
     if (!data || bytes < 48 || base > 0xfffffff7u || user >= 4) return false;
     if (ProfileBE32(data) != 1 || ProfileBE32(data + 4) != base + 8) return false;
     const auto* setting = data + 8;
     if (ProfileBE32(setting) != 1 || ProfileBE32(setting + 8) != user ||
-        ProfileBE32(setting + 16) != GamerscoreSetting || setting[24] != 1) return false;
+        ProfileBE32(setting + 16) != id || setting[24] != 1) return false;
     const auto value = ProfileBE32(setting + 32);
     if (value > 0x7fffffffu) return false;
     score = value;
     return true;
+}
+inline bool ParseGamerscore(const unsigned char* data,std::size_t bytes,std::uint32_t base,std::uint32_t user,unsigned& score){
+    return ParseProfileCounter(data,bytes,base,user,GamerscoreSetting,score);
 }
 // Portable mapping for XAM state values. Unknown values stay unavailable.
 // No service capability, avatar or guest status is inferred.
@@ -48,14 +53,13 @@ inline bool GamerpicEnabled(const std::string& dir) {
     return std::getline(flag,line)&&(line=="ENABLE-NATIVE-GAMERPIC"||line=="ENABLE-NATIVE-GAMERPIC\r");
 }
 // Read-only, fixed-size request; no writes or remote XUID lookup.
-inline bool ReadXsdkGamerscore(std::uint32_t user, unsigned& score) {
-    const std::uint32_t id = GamerscoreSetting;
+inline bool ReadXsdkCounter(std::uint32_t user,std::uint32_t id,unsigned& score) {
     alignas(8) unsigned char buffer[128] = {};
     std::uint32_t bytes = sizeof(buffer);
     if (XamUserReadProfileSettings(0, user, 0, nullptr, 1, &id, &bytes,
                                    buffer, nullptr) != 0 || bytes > sizeof(buffer)) return false;
-    return ParseGamerscore(buffer, bytes,
-        static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(buffer)), user, score);
+    return ParseProfileCounter(buffer, bytes,
+        static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(buffer)), user,id,score);
 }
 // Call from the dashboard thread on a bounded refresh interval.
 // The caller must not equate online sign-in with a verified chat service.
@@ -73,7 +77,7 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
         if (XamUserGetSigninInfo(i, 0, &first) != 0 ||
             first.signin_state != state || first.xuid == 0) continue;
         unsigned score = 0;
-        const bool scoreKnown = ReadXsdkGamerscore(i, score);
+        const bool scoreKnown = ReadXsdkCounter(i,GamerscoreSetting,score);
         if (XamUserGetSigninInfo(i, 0, &second) != 0 ||
             second.signin_state != state || second.xuid != first.xuid ||
             XamUserGetSigninState(i) != state) continue;
@@ -88,8 +92,19 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
     // One selected user's picture per refresh, only with explicit opt-in.
     // ABI is experimental: do not call when the export is missing.
     const auto selected=Resolve(result,preferred);
-    if(!readPicture||selected.controller<0||selected.guest)return result;
+    if(selected.controller<0||selected.guest)return result;
     const auto user=static_cast<std::uint32_t>(selected.controller);
+    unsigned achievements=0;
+    const bool known=ReadXsdkCounter(user,AchievementsSetting,achievements);
+    USER_SIGNIN_INFO verified{};
+    const auto expectedState=selected.state==SignIn::Online?2u:1u;
+    if(XamUserGetSigninInfo(user,0,&verified)!=0||verified.xuid!=identities[user]||
+       verified.signin_state!=expectedState||XamUserGetSigninState(user)!=expectedState){
+        result.slots[user]=Slot{};return result;
+    }
+    result.slots[user].achievementsKnown=known;
+    if(known)result.slots[user].achievements=achievements;
+    if(!readPicture)return result;
     HANDLE module=0;
     void* address=nullptr;
     if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
@@ -97,7 +112,7 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
     USER_SIGNIN_INFO before{},after{};
     const auto state=selected.state==SignIn::Online?2u:1u;
     if(XamUserGetSigninInfo(user,0,&before)!=0||before.xuid!=identities[user]||
-       before.signin_state!=state)return result;
+       before.signin_state!=state){result.slots[user]=Slot{};return result;}
     // Xenia Canary reference: tile type 2 (64x64 gamer tile), title/item 0,
     // stride in bytes, height in rows, synchronous null overlapped.
     alignas(128) std::array<unsigned char,GamerpicBytes> buffer{};

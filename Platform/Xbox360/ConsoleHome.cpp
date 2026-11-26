@@ -3452,7 +3452,8 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.TextFit(697,218,state,16,Muted,315);
     const std::string labels[]={
         social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível",
-        social_.gamerscoreKnown?"Gamerscore: "+number(social_.gamerscore):"Gamerscore: indisponível",
+        (social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
+        (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis"),
         "Cartão do jogador","Mensagens / voz: pendentes","Amigos Xbox"
     };
     const int icons[]={1,9,27,19,8};
@@ -3888,7 +3889,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
     const std::string active=social_.controller<0?"Perfil ativo: indisponivel":
         (social_.origin==InfinitySocial::Origin::Test?"Perfil de teste: ":"Perfil ativo: ")+social_.displayName+
         (social_.gamerscoreKnown?" | G reportado: "+number(social_.gamerscore):" | G indisponivel");
-    c.TextFit(48,541,active+" | GPD nao vinculado ao perfil",16,White,1170);
+    c.TextFit(48,541,active+(social_.achievementsKnown?" | Conquistas reportadas: "+number(social_.achievements):" | Conquistas indisponiveis")+" | GPD nao vinculado",16,White,1170);
     c.TextFit(48,568,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
     InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
 }

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.54 — Conquistas do perfil e documentação compacta
+
+- Contagem de conquistas reportada via XAM (0x10040013), separada dos arquivos GPD offline; validação de identidade e tipo.
+- README compacto; galeria integral em docs/screenshots/README.md e histórico anterior em DEVELOPMENT-NOTES.md.
+- Workflow de galeria publica somente a pasta de capturas e executa testes portáteis de perfil. Sem build XEX ou release; homologação física pendente.
+
 ## V0.2.53 — Gamerpic experimental na Home e Guide
 
 - Textura circular de perfil 64×64 em memória, conversão ARGB/RGBA, fallback neutro e invalidação visual por mudança de pixels/perfil.

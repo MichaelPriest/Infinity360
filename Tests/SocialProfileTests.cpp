@@ -33,6 +33,11 @@ int main() {
     data[32] = 1;
     PutBE32(data + 8, 0);
     CHECK(!ParseGamerscore(data, sizeof(data), base, 2, score));
+    PutBE32(data+8,1);PutBE32(data+24,AchievementsSetting);
+    PutBE32(data+40,77);
+    CHECK(ParseProfileCounter(data,sizeof(data),base,2,AchievementsSetting,score)&&score==77);
+    CHECK(!ParseGamerscore(data,sizeof(data),base,2,score));
+    CHECK(!ParseProfileCounter(data,sizeof(data),base,2,0x10040012u,score));
     CHECK(FromXam(0, "stale").state == SignIn::SignedOut);
     CHECK(FromXam(0, "stale").gamertag.empty());
     CHECK(FromXam(1, "Player").state == SignIn::Local);
@@ -111,8 +116,12 @@ int main() {
     Snapshot picture;
     picture.slots[0]={SignIn::Local,Origin::Console,false,"Player","",true,0};
     picture.slots[0].gamerpic=rgba;
+    picture.slots[0].achievementsKnown=true;picture.slots[0].achievements=77;
     auto pictured=Resolve(picture,0);
     CHECK(ValidGamerpic(pictured.gamerpic));
+    CHECK(pictured.achievementsKnown&&pictured.achievements==77);
+    auto changedCount=pictured;changedCount.achievements=78;
+    CHECK(!SameHeader(pictured,changedCount));
     auto noPicture=pictured;noPicture.gamerpic.clear();
     CHECK(!SameHeader(pictured,noPicture));
     picture.slots[0].guest=true;

@@ -28,3 +28,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.52 Guide social focus and experimental native UI actions; 72 native captures only
 
 2026-11-26 V0.2.53 experimental gamerpic renderer and synthetic test profile; 72 native captures only
+
+2026-11-26 V0.2.54 compact README, dedicated gallery and reported achievement count; host render and profile tests only

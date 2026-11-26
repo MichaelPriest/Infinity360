@@ -37,6 +37,8 @@ struct Slot {
     bool gamerscoreKnown = false;
     unsigned gamerscore = 0;
     std::vector<unsigned char> gamerpic;
+    bool achievementsKnown=false;
+    unsigned achievements=0;
 };
 struct Snapshot {
     std::array<Slot,4> slots{};
@@ -77,6 +79,8 @@ struct Header {
     unsigned gamerscore = 0;
     Chat chat = Chat::Unavailable;
     std::vector<unsigned char> gamerpic;
+    bool achievementsKnown=false;
+    unsigned achievements=0;
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
@@ -95,7 +99,7 @@ inline bool SameHeader(const Header& a, const Header& b) {
            a.state == b.state && a.displayName == b.displayName &&
            a.avatarAsset == b.avatarAsset && a.guest == b.guest &&
            a.gamerscoreKnown == b.gamerscoreKnown &&
-           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic;
+           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic && a.achievementsKnown==b.achievementsKnown && a.achievements==b.achievements;
 }
 
 // Confirm two consecutive console observations before emitting generic local
@@ -169,6 +173,8 @@ inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     if(!slot.guest && ValidGamerpic(slot.gamerpic))result.gamerpic=slot.gamerpic;
     result.gamerscoreKnown = !slot.guest && slot.gamerscoreKnown;
     if (result.gamerscoreKnown) result.gamerscore = slot.gamerscore;
+    result.achievementsKnown=!slot.guest&&slot.achievementsKnown;
+    if(result.achievementsKnown)result.achievements=slot.achievements;
     if (snapshot.chat == Chat::LocalOnly) result.chat = Chat::LocalOnly;
     // A test/local/guest account never enables real Xbox communications.
     if (snapshot.chat == Chat::XboxService && snapshot.serviceVerified &&
