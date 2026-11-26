@@ -29,3 +29,7 @@ ConsoleHome consulta os quatro slots XAM a cada dois segundos no XSDK, mantém o
 ## Selecao oficial de perfil
 
 No Guide local (R3), LB solicita a interface nativa `XamShowSigninUI(4,0)` declarada no kernel.h do XSDK fixado. A solicitacao e consumida uma unica vez pelo presenter; recusada durante copia ou lancamento pendente. `xsdk_system_ui_open()` e consultado por frame para suprimir comandos da dashboard enquanto uma interface do sistema esta aberta. O retorno da chamada informa apenas aceitacao, nao autentica o usuario; a consulta periodica verifica o estado observado. No host, LB informa indisponibilidade. A etiqueta Alpha foi movida para o rodape para nao ocultar o perfil. Compilacao PPC e comportamento fisico ainda nao verificados.
+
+## Revisão V0.2.47 na main
+
+Logout confirmado exige os quatro slots consultados com origem Console e estado SignedOut. Consultas parciais sem perfil autenticado permanecem Unknown. A atualização visual compara todos os campos do Header, inclusive avatar, Gamerscore, convidado e chat; a Home preserva a identificação de teste mesmo para convidados. Nenhum provider novo, teste físico ou build foi executado.
