@@ -2,6 +2,7 @@
 #include "ConsoleHome.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
+#include "InfinityIcons.h"
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
@@ -188,6 +189,8 @@ int main(int argc,char** argv) {
     menu.Load();
     HomeCanvas canvas;
     assert(canvas.LoadArt(argv[1]));
+    // Each approved vector glyph must produce visible ink in the actual framebuffer.
+    {HomeCanvas icons;for(int kind=0;kind<28;++kind){icons.SeriesBackground();unsigned before=icons.Pixels()[105*HomeCanvas::Width+105];(void)before;InfinityIcons::Draw(icons,kind,100,100,32,0xffffffffu);bool visible=false;for(int y=98;y<136;++y)for(int x=98;x<136;++x)if((icons.Pixels()[y*HomeCanvas::Width+x]&0xffffffu)>0x999999u)visible=true;assert(visible);}}
     // Exercise actual framebuffer composition, not a screenshot mockup.
     {
         HomeCanvas modern;modern.SeriesBackground();
