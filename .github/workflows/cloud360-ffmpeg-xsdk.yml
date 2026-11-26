@@ -16,6 +16,11 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Read dashboard version
+        id: version
+        run: |
+          version="$(python3 Platform/Xbox360/tools/package_alpha.py --version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Install build dependencies
         run: |
           sudo apt-get update -qq
@@ -94,11 +99,11 @@ jobs:
             --build "$RUNNER_TEMP/av-native" --ffmpeg "$HOME/ffmpeg" \
             --ffbuild "$RUNNER_TEMP/ffmpeg-build" --sdk "$HOME/xsdk" --toolchain "$HOME/xsdk-gcc" \
             --tls "$HOME/mbedtls-xenon" --curl "$HOME/curl-xenon" --miniz "$HOME/infinity-miniz" --repo "$GITHUB_WORKSPACE" \
-            --stage "$RUNNER_TEMP/Infinity360-IPTV-FFmpeg-candidate"
+            --stage "$RUNNER_TEMP/Infinity360-IPTV-FFmpeg-${{ steps.version.outputs.version }}-candidate"
       - uses: actions/upload-artifact@v4
         with:
-          name: Infinity360-IPTV-FFmpeg-candidate
-          path: ${{ runner.temp }}/Infinity360-IPTV-FFmpeg-candidate.zip
+          name: Infinity360-IPTV-FFmpeg-${{ steps.version.outputs.version }}-candidate
+          path: ${{ runner.temp }}/Infinity360-IPTV-FFmpeg-${{ steps.version.outputs.version }}-candidate.zip
           if-no-files-found: error
           retention-days: 14
       - name: Collect configure and linker diagnostics

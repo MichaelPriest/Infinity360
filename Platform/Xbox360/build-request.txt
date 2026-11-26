@@ -1,6 +1,4 @@
-INFINITY 360 V0.2.40
+INFINITY 360 V0.2.43
 Requested: 2026-11-25
-Baseline: e53abfb5571fe6d0b657f54bce514c6634f12aa2
-Standard XSDK release with modern layouts, corrected shader, homebrew catalog, Nexus official download, source directory and 1080p output telemetry. Mandatory portable gate.
-
-Retry: correct std::string concatenation in DrawModernGameDetails; preserve all tests.
+Baseline: 23f5be633a8c7fac65a45c39be382e34c6c20832
+Full standard ZIP with modern layout, integrated default features, enabled MPEG playback and synthetic test. Also trigger isolated FFmpeg candidate with LGPL relink gate. Mandatory portable tests.

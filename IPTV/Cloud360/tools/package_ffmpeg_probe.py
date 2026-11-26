@@ -113,12 +113,15 @@ def main():
     preview=stage/"bin"/"MenuPreview"
     (preview/"UserFiles").mkdir(parents=True)
     (preview/"UserFiles"/"ContentImport").mkdir()
+    (preview/"Listas").mkdir()
+    shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/README.md",preview/"LEIA-ME-RECURSOS.txt")
     (preview/"infinity-preview.txt").write_text("INFINITY360-XSDK-PREVIEW\n")
     for filename in ("aurorax-store.tsv","infinity360-providers.tsv","infinity360-store-hosts.txt","FONTES.txt"):
         shutil.copy2(args.repo/"Platform/Xbox360/StoreDefaults"/filename,preview)
     for filename in ("aurorax-profile.txt","enable-file-writes.txt","enable-https-store.txt","enable-store-install.txt","enable-xboxunity.txt","enable-xex-launch.txt","enable-continuous-session.txt","enable-dvd-install.txt","enable-iptv-playback.txt","infinity360-iptv-bitrate.txt"):
         shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults"/filename,preview)
     (stage/"bin"/"VERSION.txt").write_text(version+"\n")
+    (stage/"bin"/"BUILD-COMMIT.txt").write_text(run("git","-C",str(args.repo),"rev-parse","HEAD",text=True))
     # Deterministic, locally generated synthetic test clip (no service credentials).
     subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-f","lavfi","-i","testsrc2=size=128x72:rate=5","-f","lavfi","-i","sine=frequency=440:sample_rate=48000","-t","2","-c:v","libx264","-threads","1","-pix_fmt","yuv420p","-c:a","aac",str(stage/"bin"/"test.mp4")],check=True)
     subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(stage/"bin"/"test.mp4"),"-c","copy","-bsf:v","h264_mp4toannexb","-f","mpegts",str(stage/"bin"/"test.ts")],check=True)
@@ -152,6 +155,11 @@ def main():
             if path.is_file() or path.is_dir() and not any(path.iterdir()):z.write(path,path.relative_to(stage))
     with zipfile.ZipFile(archive) as z:
         assert z.testzip() is None
+        assert z.read("bin/default.xex")[:4] == b"XEX2"
+        assert z.read("bin/MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
+        assert z.read("bin/MenuPreview/enable-iptv-playback.txt") == b"ENABLE-IPTV-PLAYBACK\n"
+        assert z.getinfo("bin/MenuPreview/UserFiles/test.mp4").file_size>4096
+        assert z.getinfo("bin/MenuPreview/UserFiles/test.ts").file_size>4096
     print(archive, digest(archive))
 
 if __name__=="__main__":

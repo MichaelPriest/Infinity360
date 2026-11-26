@@ -39,7 +39,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y build-essential bison flex texinfo \
             libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 \
-            cmake ninja-build git glslang-tools
+            cmake ninja-build git glslang-tools ffmpeg
       - name: Pin reviewed open-source Xbox 360 XSDK
         run: |
           git clone https://github.com/xenosworks/xsdk.git "$HOME/xsdk"
@@ -95,6 +95,10 @@ jobs:
             -DINFINITY_EXPERIMENTAL_POWER=${{ inputs.power_control && 'ON' || 'OFF' }} \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build IPTV/Cloud360/native/build --parallel 2 --target aurorax_alpha cloud360_probe infinity_core_probe infinity_canvas_probe infinity_menu_preview infinity_launch_target
+      - name: Generate local MPEG-PS playback fixture
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x240:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 5 -c:v mpeg1video -pix_fmt yuv420p -b:v 500k -c:a mp2 -b:a 128k -f mpeg "$RUNNER_TEMP/infinity-test.mpg"
+          test -s "$RUNNER_TEMP/infinity-test.mpg"
       - name: Verify real XEX2 and publish separate test package
         run: |
           python3 - <<'PY'
@@ -176,7 +180,9 @@ jobs:
                   archive.write("Platform/Xbox360/StoreDefaults/"+filename, "MenuPreview/"+filename)
               archive.writestr("MenuPreview/UserFiles/", "")
               archive.writestr("MenuPreview/UserFiles/ContentImport/", "")
-              archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"TV ao vivo\",Canal demonstrativo\nhttps://example.invalid/test.ts\n")
+              archive.write(Path(os.environ["RUNNER_TEMP"])/"infinity-test.mpg", "MenuPreview/UserFiles/test.mpg")
+              archive.writestr("MenuPreview/playlist.m3u", "#EXTM3U\n#EXTINF:-1 group-title=\"Filmes\",Teste local MPEG-PS (5 s)\nUserFiles/test.mpg\n")
+              archive.writestr("MenuPreview/Listas/", "")
               # Store defaults are reviewed real homebrew metadata; no demo item.
               archive.writestr("VERSION.txt", version+"\n")
               archive.writestr("BUILD-COMMIT.txt", os.environ["GITHUB_SHA"]+"\n")
@@ -188,6 +194,9 @@ jobs:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
               assert archive.read("MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
+              assert archive.getinfo("MenuPreview/UserFiles/test.mpg").file_size > 4096
+              assert b"UserFiles/test.mpg" in archive.read("MenuPreview/playlist.m3u")
+              assert archive.read("MenuPreview/infinity360-iptv-bitrate.txt") == b"2000000\n"
               for name, value in [["enable-file-writes.txt","ENABLE-FILE-WRITES"],["enable-https-store.txt","ENABLE-HTTPS-STORE"],["enable-store-install.txt","ENABLE-STORE-INSTALL"],["enable-xboxunity.txt","ENABLE-XBOXUNITY"],["enable-xex-launch.txt","ENABLE-XEX-LAUNCH"],["enable-continuous-session.txt","ENABLE-CONTINUOUS-SESSION"],["enable-dvd-install.txt","ENABLE-DVD-INSTALL"],["enable-iptv-playback.txt","ENABLE-IPTV-PLAYBACK"]]:
                   assert archive.read("MenuPreview/"+name) == (value+"\n").encode("ascii")
               assert b"xboxunity.net\n" in archive.read("MenuPreview/infinity360-store-hosts.txt")

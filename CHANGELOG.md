@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.43 — Build com player e layout moderno
+
+- Clipe local MPEG-PS sintético de 5 segundos no ZIP padrão, com áudio e vídeo; remove entrada inválida de demonstração.
+- Candidato FFmpeg versionado, com clipes MP4/TS, commit de origem, configuração e verificações de pacote.
+- Build padrão e experimental e 69 capturas solicitadas; resultados dependem dos gates.
+
 ## V0.2.42 — IPTV player na próxima build (sem build)
 
 - Marcador de reprodução MPEG-PS incluído no ZIP completo.
