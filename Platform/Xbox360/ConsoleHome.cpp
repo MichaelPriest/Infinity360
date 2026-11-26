@@ -3297,9 +3297,10 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     const bool signedIn=social_.controller>=0;
     // Original neutral silhouette; no avatar image is claimed.
     const unsigned ink=signedIn?Lime:Muted;
-    c.Box(x+8,y+7,38,38,Panel,18);
-    c.Box(x+21,y+13,12,12,ink,6);
-    c.Box(x+16,y+27,22,12,ink,6);
+    c.Box(x+8,y+7,38,38,0xff68716du,19);
+    c.Box(x+21,y+13,12,12,White,6);
+    c.Box(x+16,y+27,22,12,White,6);
+    if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
         social_.state==SignIn::Online?"Sessao online":
         social_.state==SignIn::Local?"Sessao local":
@@ -3330,7 +3331,8 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     for(int row=0;row<5;++row){
         const int y=274+row*42;
         approvedIcon(c,icons[row],611,y+6,24,White);
-        c.TextFit(649,y+3,labels[row],18,row==0?White:Muted,365);
+        if(row==4){c.TextFit(649,y+1,"Amigos e mensagens",18,White,365);c.TextFit(649,y+22,"Integração pendente",13,Muted,365);}
+        else c.TextFit(649,y+3,labels[row],18,row==0?White:Muted,365);
         if(row<4)c.Box(611,y+39,403,1,0xff414743u);
     }
     c.SeriesTile(601,522,428,84,false,215);
@@ -3363,7 +3365,8 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
             c.TextFit(509,y+7,number(transfer_.Percent())+"%",15,Lime,34);
     }
     c.Box(255,545,292,1,0xff414743u);
-    c.TextFit(259,555,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),15,White,284);
+    if(quickGuideEditing_)c.TextFit(259,555,"LB/RB Mover | X Restaurar | Y Salvar",14,White,284);
+    else {c.Box(260,561,20,20,0xff85d42du,10);c.CenterText(260,560,20,"A",13,0xff102010u);c.Text(286,558,"Abrir",15,White,59);c.Box(350,561,20,20,0xff209de8u,10);c.CenterText(350,560,20,"X",13,0xff102010u);c.Text(376,558,"Editar",15,White,58);c.Box(439,561,20,20,0xffe34a35u,10);c.CenterText(439,560,20,"B",13,0xff102010u);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":"Guia local da dashboard"),15,Muted,284);
     if(!quickGuideEditing_)DrawSocialGuide(c);
     if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
@@ -4073,8 +4076,8 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.Translucent(0,82,1280,66,0xff161917u,100);
     for(int i=0;i<Hero;++i){
         const auto a=Geometry(i);if(i==active)c.SeriesTile(a.x,a.y,a.w,a.h,true,210);
-        approvedIcon(c,i,a.x+7,a.y+12,22,White);
-        c.TextFit(a.x+34,a.y+12,c.Tr(names[i]),14,White,a.w-36);
+        approvedIcon(c,i,a.x+6,a.y+13,20,White);
+        c.TextFit(a.x+29,a.y+13,c.Tr(names[i]),13,White,a.w-31);
     }
     c.Box(28,148,1224,1,0xff414743u);
     const auto hero=Geometry(ApprovedHome::Hero);c.SeriesTile(hero.x,hero.y,hero.w,hero.h,active==Hero);
