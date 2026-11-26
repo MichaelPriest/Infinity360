@@ -20,6 +20,12 @@ O ZIP fornecido foi inventariado: 152 arquivos, CRC OK, sem incorporar binários
 
 O layout horizontal e Guide recebem fundo grafite com luz difusa, cartões com transparência por composição alfa, foco fino, ícones monocromáticos e textos com reticências quando necessário. Capas e fundos continuam usando os arquivos locais disponíveis; a falta de capa é identificada, sem arte fictícia. As demais opções de layout e temas são preservadas. A captura nativa será validada pelo workflow de galeria; não houve build XEX nem teste físico desta revisão.
 
+## Layout aprovado — Series S/X Infinity
+
+Revisão do layout horizontal baseada nas duas referências conceituais aprovadas pelo mantenedor em 26/11/2026: menu horizontal com ícone e texto, destaque panorâmico, seis atalhos, seis cartões grandes de jogos, recorte de arte preservando proporção, vidro com contorno suave e Guide central de dois painéis. As imagens reais continuam geradas pelo renderizador C++; capas e fundos precisam existir localmente, e serviços indisponíveis não são simulados. Os demais layouts continuam disponíveis.
+
+O cabeçalho exibe CPU, GPU, EDRAM e temperatura do chassi (SYS), em Celsius, com consulta automática a cada 10 s na tela inicial quando a variante XSDK experimental SMC estiver habilitada. Amostras vencidas após 30 s ou ausentes mostram --. A consulta é somente leitura, não modifica ventoinha nem firmware; a compilação com opção smc_read e a homologação física ainda são necessárias. Histórico manual permanece independente.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
