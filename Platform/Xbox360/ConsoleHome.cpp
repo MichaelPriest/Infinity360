@@ -3299,43 +3299,66 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     c.TextFit(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
     c.Text(x+52,y+28,state,13,ink,w-58);
 }
+namespace { void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color); }
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
-    c.SeriesTile(545,129,695,330,false);
-    c.Text(568,146,"Perfil e comunicacao",29,White,649);
-    DrawSocialHeader(c,569,192,645);
-    c.Text(569,264,social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponivel",20,Muted,643);
-    c.Text(569,299,social_.gamerscoreKnown?"Gamerscore: "+number(social_.gamerscore):"Gamerscore: indisponivel",20,White,643);
-    c.Text(569,334,"Avatar: icone neutro",20,Muted,643);
-    c.Text(569,369,"Chat Xbox: indisponivel",21,Lime,643);
-    c.Text(569,408,"Amigos e mensagens: integracao pendente",17,Muted,643);
-    c.SeriesTile(545,471,695,92,false);
-    c.Text(569,482,"LB  Selecionar perfil Xbox",23,Lime,643);
+    c.SeriesTile(580,87,470,552,false,244);
+    approvedIcon(c,8,606,110,30,White);
+    c.TextFit(644,105,"Perfil e comunicação",28,White,385);
+    c.SeriesTile(601,166,428,91,false,230);
+    const unsigned ink=social_.controller>=0?Lime:Muted;
+    c.Box(623,184,54,54,0xff68716du,27);
+    c.Box(642,193,16,16,White,8);c.Box(634,213,32,17,White,8);
+    if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
+    c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,315);
+    const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":social_.state==SignIn::Online?"Sessão online":social_.state==SignIn::Local?"Sessão local":social_.state==SignIn::SignedOut?"Sem perfil":"Não consultado";
+    c.TextFit(697,218,state,16,Muted,315);
+    const std::string labels[]={
+        social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível",
+        social_.gamerscoreKnown?"Gamerscore: "+number(social_.gamerscore):"Gamerscore: indisponível",
+        "Avatar: ícone neutro","Chat Xbox: indisponível","Amigos e mensagens: integração pendente"
+    };
+    const int icons[]={1,9,8,19,8};
+    for(int row=0;row<5;++row){
+        const int y=274+row*42;
+        approvedIcon(c,icons[row],611,y+6,24,White);
+        c.TextFit(649,y+3,labels[row],18,row==0?White:Muted,365);
+        if(row<4)c.Box(611,y+39,403,1,0xff414743u);
+    }
+    c.SeriesTile(601,522,428,84,false,215);
+    c.Box(616,543,48,28,0xff65736du,8);c.Box(618,545,44,24,0xff232b28u,7);
+    c.CenterText(618,546,44,"LB",16,White);
+    c.Box(676,537,1,48,0xff65736du);
+    c.TextFit(690,532,"Selecionar perfil Xbox",20,White,327);
 #if defined(__XSDK__)
-    c.Text(569,518,"Abre a interface oficial do sistema.",17,Muted,643);
+    c.TextFit(690,565,"Abre a interface oficial do sistema.",14,Muted,327);
 #else
-    c.Text(569,518,"Interface oficial disponivel apenas no console.",17,Muted,643);
+    c.TextFit(690,565,"Interface oficial apenas no console.",14,Muted,327);
 #endif
 }
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
-    c.Translucent(0,79,1280,584,0xff090c0au,180);
-    c.SeriesTile(37,126,485,525,false,250);
-    c.Text(58,141,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rapido"),30,White,445);
+    c.DimBackdrop();
+    c.SeriesTile(235,87,332,552,false,244);
+    approvedIcon(c,2,260,111,30,White);
+    c.TextFit(301,105,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rápido"),28,White,250);
+    const int icons[]={2,20,21,3,22,5,10,4};
     for(int i=0;i<QuickGuide::Count;++i){
         const unsigned action=static_cast<unsigned>(order[i]-'0');
-        const int y=193+i*48;
-        if(i==quickGuideRow_)c.SeriesTile(53,y,453,42,true,245);
-        c.Text(64,y+3,c.Tr(QuickGuide::Label(action)),20,i==quickGuideRow_?Lime:White,345);
+        const int y=165+i*46;
+        c.SeriesTile(255,y,292,41,i==quickGuideRow_,i==quickGuideRow_?225:190);
+        approvedIcon(c,icons[action],269,y+9,23,White);
+        c.TextFit(306,y+6,c.Tr(QuickGuide::Label(action)),18,White,207);
         if(action==QuickGuide::Notifications&&notifications_.UnreadCount())
-            c.Text(420,y+4,number(notifications_.UnreadCount()),18,Lime,76);
+            c.TextFit(509,y+7,number(notifications_.UnreadCount()),15,Lime,34);
         if(action==QuickGuide::Transfers&&TransferRunning())
-            c.Text(414,y+4,number(transfer_.Percent())+"%",18,Lime,86);
+            c.TextFit(509,y+7,number(transfer_.Percent())+"%",15,Lime,34);
     }
-    c.Text(58,585,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),17,Lime,440);
-    c.Text(58,610,c.Tr(quickGuideEditing_?"B Cancelar edicao":"Guia local da dashboard"),16,Muted,440);
+    c.Box(255,545,292,1,0xff414743u);
+    c.TextFit(259,555,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),15,White,284);
+    c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":"Guia local da dashboard"),15,Muted,284);
     if(!quickGuideEditing_)DrawSocialGuide(c);
-    if(!notice_.empty()){c.SeriesTile(545,581,695,60,false,250);c.TextFit(559,596,c.Tr(notice_.c_str()),17,Lime,667);}
+    if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
@@ -3964,6 +3987,10 @@ void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
     case 11:line(16,2,16,15);line(8,6,3,12);line(3,12,3,22);line(3,22,9,29);line(9,29,23,29);line(23,29,29,22);line(29,22,29,12);line(29,12,24,6);break;
     case 13:rect(5,5,27,27);rect(13,13,19,19);line(5,5,13,13);line(19,19,27,27);break;
     case 14:line(2,9,2,28);line(2,9,13,9);line(13,9,17,13);line(17,13,29,13);line(29,13,26,28);line(26,28,2,28);break;
+    case 19:rect(4,5,28,22);line(11,22,11,29);line(11,29,19,22);break;
+    case 20:line(16,3,24,5);line(24,5,29,13);line(29,13,27,23);line(27,23,19,29);line(19,29,9,27);line(9,27,3,19);line(3,19,5,9);line(5,9,16,3);line(16,8,16,16);line(16,16,23,16);break;
+    case 21:line(16,3,20,12);line(20,12,30,13);line(30,13,22,20);line(22,20,25,29);line(25,29,16,24);line(16,24,7,29);line(7,29,10,20);line(10,20,2,13);line(2,13,12,12);line(12,12,16,3);break;
+    case 22:line(7,24,25,24);line(7,24,10,18);line(10,18,10,9);line(10,9,16,4);line(16,4,22,9);line(22,9,22,18);line(22,18,25,24);line(13,28,19,28);break;
     default:rect(4,4,28,28);break;
     }
 }
