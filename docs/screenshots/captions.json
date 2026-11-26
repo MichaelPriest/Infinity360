@@ -33,6 +33,10 @@
       {
         "stem": "74-avatar-perfil-teste",
         "caption": "Home — composição de retrato e Gamerpic com tiles sintéticos (perfil de teste)"
+      },
+      {
+        "stem": "75-avatar-diagnostico",
+        "caption": "Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host"
       }
     ]
   },

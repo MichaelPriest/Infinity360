@@ -2,6 +2,7 @@
 #include "SocialProfileXsdk.h"
 #include "NativeSocialSignals.h"
 #include "FriendRoster.h"
+#include "AvatarPreview.h"
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
@@ -302,6 +303,18 @@ int main() {
     CHECK(Resolve(artFixture,0).avatarPortrait.empty());
     artFixture.slots[0].guest=false;artFixture.slots[0].avatarPortrait.assign(3,255);
     CHECK(Resolve(artFixture,0).avatarPortrait.empty());
+    AvatarCapabilities caps;CHECK(!caps.AllExports()&&caps.Count()==0);
+    caps.checked=true;caps.found.fill(true);CHECK(caps.AllExports()&&caps.Count()==6);
+    caps.found[2]=false;CHECK(!caps.AllExports());
+    std::vector<unsigned char> frame(32*64*4,255);
+    CHECK(ValidAvatarFrame(32,64,frame));
+    CHECK(!ValidAvatarFrame(257,64,frame));
+    CHECK(!ValidAvatarFrame(32,63,frame));
+    AvatarPreview preview;
+    CHECK(preview.Set(artHeader,artHeader,32,64,frame)&&preview.KnownFor(artHeader));
+    auto changedArt=artHeader;changedArt.identity=99;
+    preview.Observe(changedArt);CHECK(!preview.KnownFor(changedArt)&&preview.Pixels().empty());
+    CHECK(!preview.Set(artHeader,changedArt,32,64,frame));
     std::cout << "social profile checks passed\n";
     return 0;
 }

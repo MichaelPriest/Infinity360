@@ -201,6 +201,13 @@ static int captureScreens(const char* atlas,const char* destination) {
             assert(profile.QuickGuideOpen());
             profile.Press(ConsoleHome::Right);
             assert(profile.SocialGuideFocused());
+            profile.Press(ConsoleHome::Refresh);assert(profile.AvatarGuideOpen());
+            ok=save("75-avatar-diagnostico",profile)&&ok;
+            profile.Press(ConsoleHome::Back);assert(!profile.AvatarGuideOpen());
+            {HomeCanvas frameCanvas;std::vector<unsigned char> frame(32*64*4,255);
+             assert(frameCanvas.AvatarFrame(frame,32,64,0,0,100,100));
+             assert(!frameCanvas.AvatarFrame(frame,32,64,-1,0,100,100));
+             assert(!frameCanvas.AvatarFrame(frame,32,63,0,0,100,100));}
             profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);

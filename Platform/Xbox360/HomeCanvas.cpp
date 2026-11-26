@@ -233,6 +233,22 @@ bool HomeCanvas::ProfilePicture(const std::vector<unsigned char>& rgba,int x,int
     }
     return true;
 }
+bool HomeCanvas::AvatarFrame(const std::vector<unsigned char>& rgba,unsigned sw,unsigned sh,int x,int y,int w,int h){
+    if(!sw||!sh||sw>256||sh>384||rgba.size()!=std::size_t(sw)*sh*4||
+       x<0||y<0||w<=0||h<=0||x>=Width||y>=Height||w>Width-x||h>Height-y)return false;
+    bool visible=false;for(std::size_t i=3;i<rgba.size();i+=4)if(rgba[i]){visible=true;break;}
+    if(!visible)return false;
+    int dw=w,dh=h;
+    if(int(sw)*h>w*int(sh))dh=std::max(1,w*int(sh)/int(sw));
+    else dw=std::max(1,h*int(sw)/int(sh));
+    x+=(w-dw)/2;y+=(h-dh)/2;
+    for(int j=0;j<dh;++j)for(int i=0;i<dw;++i){
+        const auto* p=&rgba[4*((j*sh/dh)*sw+i*sw/dw)];
+        if(p[3]){auto& dest=frame_[(y+j)*Width+x+i];
+            dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);}
+    }
+    return true;
+}
 bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop,int radius) {
     if(file.empty() || w<=0 || h<=0 || x<0 || y<0 || x>=Width || y>=Height ||
        w>Width-x || h>Height-y) return false;

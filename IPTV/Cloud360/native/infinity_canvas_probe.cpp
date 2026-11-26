@@ -7,6 +7,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "NativeSocialUiXsdk.h"
+#include "NativeAvatarProbeXsdk.h"
 #include "NativeFriendRosterXsdk.h"
 #include "NativeSocialListenerXsdk.h"
 #include "XexLaunchCheck.h"
@@ -230,6 +231,7 @@ int main(){
         xsdk_log_write("FAIL: isolated MenuPreview marker missing");return 2;
     }
     ConsoleHome menu(dir,GameScanner::DefaultRoots());menu.Load();
+    menu.SetAvatarCapabilities(InfinitySocial::ProbeAvatarExports());
     std::ifstream launchMarker((dir+"enable-xex-launch.txt").c_str());
     std::string launchSignature;
     const bool launchEnabled=bool(std::getline(launchMarker,launchSignature)) && launchSignature=="ENABLE-XEX-LAUNCH";

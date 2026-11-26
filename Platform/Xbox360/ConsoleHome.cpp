@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1007,12 +1007,18 @@ std::string ConsoleHome::Press(Key key) {
     if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
 #endif
     if(quickGuideOpen_){
+        if(avatarGuideOpen_){
+            if(key==Back||key==Left){avatarGuideOpen_=false;notice_.clear();}
+            if(key==Refresh){socialPolled_=false;socialArtPolled_=false;notice_="Atualizacao do perfil solicitada.";}
+            return "";
+        }
         if(friendGuideOpen_){PressFriendGuide(key);return "";}
         if(key!=Accept)avatarExitConfirm_.Cancel();
         if(!quickGuideEditing_){
             if(key==Right){socialGuideFocus_=true;notice_.clear();return "";}
             if(key==Left&&socialGuideFocus_){socialGuideFocus_=false;notice_.clear();return "";}
             if(socialGuideFocus_){
+                if(key==Refresh){avatarGuideOpen_=true;notice_.clear();return "";}
                 if(key==Up||key==Down){socialGuideRow_=InfinitySocial::MoveGuideSocial(socialGuideRow_,key==Up?-1:1);notice_.clear();return "";}
                 if(key==Accept){
                     const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
@@ -2092,7 +2098,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
-        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -3554,6 +3560,28 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
     c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
     c.TextFit(607,594,"Cima/Baixo Navegar | B Voltar",15,White,413);
 }
+void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
+    using namespace InfinitySocial;
+    c.SeriesTile(580,87,470,552,false,244);
+    InfinityIcons::Draw(c,InfinityIcons::Avatar,606,110,30,White);
+    c.TextFit(644,105,"Avatar Xbox",28,White,385);
+    c.SeriesTile(601,161,180,300,false,220);
+    const bool frame=avatarPreview_.KnownFor(social_)&&
+        c.AvatarFrame(avatarPreview_.Pixels(),avatarPreview_.Width(),avatarPreview_.Height(),610,173,162,274);
+    const bool portrait=!frame&&c.ProfilePicture(social_.avatarPortrait,627,239,128);
+    if(!frame&&!portrait)InfinityIcons::Draw(c,InfinityIcons::Avatar,645,252,92,Muted);
+    c.TextFit(795,165,social_.origin==Origin::Test?"PERFIL DE TESTE":social_.controller>=0?social_.displayName:"Perfil Xbox",18,White,230);
+    c.TextFit(795,201,frame?"Quadro de corpo inteiro":portrait?"Retrato 2D":"Imagem indisponivel",16,White,230);
+    c.TextFit(795,239,"Renderizador 3D",17,Lime,230);
+    c.TextFit(795,267,"Backend ainda nao integrado",15,Muted,230);
+    c.TextFit(795,305,"Exportacoes XAM",17,Lime,230);
+    c.TextFit(795,333,avatarCapabilities_.checked?number(avatarCapabilities_.Count())+"/6 localizadas":"Nao consultadas",16,White,230);
+    c.TextFit(795,365,"Exportacao nao comprova suporte.",13,Muted,230);
+    c.TextFit(795,399,ValidGamerpic(social_.gamerpic)?"Gamerpic disponivel":"Gamerpic indisponivel",15,Muted,230);
+    c.TextFit(608,480,"Corpo inteiro e animacao dependem do backend grafico.",15,Muted,412);
+    c.TextFit(608,523,"Y Atualizar perfil | B Voltar",17,White,412);
+    c.TextFit(608,563,"Editor oficial: volte e selecione Editor de avatar.",14,Muted,412);
+}
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
     c.SeriesTile(580,87,470,552,false,244);
@@ -3629,8 +3657,8 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     c.Box(255,545,292,1,0xff414743u);
     if(quickGuideEditing_)InfinityButtons::Strip(c,259,551,"LB/RB Mover | X Padrão | Y Salvar",13,White,284);
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
-    c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Esquerda: atalhos | A Abrir":"Direita: perfil e amigos"),15,Muted,284);
-    if(!quickGuideEditing_){if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
+    c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Y Avatar | A Abrir | Esq Atalhos":"Direita: perfil e amigos"),15,Muted,284);
+    if(!quickGuideEditing_){if(avatarGuideOpen_)DrawAvatarGuide(c);else if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
     if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {

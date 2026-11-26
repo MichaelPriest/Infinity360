@@ -31,6 +31,7 @@
 #include "NotificationCenter.h"
 #include "QuickGuide.h"
 #include "SocialProfile.h"
+#include "AvatarPreview.h"
 #include "FriendRoster.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
@@ -63,12 +64,17 @@ public:
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
-        social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);
+        social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);
         if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
     }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
+    bool AvatarGuideOpen()const{return quickGuideOpen_&&avatarGuideOpen_;}
+    void SetAvatarCapabilities(const InfinitySocial::AvatarCapabilities& caps){avatarCapabilities_=caps;}
+    bool SetAvatarFrame(const InfinitySocial::Header& before,unsigned w,unsigned h,const std::vector<unsigned char>& rgba){
+        return avatarPreview_.Set(before,social_,w,h,rgba);
+    }
     bool TakeFriendRosterRequest(){const bool pending=friendRosterPending_;friendRosterPending_=false;return pending&&FriendGuideOpen();}
     void FriendRosterResult(const InfinitySocial::FriendRoster& roster,const std::string& message,std::uint64_t now=0);
     bool UpdateFriendPresence(std::uint64_t now,bool autoEnabled,bool allowed);
@@ -130,6 +136,10 @@ private:
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;
     bool friendGuideOpen_=false,friendRosterPending_=false;
+    bool avatarGuideOpen_=false;
+    InfinitySocial::AvatarCapabilities avatarCapabilities_;
+    InfinitySocial::AvatarPreview avatarPreview_;
+    void DrawAvatarGuide(HomeCanvas& c)const;
     std::size_t friendRow_=0;
     InfinitySocial::FriendFilter friendFilter_=InfinitySocial::FriendFilter::All;
     InfinitySocial::FriendRoster friendRoster_;

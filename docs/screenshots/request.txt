@@ -48,3 +48,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.62 bounded presence auto refresh and title counts; host tests/captures only
 
 2026-11-26 V0.2.63 avatar portrait tile and identity-bound art cache; host tests and 74 captures only
+
+2026-11-26 V0.2.64 avatar preview panel and export probe; host tests and 75 captures only

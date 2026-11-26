@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.64 — Painel de avatar e preparação gráfica
+
+- Y no painel social abre visualização de avatar, retrato 2D e diagnóstico de seis exportações XAM; sem chamadas de inicialização não verificadas.
+- Compositor RGBA de corpo inteiro com proporção preservada, limites e vínculo à identidade; nenhum backend 3D real conectado.
+- Captura 75 e testes de limites preparados. Sem XEX/release ou homologação física.
+
 ## V0.2.63 — Retrato do avatar na Home e Guide
 
 - Leitura experimental do tile de avatar 64x64 (tipo 13) independente do Gamerpic, composição de ambos e fallback neutro; não é um modelo 3D animado.
