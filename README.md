@@ -34,6 +34,10 @@ A referência conceitual aprovada é o alvo visual, não uma captura do programa
 
 O pacote InfinityIcons.h possui 28 símbolos vetoriais originais, seguindo o conceito aprovado: menu horizontal, Guide, perfil, clima, CPU, armazenamento e demais atalhos. Os componentes compartilhados de painel, vidro, fundo e tipografia são reutilizados nas telas de biblioteca, detalhes, aplicativos, arquivos, loja, downloads, sistema, sensores, rede, plugins, conteúdo, configurações e IPTV. O player permanece separado da camada de menus; layouts e temas existentes permanecem selecionáveis. Esta é a primeira aplicação transversal do design, não uma certificação de equivalência pixel a pixel. Telas com desenho específico ainda exigem revisão da galeria e teste no console.
 
+### Migração de páginas — lote 1
+
+Cabeçalho compartilhado com perfil, quatro temperaturas, IP, clima e relógio em todas as páginas; Biblioteca em grade com arte preenchendo o cartão, foco pós-arte e fallback explícito; lista com ícones, filtros e rótulos ajustados; detalhes do jogo com capa, banner, botão de ação e atalhos vetoriais, inclusive para o layout de origem clássico. IPTV e catálogo da loja usam o renderizador moderno independentemente do layout da Home. As opções de lista/grade e layouts de navegação continuam preservadas; telas técnicas com desenho próprio ainda precisam de revisão individual. A equivalência visual ao conceito e o desempenho no console não foram homologados.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
