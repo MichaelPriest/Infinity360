@@ -200,7 +200,9 @@ private:
     SystemTelemetry telemetry_;
     VideoTelemetry videoTelemetry_;
     bool telemetryVideo_=false,thermalPage_=false;
-    ThermalTelemetry thermal_;
+    ThermalTelemetry thermal_,headerThermal_;
+    uint64_t headerThermalAt_=0;
+    bool headerThermalSampled_=false;
     ThermalHistory thermalHistory_;
     bool coolingPage_=false;
     unsigned thermalLimit_=0;
