@@ -3302,7 +3302,7 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     c.Box(x+16,y+27,22,12,White,6);
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
-        social_.state==SignIn::Online?"Sessao online":
+        social_.state==SignIn::Online?"Sessão online":
         social_.state==SignIn::Local?"Sessao local":
         social_.state==SignIn::SignedOut?"Sem perfil":"Nao consultado";
     c.TextFit(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
@@ -3996,7 +3996,7 @@ void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
     case 8:rect(12,3,20,12);line(12,14,6,20);line(20,14,26,20);line(6,20,6,29);line(26,20,26,29);line(6,29,26,29);break;
     case 9:case 18:rect(9,3,23,18);line(9,6,3,6);line(3,6,3,13);line(3,13,9,17);line(23,6,29,6);line(29,6,29,13);line(29,13,23,17);line(16,18,16,27);line(9,29,23,29);break;
     case 11:line(16,2,16,15);line(8,6,3,12);line(3,12,3,22);line(3,22,9,29);line(9,29,23,29);line(23,29,29,22);line(29,22,29,12);line(29,12,24,6);break;
-    case 13:rect(5,5,27,27);rect(13,13,19,19);line(5,5,13,13);line(19,19,27,27);break;
+    case 13:for(int k=0;k<12;++k){const int pts[][2]={{16,2},{23,4},{28,9},{30,16},{28,23},{23,28},{16,30},{9,28},{4,23},{2,16},{4,9},{9,4}};line(pts[k][0],pts[k][1],pts[(k+1)%12][0],pts[(k+1)%12][1]);}rect(14,14,18,18);break;
     case 14:line(2,9,2,28);line(2,9,13,9);line(13,9,17,13);line(17,13,29,13);line(29,13,26,28);line(26,28,2,28);break;
     case 19:rect(4,5,28,22);line(11,22,11,29);line(11,29,19,22);break;
     case 20:line(16,3,24,5);line(24,5,29,13);line(29,13,27,23);line(27,23,19,29);line(19,29,9,27);line(9,27,3,19);line(3,19,5,9);line(5,9,16,3);line(16,8,16,16);line(16,16,23,16);break;
@@ -4085,22 +4085,24 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     if(!shelf.empty()&&appearance.ShowBackdrop()){
         auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+2,hero.y+2,hero.w-4,hero.h-4,true,10);
     }
-    if(art)c.Shade(hero.x+8,hero.y+8,hero.w-16,hero.h-16,0xff070c0au,240,12);
+    if(art)c.Shade(hero.x+8,hero.y+8,hero.w-16,hero.h-16,0xff070c0au,230,4);
     else if(!shelf.empty()&&appearance.ShowCover()){
         auto cover=ArtPath(*shelf.front(),true);if(!cover.empty())c.LocalArt(cover,true,hero.x+hero.w-155,hero.y+10,145,210);
     }
     c.Text(hero.x+30,hero.y+22,"XBOX 360  |  "+std::string(c.Tr("Destaque")),17,White,hero.w-60);
     c.TextFit(hero.x+30,hero.y+61,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,45,White,435);
     c.TextFit(hero.x+30,hero.y+124,shelf.empty()?"Adicione jogos ao HDD ou USB":"Biblioteca local | Xbox 360",19,Muted,390);
-    c.Box(hero.x+30,hero.y+177,162,36,accent,8);c.CenterText(hero.x+30,hero.y+181,162,shelf.empty()?"A  Biblioteca":"A  Detalhes",19,0xff101710u);
+    c.Box(hero.x+30,hero.y+177,162,36,accent,9);
+    c.Box(hero.x+43,hero.y+185,20,20,0xff102010u,10);c.CenterText(hero.x+43,hero.y+184,20,"A",14,accent);
+    c.TextFit(hero.x+74,hero.y+179,shelf.empty()?"Biblioteca":"Detalhes",19,0xff101710u,110);
     if(active==Hero)c.SeriesFocus(hero.x,hero.y,hero.w,hero.h);
     const char* quick[]={"Instalador","Gerenciador","System Link","IPTV","Loja Infinity","Conquistas"};
-    const char* desc[]={"DVD / GOD","HDD e USB","Rede local","TV e video","Apps e extras","Gamerscore"};
+    const char* desc[]={"DVD / GOD","HDD e USB","Rede local","TV e vídeo","Apps e extras","Gamerscore"};
     for(int i=Disc;i<FirstCover;++i){
         const auto a=Geometry(i);c.SeriesTile(a.x,a.y,a.w,a.h,i==active);
-        approvedIcon(c,i-Disc+13,a.x+14,a.y+12,29,i==active?accent:White);
-        c.TextFit(a.x+14,a.y+44,quick[i-Disc],19,White,a.w-28);
-        c.TextFit(a.x+14,a.y+75,desc[i-Disc],14,Muted,a.w-28);
+        approvedIcon(c,i-Disc+13,a.x+24,a.y+16,29,i==active?accent:White);
+        c.TextFit(a.x+24,a.y+47,quick[i-Disc],19,White,a.w-35);
+        c.TextFit(a.x+24,a.y+75,desc[i-Disc],14,Muted,a.w-35);
     }
     c.Box(30,410,3,22,accent,1);c.Text(44,403,"Meus Jogos ("+number(games_.size())+")",25,White,850);
     c.Text(1087,410,"Ver biblioteca >",17,White,161);
