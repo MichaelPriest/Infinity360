@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.49 — Gamerscore reportado pelo XAM (experimental, sem build)
+
+- Leitura somente leitura de XPROFILE_GAMERCARD_CRED por slot autenticado, buffer fixo e validação de ABI big-endian.
+- Revalidação de identidade após consulta; zero válido, dados ausentes ou inválidos permanecem indisponíveis.
+- Testes do parser preparados, não executados. Emulador pode fornecer valor fictício; hardware não homologado.
+- Gamerpic, amigos e comunicação continuam pendentes. Sem build ou release.
+
 ## V0.2.48 — Consistência da identidade XAM (sem build)
 
 - Consulta duplicada de USER_SIGNIN_INFO verifica identidade e estado antes de publicar o perfil.
