@@ -15,8 +15,8 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     if(XamIsUIActive())return "Outra interface Xbox esta aberta.";
     HANDLE module=0;
     void* address=nullptr;
-    const std::uint32_t ordinal=action==NativeAction::Achievements?0x2c5u:
-        action==NativeAction::GamerCard?0x2c4u:0x2bfu;
+    const std::uint32_t ordinal=NativeSocialOrdinal(action);
+    if(!ordinal)return "Interface social desconhecida.";
     if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
        XexGetProcedureAddress(module,ordinal,&address)!=0||!address)
         return "Interface nao exportada por este sistema.";

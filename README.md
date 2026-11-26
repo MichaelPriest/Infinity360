@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.2.57 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.2.58 Alpha (código-fonte)**
 
 Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
@@ -29,7 +29,7 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Home e Guide | Menu horizontal, transparências, atalhos agrupados, relógio e clima |
 | Biblioteca | XEX/GOD/XBLA, recentes, favoritos, capas frente/verso, filtros e multidisco |
 | Perfil Xbox | Seleção, Gamerpic, Gamerscore e conquistas por título via XAM experimental |
-| Social | Cartão/amigos e notificações XAM experimentais; mensagens, chat e avatar 3D ainda sem integração direta |
+| Social | Cartão, amigos, mensagens, chat e notificações via XAM experimental; avatar 3D pendente |
 | Conteúdo | TU, DLC, saves, backups, DVD para XEX/GOD |
 | Store e downloads | Catálogo homebrew, fila persistente e fontes configuráveis |
 | Cloud360 IPTV | MPEG-PS; FFmpeg experimental para MP4/TS/HLS |

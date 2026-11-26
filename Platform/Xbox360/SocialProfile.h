@@ -86,12 +86,26 @@ struct Header {
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
-enum class NativeAction { None, GamerCard, Friends, Achievements };
+enum class NativeAction { None, GamerCard, Friends, Achievements, Messages, QuickChat };
+constexpr int GuideSocialCount=4;
+inline NativeAction GuideSocialAction(int row){
+    switch(row){case 0:return NativeAction::GamerCard;case 1:return NativeAction::Friends;
+        case 2:return NativeAction::Messages;case 3:return NativeAction::QuickChat;default:return NativeAction::None;}
+}
+inline int MoveGuideSocial(int row,int delta){
+    if(row<0||row>=GuideSocialCount)row=0;
+    return (row+GuideSocialCount+(delta<0?-1:1))%GuideSocialCount;
+}
+inline std::uint32_t NativeSocialOrdinal(NativeAction action){
+    switch(action){case NativeAction::GamerCard:return 0x2c4u;case NativeAction::Friends:return 0x2bfu;
+        case NativeAction::Achievements:return 0x2c5u;case NativeAction::Messages:return 0x2c0u;
+        case NativeAction::QuickChat:return 0x2c2u;default:return 0;}
+}
 inline bool CanRequestNative(NativeAction action,const Header& h,std::uint32_t title=0) {
     if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
        !ValidGamertag(h.displayName)||h.identity==0)return false;
     if(action==NativeAction::GamerCard)return h.state==SignIn::Local || h.state==SignIn::Online;
-    if(action==NativeAction::Friends)return h.state==SignIn::Online;
+    if(action==NativeAction::Friends||action==NativeAction::Messages||action==NativeAction::QuickChat)return h.state==SignIn::Online;
     if(action==NativeAction::Achievements)return title!=0&&(h.state==SignIn::Local||h.state==SignIn::Online);
     return false;
 }

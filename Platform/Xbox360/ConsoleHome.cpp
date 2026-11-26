@@ -1004,13 +1004,13 @@ std::string ConsoleHome::Press(Key key) {
             if(key==Right){socialGuideFocus_=true;notice_.clear();return "";}
             if(key==Left&&socialGuideFocus_){socialGuideFocus_=false;notice_.clear();return "";}
             if(socialGuideFocus_){
-                if(key==Up||key==Down){socialGuideRow_=1-socialGuideRow_;notice_.clear();return "";}
+                if(key==Up||key==Down){socialGuideRow_=InfinitySocial::MoveGuideSocial(socialGuideRow_,key==Up?-1:1);notice_.clear();return "";}
                 if(key==Accept){
-                    const auto action=socialGuideRow_==0?InfinitySocial::NativeAction::GamerCard:InfinitySocial::NativeAction::Friends;
+                    const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
                     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
 #if defined(__XSDK__)
                     if(InfinitySocial::CanRequestNative(action,social_)){nativeSocialPending_=action;nativeSocialTitle_=0;}
-                    else notice_=action==InfinitySocial::NativeAction::Friends?"Amigos requerem perfil online do console.":"Cartao requer perfil ativo do console.";
+                    else notice_=action==InfinitySocial::NativeAction::GamerCard?"Cartao requer perfil ativo do console.":"Esta interface requer perfil online do console.";
 #else
                     (void)action;notice_="Interface nativa experimental apenas no Xbox 360.";
 #endif
@@ -3451,25 +3451,24 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,315);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":social_.state==SignIn::Online?"Sessão online":social_.state==SignIn::Local?"Sessão local":social_.state==SignIn::SignedOut?"Sem perfil":"Não consultado";
     c.TextFit(697,218,state,16,Muted,315);
-    const std::string labels[]={
-        social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível",
-        (social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
-        (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis"),
-        "Cartão do jogador","Mensagens / voz: botão Xbox","Amigos Xbox"
-    };
-    const int icons[]={1,9,27,19,8};
-    for(int row=0;row<5;++row){
-        const int y=274+row*42;
-        const bool action=row==2||row==4;
-        const bool selected=socialGuideFocus_&&((row==2&&socialGuideRow_==0)||(row==4&&socialGuideRow_==1));
-        if(selected)c.SeriesTile(601,y-2,428,41,true,225);
+    const std::string controls=social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível";
+    const std::string counters=(social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
+        (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis");
+    approvedIcon(c,1,611,272,22,White);c.TextFit(649,270,controls,18,White,365);
+    approvedIcon(c,9,611,300,22,White);c.TextFit(649,298,counters,17,Muted,365);
+    c.Box(611,327,403,1,0xff414743u);
+    const char* labels[]={"Cartão do jogador","Amigos Xbox","Mensagens Xbox","Chat Xbox"};
+    const int icons[]={27,8,19,19};
+    for(int row=0;row<GuideSocialCount;++row){
+        const int y=331+row*41;
+        const auto kind=GuideSocialAction(row);
+        const bool selected=socialGuideFocus_&&socialGuideRow_==row;
+        if(selected)c.SeriesTile(601,y-2,428,40,true,225);
         approvedIcon(c,icons[row],611,y+6,24,White);
-        if(action){
-            const auto kind=row==2?NativeAction::GamerCard:NativeAction::Friends;
-            c.TextFit(649,y,labels[row],18,White,365);
-            c.TextFit(649,y+21,CanRequestNative(kind,social_)?"Interface nativa experimental":"Requer perfil compatível no console",12,Muted,365);
-        }else c.TextFit(649,y+3,labels[row],18,row==0?White:Muted,365);
-        if(row<4)c.Box(611,y+39,403,1,0xff414743u);
+        c.TextFit(649,y,labels[row],18,White,365);
+        c.TextFit(649,y+20,CanRequestNative(kind,social_)?"Interface nativa experimental":
+            row==0?"Requer perfil ativo no console":"Requer perfil online no console",12,Muted,365);
+        if(row<GuideSocialCount-1)c.Box(611,y+38,403,1,0xff414743u);
     }
     c.SeriesTile(601,500,428,57,false,215);
     InfinityButtons::Draw(c,InfinityButtons::LB,616,513,30);

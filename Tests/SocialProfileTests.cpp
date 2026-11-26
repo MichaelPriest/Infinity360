@@ -205,6 +205,27 @@ int main() {
     CHECK(EligibleForSocialSignals(account));
     account.guest=true;CHECK(!EligibleForSocialSignals(account));
     account.guest=false;account.identity=0;CHECK(!EligibleForSocialSignals(account));
+    CHECK(GuideSocialCount==4);
+    CHECK(GuideSocialAction(0)==NativeAction::GamerCard);
+    CHECK(GuideSocialAction(1)==NativeAction::Friends);
+    CHECK(GuideSocialAction(2)==NativeAction::Messages);
+    CHECK(GuideSocialAction(3)==NativeAction::QuickChat);
+    CHECK(GuideSocialAction(4)==NativeAction::None);
+    CHECK(MoveGuideSocial(0,-1)==3&&MoveGuideSocial(3,1)==0);
+    CHECK(NativeSocialOrdinal(NativeAction::Messages)==0x2c0u);
+    CHECK(NativeSocialOrdinal(NativeAction::QuickChat)==0x2c2u);
+    CHECK(NativeSocialOrdinal(NativeAction::None)==0);
+    Header communication;communication.origin=Origin::Console;communication.controller=0;
+    communication.identity=1;communication.displayName="Player";communication.state=SignIn::Local;
+    CHECK(!CanRequestNative(NativeAction::Messages,communication));
+    CHECK(!CanRequestNative(NativeAction::QuickChat,communication));
+    communication.state=SignIn::Online;
+    CHECK(CanRequestNative(NativeAction::Messages,communication));
+    CHECK(CanRequestNative(NativeAction::QuickChat,communication));
+    communication.origin=Origin::Test;
+    CHECK(!CanRequestNative(NativeAction::Messages,communication));
+    communication.origin=Origin::Console;communication.guest=true;
+    CHECK(!CanRequestNative(NativeAction::QuickChat,communication));
     std::cout << "social profile checks passed\n";
     return 0;
 }

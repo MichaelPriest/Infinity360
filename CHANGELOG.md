@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.58 — Mensagens e chat pelo Guide nativo
+
+- Guide social com quatro ações: cartão, amigos, mensagens e chat, mantendo geometria, transparências e atalhos.
+- Delegação experimental XamShowMessagesUI (0x2C0) e XamShowQuickChatUI (0x2C2), perfil online e opt-in existente; sem implementar protocolo de mensagens/voz ou contornar permissões.
+- Navegação circular e testes de elegibilidade/ordinais preparados. Sem XEX, release ou homologação física.
+
 ## V0.2.57 — Eventos sociais nativos experimentais
 
 - Listener opcional XAM para sinais de conexão, convites, lista de mensagens, voz, presença e amizades; somente eventos reconhecidos pelo sistema.
