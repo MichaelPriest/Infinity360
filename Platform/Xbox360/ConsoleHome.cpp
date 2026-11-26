@@ -1,4 +1,8 @@
 ﻿#include "ConsoleHome.h"
+#if defined(__XSDK__)
+#define INFINITY_SOCIAL_XSDK 1
+#include "SocialProfileXsdk.h"
+#endif
 #include "DashboardLayout.h"
 #include "GameGrid.h"
 #include "ApprovedHome.h"
@@ -532,7 +536,18 @@ bool ConsoleHome::Tick() {
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
     smbChanged=TickSmbSession()||smbChanged;
 #endif
-    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged;
+    bool socialChanged=false;
+#if defined(__XSDK__)
+    const uint64_t now=TransferRate::Now();
+    if(!socialPolled_||now<lastSocialPoll_||now-lastSocialPoll_>=2000){
+        socialPolled_=true;lastSocialPoll_=now;
+        const auto before=social_;
+        SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(),before.controller);
+        socialChanged=before.controller!=social_.controller||before.origin!=social_.origin||
+            before.state!=social_.state||before.displayName!=social_.displayName;
+    }
+#endif
+    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -3259,6 +3274,33 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         c.Text(886,y+9,detail,19,Muted,336);
     }
 }
+void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
+    using namespace InfinitySocial;
+    c.Glass(x,y,w,52,false);
+    const bool signedIn=social_.controller>=0;
+    // Original neutral silhouette; no avatar image is claimed.
+    const unsigned ink=signedIn?Lime:Muted;
+    c.Box(x+8,y+7,38,38,Panel,18);
+    c.Box(x+21,y+13,12,12,ink,6);
+    c.Box(x+16,y+27,22,12,ink,6);
+    const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
+        social_.state==SignIn::Online?"Sessao online":
+        social_.state==SignIn::Local?"Sessao local":
+        social_.state==SignIn::SignedOut?"Sem perfil":"Nao consultado";
+    c.Text(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
+    c.Text(x+52,y+28,state,13,ink,w-58);
+}
+void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
+    using namespace InfinitySocial;
+    c.Glass(545,129,695,330,false);
+    c.Text(568,146,"Perfil e comunicacao",29,White,649);
+    DrawSocialHeader(c,569,192,645);
+    c.Text(569,264,social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponivel",20,Muted,643);
+    c.Text(569,299,social_.gamerscoreKnown?"Gamerscore: "+number(social_.gamerscore):"Gamerscore: indisponivel",20,White,643);
+    c.Text(569,334,"Avatar: icone neutro",20,Muted,643);
+    c.Text(569,369,"Chat Xbox: indisponivel",21,Lime,643);
+    c.Text(569,408,"Amigos e mensagens: integracao pendente",17,Muted,643);
+}
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
     c.Box(37,126,485,525,Lime,10);c.Box(40,129,479,519,0xff102923u,9);
@@ -3275,6 +3317,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     }
     c.Text(58,585,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),17,Lime,440);
     c.Text(58,610,c.Tr(quickGuideEditing_?"B Cancelar edicao":"Guia local da dashboard"),16,Muted,440);
+    if(!quickGuideEditing_)DrawSocialGuide(c);
     if(!notice_.empty())c.Text(551,632,c.Tr(notice_.c_str()),17,Lime,680);
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
@@ -3293,8 +3336,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
     if(notifications_.UnreadCount())c.Text(540,26,std::string(c.Tr("Notificacoes"))+": "+number(notifications_.UnreadCount()),18,Lime,330);
     c.Text(1088,19,clockSettings_.offset==ClockWeather::Auto?clock:ClockLabel(now<0?static_cast<int64_t>(std::time(nullptr)):now),26,White,90);
-    c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
-    c.Text(1197,26,"360",16,White,37);
+    if(!approved)DrawSocialHeader(c,876,12,205);
     if(page_!=Home && section_==Iptv) {
         tv_.Draw(c,now<0?static_cast<int64_t>(std::time(0)):now,layout_!=0);
         return;
@@ -3954,9 +3996,10 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
     c.Text(116,12,"INFINITY",30,White,172);c.Text(280,12,"360",30,accent,70);
     c.Text(117,47,"Xbox 360 Dashboard",16,Muted,233);
-    c.Glass(371,12,390,52,false);
-    c.Text(383,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),16,White,370);
-    c.Text(383,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),15,Muted,370);
+    c.Glass(371,12,194,52,false);
+    c.Text(380,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),14,White,178);
+    c.Text(380,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),13,Muted,178);
+    DrawSocialHeader(c,572,12,189);
     const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
     c.Glass(772,12,266,52,active==ApprovedHome::Weather);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
