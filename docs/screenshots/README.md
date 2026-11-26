@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**77 capturas nativas** — commit [b33b9d9654c8](https://github.com/MichaelPriest/Infinity360/commit/b33b9d9654c87312730cdf5d76d0b58410909d67).
+**78 capturas nativas** — commit [7d5692d44bf2](https://github.com/MichaelPriest/Infinity360/commit/7d5692d44bf20214213082256ff553586594026d).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -22,8 +22,8 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Guide — lista própria de amigos, consulta indisponível no host** | **Home — composição de retrato e Gamerpic com tiles sintéticos (perfil de teste)** |
 | ![Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host](75-avatar-diagnostico.png) | ![Guide — central de comunicação Xbox, Party, chat e convites (perfil de teste)](76-comunicacao-xbox.png) |
 | **Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host** | **Guide — central de comunicação Xbox, Party, chat e convites (perfil de teste)** |
-| ![Guide — permissões oficiais de comunicação, perfil e multiplayer (consulta indisponível no host)](77-permissoes-xbox.png) |  |
-| **Guide — permissões oficiais de comunicação, perfil e multiplayer (consulta indisponível no host)** |  |
+| ![Guide — permissões oficiais de comunicação, perfil e multiplayer (consulta indisponível no host)](77-permissoes-xbox.png) | ![Home — acesso direto à central de perfil e comunicação pelo grupo Perfil e serviços (host)](78-perfis-home.png) |
+| **Guide — permissões oficiais de comunicação, perfil e multiplayer (consulta indisponível no host)** | **Home — acesso direto à central de perfil e comunicação pelo grupo Perfil e serviços (host)** |
 
 ### Biblioteca e conteúdo de jogos
 
