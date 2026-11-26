@@ -14,6 +14,8 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 ## Perfil ativo e comunicação — integração na main
 
+**V0.2.51:** linha do perfil ativo e Gamerscore corrigida na tela de conquistas (não na central de saves). A central de notificações recebe mudanças observadas da sessão local XAM após duas amostras consistentes, sem registrar Gamertag ou XUID. Não equivale a notificações de amigos/Xbox Live. Capturas nativas solicitadas separadamente; sem build XEX ou release.
+
 **V0.2.50:** RB no Guide abre conquistas; LB preserva a seleção oficial de perfil. A central apresenta separadamente o perfil ativo, o Gamerscore reportado e os totais GPD offline, sem atribuir a cópia ao usuário conectado. Sem build ou novas capturas.
 
 **V0.2.49:** leitura experimental do Gamerscore reportado pelo XAM (XPROFILE_GAMERCARD_CRED), com validação de tipo, slot, tamanho e identidade. O valor pode ser simulado pelo emulador; não houve homologação física. Gamerpic e comunicação permanecem pendentes.

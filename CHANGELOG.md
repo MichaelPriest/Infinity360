@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.51 — Perfil e notificações de sessão (sem build XEX)
+
+- Corrige a posição da linha do perfil ativo/Gamerscore na central de conquistas, removendo-a da central de saves.
+- Eventos locais de sessão XAM após duas observações consistentes, com baseline silencioso e proteção contra consultas inconclusivas ou perfis de teste.
+- Não registra nomes ou XUID e não confunde estado de login com serviço social Xbox Live.
+- Testes de regressão preparados; capturas nativas solicitadas, resultado pendente. Sem build XEX ou release.
+
 ## V0.2.50 — Conquistas no Guide (sem build)
 
 - RB abre a central de conquistas pelo Guide, sem alterar os atalhos configuráveis.

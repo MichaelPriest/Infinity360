@@ -45,3 +45,8 @@ XamUserReadProfileSettings consulta 0x10040006 (XPROFILE_GAMERCARD_CRED) em buff
 ## V0.2.50 — acesso a conquistas
 
 RB no Guide fora do modo de edição abre a central de conquistas existente; durante transferências o atalho é bloqueado. LB mantém seleção de perfil. O perfil ativo e o Gamerscore reportado aparecem em uma linha distinta dos totais GPD offline. Arquivos importados não são autenticados nem vinculados automaticamente ao usuário. O Gamerpic permanece neutro. Sem compilação ou homologação.
+
+
+## V0.2.51 — notificações locais de sessão
+
+SessionEvents mantém apenas estado e índice de controle em RAM. Duas observações consecutivas do console confirmam mudanças; a primeira observação estável é silenciosa, consultas Unknown ou Test invalidam a confirmação pendente. Eventos genéricos de estado local/online, perfil ativo detectado, ausência confirmada de perfil e troca do controle ativo entram no histórico de notificações existente, sem nomes ou identificadores. Não detecta troca de conta com mesmo controle/estado e não implementa eventos de amigos ou mensagens Xbox Live. A linha de perfil/Gamerscore foi movida de saves para conquistas. Testes preparados, não executados; sem build XEX ou homologação.

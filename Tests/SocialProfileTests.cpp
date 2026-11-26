@@ -88,6 +88,37 @@ int main() {
     s.slots[2].state = SignIn::SignedOut;
     CHECK(Resolve(s, 2).controller == -1);
     CHECK(Resolve(s, 2).chat == Chat::Unavailable);
+    SessionEvents events;
+    Header session;
+    session.origin=Origin::Console;session.state=SignIn::SignedOut;
+    CHECK(!events.Observe(session));
+    CHECK(!events.Observe(session)); // first stable observation is baseline
+    session.state=SignIn::Local;session.controller=0;
+    CHECK(!events.Observe(session));
+    CHECK(events.Observe(session)!=nullptr);
+    CHECK(!events.Observe(session));
+    session.gamerscoreKnown=true;session.gamerscore=25;
+    CHECK(!events.Observe(session)); // score changes do not create session events
+    Header unknown;
+    CHECK(!events.Observe(unknown));
+    CHECK(!events.Observe(session));
+    CHECK(!events.Observe(session));
+    session.state=SignIn::Online;
+    CHECK(!events.Observe(session));
+    CHECK(!events.Observe(unknown)); // interruption resets candidate
+    CHECK(!events.Observe(session));
+    CHECK(events.Observe(session)!=nullptr);
+    CHECK(!events.Observe(session));
+    session.origin=Origin::Test;session.controller=1;
+    CHECK(!events.Observe(session));
+    CHECK(!events.Observe(session));
+    session.origin=Origin::Console;
+    CHECK(!events.Observe(session));
+    CHECK(events.Observe(session)!=nullptr);
+    session.state=SignIn::SignedOut;session.controller=-1;
+    CHECK(!events.Observe(session));
+    CHECK(events.Observe(session)!=nullptr);
+    CHECK(!events.Observe(session));
     std::cout << "social profile checks passed\n";
     return 0;
 }

@@ -508,7 +508,7 @@ void ConsoleHome::LoadEvents() {
     if(!notifications_.Load(dir_+"infinity360-events.log"))notice_="Historico invalido; arquivo preservado.";
 }
 void ConsoleHome::RecordEvent(const std::string& message) {
-    // Fixed operational events only; no filenames, URLs or account data.
+    // Fixed operational/session events only; no filenames, URLs or account data.
     const std::time_t now=std::time(0);
     std::tm* utc=std::gmtime(&now);char stamp[32]="hora indisponivel";
     if(now>=946684800&&utc)std::strftime(stamp,sizeof stamp,"%Y-%m-%d %H:%MZ",utc);
@@ -554,6 +554,7 @@ bool ConsoleHome::Tick() {
         const auto before=social_;
         SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(),before.controller);
         socialChanged=!InfinitySocial::SameHeader(before,social_);
+        if(const char* event=socialEvents_.Observe(social_)){RecordEvent(event);socialChanged=true;}
     }
 #endif
     bool thermalChanged=false;
@@ -3802,10 +3803,6 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
         c.TextFit(94,y+6,label,19,White,1100);
     }
     if(!count)c.Text(48,410,std::string(c.Tr("Nenhum registro reconhecido.")),22,Muted,1170);
-    const std::string active=social_.controller<0?"Perfil ativo: indisponivel":
-        (social_.origin==InfinitySocial::Origin::Test?"Perfil de teste: ":"Perfil ativo: ")+social_.displayName+
-        (social_.gamerscoreKnown?" | G reportado: "+number(social_.gamerscore):" | G indisponivel");
-    c.TextFit(48,531,active+" | GPD nao vinculado ao perfil",16,White,1170);
     c.Text(48,555,notice_.empty()?(saveBackups_?std::string(c.Tr("Backups por Title ID, podem pertencer a outros perfis.")):std::string(c.Tr("Inventario por pasta, nao comprova titularidade. "))+std::string(saveLimited_?std::string(c.Tr("Limite atingido.")):"")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
     InfinityButtons::Strip(c,48,607,saveConfirm_?std::string(c.Tr("A Confirmar | B Cancelar")):saveBackups_?std::string(c.Tr("A Recuperar copia | X Verificar | Y Atualizar | B Voltar")):saveList_?std::string(c.Tr("A Backup | START Backups do jogo | Y Atualizar | B Voltar")):std::string(c.Tr("A Saves | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);
 }
@@ -3862,7 +3859,11 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
         InfinityIcons::Draw(c,9,58,y+4,22,White);c.TextFit(90,y+4,label,18,White,1110);
     }
     if(achievementLoaded_&&!count)c.Text(48,432,std::string(c.Tr("Nenhuma entrada de conquista reconhecida.")),21,Muted,1170);
-    c.Text(48,555,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
+    const std::string active=social_.controller<0?"Perfil ativo: indisponivel":
+        (social_.origin==InfinitySocial::Origin::Test?"Perfil de teste: ":"Perfil ativo: ")+social_.displayName+
+        (social_.gamerscoreKnown?" | G reportado: "+number(social_.gamerscore):" | G indisponivel");
+    c.TextFit(48,541,active+" | GPD nao vinculado ao perfil",16,White,1170);
+    c.TextFit(48,568,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
     InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
 }
 

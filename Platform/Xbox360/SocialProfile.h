@@ -67,6 +67,38 @@ inline bool SameHeader(const Header& a, const Header& b) {
            a.gamerscore == b.gamerscore && a.chat == b.chat;
 }
 
+// Confirm two consecutive console observations before emitting generic local
+// session events. Unknown/test observations never imply sign-out or sign-in.
+// Store only state and controller, never account names or identifiers.
+class SessionEvents {
+    SignIn stable_=SignIn::Unknown, candidate_=SignIn::Unknown;
+    int stableController_=-1, candidateController_=-1;
+public:
+    const char* Observe(const Header& h) {
+        const bool signedIn=h.state==SignIn::Local || h.state==SignIn::Online;
+        if(h.origin!=Origin::Console ||
+           !(signedIn ? h.controller>=0 && h.controller<4 :
+                         h.state==SignIn::SignedOut && h.controller==-1)) {
+            candidate_=SignIn::Unknown;candidateController_=-1;
+            return nullptr;
+        }
+        if(candidate_!=h.state || candidateController_!=h.controller) {
+            candidate_=h.state;candidateController_=h.controller;
+            return nullptr;
+        }
+        if(stable_==candidate_ && stableController_==candidateController_)return nullptr;
+        const auto before=stable_;
+        const int previousController=stableController_;
+        stable_=candidate_;stableController_=candidateController_;
+        if(before==SignIn::Unknown)return nullptr;
+        if(stable_==SignIn::SignedOut)return "Sessao Xbox: nenhum perfil ativo";
+        if(before==SignIn::SignedOut)return "Sessao Xbox: perfil ativo detectado";
+        if(previousController!=stableController_)return "Sessao Xbox: controle ativo alterado";
+        return stable_==SignIn::Online?"Sessao Xbox: estado online detectado":
+                                        "Sessao Xbox: estado local detectado";
+    }
+};
+
 inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     Header result;
     int selected = -1;
