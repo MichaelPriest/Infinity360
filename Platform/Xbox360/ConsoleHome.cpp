@@ -1009,7 +1009,21 @@ std::string ConsoleHome::Press(Key key) {
     if(quickGuideOpen_){
         if(communicationGuideOpen_){PressCommunicationGuide(key);return "";}
         if(avatarGuideOpen_){
+            if(key!=Accept)avatarExitConfirm_.Cancel();
             if(key==Back||key==Left){avatarGuideOpen_=false;avatarBodyPending_=false;notice_.clear();}
+            if(key==Accept){
+#if defined(__XSDK__)
+                using namespace InfinitySocial;
+                if(AvatarLaunchBusy()){avatarExitConfirm_.Cancel();notice_="Encerre FTP, rede e copias antes de sair.";return "";}
+                if(!CanRequestNative(NativeAction::AvatarEditor,social_)){avatarExitConfirm_.Cancel();notice_="Editor requer perfil ativo.";return "";}
+                if(!avatarExitConfirm_.Accept(social_)){notice_="Editor sai da dashboard. A confirma; B cancela.";return "";}
+                nativeSocialPending_=NativeAction::AvatarEditor;nativeSocialTitle_=0;
+                nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;
+#else
+                notice_="Editor oficial somente no Xbox 360.";
+#endif
+                return "";
+            }
             if(key==Refresh){
                 socialPolled_=false;socialArtPolled_=false;avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};
 #if defined(__XSDK__)
@@ -1056,7 +1070,10 @@ std::string ConsoleHome::Press(Key key) {
                         if(!InfinitySocial::CanRequestNative(action,social_)){avatarExitConfirm_.Cancel();notice_="Editor requer perfil ativo.";return "";}
                         if(!avatarExitConfirm_.Accept(social_)){notice_="Editor sai da dashboard. A confirma; B cancela.";return "";}
                     }
-                    if(InfinitySocial::CanRequestNative(action,social_)){nativeSocialPending_=action;nativeSocialTitle_=0;}
+                    if(InfinitySocial::CanRequestNative(action,social_)){
+                        nativeSocialPending_=action;nativeSocialTitle_=0;
+                        if(action==InfinitySocial::NativeAction::AvatarEditor){nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;}
+                    }
                     else notice_=action==InfinitySocial::NativeAction::GamerCard?"Cartao requer perfil ativo do console.":"Esta interface requer perfil online do console.";
 #else
                     (void)action;notice_="Interface nativa experimental apenas no Xbox 360.";
@@ -3699,7 +3716,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
         c.TextFit(795,425,"CPU "+number(avatarBudget_.cpu/1024)+" KiB | GPU "+number(avatarBudget_.gpu/1024)+" KiB",12,Muted,230);
     c.TextFit(608,480,"Y consulta imagem, manifesto e memoria. 3D pendente.",15,Muted,412);
     c.TextFit(608,523,"X Editar perfil | Y Atualizar | B Voltar",16,White,412);
-    c.TextFit(608,563,"Editor oficial: volte e selecione Editor de avatar.",14,Muted,412);
+    c.TextFit(608,563,"A Editor oficial (confirmar saida da dashboard)",14,Muted,412);
 }
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;

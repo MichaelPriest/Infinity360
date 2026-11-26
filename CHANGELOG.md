@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.73 — Adaptador do renderizador oficial XAvatar
+
+- Caminho XDK/D3D9 opcional com XAvatarInitialize, manifesto local, XAvatarCreateRenderer, Update/Render, animações Wave/Clap e encerramento; usa device fornecido pelo host, sem copiar biblioteca ou assets Microsoft. Não faz parte da build XSDK atual.
+- A no painel Avatar abre editor oficial com confirmação dupla e vinculação do pedido ao perfil, preservando bloqueios de transferências/FTP.
+- Teste de navegação host e documentação atualizados. Sem compilação XDK/XEX/release; falta integração de device/targets/resolve no presenter.
+
 ## V0.2.72 — Rasterização diagnóstica e correção do ABI de malhas
 
 - Corrige stride de vértice/índice nos batches, calcula tamanho total e valida índices contra contagem de vértices.

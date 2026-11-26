@@ -113,6 +113,9 @@ public:
         if(target)*target=0;
         nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;
         nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;
+        if(action==InfinitySocial::NativeAction::AvatarEditor&&
+           (owner!=social_.identity||slot!=social_.controller||!InfinitySocial::CanRequestNative(action,social_)))
+            return InfinitySocial::NativeAction::None;
         if(InfinitySocial::TargetedSocialAction(action)){
             if(!target||!FriendGuideOpen()||owner!=social_.identity||slot!=social_.controller||
                !friendFreshness_.Fresh(TransferRate::Now())||!friendRoster_.ContainsTarget(social_,recipient,action))
