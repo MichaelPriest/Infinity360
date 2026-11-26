@@ -265,12 +265,14 @@ int main(){
         if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
         uint16_t edge=buttons&~previous;previous=buttons;
+        const bool systemUiOpen=xsdk_system_ui_open();
+        if(systemUiOpen)edge=0;
         const bool wasIdle=idleScreen.Active();
         const bool activity=buttons||input.gamepad.left_trigger>30||input.gamepad.right_trigger>30||input.gamepad.thumb_rx>16000||input.gamepad.thumb_rx< -16000||input.gamepad.thumb_ry>16000||input.gamepad.thumb_ry< -16000;
         if(idleScreen.Update(IdleScreen::Now(),menu.IdleMinutes(),continuous&&pendingLaunch.empty()&&menu.IdleEligible(),activity))dirty=true;
         if(wasIdle&&activity)edge=0;
         const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
-        const bool capture=(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
+        const bool capture=!systemUiOpen&&(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
         if(capture)edge=0;
         if(edge&INPUT_GAMEPAD_BACK){if(menu.TransferRunning()){launchNotice="Conclua ou cancele as copias antes de sair.";dirty=true;}else break;}
         if(!pendingLaunch.empty()){
@@ -622,13 +624,17 @@ int main(){
             }
         }
 #endif
+        if(menu.TakeSigninRequest()){
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning();
+            const bool accepted=allowed&&XamShowSigninUI(4,0)==ERROR_SUCCESS;
+            menu.SigninResult(accepted);dirty=true;
+        }
         if(menu.Tick())dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
         if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
         else if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);
-            if(!menu.ApprovedHeader()){canvas.Box(895,13,180,45,0xff102923u,5);
-                canvas.Text(905,20,continuous?"ALPHA SESSAO":"ALPHA TESTE",20,LIME,170);}
+            if(!menu.ApprovedHeader()){canvas.Text(920,678,continuous?"ALPHA SESSAO":"ALPHA TESTE",16,LIME,300);}
 
             if(!launchNotice.empty()){
                 canvas.Box(40,590,1200,38,0xff102923u,6);
