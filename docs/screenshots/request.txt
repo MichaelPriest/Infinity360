@@ -2,3 +2,4 @@ V0.2.46 forecast and header renderer verification
 Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 profile and Guide native render (71 frames)
 2026-11-26 native sign-in Guide and overlap correction (71 frames)
+2026-11-26 Series-inspired graphite and translucent native dashboard
