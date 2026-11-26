@@ -3369,10 +3369,11 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
         social_.state==SignIn::Online?"Sessão online":
-        social_.state==SignIn::Local?"Sessao local":
+        social_.state==SignIn::Local?"Sessão local":
         social_.state==SignIn::SignedOut?"Sem perfil":"Nao consultado";
     c.TextFit(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
-    c.Text(x+52,y+28,state,13,ink,w-58);
+    const std::string subtitle=social_.guest?"Convidado":social_.gamerscoreKnown?std::string(state)+" | G "+number(social_.gamerscore):state;
+    c.TextFit(x+52,y+28,subtitle,13,ink,w-58);
 }
 namespace { void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color); }
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
@@ -4164,7 +4165,7 @@ void ConsoleHome::DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const{
         const unsigned wc=fresh?accent:Muted;
         if(weather_.code<=1){c.Box(785,25,22,22,wc,11);if(weather_.day){for(int i=0;i<4;++i){int dx=i%2?17:0,dy=i%2?0:17;int sign=i<2?-1:1;c.Stroke(796+sign*dx,36+sign*dy,796+sign*(dx+dx/3),36+sign*(dy+dy/3),wc,2);}}else c.Box(794,22,17,17,0xff101715u,8);}
         else{c.Box(783,33,31,12,wc,6);c.Box(789,25,18,19,wc,9);if(weather_.code>=51){c.Stroke(789,48,786,53,wc,2);c.Stroke(799,48,796,53,wc,2);c.Stroke(809,48,806,53,wc,2);}}
-        c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
+        c.TextFit(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
     }else{approvedIcon(c,25,785,24,26,White);c.TextFit(821,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,209);c.TextFit(821,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,209);}
 }
@@ -4229,7 +4230,10 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[page*ShelfSize+i];
         c.SeriesTile(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
         const bool reverse=!preview&&active==FirstCover+int(i)&&approvedReversePath_==game.executable;
-        bool cover=false;if(appearance.ShowCover()){const auto path=reverse?ReverseArtPath(game):ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+2,a.y+2,a.w-4,a.h-4,!reverse,10);}
+        bool cover=false;if(appearance.ShowCover()){const auto path=reverse?ReverseArtPath(game):ArtPath(game,true);if(!path.empty()){
+            const int w=reverse?(a.h-8)*2/3:a.w-4,h=reverse?a.h-8:a.h-4;
+            cover=c.LocalArt(path,true,a.x+(a.w-w)/2,a.y+(a.h-h)/2,w,h,!reverse,8);
+        }}
         bool demo=false;
         if(!reverse&&!cover&&appearance.ShowBackdrop()){const auto file=ArtPath(game,false);if(!file.empty())cover=c.LocalArt(file,false,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
         if(!reverse&&!cover&&appearance.ShowBackdrop()){demo=builtinArt(game,a.x+5,a.y+5,a.w-10,a.h-10);cover=demo;}
