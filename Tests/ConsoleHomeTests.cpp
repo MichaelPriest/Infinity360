@@ -795,6 +795,16 @@ int main(int argc,char** argv) {
     };
     writeArt(artFolder/"cover.rgba",160*240,200,10);
     writeArt(artFolder/"background.rgba",640*360,10,200);
+    writeArt(artFolder/"cover-back.rgba",160*240,90,110);
+    {ConsoleHome home(artRoot.string()+"/",noRoots);home.Load();
+     using namespace ApprovedHome;
+     std::vector<std::vector<int>> routes(End);std::vector<bool> seen(End,false);std::vector<int> queue{Home};seen[Home]=true;
+     for(size_t k=0;k<queue.size()&&!seen[FirstCover];++k)for(int d=0;d<4;++d){int n=Move(queue[k],d,1);if(!seen[n]){seen[n]=true;routes[n]=routes[queue[k]];routes[n].push_back(d);queue.push_back(n);}}
+     assert(seen[FirstCover]);for(int d:routes[FirstCover])home.Press(static_cast<ConsoleHome::Key>(d));
+     home.Draw(canvas,"20:05");assert(canvas.Pixels()[500*1280+110]==0xffc80a00u);
+     home.Press(ConsoleHome::Back);home.Draw(canvas,"20:05");assert(canvas.Pixels()[500*1280+110]==0xff5a6e00u);
+     home.Press(ConsoleHome::Back);home.Draw(canvas,"20:05");assert(canvas.Pixels()[500*1280+110]==0xffc80a00u);
+    }
     LegacyFixtureHome artwork(artRoot.string()+"/",noRoots);artwork.Load();
     artwork.Press(ConsoleHome::Accept);
     artwork.Draw(canvas,"20:05");

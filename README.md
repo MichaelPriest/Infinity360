@@ -46,6 +46,10 @@ A inicialização agora usa o conceito aprovado (Top Icons / Series Infinity). P
 
 Carrossel de até quatro títulos com troca manual X ou automática a cada oito segundos fora do foco do destaque e dos cartões. Biblioteca na Home paginada em seis cartões; LB/RB alterna páginas quando um jogo está selecionado, X alterna favorito e START fixa/desfixa. Recentes, fixados e favoritos têm precedência sobre os demais títulos visíveis. O link Ver biblioteca é selecionável. START fora dos cartões edita a ordem dos seis atalhos; Y salva e B cancela. Y na Home atualiza biblioteca, IP, armazenamento e consulta do clima quando configurado. Dados de hardware e serviços ainda dependem de homologação; arte frente/verso, Gamerpic real, Gamerscore e comunicação seguem pendentes.
 
+### Home — artes frente e verso
+
+B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa Sem verso. A capa traseira é independente do fundo e da capa frontal. No detalhe do jogo, START abre o editor de arte; Cima/Baixo seleciona o terceiro painel Verso e R3 importa cover-back.jpg/png de UserFiles/ArtImport/<TitleID>, com publicação exclusiva de cover-back.rgba (160×240). Também aceita o RGBA legado Art/<TitleID>/cover-back.rgba. START em Ver biblioteca solicita o lote XboxUnity existente (até 32 títulos sem capa, confirmação obrigatória, sem sobrescrita). Não é download automático silencioso nem inclui um provider remoto de versos/fundos. Necessita validação física e de rede.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.

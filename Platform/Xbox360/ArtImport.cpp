@@ -40,19 +40,20 @@ std::string Folder(const std::string& root,unsigned title){
     if(!title)return "";char id[9];std::sprintf(id,"%08X",title);
     return FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"Art"),id);
 }
-bool Save(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,const std::string& encoded,std::string& error){
+bool Save(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,const std::string& encoded,std::string& error,bool reverse){
     error.clear();
 #if defined(_WIN32)||defined(_XBOX)
-    (void)ws;(void)root;(void)title;(void)cover;(void)encoded;error="Provider indisponivel.";return false;
+    (void)ws;(void)root;(void)title;(void)cover;(void)encoded;(void)reverse;error="Provider indisponivel.";return false;
 #else
     auto reject=[&](const char* msg){error=msg;return false;};
     if(!title)return reject("Title ID desconhecido.");
+    if(reverse&&!cover)return reject("Verso exige dimensoes de capa.");
     std::vector<unsigned char> pixels;if(!Convert(encoded,cover,pixels))return reject("Imagem PNG/JPEG invalida ou grande.");
     const auto personal=FileWorkspace::Join(root,"UserFiles"),art=FileWorkspace::Join(personal,"Art"),folder=Folder(root,title);
     char id[9];std::sprintf(id,"%08X",title);
     if(!ws.CanWrite(personal)||(!ws.CanWrite(art)&&!ws.Create(personal,"Art"))||
        (!ws.CanWrite(folder)&&!ws.Create(art,id)))return reject("Area pessoal de arte indisponivel.");
-    const auto dest=FileWorkspace::Join(folder,cover?"cover.rgba":"background.rgba"),temp=FileWorkspace::Join(folder,"AXCOPY-ART.part");
+    const auto dest=FileWorkspace::Join(folder,reverse?"cover-back.rgba":cover?"cover.rgba":"background.rgba"),temp=FileWorkspace::Join(folder,"AXCOPY-ART.part");
     if(ws.CanReadPersonalFile(dest))return reject("Arte pessoal ja existe; LB arquiva antes de importar outra.");
     int flags=O_WRONLY|O_CREAT|O_EXCL;
 #ifndef __XSDK__
@@ -96,18 +97,18 @@ bool SetArchived(const FileWorkspace& ws,const std::string& root,unsigned title,
     if(!ws.MovePersonalExclusive(from,to,false)){error="Destino ocupado ou movimento indisponivel; arte preservada.";return false;}
     return true;
 }
-bool Local(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,std::string& error){
+bool Local(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover,std::string& error,bool reverse){
     if(!title){error="Title ID desconhecido.";return false;}
     char id[9];std::sprintf(id,"%08X",title);
     const auto folder=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(root,"UserFiles"),"ArtImport"),id);
     for(const char* ext:{".jpg",".png"}){
-        const auto path=FileWorkspace::Join(folder,std::string(cover?"cover":"background")+ext);
+        const auto path=FileWorkspace::Join(folder,std::string(reverse?"cover-back":cover?"cover":"background")+ext);
         if(!ws.CanReadPersonalFile(path))continue;
         std::ifstream input(path.c_str(),std::ios::binary|std::ios::ate);
         if(!input||input.tellg()<=0||input.tellg()>4*1024*1024){error="Imagem local excede limite.";return false;}
         std::string data(static_cast<size_t>(input.tellg()),'\0');input.seekg(0);
         if(!input.read(&data[0],data.size())){error="Falha ao ler imagem.";return false;}
-        return Save(ws,root,title,cover,data,error);
+        return Save(ws,root,title,reverse||cover,data,error,reverse);
     }
     error="Coloque JPG/PNG em UserFiles/ArtImport/<TitleID>.";return false;
 }

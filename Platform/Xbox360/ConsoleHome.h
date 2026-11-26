@@ -322,6 +322,8 @@ private:
     void DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const;
     std::vector<const Game*> ApprovedShelf()const;
     size_t approvedPage_=0,approvedHero_=0;
+    std::string approvedReversePath_;
+    std::string ReverseArtPath(const Game& game)const;
     uint64_t approvedHeroAt_=0;
     std::string approvedShortcuts_="012345",approvedDraft_;
     bool ApprovedCarouselTick(uint64_t now);

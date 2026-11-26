@@ -191,7 +191,7 @@ void ConsoleHome::Load() {
     const std::string src=savedFile(path);
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
-    homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
+    homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
@@ -760,6 +760,14 @@ std::string ConsoleHome::ArtPath(const Game& game,bool cover) const {
     const std::string idPath=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Art"),id);
     return FileWorkspace::Join(idPath,cover?"cover.rgba":"background.rgba");
 }
+std::string ConsoleHome::ReverseArtPath(const Game& game)const{
+    const auto folder=ArtFolder(game);
+    if(folder.empty())return "";
+    const auto legacy=folder+"cover-back.rgba";
+    if(fileExists(legacy))return legacy;
+    const auto id=folder.substr(folder.size()-9,8);
+    return FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Art"),id),"cover-back.rgba");
+}
 void ConsoleHome::RefreshTitleMetadata() {
     detailMetadata_=XboxTitleMetadata();
     if(!Count() || section_==Files || section_==System)return;
@@ -1226,6 +1234,19 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(artEditing_) {
+        if(artEditRow_==2){
+            if(key==Back){artEditing_=false;notice_.clear();return "";}
+            if(key==Up){artEditRow_=1;notice_.clear();return "";}
+            if(key==Down){artEditRow_=0;notice_.clear();return "";}
+            if(key==PageDown){artDirty_=true;return "";}
+            if(key==Refresh){artEditRow_=0;return Press(Refresh);}
+            if(key==Search){
+                if(TransferRunning()){notice_="Conclua a transferencia ativa.";return "";}
+                unsigned title=0;for(char ch:artEditId_)title=(title<<4)|(ch<='9'?ch-'0':ch-'A'+10);
+                StopFtp();std::string result;bool ok=ArtImport::Local(fileWorkspace_,dir_,title,true,result,true);ArtResult(ok?"Verso importado.":result,ok);return "";
+            }
+            return "";
+        }
         if(artArchiveConfirm_){
             artArchiveConfirm_=false;
             if(key!=Accept){notice_="Operacao de arte cancelada.";return "";}
@@ -1259,7 +1280,7 @@ std::string ConsoleHome::Press(Key key) {
         }
 #endif
         if(key==Back) {artEditing_=false;notice_="Alteracoes de arte canceladas.";return "";}
-        if(key==Up || key==Down)artEditRow_=1-artEditRow_;
+        if(key==Up || key==Down)artEditRow_=(artEditRow_+(key==Down?1:2))%3;
         if(key==Left || key==Right || key==Accept) {
             const int delta=key==Left?2:1;
             artDraft_[artEditRow_]=static_cast<char>('0'+(artDraft_[artEditRow_]-'0'+delta)%3);
@@ -1735,6 +1756,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if (key==Back) {
+        if(ApprovedHeader()&&ApprovedHome::CoverSlot(focus_)){PressApprovedHome(key);return "";}
         if(section_==System&&systemTab_==1&&page_==Details){
             if(peerEditing_||peerOptions_){peerEditing_=false;peerOptions_=false;notice_.clear();return "";}
             peerProbe_.Stop();
@@ -3060,6 +3082,19 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
     c.Text(44,78,"Personalizar arte",40,White,1190);
+    if(artEditRow_==2){
+        c.TextFit(46,137,"Title ID: "+artEditId_+" | Verso da capa",21,Muted,1180);
+        c.SeriesTile(45,180,370,375,true);
+        const auto path=Count()?ReverseArtPath(*visible_[row_]):std::string();
+        if(path.empty()||!c.LocalArt(path,true,130,210,200,300,false,8))c.CenterText(55,330,350,"Sem verso",23,Muted);
+        c.SeriesTile(430,180,805,375,false);
+        c.TextFit(455,207,"Capa traseira",28,White,740);
+        c.TextFit(455,277,"UserFiles/ArtImport/"+artEditId_+"/cover-back.jpg",18,White,740);
+        c.TextFit(455,310,"ou cover-back.png | Importacao sem sobrescrita",18,Muted,740);
+        c.TextFit(455,380,"Na Home, B alterna a frente e o verso do jogo selecionado.",18,White,740);
+        c.TextFit(46,570,"Cima/Baixo Selecionar | R3 Importar | RB Recarregar",19,White,1180);
+        c.TextFit(46,604,"Y Salvar | B Voltar",18,Lime,1180);return;
+    }
     c.Text(46,137,"Title ID: "+artEditId_,21,Muted,1180);
     static const char* const modes[]={"Principal","Alternativa","Visual padrao"};
     for(int i=0;i<2;++i) {
@@ -3077,7 +3112,7 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
             (artDraft_[i]=='1'?"background-alt.rgba":"background.rgba"):
             (artDraft_[i]=='1'?"cover-alt.rgba":"cover.rgba"),17,Muted,w-32);
     }
-    c.Text(46,570,"Cima/Baixo Selecionar | Esquerda/Direita ou A Alterar | RB Recarregar",19,White,1180);
+    c.Text(46,570,"Cima/Baixo Frente/Fundo/Verso | Esq/Dir ou A Alterar | RB Recarregar",19,White,1180);
     c.Text(46,604,artArchiveConfirm_?"A Confirmar | B Cancelar":"START Capa XboxUnity | R3 Importar | LB Arquivar/Restaurar | Y Salvar | B Voltar",18,Lime,1180);
 }
 void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
@@ -3433,7 +3468,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
-    buttonHint(c,254,"B","Voltar",0xffb83c28u);
+    buttonHint(c,254,"B",approved&&ApprovedHome::CoverSlot(focus_)?"Girar capa":"Voltar",0xffb83c28u);
     buttonHint(c,429,"X",approved&&ApprovedHome::CoverSlot(focus_)?"Favorito":approved&&focus_==ApprovedHome::Hero?"Destaque":page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
         section_==Files && page_!=Home && !searchActive_?"Copiar":"Favorito",0xff117db1u);
     buttonHint(c,632,"Y",(artEditing_ || (page_==Home && homeEditing_))?"Salvar":"Atualizar",0xffb3820du);
@@ -4027,6 +4062,7 @@ bool ConsoleHome::PressApprovedHome(Key key){
     const auto shelf=ApprovedShelf();
     approvedPage_=ApprovedHome::PageIndex(approvedPage_,shelf.size());approvedHero_=Featured(approvedHero_,shelf.size());
     const size_t visible=Visible(approvedPage_,shelf.size());
+    if(key!=Back)approvedReversePath_.clear();
     if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=visible)focus_=LibraryLink;
     if(key==Refresh){
         Reload();RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();approvedPage_=0;approvedHero_=0;
@@ -4035,9 +4071,26 @@ bool ConsoleHome::PressApprovedHome(Key key){
         if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=Visible(0,ApprovedShelf().size()))focus_=LibraryLink;
         return true;
     }
+    if(focus_==LibraryLink&&key==Guide){
+#if defined(INFINITY_XSDK_HTTPS)
+        if(TransferRunning()||nativeStorePending_||nativeBatch_){notice_="Conclua a transferencia ativa.";return true;}
+        if(!coverBatchConfirm_){PrepareCoverBatch();coverBatchConfirm_=!coverBatch_.empty();notice_=coverBatchConfirm_?"START confirma baixar "+number(coverBatch_.size())+" capas faltantes.":"Nenhuma capa faltante neste lote.";}
+        else{coverBatchConfirm_=false;coverBatchPending_=true;}
+#else
+        notice_="XboxUnity: download nativo indisponivel neste ambiente.";
+#endif
+        return true;
+    }
     if(focus_==Hero&&key==Favorite){approvedHero_=Featured(approvedHero_+1,shelf.size());approvedHeroAt_=TransferRate::Now();return true;}
     if(CoverSlot(focus_)){
         const size_t index=approvedPage_*ShelfSize+size_t(focus_-FirstCover);
+        if(key==Back&&index<shelf.size()){
+            const auto path=shelf[index]->executable;
+            if(approvedReversePath_==path){approvedReversePath_.clear();notice_.clear();}
+            else if(appearance_.ShowCover()){approvedReversePath_=path;notice_.clear();}
+            else notice_="Exibicao de capas desativada.";
+            return true;
+        }
         if(key==PageUp||key==PageDown){
             const size_t page=key==PageUp?(approvedPage_?approvedPage_-1:Pages(shelf.size())-1):(approvedPage_+1)%Pages(shelf.size());
             approvedPage_=page;focus_=FirstCover+int(std::min(size_t(focus_-FirstCover),Visible(page,shelf.size())-1));notice_.clear();return true;
@@ -4175,13 +4228,15 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     for(size_t i=0;i<visible;++i){
         const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[page*ShelfSize+i];
         c.SeriesTile(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
-        bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
+        const bool reverse=!preview&&active==FirstCover+int(i)&&approvedReversePath_==game.executable;
+        bool cover=false;if(appearance.ShowCover()){const auto path=reverse?ReverseArtPath(game):ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+2,a.y+2,a.w-4,a.h-4,!reverse,10);}
         bool demo=false;
-        if(!cover&&appearance.ShowBackdrop()){const auto file=ArtPath(game,false);if(!file.empty())cover=c.LocalArt(file,false,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
-        if(!cover&&appearance.ShowBackdrop()){demo=builtinArt(game,a.x+5,a.y+5,a.w-10,a.h-10);cover=demo;}
+        if(!reverse&&!cover&&appearance.ShowBackdrop()){const auto file=ArtPath(game,false);if(!file.empty())cover=c.LocalArt(file,false,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
+        if(!reverse&&!cover&&appearance.ShowBackdrop()){demo=builtinArt(game,a.x+5,a.y+5,a.w-10,a.h-10);cover=demo;}
         if(cover){for(int dy=0;dy<55;++dy)c.Translucent(a.x+5,a.y+a.h-60+dy,a.w-10,1,0xff090f0bu,unsigned(80+dy*3));}
-        else {approvedIcon(c,1,a.x+(a.w-42)/2,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,"Sem capa",13,Muted);}
+        else {approvedIcon(c,1,a.x+(a.w-42)/2,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,reverse?"Sem verso":"Sem capa",13,Muted);}
         c.TextFit(a.x+12,a.y+a.h-32,game.name,17,White,a.w-24);
+        if(reverse)c.TextFit(a.x+9,a.y+8,"VERSO",12,White,a.w-18);
         if(demo)c.TextFit(a.x+9,a.y+8,"Arte ilustrativa",12,White,a.w-18);
         if(Starred(game))InfinityIcons::Draw(c,21,a.x+a.w-25,a.y+7,18,accent);
         if(contains(pinned_,game.executable))c.TextFit(a.x+9,a.y+26,"FIXADO",12,accent,100);
@@ -4189,7 +4244,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
-    else c.TextFit(30,634,CoverSlot(active)?"LB/RB Página | START Fixar | X Favorito":active==Hero?"X Próximo destaque | R3 Guia":"R3 Guia | START Personalizar | LB Notificações | RB Loja",16,Muted,1190);
+    else c.TextFit(30,634,CoverSlot(active)?"LB/RB Página | B Frente/Verso | START Fixar | X Favorito":active==Hero?"X Próximo destaque | R3 Guia":active==LibraryLink?"A Biblioteca | START Baixar capas faltantes":"R3 Guia | START Personalizar | LB Notificações | RB Loja",16,Muted,1190);
 }
 
 bool ConsoleHome::WeatherAutoDue(int64_t now){

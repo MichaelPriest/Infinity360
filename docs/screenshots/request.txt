@@ -11,3 +11,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 production Home defaults to Series Infinity; migrate old classic preference, refined background logo and existing art fallback; primary screenshot uses production default
 2026-11-26 home-first partial completion: carousel, paginated shelf, quick action personalization and refresh indicators
 2026-11-26 home controls regression and page index name resolution
+2026-11-26 Home front and back cover support, local back artwork import and missing covers shortcut
