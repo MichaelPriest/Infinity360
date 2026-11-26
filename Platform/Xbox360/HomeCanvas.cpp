@@ -265,3 +265,53 @@ void HomeCanvas::CenterText(int x,int y,int w,const std::string& text,int size,u
     int width=0;for(size_t i=0;i<text.size();){unsigned cp=nextGlyph(text,i);if(cp<32)cp=' ';width+=(glyphWidths[cp-32]*size+11)/22;}
     Text(x+std::max(0,(w-width)/2),y,text,size,color,w-std::max(0,(w-width)/2));
 }
+
+
+void HomeCanvas::Translucent(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius){
+    if(w<=0||h<=0)return;
+    radius=std::max(0,std::min(radius,std::min(w,h)/2));
+    color=ThemeColor(color);opacity=std::min(opacity,255u);
+    for(int j=std::max(0,-y);j<h&&y+j<Height;++j){
+        int cut=0,edge=std::min(j,h-1-j);
+        if(edge<radius){int dy=radius-edge-1;
+            while(cut<radius&&(radius-cut-1)*(radius-cut-1)+dy*dy>radius*radius)++cut;
+        }
+        for(int i=std::max(cut,-x);i<w-cut&&x+i<Width;++i){
+            auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,opacity);
+        }
+    }
+}
+void HomeCanvas::SeriesBackground(){
+    if(appearance_.background!=AppearanceSettings::Gradient)return;
+    // Restrained graphite with a broad, soft accent wash, not neon stripes.
+    for(int y=0;y<Height;++y)for(int x=0;x<Width;++x){
+        const int dx=x-240,dy=y-185;
+        const unsigned glow=unsigned(std::max(0,26-(dx*dx/18000+dy*dy/9500)));
+        const unsigned base=unsigned(16+8*(Height-y)/Height);
+        const unsigned r=base+glow/4,g=base+glow,b=base+glow/3;
+        frame_[y*Width+x]=ThemeColor(0xff000000u|(r<<16)|(g<<8)|b);
+    }
+}
+void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacity){
+    if(w<8||h<8)return;
+    Translucent(x+1,y+4,w,h,0xff000000u,80,8);
+    Translucent(x,y,w,h,0xff303633u,opacity,8);
+    if(focused){
+        // Four thin inset segments keep the focus readable without a heavy glow.
+        Box(x+3,y,w-6,3,0xffa8ff00u,1);
+        Box(x+3,y+h-3,w-6,3,0xffa8ff00u,1);
+        Box(x,y+3,3,h-6,0xffa8ff00u,1);
+        Box(x+w-3,y+3,3,h-6,0xffa8ff00u,1);
+    }
+}
+void HomeCanvas::TextFit(int x,int y,const std::string& text,int size,unsigned color,int maxWidth){
+    if(size<=0||maxWidth<=0)return;
+    auto advance=[&](unsigned cp){if(cp<32)cp=' ';return (glyphWidths[cp-32]*size+11)/22;};
+    int total=0;for(size_t i=0;i<text.size();)total+=advance(nextGlyph(text,i));
+    if(total<=maxWidth){Text(x,y,text,size,color,maxWidth);return;}
+    const int dots=3*advance('.');
+    if(dots>maxWidth)return;
+    int used=0;size_t end=0;
+    for(size_t i=0;i<text.size();){const int n=advance(nextGlyph(text,i));if(used+n+dots>maxWidth)break;used+=n;end=i;}
+    Text(x,y,text.substr(0,end)+"...",size,color,maxWidth);
+}
