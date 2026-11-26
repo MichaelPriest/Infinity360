@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.62 — Presença atualizável e amigos por título
+
+- Atualização opcional a cada 30 s enquanto a lista está aberta, armada somente após consulta bem-sucedida, interrompida em falha, troca de perfil ou operação concorrente.
+- Cache de presença em RAM por até 90 s; contagem de amigos jogando o Title ID nos detalhes modernos da biblioteca, somente após resultado válido; seleção preservada quando possível.
+- Mantém X para gerenciamento oficial de amizades e pedidos. Testes portáteis preparados; sem XEX/release ou homologação física.
+
 ## V0.2.61 — Lista de amigos e presença
 
 - Guide com painel próprio de amigos, filtros Todos/Online/Pedidos, paginação de cinco registros, status e Title ID; X mantém acesso à lista oficial.

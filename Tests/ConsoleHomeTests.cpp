@@ -196,6 +196,10 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.Press(ConsoleHome::Accept);
             assert(profile.FriendGuideOpen());
             assert(!profile.TakeFriendRosterRequest());
+            assert(!profile.HasFriendPresence()&&profile.FriendsPlaying(1)==0);
+            assert(profile.UpdateFriendPresence(0,true,true));
+            assert(!profile.TakeFriendRosterRequest()); // auto never arms without a successful native result
+            assert(profile.UpdateFriendPresence(0,false,true));
             ok=save("73-amigos-xbox",profile)&&ok;
             profile.Press(ConsoleHome::PageDown);profile.Press(ConsoleHome::Refresh);
             assert(!profile.TakeFriendRosterRequest());

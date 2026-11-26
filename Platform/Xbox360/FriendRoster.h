@@ -72,6 +72,26 @@ inline std::vector<std::size_t> FilterFriends(const std::vector<FriendRow>& rows
     for(std::size_t i=0;i<rows.size();++i)if(FriendMatches(rows[i].state,filter))indices.push_back(i);
     return indices;
 }
+// Count only playing records with matching nonzero title IDs.
+inline std::size_t FriendsPlayingTitle(const std::vector<FriendRow>& rows,std::uint32_t title){
+    if(!title)return 0;
+    std::size_t count=0;
+    for(const auto& row:rows)if(row.state==FriendState::Playing&&row.title==title)++count;
+    return count;
+}
+// A successful manual query arms optional automatic refresh. Failures stop it
+// until another successful manual query. Monotonic clock, never wall time.
+class FriendFreshness {
+    std::uint64_t at_=0;
+    bool valid_=false;
+public:
+    static constexpr std::uint64_t RefreshMs=30000, ExpireMs=90000;
+    void Clear(){at_=0;valid_=false;}
+    void Result(bool success,std::uint64_t now){if(!success)Clear();else {at_=now;valid_=true;}}
+    bool Fresh(std::uint64_t now)const{return valid_&&now>=at_&&now-at_<ExpireMs;}
+    bool Due(std::uint64_t now)const{return Fresh(now)&&now-at_>=RefreshMs;}
+    bool Expire(std::uint64_t now){if(valid_&&!Fresh(now)){Clear();return true;}return false;}
+};
 // Bind a roster provider result to the exact observed profile. The
 // snapshot contains display-only rows; identity never enters logs or UI.
 class FriendRoster {

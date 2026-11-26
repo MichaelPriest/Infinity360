@@ -62,14 +62,18 @@ public:
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     // Console provider or explicitly marked host test fixture.
-    void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);}
+    void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
+        social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);
+        if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
+    }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
     bool TakeFriendRosterRequest(){const bool pending=friendRosterPending_;friendRosterPending_=false;return pending&&FriendGuideOpen();}
-    void FriendRosterResult(const InfinitySocial::FriendRoster& roster,const std::string& message){
-        friendRoster_=roster;friendRoster_.Observe(social_);friendRow_=0;notice_=message;
-    }
+    void FriendRosterResult(const InfinitySocial::FriendRoster& roster,const std::string& message,std::uint64_t now=0);
+    bool UpdateFriendPresence(std::uint64_t now,bool autoEnabled,bool allowed);
+    bool HasFriendPresence()const{return friendRoster_.KnownFor(social_);}
+    std::size_t FriendsPlaying(std::uint32_t title)const{return HasFriendPresence()?InfinitySocial::FriendsPlayingTitle(friendRoster_.Rows(),title):0;}
     InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr){const auto action=nativeSocialPending_;if(title)*title=nativeSocialTitle_;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;return action;}
     void NativeSocialResult(const std::string& message){socialPolled_=false;notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
@@ -129,6 +133,8 @@ private:
     std::size_t friendRow_=0;
     InfinitySocial::FriendFilter friendFilter_=InfinitySocial::FriendFilter::All;
     InfinitySocial::FriendRoster friendRoster_;
+    InfinitySocial::FriendFreshness friendFreshness_;
+    bool friendAutoEnabled_=false;
     void DrawFriendGuide(HomeCanvas& c)const;
     void PressFriendGuide(Key key);
     InfinitySocial::AvatarExitConfirmation avatarExitConfirm_;

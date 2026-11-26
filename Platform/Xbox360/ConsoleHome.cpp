@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1011,8 +1011,9 @@ std::string ConsoleHome::Press(Key key) {
                     const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
                     if(action==InfinitySocial::NativeAction::Friends){
                         friendGuideOpen_=true;friendRow_=0;friendFilter_=InfinitySocial::FriendFilter::All;
-                        friendRoster_.Clear();friendRosterPending_=false;notice_.clear();
-                        PressFriendGuide(Refresh);return "";
+                        friendRosterPending_=false;notice_.clear();
+                        if(!friendRoster_.KnownFor(social_))PressFriendGuide(Refresh);
+                        return "";
                     }
                     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
 #if defined(__XSDK__)
@@ -2084,7 +2085,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
-        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();avatarExitConfirm_.Cancel();notice_.clear();return "";}
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -3450,11 +3451,36 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     c.TextFit(x+52,y+28,subtitle,13,ink,w-58);
 }
 namespace { void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color); }
+void ConsoleHome::FriendRosterResult(const InfinitySocial::FriendRoster& roster,const std::string& message,std::uint64_t now){
+    using namespace InfinitySocial;
+    std::string previous;
+    const auto before=FilterFriends(friendRoster_.Rows(),friendFilter_);
+    if(friendRow_<before.size())previous=friendRoster_.Rows()[before[friendRow_]].name;
+    friendRoster_=roster;friendRoster_.Observe(social_);
+    friendFreshness_.Result(friendRoster_.KnownFor(social_),now);
+    friendRow_=0;
+    const auto after=FilterFriends(friendRoster_.Rows(),friendFilter_);
+    if(!previous.empty())for(std::size_t i=0;i<after.size();++i)
+        if(friendRoster_.Rows()[after[i]].name==previous){friendRow_=i;break;}
+    notice_=message;
+}
+bool ConsoleHome::UpdateFriendPresence(std::uint64_t now,bool autoEnabled,bool allowed){
+    const bool modeChanged=friendAutoEnabled_!=autoEnabled;
+    friendAutoEnabled_=autoEnabled;
+    if(friendFreshness_.Expire(now)){friendRoster_.Clear();friendRow_=0;return true;}
+    if(autoEnabled&&allowed&&FriendGuideOpen()&&!friendRosterPending_&&!TransferRunning()&&
+       friendRoster_.KnownFor(social_)&&friendFreshness_.Due(now)){
+#if defined(__XSDK__)
+        friendRosterPending_=true;
+#endif
+    }
+    return modeChanged;
+}
 void ConsoleHome::PressFriendGuide(Key key){
     using namespace InfinitySocial;
-    if(key==Back||key==Left){friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();notice_.clear();return;}
+    if(key==Back||key==Left){friendGuideOpen_=false;friendRosterPending_=false;notice_.clear();return;}
     if(key==Refresh){
-        friendRoster_.Clear();friendRow_=0;
+        friendRoster_.Clear();friendFreshness_.Clear();friendRow_=0;
         if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
 #if defined(__XSDK__)
         if(CanRequestNative(NativeAction::Friends,social_)){friendRosterPending_=true;notice_="Consultando lista do sistema.";}
@@ -3512,7 +3538,7 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
         const std::string state=std::string(FriendStateLabel(f.state))+(f.title?" | Title "+hexId(f.title):"");
         c.TextFit(642,y+30,state,14,Muted,370);
     }
-    c.TextFit(607,548,"Consulta experimental; sem envio ou alteracao de amizade.",13,Muted,413);
+    c.TextFit(607,548,friendAutoEnabled_?"Auto: 30 s enquanto aberto | consulta experimental":"Consulta manual experimental | X gerencia pedidos",13,Muted,413);
     c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
     c.TextFit(607,594,"Cima/Baixo Navegar | B Voltar",15,White,413);
 }
@@ -4201,7 +4227,10 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     c.Text(658,467,c.Tr("Historico de execucao"),19,Lime,562);
     c.Text(658,495,c.Tr("Tentativas")+std::string(": ")+number(stats.attempts)+" | "+c.Tr("Falhas imediatas")+": "+number(stats.failed),17,White,562);
     c.Text(658,522,stats.attempts?LaunchStatistics::Date(stats.last):c.Tr("Nenhuma tentativa registrada"),17,Muted,562);
-    c.Text(658,550,c.Tr("Y Atualizar"),17,Muted,562);
+    if(m.known&&m.titleId&&HasFriendPresence()){
+        const auto playing=FriendsPlaying(m.titleId);
+        c.TextFit(658,550,number(playing)+" amigo(s) jogando este titulo | ultima consulta",16,playing?Lime:Muted,562);
+    }else c.Text(658,550,c.Tr("Y Atualizar"),17,Muted,562);
     c.Text(45,597,game.executable,16,Muted,1180);
     if(m.discCount>1)c.Text(45,619,c.Tr("R3 Selecionar disco"),17,Lime,1180);
 }

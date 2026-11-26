@@ -273,6 +273,19 @@ int main() {
     CHECK(FilterFriends(sample,FriendFilter::Online)==std::vector<std::size_t>{0});
     CHECK(FilterFriends(sample,FriendFilter::Requests)==std::vector<std::size_t>{2});
     CHECK(FilterFriends(sample,FriendFilter::Count).empty());
+    CHECK(FriendsPlayingTitle(sample,1)==1);
+    CHECK(FriendsPlayingTitle(sample,0)==0);
+    CHECK(FriendsPlayingTitle(sample,2)==0);
+    FriendFreshness freshness;
+    CHECK(!freshness.Fresh(0)&&!freshness.Due(0));
+    freshness.Result(true,1000);
+    CHECK(freshness.Fresh(30999)&&!freshness.Due(30999));
+    CHECK(freshness.Due(31000)&&freshness.Fresh(90999));
+    CHECK(freshness.Expire(91000)&&!freshness.Fresh(91000));
+    freshness.Result(true,1000);
+    CHECK(freshness.Expire(999));
+    freshness.Result(true,1000);freshness.Result(false,31000);
+    CHECK(!freshness.Due(61000)&&!freshness.Fresh(61000));
     std::cout << "social profile checks passed\n";
     return 0;
 }

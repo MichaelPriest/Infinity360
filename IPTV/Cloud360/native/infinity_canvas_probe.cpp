@@ -633,12 +633,21 @@ int main(){
             const bool accepted=allowed&&XamShowSigninUI(4,0)==ERROR_SUCCESS;
             menu.SigninResult(accepted);dirty=true;
         }
+        const auto friendNow=TransferRate::Now();
+        // Read the independent opt-in once per dashboard session, not per frame.
+        static const bool autoFriendPresence=[&](){
+            std::ifstream flag(dir+"enable-native-friend-auto.txt");
+            std::string line;
+            return std::getline(flag,line)&&(line=="ENABLE-NATIVE-FRIEND-AUTO"||line=="ENABLE-NATIVE-FRIEND-AUTO\r");
+        }();
+        const bool friendAllowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+        if(menu.UpdateFriendPresence(friendNow,autoFriendPresence,friendAllowed))dirty=true;
         if(menu.TakeFriendRosterRequest()){
             InfinitySocial::FriendRoster roster;
             const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
             const auto result=allowed?InfinitySocial::ReadNativeFriendRoster(menu.SocialHeader(),dir,roster):
                 std::string("Consulta bloqueada por outra operacao.");
-            menu.FriendRosterResult(roster,result);dirty=true;
+            menu.FriendRosterResult(roster,result,TransferRate::Now());dirty=true;
         }
         unsigned socialTitle=0;
         const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle);
