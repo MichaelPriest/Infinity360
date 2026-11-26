@@ -17,6 +17,13 @@
 #include <iterator>
 #include <sstream>
 
+// Explicitly exercise historic controller routes in legacy regression fixtures.
+class LegacyFixtureHome : public ConsoleHome {
+public:
+    LegacyFixtureHome(const std::string& dir,const std::vector<std::string>& roots)
+        : ConsoleHome(dir,roots,DashboardLayout::Classic){}
+};
+
 static int captureScreens(const char* atlas,const char* destination) {
     namespace fs=std::filesystem;
     fs::path output(destination);
@@ -91,29 +98,30 @@ static int captureScreens(const char* atlas,const char* destination) {
         return !!out;
     };
     bool ok=true;
-    ConsoleHome menu(dir,roots);menu.Load();
-    ok=save("01-inicio",menu)&&ok;
-    menu.Press(ConsoleHome::Search);assert(menu.QuickGuideOpen());ok=save("40-guia-rapido",menu)&&ok;
-    menu.Press(ConsoleHome::Favorite);menu.Press(ConsoleHome::PageDown);ok=save("41-guia-edicao",menu)&&ok;
-    menu.Press(ConsoleHome::Back);assert(menu.QuickGuideOrder()==QuickGuide::Default());menu.Press(ConsoleHome::Back);assert(!menu.QuickGuideOpen());
+    ConsoleHome approved(dir,roots);approved.Load();assert(approved.ApprovedHeader());
+    ok=save("01-inicio",approved)&&ok;
+    approved.Press(ConsoleHome::Search);assert(approved.QuickGuideOpen());ok=save("40-guia-rapido",approved)&&ok;
+    approved.Press(ConsoleHome::Favorite);approved.Press(ConsoleHome::PageDown);ok=save("41-guia-edicao",approved)&&ok;
+    approved.Press(ConsoleHome::Back);assert(approved.QuickGuideOrder()==QuickGuide::Default());approved.Press(ConsoleHome::Back);assert(!approved.QuickGuideOpen());
+    LegacyFixtureHome menu(dir,roots);menu.Load();
     menu.Press(ConsoleHome::Accept);ok=save("02-biblioteca",menu)&&ok;
     menu.Press(ConsoleHome::Accept);ok=save("03-detalhes",menu)&&ok;
     menu.Press(ConsoleHome::PageDown);ok=save("10-conteudo-tu",menu)&&ok;
     for(const char* name:{"11-dlc","12-saves","13-trainers","14-tu-baixadas","15-backups","16-tu-arquivadas","26-tu-retiradas"}){
         menu.Press(ConsoleHome::Right);ok=save(name,menu)&&ok;
     }
-    ConsoleHome apps(dir,roots);apps.Load();apps.Press(ConsoleHome::Down);apps.Press(ConsoleHome::Accept);
+    LegacyFixtureHome apps(dir,roots);apps.Load();apps.Press(ConsoleHome::Down);apps.Press(ConsoleHome::Accept);
     ok=save("17-aplicativos",apps)&&ok;
-    ConsoleHome emu(dir,roots);emu.Load();emu.Press(ConsoleHome::Down);emu.Press(ConsoleHome::Right);emu.Press(ConsoleHome::Accept);
+    LegacyFixtureHome emu(dir,roots);emu.Load();emu.Press(ConsoleHome::Down);emu.Press(ConsoleHome::Right);emu.Press(ConsoleHome::Accept);
     ok=save("18-emuladores",emu)&&ok;
-    ConsoleHome files(dir,roots);files.Load();files.Press(ConsoleHome::Right);files.Press(ConsoleHome::Down);files.Press(ConsoleHome::Accept);
+    LegacyFixtureHome files(dir,roots);files.Load();files.Press(ConsoleHome::Right);files.Press(ConsoleHome::Down);files.Press(ConsoleHome::Accept);
     ok=save("19-arquivos",files)&&ok;
-    ConsoleHome store(dir,roots);store.Load();store.Press(ConsoleHome::PageDown);
+    LegacyFixtureHome store(dir,roots);store.Load();store.Press(ConsoleHome::PageDown);
     ok=save("04-loja",store)&&ok;
     store.Press(ConsoleHome::Accept);ok=save("05-produto",store)&&ok;
-    ConsoleHome tv(dir,roots);tv.Load();tv.Press(ConsoleHome::Right);tv.Press(ConsoleHome::Accept);
+    LegacyFixtureHome tv(dir,roots);tv.Load();tv.Press(ConsoleHome::Right);tv.Press(ConsoleHome::Accept);
     tv.Press(ConsoleHome::Right);ok=save("06-iptv",tv)&&ok;
-    ConsoleHome system(dir,roots);system.Load();
+    LegacyFixtureHome system(dir,roots);system.Load();
     system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Down);
     system.Press(ConsoleHome::Right);system.Press(ConsoleHome::Accept);
     ok=save("07-sistema",system)&&ok;
@@ -138,7 +146,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::Right);
             system.Press(ConsoleHome::PageDown);assert(system.Language()==1);ok=save("36-english",system)&&ok;
             system.Press(ConsoleHome::PageDown);assert(system.Language()==2);ok=save("37-espanol",system)&&ok;
-            {ConsoleHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
+            {LegacyFixtureHome persisted(dir,roots);persisted.Load();assert(persisted.Language()==2);}
             system.Press(ConsoleHome::PageDown);assert(system.Language()==0);
             system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Favorite);ok=save("53-aparencia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
@@ -146,7 +154,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     // Real renderer captures for the nine modern home layouts and cover grid.
     for(unsigned style=1;style<DashboardLayout::Count;++style){
         {std::ofstream out(root/"aurorax-profile.txt",std::ios::app);out<<"J\t"<<style<<"\nG\t2\n";}
-        ConsoleHome modern(dir,roots);modern.Load();
+        LegacyFixtureHome modern(dir,roots);modern.Load();
         const auto name=std::to_string(53+style)+"-layout-"+std::to_string(style);
         ok=save(name.c_str(),modern)&&ok;
         if(style==DashboardLayout::TopIcons){modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("63-biblioteca-grade",modern)&&ok;
@@ -157,7 +165,7 @@ static int captureScreens(const char* atlas,const char* destination) {
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Search);ok=save("68-fontes-store",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);
             modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("69-iptv-moderno",modern)&&ok;
-            ConsoleHome profile(dir,roots);profile.Load();
+            LegacyFixtureHome profile(dir,roots);profile.Load();
             InfinitySocial::Snapshot fixture;
             fixture.slots[0]={InfinitySocial::SignIn::Local,InfinitySocial::Origin::Test,false,"PerfilTeste","",false,0};
             profile.SetSocialSnapshot(fixture,0);
@@ -180,12 +188,20 @@ int main(int argc,char** argv) {
     assert(argc==2);
     namespace fs=std::filesystem;
     const auto root=fs::temp_directory_path()/("aurorax-home-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    {const auto p=root/"ApprovedDefault";fs::create_directories(p);
+     const std::vector<std::string> noGameRoots;
+     ConsoleHome fresh(p.string()+"/",noGameRoots);fresh.Load();assert(fresh.ApprovedHeader());
+     std::ofstream(p/"aurorax-profile.txt")<<"J\t0\n";
+     ConsoleHome migrated(p.string()+"/",noGameRoots);migrated.Load();assert(migrated.ApprovedHeader());
+     std::ofstream(p/"aurorax-profile.txt")<<"J\t0\nM\t1\n";
+     ConsoleHome explicitClassic(p.string()+"/",noGameRoots);explicitClassic.Load();assert(!explicitClassic.ApprovedHeader());
+    }
     fs::create_directories(root/"Games"/"Halo 3");
     const std::string exe=(root/"Games"/"Halo 3"/"default.xex").string();
     std::ofstream(exe)<<"fixture";
     const std::string dir=root.string()+"/";
     const std::vector<std::string> roots(1,(root/"Games").string());
-    ConsoleHome menu(dir,roots);
+    LegacyFixtureHome menu(dir,roots);
     menu.Load();
     HomeCanvas canvas;
     assert(canvas.LoadArt(argv[1]));
@@ -227,7 +243,7 @@ int main(int argc,char** argv) {
      assert(data.find("R\t")==std::string::npos); // Not recently played yet
     }
     assert(menu.Press(ConsoleHome::Accept)==exe);
-    ConsoleHome restored(dir,roots); restored.Load();
+    LegacyFixtureHome restored(dir,roots); restored.Load();
     restored.Press(ConsoleHome::Down); restored.Press(ConsoleHome::Down); // Recent
     restored.Press(ConsoleHome::Accept); restored.Press(ConsoleHome::Accept);
     assert(restored.Press(ConsoleHome::Accept)==exe);
@@ -327,12 +343,12 @@ int main(int argc,char** argv) {
 
     // A WMV request passes through the real dashboard without entering the XEX launch channel.
     fs::remove(root/"cloud360-source.txt");
-    ConsoleHome mediaMenu(dir,roots);mediaMenu.Load();mediaMenu.Press(ConsoleHome::Right);
+    LegacyFixtureHome mediaMenu(dir,roots);mediaMenu.Load();mediaMenu.Press(ConsoleHome::Right);
     mediaMenu.Press(ConsoleHome::Accept);mediaMenu.Press(ConsoleHome::Accept);
     assert(mediaMenu.Press(ConsoleHome::Accept).empty());assert(mediaMenu.TakeMovie()==dir+"clip.wmv");
     std::ofstream(root/"playlist.m3u")<<"#EXTM3U\n#EXTINF:-1,Canal na rede\nhttp://192.168.1.10:8090/channel/id.mpg\n"
         "#EXTINF:-1,HLS original\nhttps://example.invalid/live.m3u8\n#EXTINF:-1,Nexus\nbrazucaplay:sample\n";
-    ConsoleHome streamMenu(dir,roots);streamMenu.Load();streamMenu.Press(ConsoleHome::Right);
+    LegacyFixtureHome streamMenu(dir,roots);streamMenu.Load();streamMenu.Press(ConsoleHome::Right);
     streamMenu.Press(ConsoleHome::Accept);streamMenu.Press(ConsoleHome::Accept);
     assert(streamMenu.Press(ConsoleHome::Accept).empty());
     assert(streamMenu.TakeMovie()=="http://192.168.1.10:8090/channel/id.mpg" && streamMenu.TakeMovie().empty());
@@ -357,7 +373,7 @@ int main(int argc,char** argv) {
         <<"schema=1\n"<<"id=aurorax.retro\n"<<"name=Retro Plugin\n"
         <<"version=0.1\n"<<"category=emulator\n"
         <<"entry=default.xex\n"<<"enabled=true\n";
-    ConsoleHome pluginMenu(dir,roots); pluginMenu.Load();
+    LegacyFixtureHome pluginMenu(dir,roots); pluginMenu.Load();
     pluginMenu.Press(ConsoleHome::Down);   // Apps at home position 2
     pluginMenu.Press(ConsoleHome::Accept); // Apps listing
     pluginMenu.Press(ConsoleHome::Accept); // App details
@@ -373,7 +389,7 @@ int main(int argc,char** argv) {
     const fs::path brew=root/"Homebrew"/"RetroArch 360";
     fs::create_directories(brew);
     std::ofstream(brew/"default.xex")<<"homebrew fixture";
-    ConsoleHome tabsMenu(dir,roots); tabsMenu.Load();
+    LegacyFixtureHome tabsMenu(dir,roots); tabsMenu.Load();
     tabsMenu.Press(ConsoleHome::Down);             // Apps
     tabsMenu.Press(ConsoleHome::Accept);
     tabsMenu.Press(ConsoleHome::Right);            // Instalados (empty)
@@ -394,7 +410,7 @@ int main(int argc,char** argv) {
 
     // System panel keeps the AuroraX theme, and clearly marks providers
     // which are not yet supported on physical Xbox 360 hardware.
-    ConsoleHome sysMenu(dir,roots); sysMenu.Load();
+    LegacyFixtureHome sysMenu(dir,roots); sysMenu.Load();
     sysMenu.Press(ConsoleHome::Right);  // Cloud360
     sysMenu.Press(ConsoleHome::Down);   // Arquivos
     sysMenu.Press(ConsoleHome::Right);  // Sistema
@@ -426,7 +442,7 @@ int main(int argc,char** argv) {
     std::ofstream(extraDir/"default.xex")<<"extra test";
     const fs::path scanConfig=root/"aurorax-scanpaths.txt";
     std::ofstream(scanConfig)<<extraDir.parent_path().string()<<"\n";
-    ConsoleHome extraMenu(dir,roots); extraMenu.Load();
+    LegacyFixtureHome extraMenu(dir,roots); extraMenu.Load();
     extraMenu.Press(ConsoleHome::Accept); // Library, now includes configured path
     extraMenu.Press(ConsoleHome::Accept); // First game alphabetically
     assert(extraMenu.Press(ConsoleHome::Accept)==(extraDir/"default.xex").string());
@@ -447,7 +463,7 @@ int main(int argc,char** argv) {
         <<extraDir.parent_path().string()<<"\n"
         <<arcade.parent_path().string()<<"\n"
         <<original.parent_path().string()<<"\n";
-    ConsoleHome categoryMenu(dir,roots); categoryMenu.Load();
+    LegacyFixtureHome categoryMenu(dir,roots); categoryMenu.Load();
     categoryMenu.Press(ConsoleHome::Accept);  // Library
     categoryMenu.Press(ConsoleHome::Right);   // Xbox 360 (Forza + Halo)
     categoryMenu.Press(ConsoleHome::Accept);
@@ -463,7 +479,7 @@ int main(int argc,char** argv) {
     categoryMenu.Draw(canvas,"19:45");
 
     // Series360 RS Ordenar: stable native sort, no web mockup required.
-    ConsoleHome orderedMenu(dir,roots); orderedMenu.Load();
+    LegacyFixtureHome orderedMenu(dir,roots); orderedMenu.Load();
     orderedMenu.Press(ConsoleHome::Accept); // Library: A-Z
     orderedMenu.Press(ConsoleHome::Search); // RS -> Z-A
     orderedMenu.Press(ConsoleHome::Accept);
@@ -473,7 +489,7 @@ int main(int argc,char** argv) {
     orderedMenu.Draw(canvas,"19:45");
 
     // Library search: Start opens on-screen keyboard, A types, Y applies.
-    ConsoleHome searchMenu(dir,roots); searchMenu.Load();
+    LegacyFixtureHome searchMenu(dir,roots); searchMenu.Load();
     searchMenu.Press(ConsoleHome::Accept); // Library / Todos
     searchMenu.Press(ConsoleHome::Guide);  // Start: keyboard
     for(int i=0;i<6;++i) searchMenu.Press(ConsoleHome::Right);
@@ -492,7 +508,7 @@ int main(int argc,char** argv) {
            (original/"default.xex").string());
 
     // Persisted hidden games never show in default tabs; Ocultos allows unhide.
-    ConsoleHome hideMenu(dir,roots); hideMenu.Load();
+    LegacyFixtureHome hideMenu(dir,roots); hideMenu.Load();
     hideMenu.Press(ConsoleHome::Accept);
     hideMenu.Press(ConsoleHome::PageUp); // LB: hide first game (Fable)
     hideMenu.Press(ConsoleHome::Accept);
@@ -506,7 +522,7 @@ int main(int argc,char** argv) {
     hideMenu.Press(ConsoleHome::Back);
     hideMenu.Press(ConsoleHome::PageUp); // LB: show Fable again
     hideMenu.Draw(canvas,"19:46");
-    ConsoleHome showAgain(dir,roots); showAgain.Load();
+    LegacyFixtureHome showAgain(dir,roots); showAgain.Load();
     showAgain.Press(ConsoleHome::Accept);
     showAgain.Press(ConsoleHome::Accept);
     assert(showAgain.Press(ConsoleHome::Accept)==
@@ -526,7 +542,7 @@ int main(int argc,char** argv) {
         stfs[0x411u+2u*(size_t)i+1u]=(unsigned char)godName[i];
     {std::ofstream pkg(godFile,std::ios::binary);
      pkg.write(reinterpret_cast<const char*>(&stfs[0]),stfs.size());}
-    ConsoleHome godMenu(dir,roots); godMenu.Load();
+    LegacyFixtureHome godMenu(dir,roots); godMenu.Load();
     godMenu.Press(ConsoleHome::Accept);   // Library
     for(int i=0;i<4;++i) godMenu.Press(ConsoleHome::Right); // Packages
     godMenu.Press(ConsoleHome::Accept);   // Details
@@ -535,7 +551,7 @@ int main(int argc,char** argv) {
 
     // Series360 collection workflow: create, assign, rename, remove and delete
     // entirely with the controller; no title data is modified.
-    ConsoleHome collectionMenu(dir,roots); collectionMenu.Load();
+    LegacyFixtureHome collectionMenu(dir,roots); collectionMenu.Load();
     collectionMenu.Press(ConsoleHome::Accept);  // Library
     for(int i=0;i<5;++i) collectionMenu.Press(ConsoleHome::Right); // Collections
     collectionMenu.Press(ConsoleHome::PageDown);  // Manage
@@ -576,7 +592,7 @@ int main(int argc,char** argv) {
     const fs::path fresh=root/"Games"/"NeverOpened"/"default.xex";
     fs::create_directories(fresh.parent_path());
     std::ofstream(fresh)<<"unlaunched game fixture";
-    ConsoleHome neverMenu(dir,roots); neverMenu.Load();
+    LegacyFixtureHome neverMenu(dir,roots); neverMenu.Load();
     neverMenu.Press(ConsoleHome::Accept); // Library
     for(int i=0;i<6;++i) neverMenu.Press(ConsoleHome::Right); // Nunca
     neverMenu.Press(ConsoleHome::Accept); // Details
@@ -593,7 +609,7 @@ int main(int argc,char** argv) {
 
     // Per-title content view: controller can browse all three categories,
     // without launching a TU, deleting saves, or changing installed files.
-    ConsoleHome contentMenu(dir,roots); contentMenu.Load();
+    LegacyFixtureHome contentMenu(dir,roots); contentMenu.Load();
     contentMenu.Press(ConsoleHome::Accept);
     for(int i=0;i<4;++i) contentMenu.Press(ConsoleHome::Right); // Pacotes
     contentMenu.Press(ConsoleHome::Accept); // GOD details
@@ -611,7 +627,7 @@ int main(int argc,char** argv) {
     const fs::path fileRoot=root/"FileMenuFixture";
     fs::create_directories(fileRoot);
     std::ofstream(fileRoot/"source.txt")<<"local file";
-    ConsoleHome fileMenu(fileRoot.string()+"/",std::vector<std::string>());
+    LegacyFixtureHome fileMenu(fileRoot.string()+"/",std::vector<std::string>());
     fileMenu.Load();
     fileMenu.Press(ConsoleHome::Right);  // IPTV tile
     fileMenu.Press(ConsoleHome::Down);   // Arquivos
@@ -646,7 +662,7 @@ int main(int argc,char** argv) {
     std::ofstream(pinGame)<<"pin fixture";
     const std::string pinDir=pinRoot.string()+"/";
     const std::vector<std::string> pinRoots(1,(pinRoot/"Games").string());
-    ConsoleHome pinMenu(pinDir,pinRoots); pinMenu.Load();
+    LegacyFixtureHome pinMenu(pinDir,pinRoots); pinMenu.Load();
     pinMenu.Press(ConsoleHome::Accept); // Library
     pinMenu.Press(ConsoleHome::Accept); // Details
     pinMenu.Press(ConsoleHome::PageUp); // LB pins, does not launch
@@ -656,7 +672,7 @@ int main(int argc,char** argv) {
         assert(data.find("K\t"+pinGame.string())!=std::string::npos);
         assert(data.find("F\t"+pinGame.string())==std::string::npos);
     }
-    ConsoleHome pinReload(pinDir,pinRoots); pinReload.Load();
+    LegacyFixtureHome pinReload(pinDir,pinRoots); pinReload.Load();
     pinReload.Draw(canvas,"19:56");
     pinReload.Press(ConsoleHome::Accept);
     for(int i=0;i<8;++i)pinReload.Press(ConsoleHome::Right); // Fixados
@@ -675,7 +691,7 @@ int main(int argc,char** argv) {
     pinReload.Press(ConsoleHome::Left);
     pinReload.Press(ConsoleHome::Accept); // recent
     assert(pinReload.Press(ConsoleHome::Accept).empty());
-    ConsoleHome unpin(pinDir,pinRoots);unpin.Load();
+    LegacyFixtureHome unpin(pinDir,pinRoots);unpin.Load();
     unpin.Press(ConsoleHome::Accept);
     for(int i=0;i<7;++i)unpin.Press(ConsoleHome::Right); // hidden
     unpin.Press(ConsoleHome::PageUp); // unhide
@@ -695,7 +711,7 @@ int main(int argc,char** argv) {
     const std::string layoutDir=layoutRoot.string()+"/";
     const std::vector<std::string> noRoots;
     const fs::path profile=layoutRoot/"aurorax-profile.txt";
-    ConsoleHome layout(layoutDir,noRoots);layout.Load();
+    LegacyFixtureHome layout(layoutDir,noRoots);layout.Load();
     layout.Press(ConsoleHome::Guide); // Start editor
     layout.Press(ConsoleHome::Right);
     layout.Press(ConsoleHome::Right); // Files slot
@@ -715,7 +731,7 @@ int main(int argc,char** argv) {
         const std::string data((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
         assert(data.find("O\t2013")!=std::string::npos);
     }
-    ConsoleHome restoredLayout(layoutDir,noRoots);restoredLayout.Load();
+    LegacyFixtureHome restoredLayout(layoutDir,noRoots);restoredLayout.Load();
     restoredLayout.Press(ConsoleHome::Down); // first middle slot is now Files
     restoredLayout.Press(ConsoleHome::Accept);
     restoredLayout.Press(ConsoleHome::Guide); // Files creates personal workspace
@@ -732,7 +748,7 @@ int main(int argc,char** argv) {
     }
     // Malformed permutations must never index an invalid section.
     std::ofstream(profile)<<"O\t2229\n";
-    ConsoleHome invalidLayout(layoutDir,noRoots);invalidLayout.Load();
+    LegacyFixtureHome invalidLayout(layoutDir,noRoots);invalidLayout.Load();
     invalidLayout.Draw(canvas,"20:02");
     invalidLayout.Press(ConsoleHome::Guide);
     invalidLayout.Press(ConsoleHome::Refresh);
@@ -758,7 +774,7 @@ int main(int argc,char** argv) {
     };
     writeArt(artFolder/"cover.rgba",160*240,200,10);
     writeArt(artFolder/"background.rgba",640*360,10,200);
-    ConsoleHome artwork(artRoot.string()+"/",noRoots);artwork.Load();
+    LegacyFixtureHome artwork(artRoot.string()+"/",noRoots);artwork.Load();
     artwork.Press(ConsoleHome::Accept);
     artwork.Draw(canvas,"20:05");
     assert(canvas.Pixels()[250*1280+60]==0xffc80a00u);
@@ -790,7 +806,7 @@ int main(int argc,char** argv) {
     writeArt(artFolder/"cover.rgba",160*240,200,10);
     writeArt(artFolder/"cover-alt.rgba",160*240,5,180);
     writeArt(artFolder/"background-alt.rgba",640*360,180,5);
-    ConsoleHome artEdit(artRoot.string()+"/",noRoots);artEdit.Load();
+    LegacyFixtureHome artEdit(artRoot.string()+"/",noRoots);artEdit.Load();
     artEdit.Press(ConsoleHome::Accept);
     artEdit.Press(ConsoleHome::Accept);
     artEdit.Press(ConsoleHome::Guide);
@@ -808,7 +824,7 @@ int main(int argc,char** argv) {
     artEdit.Draw(canvas,"20:06");
     assert(canvas.Pixels()[250*1280+100]==0xff05b400u);
     assert(canvas.Pixels()[220*1280+850]!=0xff0ac800u);
-    ConsoleHome artRestored(artRoot.string()+"/",noRoots);artRestored.Load();
+    LegacyFixtureHome artRestored(artRoot.string()+"/",noRoots);artRestored.Load();
     artRestored.Press(ConsoleHome::Accept);
     artRestored.Draw(canvas,"20:07");
     assert(canvas.Pixels()[250*1280+60]==0xff05b400u);
@@ -827,7 +843,7 @@ int main(int argc,char** argv) {
      names<<"4D5307E6\tImported Halo\n";
      names<<"DEADBEEF\tNot installed\n";
      names<<"00000000\tInvalid ID\n";}
-    ConsoleHome imported(artRoot.string()+"/",noRoots);imported.Load();
+    LegacyFixtureHome imported(artRoot.string()+"/",noRoots);imported.Load();
     imported.Press(ConsoleHome::Accept);
     imported.Press(ConsoleHome::Guide); // search by imported name
     // I: second row, second column
@@ -848,7 +864,7 @@ int main(int argc,char** argv) {
     {std::ofstream out(migrateRoot/"aurorax-aurora-profile.tsv");
      out<<"F\t4D5307E6\nF\tDEADBEEF\nR\t4D5307E6\n";}
     const fs::path migrateProfile=migrateRoot/"aurorax-profile.txt";
-    ConsoleHome migrate(migrateRoot.string()+"/",noRoots);migrate.Load();
+    LegacyFixtureHome migrate(migrateRoot.string()+"/",noRoots);migrate.Load();
     migrate.Press(ConsoleHome::Favorite); // preview
     migrate.Draw(canvas,"20:09");
     migrate.Press(ConsoleHome::Back);
@@ -862,7 +878,7 @@ int main(int argc,char** argv) {
         assert(data.find("DEADBEEF")==std::string::npos);
         assert(data.find("R\t")==std::string::npos); // nonlaunchable package
     }
-    ConsoleHome migrateAgain(migrateRoot.string()+"/",noRoots);migrateAgain.Load();
+    LegacyFixtureHome migrateAgain(migrateRoot.string()+"/",noRoots);migrateAgain.Load();
     migrateAgain.Press(ConsoleHome::Favorite);
     migrateAgain.Press(ConsoleHome::Accept);
     {
@@ -896,7 +912,7 @@ int main(int argc,char** argv) {
         fs::create_directories(drives/"dvd:");fs::create_directory(drives/"hdd:");fs::create_directory(drives/"usb0:");
         fs::copy_file(trainerGame,drives/"dvd:"/"default.xex");
         fs::current_path(drives);
-        ConsoleHome dvdMenu(dir,roots);dvdMenu.Load();
+        LegacyFixtureHome dvdMenu(dir,roots);dvdMenu.Load();
         for(auto key:{ConsoleHome::Right,ConsoleHome::Down,ConsoleHome::Right,ConsoleHome::Accept})dvdMenu.Press(key);
         for(int i=0;i<6;++i)dvdMenu.Press(ConsoleHome::Right);
         dvdMenu.Press(ConsoleHome::Accept); // DVD panel, initially Extract
@@ -935,7 +951,7 @@ int main(int argc,char** argv) {
     assert(trainerItems[0].Compatibility(trainerInfo)==TrainerEntry::HeaderMatches);
     trainerInfo.mediaId=1;
     assert(trainerItems[0].Compatibility(trainerInfo)==TrainerEntry::DifferentMedia);
-    ConsoleHome trainerMenu(trainerRoot.string()+"/",std::vector<std::string>(1,(trainerRoot/"Games").string()));
+    LegacyFixtureHome trainerMenu(trainerRoot.string()+"/",std::vector<std::string>(1,(trainerRoot/"Games").string()));
     trainerMenu.Load();
     trainerMenu.Press(ConsoleHome::Accept);trainerMenu.Press(ConsoleHome::Accept);
     trainerMenu.Press(ConsoleHome::PageDown);
@@ -984,11 +1000,11 @@ int main(int argc,char** argv) {
     {std::ofstream out(orderedRoot/"aurorax-profile.txt");
      out<<"K\t"<<orderedA.string()<<"\nK\t"<<orderedB.string()<<"\n";}
     const std::vector<std::string> orderedRoots(1,(orderedRoot/"Games").string());
-    ConsoleHome ordered(orderedRoot.string()+"/",orderedRoots);ordered.Load();
+    LegacyFixtureHome ordered(orderedRoot.string()+"/",orderedRoots);ordered.Load();
     ordered.Press(ConsoleHome::Accept);
     for(int i=0;i<8;++i)ordered.Press(ConsoleHome::Right);
     ordered.Press(ConsoleHome::Search); // move A down
-    ConsoleHome orderedReload(orderedRoot.string()+"/",orderedRoots);orderedReload.Load();
+    LegacyFixtureHome orderedReload(orderedRoot.string()+"/",orderedRoots);orderedReload.Load();
     orderedReload.Press(ConsoleHome::Accept);
     for(int i=0;i<8;++i)orderedReload.Press(ConsoleHome::Right);
     orderedReload.Press(ConsoleHome::Accept);
@@ -999,7 +1015,7 @@ int main(int argc,char** argv) {
     fs::create_directories(queueRoot/"UserFiles");
     {std::ofstream out(queueRoot/"a.bin",std::ios::binary);out.seekp(200000);out.put('a');}
     {std::ofstream out(queueRoot/"b.bin",std::ios::binary);out.seekp(200000);out.put('b');}
-    ConsoleHome queueMenu(queueRoot.string()+"/",noRoots);queueMenu.Load();
+    LegacyFixtureHome queueMenu(queueRoot.string()+"/",noRoots);queueMenu.Load();
     queueMenu.Press(ConsoleHome::Right);queueMenu.Press(ConsoleHome::Down);
     queueMenu.Press(ConsoleHome::Accept); // Files; directories sort first
     queueMenu.Press(ConsoleHome::Down);queueMenu.Press(ConsoleHome::Favorite); // a.bin
@@ -1030,7 +1046,7 @@ int main(int argc,char** argv) {
     const fs::path scanUiExe=scanUiRoot/"CustomGames"/"Example"/"default.xex";
     std::ofstream(scanUiExe)<<"fixture";
     const fs::path scanUiConfig=scanUiRoot/"aurorax-scanpaths-ui.txt";
-    ConsoleHome scanUi(scanUiRoot.string()+"/",noRoots);scanUi.Load();
+    LegacyFixtureHome scanUi(scanUiRoot.string()+"/",noRoots);scanUi.Load();
     scanUi.Press(ConsoleHome::Right);scanUi.Press(ConsoleHome::Down);
     scanUi.Press(ConsoleHome::Accept); // Files
     scanUi.Press(ConsoleHome::Accept); // CustomGames
@@ -1038,7 +1054,7 @@ int main(int argc,char** argv) {
     assert(!fs::exists(scanUiConfig));
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept);
     assert(fs::exists(scanUiConfig));
-    ConsoleHome scanUiReload(scanUiRoot.string()+"/",noRoots);scanUiReload.Load();
+    LegacyFixtureHome scanUiReload(scanUiRoot.string()+"/",noRoots);scanUiReload.Load();
     scanUiReload.Press(ConsoleHome::Accept);scanUiReload.Press(ConsoleHome::Accept);
     assert(scanUiReload.Press(ConsoleHome::Accept)==scanUiExe.string());
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept); // remove
@@ -1048,7 +1064,7 @@ int main(int argc,char** argv) {
     const fs::path actionRoot=root/"FileActionsFixture";
     fs::create_directories(actionRoot/"UserFiles"/"Dest");
     std::ofstream(actionRoot/"UserFiles"/"test.txt")<<"personal";
-    ConsoleHome actions(actionRoot.string()+"/",noRoots);actions.Load();
+    LegacyFixtureHome actions(actionRoot.string()+"/",noRoots);actions.Load();
     actions.Press(ConsoleHome::Right);actions.Press(ConsoleHome::Down);
     actions.Press(ConsoleHome::Accept);actions.Press(ConsoleHome::Accept); // Files/UserFiles
     actions.Press(ConsoleHome::Down); // test.txt
@@ -1069,7 +1085,7 @@ int main(int argc,char** argv) {
     fs::create_directories(batchRoot/"UserFiles");
     std::ofstream(batchRoot/"Bundle"/"nested.txt")<<"nested";
     std::ofstream(batchRoot/"single.txt")<<"single";
-    ConsoleHome batch(batchRoot.string()+"/",noRoots);batch.Load();
+    LegacyFixtureHome batch(batchRoot.string()+"/",noRoots);batch.Load();
     batch.Press(ConsoleHome::Right);batch.Press(ConsoleHome::Down);
     batch.Press(ConsoleHome::Accept); // Bundle, UserFiles, single.txt
     batch.Press(ConsoleHome::Right);batch.Press(ConsoleHome::Down);batch.Press(ConsoleHome::Down);
@@ -1089,7 +1105,7 @@ int main(int argc,char** argv) {
     const std::string storeHash(64,'a');
     {std::ofstream out(storeRoot/"aurorax-store.tsv");
      out<<"demo\thomebrew\tExample\t1.0\t4\t"<<storeHash<<"\thttps://example.org/demo.zip\tAuthorized fixture\n";}
-    ConsoleHome storeMenu(storeRoot.string()+"/",noRoots);storeMenu.Load();
+    LegacyFixtureHome storeMenu(storeRoot.string()+"/",noRoots);storeMenu.Load();
     storeMenu.Press(ConsoleHome::PageDown);storeMenu.Draw(canvas,"20:49");
     storeMenu.Press(ConsoleHome::Accept);storeMenu.Press(ConsoleHome::Accept);
     storeMenu.Press(ConsoleHome::Back); // cancel
@@ -1111,7 +1127,7 @@ int main(int argc,char** argv) {
         <<"\thttps://example.org/ptbr.zip\tAuthorized\t4D5307E6\t12345678\t20010002\n";
      out<<"wrong\ttranslation\tOutra versao\t1\t4\t"<<storeHash
         <<"\thttps://example.org/other.zip\tAuthorized\t4D5307E6\t12345678\t20010003\n";}
-    ConsoleHome ptbr(ptbrRoot.string()+"/",std::vector<std::string>(1,(ptbrRoot/"Games").string()));
+    LegacyFixtureHome ptbr(ptbrRoot.string()+"/",std::vector<std::string>(1,(ptbrRoot/"Games").string()));
     ptbr.Load();ptbr.Press(ConsoleHome::PageDown);
     for(int i=0;i<7;++i)ptbr.Press(ConsoleHome::Right);
     ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);ptbr.Press(ConsoleHome::Accept);
@@ -1129,7 +1145,7 @@ int main(int argc,char** argv) {
     {std::ofstream out(nexusRoot/"aurorax-nexus-names.tsv");out<<"4D5307E6\tNexus title\n";}
     {std::ofstream out(nexusRoot/"aurorax-aurora-names.tsv");out<<"4D5307E6\tAurora title\n";}
     {std::ofstream out(nexusRoot/"aurorax-nexus-translation-ids.txt");out<<"4D5307E6\n";}
-    ConsoleHome nexusMeta(nexusRoot.string()+"/",std::vector<std::string>(1,(nexusRoot/"Games").string()));
+    LegacyFixtureHome nexusMeta(nexusRoot.string()+"/",std::vector<std::string>(1,(nexusRoot/"Games").string()));
     nexusMeta.Load();nexusMeta.Press(ConsoleHome::Accept);nexusMeta.Press(ConsoleHome::Accept);
     nexusMeta.Draw(canvas,"20:50");
     assert(nexusMeta.Press(ConsoleHome::Accept)==nexusGame.string());
@@ -1186,16 +1202,16 @@ int main(int argc,char** argv) {
         assert(draft=="10234567"&&selected==1);
         const auto guideRoot=root/"QuickGuideFixture";fs::create_directories(guideRoot);
         const auto dir=guideRoot.string()+"/";
-        ConsoleHome guide(dir,{});guide.Load();guide.Press(ConsoleHome::Search);
+        LegacyFixtureHome guide(dir,{});guide.Load();guide.Press(ConsoleHome::Search);
         assert(guide.QuickGuideOpen()&&!guide.IdleEligible());
         guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Back);
         assert(guide.QuickGuideOrder()=="01234567");
         guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Refresh);
         assert(guide.QuickGuideOrder()=="10234567");
-        ConsoleHome reloaded(dir,{});reloaded.Load();assert(reloaded.QuickGuideOrder()=="10234567");
+        LegacyFixtureHome reloaded(dir,{});reloaded.Load();assert(reloaded.QuickGuideOrder()=="10234567");
         reloaded.Press(ConsoleHome::Search);assert(reloaded.Press(ConsoleHome::Accept).empty()&&!reloaded.QuickGuideOpen());
         std::ofstream(guideRoot/"aurorax-profile.txt")<<"Q\t00000000\n";
-        ConsoleHome invalid(dir,{});invalid.Load();assert(invalid.QuickGuideOrder()==QuickGuide::Default());
+        LegacyFixtureHome invalid(dir,{});invalid.Load();assert(invalid.QuickGuideOrder()==QuickGuide::Default());
     }
     assert(std::string(ConsoleStatus::StateLabel(false,0))=="Provider indisponivel");
     assert(std::string(ConsoleStatus::StateLabel(true,0))=="Sem sessao");
@@ -1440,7 +1456,7 @@ int main(int argc,char** argv) {
     assert(!residentConflict(configs,0,0)&&residentConflict(configs,0,1)&&residentConflict(configs,0,2));
     assert(!residentConflict(configs,2,0));
     
-    ConsoleHome residentMenu(residentRoot.string()+"/",noRoots);residentMenu.Load();
+    LegacyFixtureHome residentMenu(residentRoot.string()+"/",noRoots);residentMenu.Load();
     residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Down);
     residentMenu.Press(ConsoleHome::Right);residentMenu.Press(ConsoleHome::Accept);
     for(int i=0;i<4;++i)residentMenu.Press(ConsoleHome::Right);
