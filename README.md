@@ -78,7 +78,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**72 capturas nativas** — commit [f94e2410b6d1](https://github.com/MichaelPriest/Infinity360/commit/f94e2410b6d1c09cb4205a8f505c7aacde83acfa).
+**72 capturas nativas** — commit [fb02720741fa](https://github.com/MichaelPriest/Infinity360/commit/fb02720741fac1fd5342bd418fbc5a5d9230bbea).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
