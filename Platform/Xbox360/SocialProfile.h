@@ -58,6 +58,15 @@ struct Header {
     Chat chat = Chat::Unavailable;
 };
 
+// Compare every display-affecting field, not just name and sign-in state.
+inline bool SameHeader(const Header& a, const Header& b) {
+    return a.controller == b.controller && a.origin == b.origin &&
+           a.state == b.state && a.displayName == b.displayName &&
+           a.avatarAsset == b.avatarAsset && a.guest == b.guest &&
+           a.gamerscoreKnown == b.gamerscoreKnown &&
+           a.gamerscore == b.gamerscore && a.chat == b.chat;
+}
+
 inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     Header result;
     int selected = -1;
@@ -73,10 +82,11 @@ inline Header Resolve(const Snapshot& snapshot, int preferredController) {
         }
     }
     if (selected < 0) {
-        bool knownSignedOut = false;
+        // A partial or failed query cannot establish that every controller is signed out.
+        bool knownSignedOut = true;
         for (const auto& slot : snapshot.slots) {
-            if (slot.origin == Origin::Console && slot.state == SignIn::SignedOut)
-                knownSignedOut = true;
+            if (slot.origin != Origin::Console || slot.state != SignIn::SignedOut)
+                knownSignedOut = false;
         }
         if (knownSignedOut) {
             result.origin = Origin::Console;
