@@ -553,8 +553,7 @@ bool ConsoleHome::Tick() {
         socialPolled_=true;lastSocialPoll_=now;
         const auto before=social_;
         SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(),before.controller);
-        socialChanged=before.controller!=social_.controller||before.origin!=social_.origin||
-            before.state!=social_.state||before.displayName!=social_.displayName;
+        socialChanged=!InfinitySocial::SameHeader(before,social_);
     }
 #endif
     bool thermalChanged=false;
@@ -3407,7 +3406,8 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
         social_.state==SignIn::Local?"Sessão local":
         social_.state==SignIn::SignedOut?"Sem perfil":"Nao consultado";
     c.TextFit(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
-    const std::string subtitle=social_.guest?"Convidado":social_.gamerscoreKnown?std::string(state)+" | G "+number(social_.gamerscore):state;
+    const std::string subtitle=social_.origin==Origin::Test?"PERFIL DE TESTE":
+        social_.guest?"Convidado":social_.gamerscoreKnown?std::string(state)+" | G "+number(social_.gamerscore):state;
     c.TextFit(x+52,y+28,subtitle,13,ink,w-58);
 }
 namespace { void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color); }
