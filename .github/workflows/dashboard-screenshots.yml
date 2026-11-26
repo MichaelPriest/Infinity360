@@ -5,7 +5,7 @@ on:
   # Explicit screenshot requests only; no Xbox executable is built here.
   push:
     branches: [main, feature/profile-social-provider]
-    paths: [docs/screenshots/request.txt]
+    paths: [docs/screenshots/request.txt, .github/workflows/dashboard-screenshots.yml]
 
 permissions:
   contents: write
@@ -26,7 +26,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/infinity-render-logs"
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/configure.log"
           cmake --build build --target console_home_tests -j2 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/compile.log"
-          ctest --test-dir build -R '^console_home
+          ctest --test-dir build -R '^console_home$' --output-on-failure 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/tests.log"
       - name: Capture and encode PNG screenshots
         run: |
           set -o pipefail
@@ -104,78 +104,5 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git fetch origin "$GITHUB_REF_NAME"
           test "$(git rev-parse "origin/$GITHUB_REF_NAME")" = "$GITHUB_SHA" || { echo "::error::Branch advanced during capture; request a fresh gallery for the new source."; exit 1; }
-          git commit -m "docs: refresh native dashboard screenshots"
-          git push origin "HEAD:$GITHUB_REF_NAME"
- --output-on-failure 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/tests.log"
-      - name: Capture and encode PNG screenshots
-        run: |
-          build/console_home_tests Platform/Xbox360/Assets/home.tga "$RUNNER_TEMP/infinity-frames"
-          python3 - <<'PY'
-          import os, pathlib, struct, zlib
-          frames = pathlib.Path(os.environ["RUNNER_TEMP"]) / "infinity-frames"
-          output = pathlib.Path("docs/screenshots")
-          output.mkdir(parents=True, exist_ok=True)
-          images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 71, len(images)
-          assert (frames / '70-perfil-teste.ppm').is_file() and (frames / '71-guia-perfil-teste.ppm').is_file()
-          assert (frames / '68-fontes-store.ppm').is_file() and (frames / '69-iptv-moderno.ppm').is_file()
-          assert (frames / '65-detalhes-moderno.ppm').is_file() and (frames / '66-store-moderna.ppm').is_file() and (frames / '67-store-produto-moderno.ppm').is_file()
-          assert (frames / "54-layout-1.ppm").is_file() and (frames / "62-layout-9.ppm").is_file()
-          assert (frames / "63-biblioteca-grade.ppm").is_file() and (frames / "64-biblioteca-filtros.ppm").is_file()
-          assert (frames / "53-aparencia.ppm").is_file()
-          assert (frames / "52-conquistas-gpd.ppm").is_file()
-          assert (frames / "51-perfis-saves.ppm").is_file()
-          assert (frames / "50-link-opcoes.ppm").is_file()
-          assert (frames / "48-smb.ppm").is_file() and (frames / "49-smb-config.ppm").is_file()
-          assert (frames / "47-refrigeracao.ppm").is_file()
-          assert (frames / "46-energia.ppm").is_file()
-          assert (frames / "42-marcos-locais.ppm").is_file()
-          assert (frames / '40-guia-rapido.ppm').is_file() and (frames / '41-guia-edicao.ppm').is_file()
-          assert (frames / '36-english.ppm').is_file() and (frames / '37-espanol.ppm').is_file()
-          assert (frames / "29-rede-udp.ppm").is_file()
-          assert (frames / "28-video-kernel.ppm").is_file()
-          def chunk(kind, data):
-              return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind+data)&0xffffffff)
-          for image in images:
-              magic, size, depth, rgb = image.read_bytes().split(b"\n", 3)
-              assert (magic,size,depth)==(b"P6",b"1280 720",b"255")
-              assert len(rgb)==1280*720*3
-              scan = b"".join(b"\x00"+rgb[i:i+3840] for i in range(0,len(rgb),3840))
-              png = b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",1280,720,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(scan,9))+chunk(b"IEND",b"")
-              (output/(image.stem+".png")).write_bytes(png)
-          (output/"source.txt").write_text(os.environ["GITHUB_SHA"]+"\n")
-          # Gallery only references images actually produced by this renderer.
-          readme=pathlib.Path("README.md")
-          contents=readme.read_text(encoding="utf-8")
-          start="<!-- NATIVE-GALLERY-BEGIN -->"
-          end="<!-- NATIVE-GALLERY-END -->"
-          assert contents.count(start)==1 and contents.count(end)==1
-          names=[(p.stem,p.with_suffix(".png").name) for p in images]
-          lines=[f"**{len(names)} capturas nativas** — commit [{os.environ['GITHUB_SHA'][:12]}](https://github.com/MichaelPriest/Infinity360/commit/{os.environ['GITHUB_SHA']}).", "", "| Tela | Tela |", "| --- | --- |"]
-          for i in range(0,len(names),2):
-              pair=names[i:i+2]
-              cells=[f"![{stem}](docs/screenshots/{file})" for stem,file in pair]
-              if len(cells)==1: cells.append("")
-              lines.append("| "+" | ".join(cells)+" |")
-              labels=[stem[3:].replace("-"," ").capitalize() for stem,_ in pair]
-              if len(labels)==1: labels.append("")
-              lines.append("| "+" | ".join(labels)+" |")
-          left,rest=contents.split(start,1)
-          _,right=rest.split(end,1)
-          readme.write_text(left+start+"\n\n"+"\n".join(lines)+"\n\n"+end+right,encoding="utf-8")
-          PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: infinity-native-screenshots
-          path: docs/screenshots/
-      - name: Publish gallery to selected branch without overwriting newer source
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/profile-social-provider'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots README.md
-          if git diff --cached --quiet; then exit 0; fi
-          git fetch origin "$GITHUB_REF_NAME"
-          test "$(git rev-parse "origin/$GITHUB_REF_NAME")" = "$GITHUB_SHA" || { echo "Main moved; newer workflow will render its own screenshots."; exit 0; }
           git commit -m "docs: refresh native dashboard screenshots"
           git push origin "HEAD:$GITHUB_REF_NAME"
