@@ -215,7 +215,9 @@ int main(int argc,char** argv) {
     canvas.VideoRgb(rgb,2,1,1.0);
     assert(canvas.Pixels()[360*1280+0]==0xffff0000u);
     menu.Draw(canvas,"19:42");
-    assert(canvas.Pixels()[200*1280+42]==0xff9dec31u);
+    // The active Library tile now uses the approved rounded lime focus,
+    // rather than the legacy opaque green border. Verify an actual mid-edge pixel.
+    assert(canvas.Pixels()[200*1280+42]==0xffa8ff00u);
     menu.Press(ConsoleHome::Accept);                 // Library
     menu.Press(ConsoleHome::Favorite);
     assert(menu.Press(ConsoleHome::Accept).empty()); // Details
