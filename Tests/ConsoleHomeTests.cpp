@@ -249,6 +249,14 @@ int main(int argc,char** argv) {
      }
      buttons.SetTheme(0);buttons.Box(100,100,32,32,0xff101010u);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);unsigned green=buttons.Pixels()[106*1280+116];
      buttons.SetTheme(1);buttons.Box(100,100,32,32,0xff101010u);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);assert(buttons.Pixels()[106*1280+116]==green);
+     // All labels are part of the raster texture: shared Draw must equal raw sprite rendering.
+     for(int k=0;k<InfinityButtons::Count;++k)for(int h:{20,27,32}){
+        buttons.Box(100,100,80,40,0xff101010u);InfinityButtons::Draw(buttons,k,100,100,h);
+        std::vector<unsigned> region;
+        for(int y=100;y<100+h;++y)for(int x=100;x<100+InfinityButtons::Width(k,h);++x)region.push_back(buttons.Pixels()[y*1280+x]);
+        buttons.Box(100,100,80,40,0xff101010u);buttons.ControllerButton(k,100,100,h);
+        size_t n=0;for(int y=100;y<100+h;++y)for(int x=100;x<100+InfinityButtons::Width(k,h);++x)assert(region[n++]==buttons.Pixels()[y*1280+x]);
+     }
      InfinityButtons::Draw(buttons,InfinityButtons::RB,-10,-10,32);
     }
     // Exercise actual framebuffer composition, not a screenshot mockup.

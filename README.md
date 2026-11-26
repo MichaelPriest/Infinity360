@@ -60,17 +60,17 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
 
-### Botões oficiais do controle Xbox 360
+### Botões do controle Xbox 360 — texturas de alta legibilidade
 
-![Imagens originais Xbox 360, adaptadas do pacote XNA](Platform/Xbox360/Assets/xbox-buttons.png)
+![Atlas de botões com letras incorporadas](Platform/Xbox360/Assets/xbox-buttons.png)
 
-14 imagens do pacote Microsoft XNA Game Studio **Xbox 360 Controller Button Images** (2007), arquivado sob Microsoft Permissive License (MS-PL). As texturas TGA originais foram convertidas em atlas com transparência, preservando as proporções e sem redesenhar os símbolos. Os analógicos usam as imagens originais dos thumbsticks. As cores permanecem iguais em todos os temas. Aplicados ao rodapé compartilhado, Home, Guide, detalhes e IPTV; os mapeamentos de entrada permanecem inalterados.
+A, B, X, Y, LB, RB, LT, RT, START, BACK, L3 e R3 foram recriados no estilo clássico Xbox 360, com letras/siglas de alto contraste integradas aos pixels da imagem. Direcional e Guide preservam as imagens XNA originais. O atlas transparente (14 células de 48×32) é incorporado ao renderizador, sem sobreposição de texto, preservando as cores em todos os temas. Os atalhos e comandos não foram alterados.
 
-Fonte: [arquivo XNA](https://github.com/SimonDarksideJ/XNAGameStudio/wiki/Xbox-360-Controller-Button-Images). [Licença original](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência dos arquivos](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). A distribuição não implica afiliação ou endosso da Microsoft.
+Referência: [pacote original Microsoft XNA (2007)](Platform/Xbox360/Assets/XNA-Controller/xbox-buttons-original.png), [licença original MS-PL](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). As texturas recriadas não são imagens oficiais da Microsoft e não implicam afiliação ou endosso.
 
 ### Home compacta e legibilidade
 
-A navegação padrão Series Infinity exibe apenas Início, Jogos, Apps, IPTV, Loja e Sistema. Os seis cartões antigos foram agrupados em Gerenciar, Rede e mídia e Perfil e serviços. Sistema abre um submenu com central, configurações, energia e downloads. Os atalhos anteriores permanecem acessíveis e a ordem de prioridade personalizada é preservada. A Home omite instruções redundantes e mostra comandos conforme o foco. Os botões oficiais XNA recebem letras/siglas de alto contraste em tamanhos pequenos; os ícones rasterizados têm contraste reforçado. Os layouts alternativos mantêm sua navegação própria.
+A navegação padrão Series Infinity exibe apenas Início, Jogos, Apps, IPTV, Loja e Sistema. Os seis cartões antigos foram agrupados em Gerenciar, Rede e mídia e Perfil e serviços. Sistema abre um submenu com central, configurações, energia e downloads. Os atalhos anteriores permanecem acessíveis e a ordem de prioridade personalizada é preservada. A Home omite instruções redundantes e mostra comandos conforme o foco. Os botões usam letras/siglas integradas à imagem, de alto contraste; os ícones rasterizados têm contraste reforçado. Os layouts alternativos mantêm sua navegação própria.
 
 ## Galeria da interface nativa
 
