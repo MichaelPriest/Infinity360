@@ -41,3 +41,7 @@ O XSDK fixado em 74dfcca8 declara e importa XamUserGetSigninInfo. Dois resultado
 ## V0.2.49 — Gamerscore experimental
 
 XamUserReadProfileSettings consulta 0x10040006 (XPROFILE_GAMERCARD_CRED) em buffer de 128 bytes, sem escrita ou lookup remoto. O parser exige cabeçalho de 8 bytes, registro de 40 bytes, origem global, slot, ID, INT32 e valor não negativo. Identidade é revalidada após a consulta. Referências de ABI: [xam_user.cc](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/xam_user.cc), [user_profile.h](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/user_profile.h), [user_profile.cc](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/user_profile.cc). Xenia pode devolver valores sintéticos; não comprova dados Xbox Live. A chamada síncrona não tem timeout garantido e precisa de avaliação de latência em hardware. Testes preparados, não executados. Sem build ou release.
+
+## V0.2.50 — acesso a conquistas
+
+RB no Guide fora do modo de edição abre a central de conquistas existente; durante transferências o atalho é bloqueado. LB mantém seleção de perfil. O perfil ativo e o Gamerscore reportado aparecem em uma linha distinta dos totais GPD offline. Arquivos importados não são autenticados nem vinculados automaticamente ao usuário. O Gamerpic permanece neutro. Sem compilação ou homologação.
