@@ -2,6 +2,7 @@
 #include "GlyphWidths.h"
 #include <algorithm>
 #include <cstdio>
+#include <cmath>
 
 namespace {
 const int ArtWidth = 1024, ArtHeight = 512;
@@ -218,25 +219,45 @@ bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,i
     return true;
 }
 void HomeCanvas::Text(int x,int y,const std::string& text,int size,unsigned color,int maxWidth) {
+    if(art_.empty()||size<=0||maxWidth<=0)return;
     color=ThemeColor(color);
-    const int right=x+maxWidth;
-    for (size_t i=0; i<text.size();) {
-        unsigned c=nextGlyph(text,i);
-        if(c<32) c=' ';
-        int index=int(c)-32;
-        int advance=(glyphWidths[index]*size+11)/22;
-        if(x+advance>right) break;
-        const int cell=30*size/22;
-        Image(index%32*30,234+index/32*34,30,34,x,y,cell,34*size/22,color);
-        if (size>=28) Image(index%32*30,234+index/32*34,30,34,x+1,y,cell,34*size/22,color);
+    const int right=x+maxWidth, w=std::max(1,30*size/22),h=std::max(1,34*size/22);
+    // Bilinear alpha resampling of the original font atlas, without double-drawing bold glyphs.
+    for(size_t pos=0;pos<text.size();){
+        unsigned cp=nextGlyph(text,pos);if(cp<32)cp=' ';
+        const int index=int(cp)-32,advance=(glyphWidths[index]*size+11)/22;
+        if(x+advance>right)break;
+        const int sx=index%32*30,sy=234+index/32*34;
+        for(int j=std::max(0,-y);j<h&&y+j<Height;++j){
+            const int fy=std::max(0,std::min(33*256,((2*j+1)*34*128/h)-128));
+            const int iy=fy>>8,ay=fy&255,iy1=std::min(33,iy+1);
+            for(int i=std::max(0,-x);i<w&&x+i<Width&&x+i<right;++i){
+                const int fx=std::max(0,std::min(29*256,((2*i+1)*30*128/w)-128));
+                const int ix=fx>>8,ax=fx&255,ix1=std::min(29,ix+1);
+                const unsigned a0=(art_[(sy+iy)*ArtWidth+sx+ix]>>24)*(256-ax)+(art_[(sy+iy)*ArtWidth+sx+ix1]>>24)*ax;
+                const unsigned a1=(art_[(sy+iy1)*ArtWidth+sx+ix]>>24)*(256-ax)+(art_[(sy+iy1)*ArtWidth+sx+ix1]>>24)*ax;
+                const unsigned alpha=(a0*(256-ay)+a1*ay+32768)>>16;
+                if(alpha){auto& dest=frame_[(y+j)*Width+x+i];dest=blend(color,dest,alpha);}
+            }
+        }
         x+=advance;
     }
 }
 
 void HomeCanvas::Stroke(int x0,int y0,int x1,int y1,unsigned color,int width){
-    const int dx=std::abs(x1-x0),sx=x0<x1?1:-1,dy=-std::abs(y1-y0),sy=y0<y1?1:-1;int error=dx+dy;
-    for(;;){Box(x0-width/2,y0-width/2,width,width,color,width/2);if(x0==x1&&y0==y1)break;
-        const int e=2*error;if(e>=dy){error+=dy;x0+=sx;}if(e<=dx){error+=dx;y0+=sy;}}
+    // Antialiased line capsules, with a bounded pixel rectangle.
+    if(width<=0)return;
+    color=ThemeColor(color);
+    const float dx=float(x1-x0),dy=float(y1-y0),length=dx*dx+dy*dy,r=float(width)/2;
+    const int pad=width/2+2;
+    for(int y=std::max(0,std::min(y0,y1)-pad);y<std::min(int(Height),std::max(y0,y1)+pad+1);++y)
+        for(int x=std::max(0,std::min(x0,x1)-pad);x<std::min(int(Width),std::max(x0,x1)+pad+1);++x){
+            const float px=float(x-x0),py=float(y-y0);
+            const float t=length?std::max(0.0f,std::min(1.0f,(px*dx+py*dy)/length)):0.0f;
+            const float ex=px-t*dx,ey=py-t*dy;
+            const float coverage=std::max(0.0f,std::min(1.0f,r+0.5f-std::sqrt(ex*ex+ey*ey)));
+            if(coverage>0){auto& dest=frame_[y*Width+x];dest=blend(color,dest,unsigned(coverage*255+0.5f));}
+        }
 }
 void HomeCanvas::Shade(int x,int y,int w,int h,unsigned color,unsigned a,unsigned b){
     if(w<=0||h<=0)return;color=ThemeColor(color);a=std::min(a,255u);b=std::min(b,255u);
@@ -303,21 +324,39 @@ void HomeCanvas::SeriesBackground(){
     }
 }
 void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
-    if(w<8||h<8)return;
-    Box(x+5,y,w-10,3,0xffa8ff00u,1);
-    Box(x+5,y+h-3,w-10,3,0xffa8ff00u,1);
-    Box(x,y+5,3,h-10,0xffa8ff00u,1);
-    Box(x+w-3,y+5,3,h-10,0xffa8ff00u,1);
+    if(w<12||h<12)return;
+    const unsigned accent=ThemeColor(0xffa8ff00u);
+    const int radius=10;
+    for(int yy=std::max(0,y);yy<std::min(int(Height),y+h);++yy)
+        for(int xx=std::max(0,x);xx<std::min(int(Width),x+w);++xx){
+            const float dx=float(std::max(std::abs(2*(xx-x)-(w-1))-(w-2*radius),0))/2;
+            const float dy=float(std::max(std::abs(2*(yy-y)-(h-1))-(h-2*radius),0))/2;
+            const float d=std::sqrt(dx*dx+dy*dy);
+            const float outer=std::max(0.0f,std::min(1.0f,float(radius)+0.5f-d));
+            const float inner=std::max(0.0f,std::min(1.0f,float(radius)-2.0f-d));
+            const unsigned alpha=unsigned(std::max(0.0f,outer-inner)*255+0.5f);
+            if(alpha){auto& p=frame_[yy*Width+xx];p=blend(accent,p,alpha);}
+        }
 }
 void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacity){
-    if(w<8||h<8)return;
-    Translucent(x+1,y+4,w,h,0xff000000u,80,10);
-    Translucent(x,y,w,h,0xff65736du,140,10);
-    Translucent(x+1,y+1,w-2,h-2,0xff232b28u,opacity,9);
-    // Soft highlight within the upper part of each glass surface.
-    for(int j=0;j<std::min(24,h-6);++j)
-        Translucent(x+7,y+3+j,w-14,1,0xff99afa1u,unsigned((24-j)/2));
-    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,68,7);SeriesFocus(x,y,w,h);}
+    if(w<12||h<12)return;
+    Translucent(x,y+5,w,h,0xff000000u,55,11);
+    Translucent(x,y,w,h,0xff8a9691u,135,11);
+    Translucent(x+1,y+1,w-2,h-2,0xff19221fu,opacity,10);
+    // Full-surface shading plus green reflection at lower right.
+    const unsigned highlight=ThemeColor(0xff6c7772u),reflection=ThemeColor(0xff426d42u);
+    for(int yy=3;yy<h-3;++yy){
+        const int inset=(yy<10||yy>=h-10)?9:3;
+        const unsigned light=unsigned(43*(h-yy)/h);
+        for(int xx=inset;xx<w-inset;++xx){
+            if(x+xx<0||x+xx>=Width||y+yy<0||y+yy>=Height)continue;
+            auto& dest=frame_[(y+yy)*Width+x+xx];
+            dest=blend(highlight,dest,light);
+            const unsigned glow=unsigned(45*xx/w)*unsigned(yy)/unsigned(h);
+            dest=blend(reflection,dest,glow);
+        }
+    }
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,66,8);SeriesFocus(x,y,w,h);}
 }
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.
