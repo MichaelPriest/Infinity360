@@ -60,13 +60,13 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
 
-### Botões do controle Xbox 360 — texturas de alta legibilidade
+### Botões do controle Xbox 360 — formas originais, alta legibilidade
 
-![Atlas de botões com letras incorporadas](Platform/Xbox360/Assets/xbox-buttons.png)
+![Atlas de botões com formas originais](Platform/Xbox360/Assets/xbox-buttons.png)
 
-A, B, X, Y, LB, RB, LT, RT, START, BACK, L3 e R3 foram recriados no estilo clássico Xbox 360, com letras/siglas de alto contraste integradas aos pixels da imagem. Direcional e Guide preservam as imagens XNA originais. O atlas transparente (14 células de 48×32) é incorporado ao renderizador, sem sobreposição de texto, preservando as cores em todos os temas. Os atalhos e comandos não foram alterados.
+Imagens derivadas diretamente do pacote Microsoft XNA (2007). Os 14 canais alpha originais foram preservados byte a byte: botões redondos, ombros assimétricos, gatilhos verticais, START/BACK com setas e rótulos externos, analógicos, direcional e Guide. A legibilidade foi reforçada exclusivamente nos pixels RGB das imagens, sem alterar a silhueta ou sobrepor texto em execução. Direcional e Guide permanecem intactos. Testes verificam o hash da transparência de cada botão.
 
-Referência: [pacote original Microsoft XNA (2007)](Platform/Xbox360/Assets/XNA-Controller/xbox-buttons-original.png), [licença original MS-PL](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). As texturas recriadas não são imagens oficiais da Microsoft e não implicam afiliação ou endosso.
+Referência: [atlas original XNA](Platform/Xbox360/Assets/XNA-Controller/xbox-buttons-original.png), [licença original MS-PL](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). As alterações de contraste são adaptações do INFINITY 360, não imagens oficiais inalteradas.
 
 ### Home compacta e legibilidade
 

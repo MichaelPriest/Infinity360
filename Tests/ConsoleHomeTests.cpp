@@ -5,6 +5,7 @@
 #include "ApprovedHome.h"
 #include "InfinityIcons.h"
 #include "ControllerButtons.h"
+#include "ControllerButtonPixels.h"
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
@@ -239,6 +240,12 @@ int main(int argc,char** argv) {
      brand.SeriesBackground();bool changed=false;size_t n=0;
      for(int y=15;y<61;++y)for(int x=28;x<348;++x)if(first[n++]!=brand.Pixels()[y*1280+x])changed=true;
      assert(changed);}
+    // Check the exact original alpha silhouette for each of the 14 XNA images.
+    for(int k=0;k<ControllerButtonPixels::Count;++k){
+        unsigned h=2166136261u;
+        for(int y=0;y<32;++y)for(int x=0;x<48;++x)h=(h^(ControllerButtonPixels::Pixel(k,x,y)>>24))*16777619u;
+        assert(h==ControllerButtonPixels::OriginalAlphaHash[k]);
+    }
     // Verify every controller sprite changes pixels, remains clipped, and preserves physical button colors across themes.
     {HomeCanvas buttons;buttons.SeriesBackground();
      for(int k=0;k<InfinityButtons::Count;++k){
