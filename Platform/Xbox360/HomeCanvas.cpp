@@ -303,13 +303,20 @@ void HomeCanvas::Translucent(int x,int y,int w,int h,unsigned color,unsigned opa
 }
 void HomeCanvas::SeriesBackground(){
     if(appearance_.background!=AppearanceSettings::Gradient)return;
+    // Smooth dark graphite with three off-center green ribbons like the approved reference.
     for(int y=0;y<Height;++y)for(int x=0;x<Width;++x){
-        const int dx=x-240,dy=y-185;
-        const int wave=Height+20-x/4+(x-700)*(x-700)/9000;
-        const int distance=std::abs(y-wave);
-        const unsigned glow=unsigned(std::max(0,22-(dx*dx/18000+dy*dy/9500))+std::max(0,45-distance)/2);
-        const unsigned base=unsigned(13+7*(Height-y)/Height);
-        frame_[y*Width+x]=ThemeColor(0xff000000u|((base+glow/5)<<16)|((base+glow)<<8)|(base+glow/4));
+        const int waveBottom=760-x*3/11+(x-690)*(x-690)/7800;
+        const int waveRight=570-(x-960)*3/4+(x-1150)*(x-1150)/2100;
+        const int waveLeft=110-x*3/5+x*x/2200;
+        const int d0=std::abs(y-waveBottom),d1=std::abs(y-waveRight),d2=std::abs(y-waveLeft);
+        const int a0=std::max(0,64-d0),a1=std::max(0,52-d1),a2=std::max(0,40-d2);
+        const int glow=a0*a0/150+a1*a1/125*std::max(0,x-850)/430+a2*a2/100*std::max(0,300-x)/300;
+        const int glint=std::max(0,3-d0)*8+std::max(0,2-d1)*std::max(0,x-1000)/50;
+        const unsigned base=unsigned(12+8*(Height-y)/Height);
+        const unsigned red=std::min(255u,base+unsigned(glow/7+glint/3));
+        const unsigned green=std::min(255u,base+4+unsigned(glow+glint));
+        const unsigned blue=std::min(255u,base+1+unsigned(glow/10));
+        frame_[y*Width+x]=ThemeColor(0xff000000u|(red<<16)|(green<<8)|blue);
     }
 }
 void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
