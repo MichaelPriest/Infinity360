@@ -549,7 +549,7 @@ bool ConsoleHome::Tick() {
     }
 #endif
     bool thermalChanged=false;
-    if(ThermalTelemetry::Supported()&&ApprovedHeader()&&!TransferRunning()){
+    if(ThermalTelemetry::Supported()&&!TransferRunning()){
         const auto stamp=TransferRate::Now();
         if(ThermalTelemetry::HeaderDue(headerThermalSampled_,headerThermalAt_,stamp)){
             headerThermalAt_=stamp;headerThermalSampled_=true;
@@ -2324,7 +2324,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
-    if(layout_&&!storeManage_){DrawModernStore(c);return;}
+    if(!storeManage_){DrawModernStore(c);return;}
     InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
     c.Text(48,133,StoreSourceLabel()+" | Destino: "+StoreStorage::Label(store_.Storage()),21,Muted,1175);
     const char* const tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
@@ -3182,7 +3182,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         return;
     }
     if(page_==Details && Count()) {
-        if(layout_&&(section_==Library||section_==Recent||section_==Favorites)){DrawModernGameDetails(c);return;}
+        if(section_==Library||section_==Recent||section_==Favorites){DrawModernGameDetails(c);return;}
         c.Box(44,169,1190,407,Panel,12);
         std::string title,sub,hint;
         if(section_==Files) {
@@ -3238,7 +3238,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
-            c.Text(x+(numTabs==9?7:15),155,c.Tr(tabs[i]),numTabs==9?17:21,i==subtab_?Lime:White,tabWidth-(numTabs==9?14:25));
+            c.CenterText(x,155,tabWidth,c.Tr(tabs[i]),numTabs==9?16:19,White);
             if(GridListing()&&gridFilter_&&i==subtab_)c.Box(x+4,185,tabWidth-8,3,Lime);
         }
         c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,1120);
@@ -3289,8 +3289,9 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             const std::string coverFile=ArtPath(*visible_[i],true);
             if(!coverFile.empty() && c.LocalArt(coverFile,true,55,y+2,30,45))nameX=99;
         }
-        c.Text(nameX,y+6,name,23,White,872-nameX);
-        c.Text(886,y+9,detail,19,Muted,336);
+        if(nameX==62){InfinityIcons::Draw(c,section_==Files?14:1,57,y+10,26,Muted);nameX=96;}
+        c.TextFit(nameX,y+6,name,23,White,872-nameX);
+        c.TextFit(886,y+9,detail,19,Muted,336);
     }
 }
 void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
@@ -3381,26 +3382,18 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Background();
     const bool approved=ApprovedHeader()&&!weatherPanel_;
     c.SeriesBackground();
-    // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
-    const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
-    for(unsigned k=1;k<sizeof logo/sizeof logo[0];++k)c.Stroke(31+logo[k-1][0],19+logo[k-1][1],31+logo[k][0],19+logo[k][1],Lime,5);
-    c.Text(105,16,"INFINITY",32,White,220);
-    c.Text(282,16,"360",32,Lime,84);
-    c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
-    if(notifications_.UnreadCount())c.Text(540,26,std::string(c.Tr("Notificacoes"))+": "+number(notifications_.UnreadCount()),18,Lime,330);
-    c.Text(1088,19,clockSettings_.offset==ClockWeather::Auto?clock:ClockLabel(now<0?static_cast<int64_t>(std::time(nullptr)):now),26,White,90);
-    if(!approved)DrawSocialHeader(c,876,12,205);
+    DrawApprovedHeader(c,approved&&focus_==ApprovedHome::Weather);
+    const int64_t stamp=now<0?static_cast<int64_t>(std::time(nullptr)):now;
+    c.SeriesTile(1046,12,206,52,false);
+    c.TextFit(1058,18,clockSettings_.offset==ClockWeather::Auto?clock:ClockLabel(stamp),26,White,97);
+    c.Box(1159,20,1,35,0xff65736du);
+    c.TextFit(1166,16,ClockWeather::Date(stamp,clockSettings_.offset),13,White,79);
+    c.TextFit(1166,38,ClockWeather::Zone(clockSettings_.offset),12,Muted,79);
     if(page_!=Home && section_==Iptv) {
-        tv_.Draw(c,now<0?static_cast<int64_t>(std::time(0)):now,layout_!=0);
+        tv_.Draw(c,stamp,true);
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
-    if(approved){const int64_t stamp=now<0?static_cast<int64_t>(std::time(nullptr)):now;
-        c.SeriesTile(1046,12,206,52,false);c.TextFit(1058,18,ClockLabel(stamp),26,White,97);
-        c.Box(1159,20,1,35,0xff65736du);c.TextFit(1166,16,ClockWeather::Date(stamp,clockSettings_.offset),13,White,79);
-        c.TextFit(1166,38,ClockWeather::Zone(clockSettings_.offset),12,Muted,79);}
-
-
     if(quickGuideOpen_){DrawQuickGuide(c);return;}
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
         c.Text(690,71,(copyPaused_?std::string("Fila pausada"):std::string("Copia ")+number(transfer_.Percent())+"%")+
@@ -3867,13 +3860,14 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
             panel(c,x,y,cw,ch,Panel,active);
             const auto cover=ArtPath(game,true),back=ArtPath(game,false);
             bool art=false;
-            if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+50,y+7,90,135);
-            if(!art&&appearance_.ShowBackdrop()&&!back.empty())art=c.LocalArt(back,false,x+7,y+19,cw-14,99);
-            if(!art)InfinityIcons::Draw(c,1,x+67,y+44,56,Muted);
-            if(Starred(game))c.Text(x+10,y+7,"*",23,Lime,25);
-            if(contains(pinned_,game.executable))c.Text(x+cw-57,y+7,c.Tr("FIXADO"),12,Lime,50);
-            c.Box(x+5,y+143,cw-10,26,0xff102923u,4);
-            c.Text(x+9,y+146,game.name,17,White,cw-18);
+            if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+2,y+2,cw-4,ch-4,true,9);
+            if(!art&&appearance_.ShowBackdrop()&&!back.empty())art=c.LocalArt(back,false,x+2,y+2,cw-4,ch-4,true,9);
+            if(art){for(int dy=0;dy<45;++dy)c.Translucent(x+5,y+ch-50+dy,cw-10,1,0xff090f0bu,unsigned(90+dy*3));}
+            else{InfinityIcons::Draw(c,1,x+(cw-48)/2,y+46,48,Muted);c.CenterText(x+4,y+100,cw-8,"Sem capa",14,Muted);}
+            if(Starred(game))InfinityIcons::Draw(c,21,x+9,y+9,19,Lime);
+            if(contains(pinned_,game.executable))c.TextFit(x+cw-62,y+7,c.Tr("FIXADO"),12,Lime,54);
+            c.TextFit(x+10,y+ch-32,game.name,17,White,cw-20);
+            if(active)c.SeriesFocus(x,y,cw,ch);
         }
         c.Text(1060,597,number(first/GameGrid::Page+1)+"/"+number((count+GameGrid::Page-1)/GameGrid::Page),17,Lime,170);
     }
@@ -3884,23 +3878,26 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
 void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     const auto& game=*visible_[row_];const auto& m=detailMetadata_;
     const auto cover=ArtPath(game,true),back=ArtPath(game,false);
-    panel(c,45,145,1190,246,Panel,false);
-    if(appearance_.ShowBackdrop()&&!back.empty())c.LocalArt(back,false,637,149,594,238);
-    c.Box(52,152,577,232,0xff102923u,8);
-    bool art=appearance_.ShowCover()&&!cover.empty()&&c.LocalArt(cover,true,65,166,136,204);
-    if(!art)InfinityIcons::Draw(c,1,107,224,52,Muted);
-    c.Text(219,165,game.name,31,White,398);
-    c.Text(219,211,game.device,18,Muted,398);
-    c.Text(219,241,m.package?(m.volumeType==0?"STFS / GOD / XBLA":"SVOD"):"XEX",21,Lime,398);
-    if(m.discCount)c.Text(219,273,std::string(c.Tr("Disco"))+" "+number(m.discNumber)+"/"+number(m.discCount),19,Muted,398);
-    c.Text(219,301,contains(pinned_,game.executable)?c.Tr("FIXADO"):Starred(game)?c.Tr("Favorito"):"",17,Lime,398);
-    panel(c,218,336,395,39,0xff102923u,true);
-    c.Text(232,343,c.Tr(m.package?"A Solicitar montagem":"A Jogar"),21,Lime,365);
-    // These are existing controller shortcuts, not new focus targets.
+    c.SeriesTile(45,145,1190,246,false);
+    bool backdrop=false;
+    if(appearance_.ShowBackdrop()&&!back.empty())backdrop=c.LocalArt(back,false,637,148,595,240,true,9);
+    if(backdrop)c.Shade(640,151,130,234,0xff101715u,240,0);
+    const bool art=appearance_.ShowCover()&&!cover.empty()&&c.LocalArt(cover,true,65,166,136,204,false,8);
+    if(!art){c.SeriesTile(65,166,136,204,false);InfinityIcons::Draw(c,1,107,224,52,Muted);c.CenterText(68,289,130,"Sem capa",14,Muted);}
+    c.TextFit(219,165,game.name,36,White,398);
+    c.TextFit(219,220,game.device,18,Muted,398);
+    c.TextFit(219,251,m.package?(m.volumeType==0?"STFS / GOD / XBLA":"SVOD"):"XEX",19,White,398);
+    if(m.discCount)c.TextFit(219,277,std::string(c.Tr("Disco"))+" "+number(m.discNumber)+"/"+number(m.discCount),17,Muted,398);
+    c.TextFit(219,305,contains(pinned_,game.executable)?c.Tr("FIXADO"):Starred(game)?c.Tr("Favorito"):"",15,Lime,398);
+    c.Box(219,337,250,39,0xffa8ff00u,8);
+    c.Box(232,346,22,22,0xff102010u,11);c.CenterText(232,345,22,"A",14,0xffa8ff00u);
+    c.TextFit(266,340,c.Tr(m.package?"Solicitar montagem":"Jogar"),19,0xff101710u,194);
     const char* actions[]={"RB TU / DLC / Saves","LB Fixar / Desafixar","START Capa e fundo","X Favorito"};
+    const int actionIcons[]={5,23,2,21};
     for(int i=0;i<4;++i){
-        const int x=45+i*300;panel(c,x,401,289,49,Panel,false);
-        c.Text(x+10,413,c.Tr(actions[i]),17,White,269);
+        const int x=45+i*300;c.SeriesTile(x,401,289,49,false);
+        InfinityIcons::Draw(c,actionIcons[i],x+10,413,22,White);
+        c.TextFit(x+41,413,c.Tr(actions[i]),16,White,237);
     }
     panel(c,45,461,590,125,Panel,false);
     panel(c,646,461,589,125,Panel,false);
@@ -3920,7 +3917,7 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     if(m.discCount>1)c.Text(45,619,c.Tr("R3 Selecionar disco"),17,Lime,1180);
 }
 void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
-    c.Text(44,78,"INFINITY Store",40,White,1175);
+    InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
     c.Text(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i){
@@ -3951,8 +3948,8 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     }
     const int x=storeDetails_?45:735,w=storeDetails_?1190:500;
     panel(c,x,228,w,344,Panel,false);
-    c.Box(x+10,238,w-20,58,0xff102923u,7);
-    c.Text(x+22,249,item.name,26,White,w-44);
+    c.SeriesTile(x+10,238,w-20,58,false,190);
+    InfinityIcons::Draw(c,4,x+22,254,24,White);c.TextFit(x+58,249,item.name,26,White,w-78);
     c.Text(x+20,310,c.Tr(status(item)),21,Lime,w-40);
     c.Text(x+20,346,item.version+" | "+StorageInfo::FormatBytes(item.bytes),20,White,w-40);
     c.Text(x+20,379,std::string(c.Tr("Categoria"))+": "+item.category,18,Muted,w-40);
@@ -4011,12 +4008,8 @@ void ConsoleHome::OpenApprovedSlot(){
     if(selected==Settings){localMilestones_=true;appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;}
     if(selected==Power){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();}
 }
-void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
-    using namespace ApprovedHome;
-    const auto& appearance=preview?appearanceDraft_:appearance_;
-    const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
+void ConsoleHome::DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const{
     const unsigned accent=0xffa8ff00u;
-    c.SeriesBackground();
     c.Translucent(0,0,1280,78,0xff101211u,100);
     // Continuous figure-eight logo, drawn from original strokes.
     const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
@@ -4034,7 +4027,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.TextFit(401,31,"EDRAM "+reading.CompactCelsius(2)+" | SYS "+reading.CompactCelsius(3),11,Muted,157);
     c.TextFit(401,47,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),11,Muted,157);
     DrawSocialHeader(c,572,12,189);
-    c.SeriesTile(772,12,266,52,active==ApprovedHome::Weather);
+    c.SeriesTile(772,12,266,52,weatherFocused);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
     const bool fresh=has&&weather_.Fresh(std::time(nullptr));
     if(has){
@@ -4044,6 +4037,12 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
     }else{approvedIcon(c,25,785,24,26,White);c.TextFit(821,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,209);c.TextFit(821,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,209);}
+}
+void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
+    using namespace ApprovedHome;
+    const auto& appearance=preview?appearanceDraft_:appearance_;
+    const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
+    const unsigned accent=0xffa8ff00u;
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
     c.Translucent(0,82,1280,66,0xff161917u,100);
     for(int i=0;i<Hero;++i){
