@@ -319,6 +319,7 @@ private:
     bool layoutPreview_=false;
     void DrawModernHome(HomeCanvas& c,unsigned style,bool preview=false)const;
     void DrawApprovedHome(HomeCanvas& c,bool preview=false)const;
+    void DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const;
     std::vector<const Game*> ApprovedShelf()const;
     void OpenApprovedSlot();
     unsigned themeDraft_=0,appearanceRow_=0;
