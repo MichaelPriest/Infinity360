@@ -395,11 +395,12 @@ void CloudTv::DrawEpisodes(HomeCanvas& c) const {
     }
     c.Text(488,591,"Esquerda e direita mudam a temporada.",17,Soft,705);
 }
-void CloudTv::Draw(HomeCanvas& c,int64_t now) const {
+void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     if(view_==Search) {DrawSearch(c);return;}
     if(view_==Guide) DrawGuide(c,now);
     else if(view_==Episodes) DrawEpisodes(c);
     else if(view_==Details) DrawDetails(c,now);
+    else if(modern) DrawModernList(c,now);
     else DrawList(c,now);
     if(!notice_.empty()) {
         c.Box(44,626,1191,35,0xff132e23u,6);c.Text(57,629,notice_,18,Lime,1160);
@@ -444,4 +445,50 @@ void CloudTv::DrawSearch(HomeCanvas& c) const {
     c.Box(0,663,1280,57,0xff061915u);
     c.Text(44,675,c.Tr("A  Selecionar"),19,Lime,203);c.Text(260,675,c.Tr("B  Cancelar"),19,Ink,205);
     c.Text(482,675,c.Tr("X  Apagar"),19,Ink,209);c.Text(706,675,c.Tr("Y  Buscar"),19,Ink,200);
+}
+
+void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
+    const bool picking=tab_==TvSources;
+    if(picking){DrawList(c,now);return;}
+    const size_t total=rows_.size();
+    c.Text(44,76,"Cloud360 IPTV",38,Ink,740);
+    c.Text(830,94,countText(total)+" "+c.Tr("itens"),20,Lime,400);
+    for(int i=0;i<TvTabCount;++i){
+        const int x=45+i*150;
+        tile(c,x,141,143,43,i==tab_);
+        c.Text(x+8,151,c.Tr(tabs[i]),18,i==tab_?Lime:Soft,127);
+    }
+    if(!query_.empty())c.Text(47,192,c.Tr("Busca")+std::string(": ")+query_,17,Lime,1165);
+    else c.Text(47,192,source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,17,Soft,1165);
+    if(!total){
+        tile(c,45,232,1190,335,false);
+        c.Text(65,270,c.Tr("Nenhum item nesta seção."),26,Ink,1145);
+        c.Text(65,321,"Fontes: escolha um arquivo M3U autorizado na pasta Listas.",20,Soft,1145);return;
+    }
+    const size_t first=row_/PageSize*PageSize;
+    for(size_t i=first;i<total&&i<first+PageSize;++i){
+        const auto& item=catalog_.Items()[rows_[i]];
+        const int y=226+int(i-first)*69;
+        tile(c,45,y,493,62,i==row_);
+        c.Box(55,y+9,42,44,0xff102923u,5);
+        c.Text(60,y+20,countText(i+1),18,i==row_?Lime:Soft,34);
+        std::string name=item.name;
+        TvEpisode ep;if((tab_==TvSeries||tab_==TvAnime||tab_==TvCartoon)&&tvEpisode(name,ep))name=ep.show;
+        const bool favorite=cloud_favorite_has_id(&favorites_,item.id);
+        c.Text(107,y+5,name,22,Ink,419);
+        c.Text(107,y+33,(favorite?"* ":"")+item.group,16,Soft,419);
+    }
+    const size_t index=rows_[row_];const auto& item=catalog_.Items()[index];
+    tile(c,550,226,685,335,false);
+    DrawArt(c,index,561,237,663,190);
+    c.Text(566,436,item.group,17,Lime,654);
+    c.Text(566,461,item.name,27,Ink,654);
+    if(item.category==TvLive){
+        const auto& schedule=guide_.For(item.channel,item.name);
+        const auto* on=TvGuide::Current(schedule,now);const auto* next=TvGuide::Next(schedule,now);
+        c.Text(566,504,on?"Agora: "+on->title:"Agora: sem programação",18,Soft,654);
+        c.Text(566,531,next?"A seguir: "+localTime(next->start)+" "+next->title:"A seguir: sem programação",16,Soft,654);
+    }else c.Text(566,509,protocol(item,dir_+source_),18,Soft,654);
+    c.Text(45,587,countText(row_+1)+" / "+countText(total),17,Lime,470);
+    c.Text(551,587,c.Tr("A Detalhes"),19,Lime,675);
 }

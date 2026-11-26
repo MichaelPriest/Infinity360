@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.41 — Defaults integrados e IPTV moderno (sem build)
+
+- ZIP completo inicia Top Icons e grade Auto; sete marcadores de funcionalidades manuais incluídos.
+- Hosts XboxUnity adicionados; verificações de integridade e confirmação preservadas.
+- Listagem IPTV moderna e duas capturas preparadas. Experimentos de hardware/SMB/FFmpeg e FTP continuam isolados.
+
 ## V0.2.40 — Catálogo Nexus oficial e build solicitada
 
 - Nexus Dashboard v1.0 no catálogo local, tamanho e SHA-256 confirmados em manifesto e release oficiais; instalação manual.

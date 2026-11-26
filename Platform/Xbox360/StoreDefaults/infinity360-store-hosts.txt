@@ -2,3 +2,5 @@
 github.com
 release-assets.githubusercontent.com
 objects.githubusercontent.com
+xboxunity.net
+www.xboxunity.net

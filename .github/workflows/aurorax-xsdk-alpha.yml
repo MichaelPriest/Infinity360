@@ -128,7 +128,7 @@ jobs:
               "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
               "Optional XEX launch and experimental MPEG-PS playback only after GPU checks pass.\n"
-              "HTTPS Store opt-in: MenuPreview/enable-https-store.txt containing ENABLE-HTTPS-STORE.\n"
+              "Fresh full ZIP: Top Icons, continuous menu, HTTPS Store, XboxUnity, workspace writes, XEX launch, app installer and DVD-to-workspace enabled. See MenuPreview/LEIA-ME-RECURSOS.txt.\n"
               "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
               "Console clock must be correct. HTTPS only; only allowlisted GitHub release asset redirects for packages; SHA-256 verified.\n"
               "Homebrew catalogue: see MenuPreview/FONTES.txt. Some packages need manual installation and owned data.\n"
@@ -140,9 +140,9 @@ jobs:
               "Upload: enable-ftp-upload.txt containing ENABLE-FTP-UPLOAD, press X in Network. ALLO exact size <=32 MiB.\n"
               "Requires enable-file-writes.txt and private credentials in infinity360-ftp.txt (two lines).\n"
               "Use an isolated trusted LAN; FTP credentials are not encrypted. Never forward port 2121.\n"
-              "File writes OFF by default. To opt in create MenuPreview/enable-file-writes.txt containing ENABLE-FILE-WRITES.\n"
+              "Personal workspace writes enabled in fresh full ZIP; remove enable-file-writes.txt to disable.\n"
               "Write only to MenuPreview/UserFiles or Infinity360Files on HDD/USB. Use disposable test data.\n"
-              "To enable, manually create MenuPreview/enable-xex-launch.txt containing ENABLE-XEX-LAUNCH.\n"
+              "Explicit XEX launch enabled in fresh full ZIP; remove enable-xex-launch.txt to disable.\n"
               "First launch Games/INFINITY Launch Test/default.xex from the menu; it only logs and exits.\n"
               "Prior GPU corruption was reported with Cloud360 v0.5.1.\n"
               "DO NOT run 0.5.1. First run the no-GPU probe by itself.\n"
@@ -168,6 +168,10 @@ jobs:
               archive.writestr("Licenses/miniz-SOURCE.txt", "https://github.com/richgel999/miniz/tree/77d0dce8627735138c51770d1799a1ef48f2117d\n")
               archive.writestr("Licenses/SOURCES.txt", "Mbed TLS: https://github.com/xenosworks/mbedtls-xenon/tree/591b04adbec4bc5582649601f4407506a610162b\nlibcurl: https://github.com/xenosworks/curl-xenon/tree/a6b70bd06820e1c625f47fe0e592e08c5daaa6b4\nCA bundle: Mozilla roots, MPL-2.0; source https://curl.se/docs/caextract.html\n")
               archive.writestr("MenuPreview/infinity-preview.txt", "INFINITY360-XSDK-PREVIEW\n")
+              release_defaults = Path("Platform/Xbox360/ReleaseDefaults")
+              for name in ("enable-file-writes.txt", "enable-https-store.txt", "enable-store-install.txt", "enable-xboxunity.txt", "enable-xex-launch.txt", "enable-continuous-session.txt", "enable-dvd-install.txt", "aurorax-profile.txt"):
+                  archive.write(release_defaults/name, "MenuPreview/"+name)
+              archive.write(release_defaults/"README.md", "MenuPreview/LEIA-ME-RECURSOS.txt")
               for filename in ("aurorax-store.tsv", "infinity360-providers.tsv", "infinity360-store-hosts.txt", "FONTES.txt"):
                   archive.write("Platform/Xbox360/StoreDefaults/"+filename, "MenuPreview/"+filename)
               archive.writestr("MenuPreview/UserFiles/", "")
@@ -183,6 +187,12 @@ jobs:
           with ZipFile(dest) as archive:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
+              assert archive.read("MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
+              for name, value in [["enable-file-writes.txt","ENABLE-FILE-WRITES"],["enable-https-store.txt","ENABLE-HTTPS-STORE"],["enable-store-install.txt","ENABLE-STORE-INSTALL"],["enable-xboxunity.txt","ENABLE-XBOXUNITY"],["enable-xex-launch.txt","ENABLE-XEX-LAUNCH"],["enable-continuous-session.txt","ENABLE-CONTINUOUS-SESSION"],["enable-dvd-install.txt","ENABLE-DVD-INSTALL"]]:
+                  assert archive.read("MenuPreview/"+name) == (value+"\n").encode("ascii")
+              assert b"xboxunity.net\n" in archive.read("MenuPreview/infinity360-store-hosts.txt")
+              for name in ("enable-ftp.txt","enable-ftp-upload.txt","enable-package-launch.txt","enable-content-install.txt","enable-dashboard-update.txt","enable-smb-session.txt"):
+                  assert "MenuPreview/"+name not in archive.namelist()
           update = dest.parent / f"Infinity360-Update-XSDK-{version}.pkg"
           with ZipFile(update, "w", ZIP_DEFLATED) as candidate, ZipFile(dest) as original:
               candidate.write(outputs["infinity_menu_preview.xex"], "default.xex")

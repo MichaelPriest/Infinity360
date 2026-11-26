@@ -10,7 +10,7 @@ public:
     explicit CloudTv(const std::string& dir);
     void Open();
     bool Press(MenuKey key); // false returns to the dashboard
-    void Draw(HomeCanvas& canvas,int64_t now) const;
+    void Draw(HomeCanvas& canvas,int64_t now,bool modern=false) const;
     std::string TakeMovie();
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
@@ -37,6 +37,7 @@ private:
     void Toggle(size_t index);
     void DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const;
     void DrawList(HomeCanvas& c,int64_t now) const;
+    void DrawModernList(HomeCanvas& c,int64_t now) const;
     void DrawGuide(HomeCanvas& c,int64_t now) const;
     void DrawDetails(HomeCanvas& c,int64_t now) const;
     void DrawEpisodes(HomeCanvas& c) const;

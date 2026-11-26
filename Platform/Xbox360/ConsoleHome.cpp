@@ -3285,7 +3285,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
     c.Text(1197,26,"360",16,White,37);
     if(page_!=Home && section_==Iptv) {
-        tv_.Draw(c,now<0?static_cast<int64_t>(std::time(0)):now);
+        tv_.Draw(c,now<0?static_cast<int64_t>(std::time(0)):now,layout_!=0);
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
