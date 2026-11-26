@@ -48,7 +48,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**71 capturas nativas** — commit [d4a06442ab07](https://github.com/MichaelPriest/Infinity360/commit/d4a06442ab07674555e4728b80c92d806ad302ae).
+**71 capturas nativas** — commit [d6ea4be35690](https://github.com/MichaelPriest/Infinity360/commit/d6ea4be35690150b10a0adb31e62f9f71e348e70).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -167,6 +167,7 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Arcade — biblioteca e menu inferior** | **Media Hub — destaque de mídia e menu lateral** |
 | ![Performance — indicadores locais e menu em duas colunas](docs/screenshots/62-layout-9.png) |  |
 | **Performance — indicadores locais e menu em duas colunas** |  |
+
 
 <!-- NATIVE-GALLERY-END -->
 
