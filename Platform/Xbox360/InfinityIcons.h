@@ -21,6 +21,13 @@ public:
     void circle(float cx,float cy,float r){arc(cx,cy,r,0,6.2831853f);}
     void box(float l,float t,float r,float b,float q=2){path({{l+q,t},{r-q,t}});curve({r-q,t},{r,t},{r,t},{r,t+q});path({{r,t+q},{r,b-q}});curve({r,b-q},{r,b},{r,b},{r-q,b});path({{r-q,b},{l+q,b}});curve({l+q,b},{l,b},{l,b},{l,b-q});path({{l,b-q},{l,t+q}});curve({l,t+q},{l,t},{l,t},{l+q,t});}
 };
+inline void Logo(HomeCanvas& c,int x,int y,int size,unsigned color){
+    Painter p(c,x,y,size,color);
+    p.curve({16,16},{10,8},{3,5},{1,13});
+    p.curve({1,13},{-1,23},{8,27},{16,16});
+    p.curve({16,16},{24,5},{33,9},{31,19});
+    p.curve({31,19},{29,27},{22,24},{16,16});
+}
 inline void Draw(HomeCanvas& c,int kind,int x,int y,int size,unsigned color){
     if(size<=0)return;
     Painter p(c,x,y,size,color);
