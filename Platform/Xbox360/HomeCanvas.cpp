@@ -267,18 +267,7 @@ void HomeCanvas::Shade(int x,int y,int w,int h,unsigned color,unsigned a,unsigne
             auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,alpha);
         }
 }
-void HomeCanvas::Glass(int x,int y,int w,int h,bool focused){
-    if(focused){
-        Box(x-4,y-4,w+8,h+8,0xff244715u,15);Box(x-2,y-2,w+4,h+4,0xff548d1cu,13);
-    }
-    Box(x,y,w,h,focused?0xffa8ff00u:0xff404a45u,12);
-    Box(x+2,y+2,w-4,h-4,0xff101715u,10);
-    for(int j=0;j<h-10;++j){
-        const unsigned value=unsigned(24*(h-10-j)/std::max(1,h-10));
-        Box(x+5,y+5+j,w-10,1,0xff101715u+(value<<16)+(value<<8)+value);
-    }
-    if(focused)Box(x+8,y+h-5,w-16,3,0xffa8ff00u,1);
-}
+void HomeCanvas::Glass(int x,int y,int w,int h,bool focused){SeriesTile(x,y,w,h,focused,220);}
 void HomeCanvas::NeonBackground(){
     // Respect explicit solid/wallpaper preferences; default gradient becomes
     // graphite with luminous curved ribbons, computed without external art.
