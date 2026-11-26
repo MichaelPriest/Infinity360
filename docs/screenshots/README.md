@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**75 capturas nativas** — commit [564379f8db10](https://github.com/MichaelPriest/Infinity360/commit/564379f8db10ce22410ad35c1cf2013ef69811c6).
+**76 capturas nativas** — commit [7f683d579093](https://github.com/MichaelPriest/Infinity360/commit/7f683d579093d82659e2c166cd781160b6cf40a0).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -20,8 +20,8 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Guia rápido — perfil de teste e seis ações sociais (indisponíveis no host)** | **Home — grupo Sistema, com funções secundárias** |
 | ![Guide — lista própria de amigos, consulta indisponível no host](73-amigos-xbox.png) | ![Home — composição de retrato e Gamerpic com tiles sintéticos (perfil de teste)](74-avatar-perfil-teste.png) |
 | **Guide — lista própria de amigos, consulta indisponível no host** | **Home — composição de retrato e Gamerpic com tiles sintéticos (perfil de teste)** |
-| ![Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host](75-avatar-diagnostico.png) |  |
-| **Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host** |  |
+| ![Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host](75-avatar-diagnostico.png) | ![Guide — central de comunicação Xbox, Party, chat e convites (perfil de teste)](76-comunicacao-xbox.png) |
+| **Guide — painel de avatar, retrato sintético e diagnóstico indisponível no host** | **Guide — central de comunicação Xbox, Party, chat e convites (perfil de teste)** |
 
 ### Biblioteca e conteúdo de jogos
 
