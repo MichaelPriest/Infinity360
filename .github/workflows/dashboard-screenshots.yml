@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
   # Explicit screenshot requests only; no Xbox executable is built here.
   push:
-    branches: [main]
+    branches: [main, feature/profile-social-provider]
     paths: [docs/screenshots/request.txt]
 
 permissions:
   contents: write
 
 concurrency:
-  group: dashboard-screenshots-main
+  group: dashboard-screenshots-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,7 +34,8 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 69, len(images)
+          assert len(images) == 71, len(images)
+          assert (frames / '70-perfil-teste.ppm').is_file() and (frames / '71-guia-perfil-teste.ppm').is_file()
           assert (frames / '68-fontes-store.ppm').is_file() and (frames / '69-iptv-moderno.ppm').is_file()
           assert (frames / '65-detalhes-moderno.ppm').is_file() and (frames / '66-store-moderna.ppm').is_file() and (frames / '67-store-produto-moderno.ppm').is_file()
           assert (frames / "54-layout-1.ppm").is_file() and (frames / "62-layout-9.ppm").is_file()
@@ -85,14 +86,14 @@ jobs:
         with:
           name: infinity-native-screenshots
           path: docs/screenshots/
-      - name: Publish gallery to main without overwriting newer source
-        if: github.ref == 'refs/heads/main'
+      - name: Publish gallery to selected branch without overwriting newer source
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/profile-social-provider'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots README.md
           if git diff --cached --quiet; then exit 0; fi
-          git fetch origin main
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo "Main moved; newer workflow will render its own screenshots."; exit 0; }
+          git fetch origin "$GITHUB_REF_NAME"
+          test "$(git rev-parse "origin/$GITHUB_REF_NAME")" = "$GITHUB_SHA" || { echo "Main moved; newer workflow will render its own screenshots."; exit 0; }
           git commit -m "docs: refresh native dashboard screenshots"
-          git push origin HEAD:main
+          git push origin "HEAD:$GITHUB_REF_NAME"
