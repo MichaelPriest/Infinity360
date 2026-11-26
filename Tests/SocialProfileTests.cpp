@@ -4,6 +4,7 @@
 #include "FriendRoster.h"
 #include "AvatarPreview.h"
 #include "AvatarManifest.h"
+#include "AvatarAssetGeometry.h"
 #include "ProfilePrivileges.h"
 #include <iostream>
 using namespace InfinitySocial;
@@ -405,6 +406,41 @@ int main() {
     CHECK(InspectAvatarBudget(0,AvatarCpuLimit,AvatarGpuLimit).state==AvatarBudgetState::Ready);
     CHECK(InspectAvatarBudget(0,AvatarCpuLimit+1,4096).state==AvatarBudgetState::ExceedsLimit);
     CHECK(InspectAvatarBudget(0,1024,0xffffffffu).state==AvatarBudgetState::ExceedsLimit);
+    auto bufferPlan=PlanAvatarBuffers(InspectAvatarBudget(0,129,65537));
+    CHECK(bufferPlan.valid&&bufferPlan.cpuBytes==256&&bufferPlan.gpuBytes==131072);
+    CHECK(!PlanAvatarBuffers({AvatarBudgetState::Ready,0,1}).valid);
+    CHECK(!PlanAvatarBuffers({AvatarBudgetState::Ready,AvatarCpuLimit+1,1}).valid);
+    // Synthetic memory graph: one skeleton, model, mesh and texture.
+    // All addresses are guest addresses, not pointers to host memory.
+    std::array<unsigned char,1024> acpu{};
+    std::array<unsigned char,512> agpu{};
+    const std::uint32_t cb=0x100000u,gb=0x200000u;
+    PutBE32(acpu.data(),cb+20);PutBE32(acpu.data()+8,1);
+    PutBE32(acpu.data()+12,cb+124);PutBE32(acpu.data()+16,cb+156);
+    PutBE32(acpu.data()+20,1);PutBE32(acpu.data()+24,cb+28);
+    auto* model=acpu.data()+156;
+    PutBE32(model+12,96);PutBE32(model+16,6);PutBE32(model+20,1);PutBE32(model+24,1);
+    PutBE32(model+36,gb);PutBE32(model+40,gb+96);
+    PutBE32(model+44,cb+208);PutBE32(model+48,cb+720);
+    auto* batch=acpu.data()+208;
+    PutBE32(batch+484,1);PutBE32(batch+488,3);PutBE32(batch+492,1);
+    PutBE32(batch+496,96);PutBE32(batch+500,6);
+    PutBE32(batch+504,gb);PutBE32(batch+508,gb+96);
+    auto* texture=acpu.data()+720;
+    PutBE32(texture+4,4);PutBE32(texture+8,4);PutBE32(texture+12,64);PutBE32(texture+36,gb+128);
+    const AvatarMemoryView cpuView{acpu.data(),cb,acpu.size()},gpuView{agpu.data(),gb,agpu.size()};
+    AvatarGeometry geometry;
+    CHECK(ParseAvatarGeometry(cpuView,gpuView,geometry));
+    CHECK(geometry.joints==1&&geometry.components==1&&geometry.textures==1&&geometry.meshes.size()==1);
+    CHECK(geometry.meshes[0].triangles==1&&geometry.meshes[0].vertexCount==3);
+    PutBE32(batch+504,gb+1);CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry)&&geometry.meshes.empty());
+    PutBE32(batch+504,gb);PutBE32(model+20,0xffffffffu);
+    CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry));
+    PutBE32(model+20,1);PutBE32(acpu.data()+4,cb+800);
+    CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry));
+    PutBE32(acpu.data()+4,0);PutBE32(texture+36,gb+500);
+    CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry));
+    PutBE32(texture+36,gb+128);CHECK(ParseAvatarGeometry(cpuView,gpuView,geometry));
     std::cout << "social profile checks passed\n";
     return 0;
 }

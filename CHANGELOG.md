@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.71 — Leitor de geometria e planejamento de buffers oficiais
+
+- Leitor portátil do grafo XAM: esqueleto, modelos, batches de triângulos, buffers de vértices/índices e texturas; validação de endereços e contagens em regiões CPU/GPU delimitadas.
+- Plano de alocação alinhada de 128 B CPU/64 KiB GPU compatível com a granularidade XSDK; valida limites antes de alocar. Não aloca nem executa GetAssets.
+- Fixture sintético e rejeição de ponteiros fora dos buffers, contagens absurdas, props não suportados e sobreposição de regiões. Sem XEX/release; renderer nativo ainda pendente.
+
 ## V0.2.70 — Pré-validação de assets oficiais do avatar
 
 - Consulta experimental `XamAvatarGetAssetsResultSize` (0x5E0), máscara 0x1FFF, limites defensivos de CPU/GPU, rejeição de stubs com tamanho zero.
