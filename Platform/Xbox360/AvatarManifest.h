@@ -19,6 +19,19 @@ inline AvatarManifestSummary InspectAvatarManifest(const unsigned char* p,std::s
     }
     out.known=true;out.populated=count;return out;
 }
+// Full component mask observed in the official AvatarEditor call sites.
+constexpr std::uint32_t AvatarAllComponents=0x1fffu;
+constexpr std::uint32_t AvatarCpuLimit=16u*1024u*1024u,AvatarGpuLimit=48u*1024u*1024u;
+enum class AvatarBudgetState { Unknown, Unavailable, ExceedsLimit, Ready };
+struct AvatarAssetBudget {
+    AvatarBudgetState state=AvatarBudgetState::Unknown;
+    std::uint32_t cpu=0,gpu=0;
+};
+inline AvatarAssetBudget InspectAvatarBudget(std::uint32_t status,std::uint32_t cpu,std::uint32_t gpu){
+    if(status||!cpu||!gpu)return {AvatarBudgetState::Unavailable,0,0};
+    if(cpu>AvatarCpuLimit||gpu>AvatarGpuLimit)return {AvatarBudgetState::ExceedsLimit,cpu,gpu};
+    return {AvatarBudgetState::Ready,cpu,gpu};
+}
 // Attempt once per identity, then at most once every 120s. Clock regression
 // invalidates cached data; pending manual requests are handled independently.
 class AvatarRefresh {

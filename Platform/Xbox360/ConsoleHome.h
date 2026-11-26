@@ -68,7 +68,7 @@ public:
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
         const auto previous=social_;
         social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);privileges_.Observe(social_);
-        avatarRefresh_.Observe(social_);if(!InfinitySocial::SameArtAccount(previous,social_))avatarManifest_={};
+        avatarRefresh_.Observe(social_);if(!InfinitySocial::SameArtAccount(previous,social_)){avatarManifest_={};avatarBudget_={};}
         if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
     }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
@@ -92,6 +92,9 @@ public:
         privileges_=result;privileges_.Observe(social_);notice_=message;
     }
     bool ExpirePrivileges(std::uint64_t now){return privileges_.Expire(social_,now);}
+    void AvatarBudgetResult(const InfinitySocial::Header& before,const InfinitySocial::AvatarAssetBudget& budget){
+        avatarBudget_=InfinitySocial::SameArtAccount(before,social_)?budget:InfinitySocial::AvatarAssetBudget{};
+    }
     void SetAvatarCapabilities(const InfinitySocial::AvatarCapabilities& caps){avatarCapabilities_=caps;}
     bool SetAvatarFrame(const InfinitySocial::Header& before,unsigned w,unsigned h,const std::vector<unsigned char>& rgba){
         return avatarPreview_.Set(before,social_,w,h,rgba);
@@ -118,10 +121,10 @@ public:
         }
         return action;
     }
-    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};notice_=message;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -185,6 +188,7 @@ private:
     InfinitySocial::AvatarPreview avatarPreview_;
     InfinitySocial::AvatarRefresh avatarRefresh_;
     InfinitySocial::AvatarManifestSummary avatarManifest_;
+    InfinitySocial::AvatarAssetBudget avatarBudget_;
     void DrawAvatarGuide(HomeCanvas& c)const;
     std::size_t friendRow_=0;
     InfinitySocial::FriendFilter friendFilter_=InfinitySocial::FriendFilter::All;

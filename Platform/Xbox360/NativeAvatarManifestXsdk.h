@@ -24,4 +24,25 @@ inline AvatarManifestSummary ReadNativeAvatarManifest(const Header& expected,con
     if(rc!=0||!verify())return {};
     return InspectAvatarManifest(bytes.data(),AvatarManifestBytes);
 }
+// Size-only preflight. No allocation or invocation of asset loading.
+// Separate opt-in because native initialization requirements are not verified.
+inline AvatarAssetBudget ReadNativeAvatarBudget(const Header& expected,const std::string& dir){
+    if(!CanRequestNative(NativeAction::GamerCard,expected)||XamIsUIActive())return {};
+    std::ifstream flag(dir+"enable-native-avatar-assets.txt");
+    std::string line;
+    if(!std::getline(flag,line)||(line!="ENABLE-NATIVE-AVATAR-ASSETS"&&line!="ENABLE-NATIVE-AVATAR-ASSETS\r"))return {};
+    HANDLE module=0;void* address=nullptr;
+    if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
+       XexGetProcedureAddress(module,0x5e0u,&address)!=0||!address)return {AvatarBudgetState::Unavailable,0,0};
+    const auto user=static_cast<std::uint32_t>(expected.controller);
+    const auto state=expected.state==SignIn::Online?2u:1u;
+    const auto verify=[&](){USER_SIGNIN_INFO info{};return XamUserGetSigninInfo(user,0,&info)==0&&
+        info.xuid==expected.identity&&info.signin_state==state&&XamUserGetSigninState(user)==state;};
+    if(!verify())return {};
+    using Size=std::uint32_t(*)(std::uint32_t,std::uint32_t*,std::uint32_t*);
+    std::uint32_t cpu=0,gpu=0;
+    const auto rc=reinterpret_cast<Size>(address)(AvatarAllComponents,&cpu,&gpu);
+    if(!verify())return {};
+    return InspectAvatarBudget(rc,cpu,gpu);
+}
 }

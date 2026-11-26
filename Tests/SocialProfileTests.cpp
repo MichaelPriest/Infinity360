@@ -397,6 +397,14 @@ int main() {
     CHECK(avatarRefresh.Due(swapped,101)&&avatarRefresh.Due(communication,99));
     avatarRefresh.Observe(swapped);
     CHECK(avatarRefresh.Due(communication,101));
+    CHECK(InspectAvatarBudget(0,0,0).state==AvatarBudgetState::Unavailable);
+    CHECK(InspectAvatarBudget(0,1024,0).state==AvatarBudgetState::Unavailable);
+    CHECK(InspectAvatarBudget(1,1024,4096).state==AvatarBudgetState::Unavailable);
+    auto budget=InspectAvatarBudget(0,1024,4096);
+    CHECK(budget.state==AvatarBudgetState::Ready&&budget.cpu==1024&&budget.gpu==4096);
+    CHECK(InspectAvatarBudget(0,AvatarCpuLimit,AvatarGpuLimit).state==AvatarBudgetState::Ready);
+    CHECK(InspectAvatarBudget(0,AvatarCpuLimit+1,4096).state==AvatarBudgetState::ExceedsLimit);
+    CHECK(InspectAvatarBudget(0,1024,0xffffffffu).state==AvatarBudgetState::ExceedsLimit);
     std::cout << "social profile checks passed\n";
     return 0;
 }

@@ -666,7 +666,10 @@ int main(){
             const auto result=avatarAllowed?InfinitySocial::ReadNativeAvatarBody(before,dir,preview):
                 std::string("Consulta bloqueada por outra operacao.");
             menu.AvatarBodyResult(preview,result,TransferRate::Now(),manualAvatar);
-            if(manualAvatar&&avatarAllowed)menu.AvatarManifestResult(before,InfinitySocial::ReadNativeAvatarManifest(before,dir));
+            if(manualAvatar&&avatarAllowed){
+                menu.AvatarManifestResult(before,InfinitySocial::ReadNativeAvatarManifest(before,dir));
+                menu.AvatarBudgetResult(before,InfinitySocial::ReadNativeAvatarBudget(before,dir));
+            }
             dirty=true;
         }
         if(menu.ExpirePrivileges(TransferRate::Now()))dirty=true;

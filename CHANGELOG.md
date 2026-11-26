@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.70 — Pré-validação de assets oficiais do avatar
+
+- Consulta experimental `XamAvatarGetAssetsResultSize` (0x5E0), máscara 0x1FFF, limites defensivos de CPU/GPU, rejeição de stubs com tamanho zero.
+- Guide mostra orçamento real informado pelo sistema, sem confundir exportação/consulta com carregamento de modelos.
+- Nenhuma alocação de GPU, `GetAssets` ou animação sem contrato de memória e inicialização validados. Testes e atualização das capturas solicitados; sem XEX/release.
+
 ## V0.2.69 — Atualização de avatar e manifesto oficial
 
 - Consulta automática de imagem oficial opcional por perfil, intervalo mínimo 120 s, incluindo falhas; invalidação ao trocar identidade ou editar perfil; atualização manual preservada.

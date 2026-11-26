@@ -60,3 +60,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.68 native cached full body avatar PNG tile and Home counters; host tests/captures only
 
 2026-11-26 V0.2.69 official avatar automatic refresh and opt-in local manifest summary; host tests and captures only
+
+2026-11-26 V0.2.70 official avatar asset size preflight and budget diagnostics; host tests/captures only
