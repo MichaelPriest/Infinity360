@@ -45,6 +45,7 @@ inline Slot FromXam(std::uint32_t state, const std::string& name) {
 
 #if defined(INFINITY_SOCIAL_XSDK)
 #include <xsdk/xam.h>
+#include <xsdk/kernel.h>
 #include <fstream>
 namespace InfinitySocial {
 inline bool GamerpicEnabled(const std::string& dir) {

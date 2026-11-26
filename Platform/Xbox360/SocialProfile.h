@@ -86,12 +86,12 @@ struct Header {
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
-enum class NativeAction { None, GamerCard, Friends, Achievements, Messages, QuickChat, AvatarEditor };
-constexpr int GuideSocialCount=5;
+enum class NativeAction { None, GamerCard, Friends, Achievements, Messages, QuickChat, AvatarEditor, RecentPlayers };
+constexpr int GuideSocialCount=6;
 inline NativeAction GuideSocialAction(int row){
     switch(row){case 0:return NativeAction::GamerCard;case 1:return NativeAction::Friends;
         case 2:return NativeAction::Messages;case 3:return NativeAction::QuickChat;
-        case 4:return NativeAction::AvatarEditor;default:return NativeAction::None;}
+        case 4:return NativeAction::AvatarEditor;case 5:return NativeAction::RecentPlayers;default:return NativeAction::None;}
 }
 inline int MoveGuideSocial(int row,int delta){
     if(row<0||row>=GuideSocialCount)row=0;
@@ -100,13 +100,13 @@ inline int MoveGuideSocial(int row,int delta){
 inline std::uint32_t NativeSocialOrdinal(NativeAction action){
     switch(action){case NativeAction::GamerCard:return 0x2c4u;case NativeAction::Friends:return 0x2bfu;
         case NativeAction::Achievements:return 0x2c5u;case NativeAction::Messages:return 0x2c0u;
-        case NativeAction::QuickChat:return 0x2c2u;case NativeAction::AvatarEditor:return 0x7dbu;default:return 0;}
+        case NativeAction::QuickChat:return 0x2c2u;case NativeAction::AvatarEditor:return 0x7dbu;case NativeAction::RecentPlayers:return 0x2c8u;default:return 0;}
 }
 inline bool CanRequestNative(NativeAction action,const Header& h,std::uint32_t title=0) {
     if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
        !ValidGamertag(h.displayName)||h.identity==0)return false;
     if(action==NativeAction::GamerCard||action==NativeAction::AvatarEditor)return h.state==SignIn::Local || h.state==SignIn::Online;
-    if(action==NativeAction::Friends||action==NativeAction::Messages||action==NativeAction::QuickChat)return h.state==SignIn::Online;
+    if(action==NativeAction::Friends||action==NativeAction::Messages||action==NativeAction::QuickChat||action==NativeAction::RecentPlayers)return h.state==SignIn::Online;
     if(action==NativeAction::Achievements)return title!=0&&(h.state==SignIn::Local||h.state==SignIn::Online);
     return false;
 }

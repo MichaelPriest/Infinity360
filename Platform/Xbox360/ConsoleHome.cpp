@@ -3460,23 +3460,23 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     const std::string controls=social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível";
     const std::string counters=(social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
         (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis");
-    approvedIcon(c,1,611,272,22,White);c.TextFit(649,270,controls,18,White,365);
-    approvedIcon(c,9,611,300,22,White);c.TextFit(649,298,counters,17,Muted,365);
-    c.Box(611,327,403,1,0xff414743u);
-    const char* labels[]={"Cartão do jogador","Amigos Xbox","Mensagens Xbox","Chat Xbox","Editor de avatar"};
-    const int icons[]={27,8,19,19,27};
+    approvedIcon(c,1,611,268,20,White);c.TextFit(642,266,controls,16,White,372);
+    approvedIcon(c,9,611,290,20,White);c.TextFit(642,289,counters,15,Muted,372);
+    c.Box(611,312,403,1,0xff414743u);
+    const char* labels[]={"Cartão do jogador","Amigos Xbox","Mensagens Xbox","Chat Xbox","Editor de avatar","Jogadores recentes"};
+    const int icons[]={27,8,19,19,27,8};
     for(int row=0;row<GuideSocialCount;++row){
-        const int y=331+row*33;
+        const int y=315+row*30;
         const auto kind=GuideSocialAction(row);
         const bool selected=socialGuideFocus_&&socialGuideRow_==row;
-        if(selected)c.SeriesTile(601,y-2,428,32,true,225);
-        approvedIcon(c,icons[row],611,y+4,22,White);
+        if(selected)c.SeriesTile(601,y-1,428,29,true,225);
+        approvedIcon(c,icons[row],611,y+3,21,White);
         c.TextFit(649,y,labels[row],16,White,365);
         const bool avatar=kind==NativeAction::AvatarEditor;
-        c.TextFit(649,y+17,CanRequestNative(kind,social_)?
+        c.TextFit(649,y+15,CanRequestNative(kind,social_)?
             (avatar?(avatarExitConfirm_.Matches(social_)?"A confirma saída":"Sai da dashboard — requer confirmação"):"Interface nativa experimental"):
             (row==0||avatar?"Requer perfil ativo no console":"Requer perfil online no console"),12,Muted,365);
-        if(row<GuideSocialCount-1)c.Box(611,y+30,403,1,0xff414743u);
+        if(row<GuideSocialCount-1)c.Box(611,y+28,403,1,0xff414743u);
     }
     c.SeriesTile(601,500,428,57,false,215);
     InfinityButtons::Draw(c,InfinityButtons::LB,616,513,30);

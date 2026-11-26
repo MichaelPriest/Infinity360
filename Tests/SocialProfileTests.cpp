@@ -1,6 +1,7 @@
 #include "SocialProfile.h"
 #include "SocialProfileXsdk.h"
 #include "NativeSocialSignals.h"
+#include "FriendRoster.h"
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
@@ -205,14 +206,15 @@ int main() {
     CHECK(EligibleForSocialSignals(account));
     account.guest=true;CHECK(!EligibleForSocialSignals(account));
     account.guest=false;account.identity=0;CHECK(!EligibleForSocialSignals(account));
-    CHECK(GuideSocialCount==5);
+    CHECK(GuideSocialCount==6);
     CHECK(GuideSocialAction(0)==NativeAction::GamerCard);
     CHECK(GuideSocialAction(1)==NativeAction::Friends);
     CHECK(GuideSocialAction(2)==NativeAction::Messages);
     CHECK(GuideSocialAction(3)==NativeAction::QuickChat);
     CHECK(GuideSocialAction(4)==NativeAction::AvatarEditor);
-    CHECK(GuideSocialAction(5)==NativeAction::None);
-    CHECK(MoveGuideSocial(0,-1)==4&&MoveGuideSocial(4,1)==0);
+    CHECK(GuideSocialAction(5)==NativeAction::RecentPlayers);
+    CHECK(GuideSocialAction(6)==NativeAction::None);
+    CHECK(MoveGuideSocial(0,-1)==5&&MoveGuideSocial(5,1)==0);
     CHECK(NativeSocialOrdinal(NativeAction::Messages)==0x2c0u);
     CHECK(NativeSocialOrdinal(NativeAction::QuickChat)==0x2c2u);
     CHECK(NativeSocialOrdinal(NativeAction::None)==0);
@@ -239,6 +241,33 @@ int main() {
     CHECK(!confirm.Matches(communication));
     communication.origin=Origin::Test;
     CHECK(!confirm.Accept(communication)&&!confirm.Matches(communication));
+    CHECK(NativeSocialOrdinal(NativeAction::RecentPlayers)==0x2c8u);
+    communication.origin=Origin::Console;communication.guest=false;communication.state=SignIn::Local;
+    CHECK(!CanRequestNative(NativeAction::RecentPlayers,communication));
+    communication.state=SignIn::Online;
+    CHECK(CanRequestNative(NativeAction::RecentPlayers,communication));
+    unsigned char record[FriendRecordBytes]={};
+    PutBE32(record+4,1);record[8]='A';
+    PutBE32(record+0x18,3);PutBE32(record+0x24,0x12345678u);
+    std::vector<FriendRow> rows;
+    CHECK(ParseFriendRoster(record,sizeof(record),1,rows)&&rows.size()==1);
+    CHECK(rows[0].name=="A"&&rows[0].state==FriendState::Playing&&rows[0].title==0x12345678u);
+    CHECK(!ParseFriendRoster(record,sizeof(record)-1,1,rows)&&rows.empty());
+    CHECK(!ParseFriendRoster(record,sizeof(record),101,rows));
+    CHECK(ParseFriendRoster(nullptr,0,0,rows)&&rows.empty());
+    CHECK(DecodeFriendState(0)==FriendState::Offline);
+    CHECK(DecodeFriendState(1)==FriendState::Online);
+    CHECK(DecodeFriendState(0x40000000u)==FriendState::RequestSent);
+    CHECK(DecodeFriendState(0x80000000u)==FriendState::RequestReceived);
+    CHECK(DecodeFriendState(0xc0000000u)==FriendState::Unknown);
+    FriendRoster friends;
+    CHECK(friends.Set(communication,communication,record,sizeof(record),1));
+    CHECK(friends.KnownFor(communication)&&friends.Rows().size()==1);
+    auto swapped=communication;swapped.identity=2;
+    friends.Observe(swapped);CHECK(!friends.KnownFor(swapped)&&friends.Rows().empty());
+    CHECK(!friends.Set(communication,swapped,record,sizeof(record),1));
+    CHECK(friends.Set(communication,communication,nullptr,0,0)&&friends.KnownFor(communication));
+    CHECK(friends.Rows().empty());
     std::cout << "social profile checks passed\n";
     return 0;
 }

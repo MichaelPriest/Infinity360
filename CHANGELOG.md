@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.60 — Jogadores recentes e base de presença
+
+- Sexta ação do Guide: jogadores recentes via XamShowPlayersUI (0x2C8), experimental, restrita a perfil online.
+- Parser portátil de registros X_ONLINE_FRIEND (0xC4), com estados de presença, convites de amizade, limites, validação de nomes e identidade, sem armazenar XUID de amigos.
+- Modelo de roster vinculado à sessão; ainda sem provider real de enumeração ou tela de lista própria. Capturas V0.2.59 confirmadas; novas solicitadas. Sem XEX/release.
+
 ## V0.2.59 — Editor de avatar e correção da galeria
 
 - Atalho experimental para editor oficial do avatar (0x7DB), com confirmação vinculada à conta e bloqueio durante cópia, FTP ou diagnóstico de rede; opt-in separado por poder encerrar a dashboard.

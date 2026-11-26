@@ -201,6 +201,8 @@ static int captureScreens(const char* atlas,const char* destination) {
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+            profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
+            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             ok=save("71-guia-perfil-teste",profile)&&ok;
             profile.Press(ConsoleHome::Left);
             assert(!profile.SocialGuideFocused());
