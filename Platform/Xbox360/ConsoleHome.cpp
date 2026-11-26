@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "Modules/Patches/FpsCatalog.h"
 #if defined(__XSDK__)
 #define INFINITY_SOCIAL_XSDK 1
 #include "SocialProfileXsdk.h"
@@ -2623,7 +2624,8 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
         c.Text(810,y+3,status,18,match==TrainerEntry::HeaderMatches?Lime:Muted,398);
         c.Text(810,y+30,tuText,17,Muted,398);
     }
-    c.Text(48,555,"Use apenas offline e com arquivos confiaveis. TU ativo e funcionamento nao verificados.",19,Muted,1180);
+    const auto patches=InfinityFps::CountFor(dir_,contentInfo_.titleId);
+    c.Text(48,555,patches?number(patches)+" referencias FPS no catalogo local; aplicacao nao integrada.":"Use apenas offline. TU ativo e funcionamento nao verificados.",19,Muted,1180);
     c.Text(48,600,trainerConfirm_?"A Confirmar saida para trainer | B Cancelar":
         "A Abrir utilitario independente | Y Atualizar | B Voltar",18,Lime,1175);
 }

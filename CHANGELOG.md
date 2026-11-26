@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.84 — Índice FPS local
+
+- Leitura limitada do índice XML de patches Nexus por Title ID, sem interpretar ou aplicar código de patch.
+- Contagem de referências no painel Trainers; diretório Patches no pacote unificado e regressões sintéticas.
+
 ## V0.2.83 — Trainers no pacote unificado
 
 - Descoberta de trainers independentes em Trainers e MenuPreview/Trainers, preservando checagens Title ID, Media ID, versão e TU.

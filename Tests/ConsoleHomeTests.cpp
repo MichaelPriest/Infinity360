@@ -9,6 +9,7 @@
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
+#include "../Platform/Xbox360/Modules/Patches/FpsCatalog.h"
 #include "../Platform/Xbox360/Modules/IPTV/SourcePolicy.h"
 #include <cassert>
 #include <algorithm>
@@ -1119,6 +1120,11 @@ int main(int argc,char** argv) {
            <<"media_id=12345678\nversion="<<version<<"\nentry="<<entry<<"\n";
     };
     writeTrainer("20010002","trainer.xex");
+    fs::create_directories(trainerRoot/"Patches");
+    {std::ofstream f(trainerRoot/"Patches/FpsPatchCatalog.xml");f<<"<files>\n<file name=\"4D5307E6 - Example.patch.toml\" source=\"original\">\n</file>\n<file name=\"4D5307E6 - Example.patch.toml\">\n</file>\n<file name=\"4D5307E6 - Example (TU1).patch.toml\">\n</file>\n<file name=\"12345678 - Other.patch.toml\">\n</file>\n</files>\n";}
+    assert(InfinityFps::CountFor(trainerRoot.string()+"/",0x4d5307e6)==2);
+    assert(InfinityFps::CountFor(trainerRoot.string()+"/",0x12345678)==1);
+    assert(InfinityFps::CountFor(trainerRoot.string()+"/",0)==0);
     const auto trainerItems=TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6);
     assert(trainerItems.size()==1);
     const auto runtime=trainerRoot/"MenuPreview";
