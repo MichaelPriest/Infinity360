@@ -16,6 +16,10 @@ A branch `feature/profile-social-provider` contém o contrato portátil para ide
 
 O ZIP fornecido foi inventariado: 152 arquivos, CRC OK, sem incorporar binários. O adapter experimental XSDK consulta estado e Gamertag dos quatro controles; a integração à interface e a validação física permanecem pendentes. [Auditoria e matriz de aproveitamento](Platform/Xbox360/docs/SYSTEMUPDATE-17559-AUDIT.md).
 
+## Refinamento visual Series S/X (branch de desenvolvimento)
+
+O layout horizontal e Guide recebem fundo grafite com luz difusa, cartões com transparência por composição alfa, foco fino, ícones monocromáticos e textos com reticências quando necessário. Capas e fundos continuam usando os arquivos locais disponíveis; a falta de capa é identificada, sem arte fictícia. As demais opções de layout e temas são preservadas. A captura nativa será validada pelo workflow de galeria; não houve build XEX nem teste físico desta revisão.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
