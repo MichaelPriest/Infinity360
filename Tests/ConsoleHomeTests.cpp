@@ -174,6 +174,19 @@ int main(int argc,char** argv) {
     menu.Load();
     HomeCanvas canvas;
     assert(canvas.LoadArt(argv[1]));
+    // Exercise actual framebuffer composition, not a screenshot mockup.
+    {
+        HomeCanvas modern;modern.SeriesBackground();
+        const unsigned original=modern.Pixels()[100*HomeCanvas::Width+100];
+        modern.Translucent(80,80,40,40,0xffffffffu,0,6);
+        assert(modern.Pixels()[100*HomeCanvas::Width+100]==original);
+        modern.Translucent(80,80,40,40,0xffffffffu,128,6);
+        const unsigned mixed=modern.Pixels()[100*HomeCanvas::Width+100];
+        assert(mixed!=original&&mixed!=0xffffffffu);
+        modern.SeriesTile(200,200,80,70,true);
+        assert(modern.Pixels()[200*HomeCanvas::Width+240]==0xffa8ff00u);
+    }
+
     // A 2:1 source with 2:3 pixel aspect displays as 4:3, not stretched.
     const unsigned char rgb[]={255,0,0,255,0,0};
     canvas.VideoRgb(rgb,2,1,2.0/3.0);
