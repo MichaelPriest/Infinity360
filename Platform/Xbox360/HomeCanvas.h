@@ -26,6 +26,8 @@ public:
     void Stroke(int x0,int y0,int x1,int y1,unsigned color,int width=3);
     void NeonBackground();
     void SeriesBackground();
+    void SeriesFocus(int x,int y,int w,int h);
+    void DimBackdrop();
     void SeriesTile(int x,int y,int w,int h,bool focused=false,unsigned opacity=232);
     void TextFit(int x,int y,const std::string& text,int size,unsigned color,int maxWidth);
     void Translucent(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius=0);
@@ -34,7 +36,7 @@ public:
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
     bool Logo(const std::string& file, int x, int y, int w, int h);
     // Fixed-size local RGBA files, cached including failed reads until refresh.
-    bool LocalArt(const std::string& file,bool cover,int x,int y,int w,int h);
+    bool LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop=false,int radius=0);
     void ClearLocalArt() { localArt_.clear(); }
     void Text(int x, int y, const std::string& text, int size, unsigned color, int maxWidth);
 private:
