@@ -2,6 +2,7 @@
 #include "GameScanner.h"
 #include <algorithm>
 #include <cstdio>
+#include <set>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -115,16 +116,36 @@ std::vector<TrainerEntry> TrainerCatalog::Scan(const std::string& app,unsigned t
     std::vector<TrainerEntry> result;
     if(!titleId)return result;
     char id[9];std::sprintf(id,"%08X",titleId);
-    const std::string root=join(app,"Trainers"), folder=join(root,id);
-    if(!normal(root,true)||!normal(folder,true))return result;
-    std::vector<FolderEntry> entries;
-    if(!ReadFolder(folder,entries))return result;
-    for(size_t i=0;i<entries.size()&&i<1024&&result.size()<64;++i) {
-        if(!entries[i].directory||!safe(entries[i].name))continue;
-        TrainerEntry entry;
-        if(readEntry(join(folder,entries[i].name),entries[i].name,titleId,entry))
-            result.push_back(entry);
+    std::vector<std::string> roots{join(app,"Trainers")};
+    std::string base=app;
+    while(!base.empty()&&(base.back()=='/'||base.back()=='\\'))base.pop_back();
+    const auto sep=base.find_last_of("/\\");
+    std::string leaf=base.substr(sep==std::string::npos?0:sep+1);
+    for(char& ch:leaf)if(ch>='A'&&ch<='Z')ch=char(ch-'A'+'a');
+    if(leaf=="menupreview")roots.push_back(join(sep==std::string::npos?"":base.substr(0,sep+1),"Trainers"));
+    else roots.push_back(join(join(app,"MenuPreview"),"Trainers"));
+    std::map<std::string,size_t> seen;std::set<std::string> conflicts;
+    for(const auto& root:roots){
+        const auto folder=join(root,id);
+        if(!normal(root,true)||!normal(folder,true))continue;
+        std::vector<FolderEntry> entries;if(!ReadFolder(folder,entries))continue;
+        for(size_t i=0;i<entries.size()&&i<1024&&result.size()<64;++i){
+            if(!entries[i].directory||!safe(entries[i].name))continue;
+            TrainerEntry entry;
+            if(!readEntry(join(folder,entries[i].name),entries[i].name,titleId,entry))continue;
+            auto key=entry.id;for(char& ch:key)if(ch>='A'&&ch<='Z')ch=char(ch-'A'+'a');
+            const auto old=seen.find(key);
+            if(old!=seen.end()){
+                if(result[old->second].launcher!=entry.launcher)conflicts.insert(key);
+                continue;
+            }
+            seen[key]=result.size();result.push_back(entry);
+        }
     }
+    result.erase(std::remove_if(result.begin(),result.end(),[&](const TrainerEntry& entry){
+        auto key=entry.id;for(char& ch:key)if(ch>='A'&&ch<='Z')ch=char(ch-'A'+'a');
+        return conflicts.count(key)!=0;
+    }),result.end());
     return result;
 }
 bool TrainerCatalog::Recheck(const std::string& app,const TrainerEntry& entry) {

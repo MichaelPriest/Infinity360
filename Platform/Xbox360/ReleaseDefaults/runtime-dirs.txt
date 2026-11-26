@@ -2,3 +2,4 @@ UserFiles/ContentImport
 Listas
 Plugins
 Andromeda
+Trainers

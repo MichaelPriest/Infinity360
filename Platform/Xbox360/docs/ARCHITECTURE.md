@@ -36,3 +36,7 @@ Build somente mediante autorização; regressões portáteis e relink obrigatór
 ### Extensões locais
 
 O registro aceita ambos os layouts `Plugins/<nome>/plugin.axplugin` e `MenuPreview/Plugins/<nome>/plugin.axplugin`. A descoberta não carrega módulos residentes. IDs repetidos em instalações distintas são bloqueados; aliases HDD1/HDD são normalizados no console.
+
+### Trainers independentes
+
+`Source/TrainerCatalog.*` mantém o contrato de manifesto local e validação de Title ID, Media ID, versão e TU. A distribuição unificada cria `MenuPreview/Trainers`; o registro também procura a pasta irmã `Trainers`. Patches de memória FPS e integração HID permanecem módulos futuros, não ativados.

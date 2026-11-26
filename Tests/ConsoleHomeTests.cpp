@@ -1121,6 +1121,16 @@ int main(int argc,char** argv) {
     writeTrainer("20010002","trainer.xex");
     const auto trainerItems=TrainerCatalog::Scan(trainerRoot.string()+"/",0x4d5307e6);
     assert(trainerItems.size()==1);
+    const auto runtime=trainerRoot/"MenuPreview";
+    fs::create_directories(runtime);
+    assert(TrainerCatalog::Scan(runtime.string()+"/",0x4d5307e6).size()==1);
+    const auto duplicate=runtime/"Trainers"/"4D5307E6"/"Example";
+    fs::create_directories(duplicate);
+    fs::copy_file(trainerManifest,duplicate/"trainer.axtrainer");
+    fs::copy_file(trainerLauncher,duplicate/"trainer.xex");
+    assert(TrainerCatalog::Scan(runtime.string()+"/",0x4d5307e6).empty());
+    assert(!TrainerCatalog::Recheck(trainerRoot.string()+"/",trainerItems[0]));
+    fs::remove_all(runtime);
     XboxExecutionInfo trainerInfo;
     assert(ContentCatalog::ReadExecutionInfo(trainerGame.string(),trainerInfo));
     assert(trainerItems[0].Compatibility(trainerInfo)==TrainerEntry::HeaderMatches);

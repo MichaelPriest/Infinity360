@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.83 — Trainers no pacote unificado
+
+- Descoberta de trainers independentes em Trainers e MenuPreview/Trainers, preservando checagens Title ID, Media ID, versão e TU.
+- Bloqueio de IDs duplicados em instalações distintas, inclusive na revalidação antes de iniciar o XEX. Diretório Trainers no manifesto de runtime.
+- Testes de regressão e documentação atualizados; sem build nesta revisão.
+
 ## V0.2.82 — Compatibilidade de instalação de plugins
 
 - Registro local procura Plugins ao lado de default.xex e em MenuPreview/Plugins, independentemente da raiz recebida.
