@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -37,6 +38,19 @@ static int captureScreens(const char* atlas,const char* destination) {
         std::ofstream out(root/"Games"/name/"default.xex",std::ios::binary);
         out.write(reinterpret_cast<const char*>(raw),sizeof raw);
         const auto hex=[](unsigned v){char b[9];std::snprintf(b,sizeof b,"%08X",v);return std::string(b);};
+        // Optional authorized artwork inputs for a real-render capture; default CI
+        // remains an honest no-art capture. Use the game folder names above.
+        if(const char* artRoot=std::getenv("INFINITY_CAPTURE_ART_DIR")){
+            const auto source=fs::path(artRoot)/name;
+            const auto target=root/"Art"/hex(title);
+            for(const auto& art: {std::make_pair("cover.rgba",160u*240u*4u),std::make_pair("background.rgba",640u*360u*4u)}){
+                std::error_code ec;
+                if(fs::is_regular_file(source/art.first,ec)&&!ec&&fs::file_size(source/art.first,ec)==art.second&&!ec){
+                    fs::create_directories(target);
+                    fs::copy_file(source/art.first,target/art.first,fs::copy_options::overwrite_existing);
+                }
+            }
+        }
         const auto tu=root/"Content/0000000000000000"/hex(title)/"000B0000";
         fs::create_directories(tu);
         std::string package(0x1800,'\0');package.replace(0,4,"LIVE");
