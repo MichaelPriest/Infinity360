@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.57 — Eventos sociais nativos experimentais
+
+- Listener opcional XAM para sinais de conexão, convites, lista de mensagens, voz, presença e amizades; somente eventos reconhecidos pelo sistema.
+- Histórico genérico, sem payload nem identificação de remetente, com revalidação de sessão, lote máximo de oito e limitação de frequência por categoria.
+- Testes portáteis de mapeamento, elegibilidade e deduplicação preparados. Sem build XEX, release ou homologação física.
+
 ## V0.2.56 — Central social e consistência de identidade
 
 - Detecção de troca de conta no mesmo controle e confirmação de aumentos de Gamerscore/conquistas em duas amostras; baseline silencioso e descarte após mudanças de perfil/estado ou dados ausentes.

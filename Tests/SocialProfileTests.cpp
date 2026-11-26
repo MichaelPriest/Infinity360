@@ -1,5 +1,6 @@
 #include "SocialProfile.h"
 #include "SocialProfileXsdk.h"
+#include "NativeSocialSignals.h"
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
@@ -185,6 +186,25 @@ int main() {
     CHECK(!counters.Observe(account));CHECK(!counters.Observe(account));
     account.origin=Origin::Test;account.achievements=101;
     CHECK(!counters.Observe(account));CHECK(!counters.Observe(account));
+    CHECK(SocialListenerMask==6);
+    CHECK(SocialSignal(0x82000006u)==Signal::Messages);
+    CHECK(SocialSignal(0x04000001u)==Signal::Presence);
+    CHECK(SocialSignal(0x00000009u)==Signal::None);
+    CHECK(SocialSignal(0x8200000bu)==Signal::None);
+    SignalGate signals;
+    CHECK(signals.Observe(0x82000006u,0)!=nullptr);
+    CHECK(!signals.Observe(0x82000006u,59999));
+    CHECK(signals.Observe(0x82000006u,60000)!=nullptr);
+    CHECK(signals.Observe(0x0200000au,60000)!=nullptr);
+    CHECK(!signals.Observe(0x04000001u,60001));
+    CHECK(!signals.Observe(0x04000001u,1));
+    CHECK(!signals.Observe(0x04000001u,60000));
+    CHECK(signals.Observe(0x04000001u,60001)!=nullptr);
+    CHECK(!signals.Observe(0x12345678u,100000));
+    account.origin=Origin::Console;account.state=SignIn::Online;
+    CHECK(EligibleForSocialSignals(account));
+    account.guest=true;CHECK(!EligibleForSocialSignals(account));
+    account.guest=false;account.identity=0;CHECK(!EligibleForSocialSignals(account));
     std::cout << "social profile checks passed\n";
     return 0;
 }

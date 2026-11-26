@@ -7,6 +7,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "NativeSocialUiXsdk.h"
+#include "NativeSocialListenerXsdk.h"
 #include "XexLaunchCheck.h"
 #include "DashboardScreenshot.h"
 #include "XsdkPackageMount.h"
@@ -255,6 +256,7 @@ int main(){
     bool ok=true,dirty=true,systemExit=false;
     FileWorkspace captureWorkspace(dir);
     IdleScreen idleScreen;
+    InfinitySocial::XsdkSocialListener socialListener(dir);
     // Longer than the minimal GPU probe, but still bounded.
     std::string clock;
     for(unsigned frame=0;continuous||frame<3600;++frame){
@@ -639,6 +641,8 @@ int main(){
             dirty=true;
         }
         if(menu.Tick())dirty=true;
+        if(socialListener.Poll(menu.SocialHeader(),TransferRate::Now(),pendingLaunch.empty()&&!menu.TransferRunning(),
+            [&](const char* label){menu.NativeSocialSignal(label);}))dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
         if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
         else if(dirty){

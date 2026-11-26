@@ -31,7 +31,7 @@ public:
         const auto has=[&](const char* key){return message.find(key)!=std::string::npos;};
         if(has("Falha")||has("falhou")||has("recusad")||has("interrompid")||has("cancelad"))item.level=Warning;
         else if(has("verificad")||has("instalad")||has("concluido")||has("importad")||has("sincronizado")||has("salvo")||has("copiado")||has("recuperada"))item.level=Success;
-        item.area=(message.compare(0,12,"Sessao Xbox:")==0||message.compare(0,12,"Perfil Xbox:")==0)?"Social":has("FTP")?"Rede":has("lancamento")?"Jogos":
+        item.area=(message.compare(0,12,"Sessao Xbox:")==0||message.compare(0,12,"Perfil Xbox:")==0||message.compare(0,12,"Evento Xbox:")==0)?"Social":has("FTP")?"Rede":has("lancamento")?"Jogos":
             has("Store")||has("loja")||has("Download")||has("Catalogo")?"Loja":
             has("Backup")||has("Recuperacao")||has("recuperada")||has("TU ")||has("XboxUnity")||has("conteudo")?"Conteudo":
             has("DVD")||has("GOD")?"Discos":
