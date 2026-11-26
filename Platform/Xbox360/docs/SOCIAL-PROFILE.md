@@ -33,3 +33,7 @@ No Guide local (R3), LB solicita a interface nativa `XamShowSigninUI(4,0)` decla
 ## Revisão V0.2.47 na main
 
 Logout confirmado exige os quatro slots consultados com origem Console e estado SignedOut. Consultas parciais sem perfil autenticado permanecem Unknown. A atualização visual compara todos os campos do Header, inclusive avatar, Gamerscore, convidado e chat; a Home preserva a identificação de teste mesmo para convidados. Nenhum provider novo, teste físico ou build foi executado.
+
+## V0.2.48 — identidade consistente
+
+O XSDK fixado em 74dfcca8 declara e importa XamUserGetSigninInfo. Dois resultados válidos com XUID não nulo e estado consistente são exigidos para publicar o perfil autenticado. XUID é comparado em memória e não integra o Snapshot. Falha de leitura permanece Unknown. A estrutura não documenta flags de convidado, portanto elas não são inferidas. XamUserReadProfileSettings está declarado, mas seu layout de saída e IDs ainda precisam de validação para Gamerscore/Gamerpic. Amigos, mensagens e voz permanecem indisponíveis. Testes atualizados sem execução; nenhuma build solicitada.
