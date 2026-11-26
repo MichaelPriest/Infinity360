@@ -12,6 +12,10 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 A branch `feature/profile-social-provider` contém o contrato portátil para identificar perfis ativos por controle, origem real ou de teste, Gamerscore opcional, avatar e disponibilidade de comunicação. A integração XAM, o cabeçalho/Guide e o chat real ainda dependem da recuperação das alterações mais recentes do Work e da homologação do provider. [Contrato e testes](Platform/Xbox360/docs/SOCIAL-PROFILE.md). A versão permanece V0.2.46 nesta base até reconciliar as alterações; nenhuma build iniciada.
 
+## Atualização oficial 17559 — auditoria
+
+O ZIP fornecido foi inventariado: 152 arquivos, CRC OK, sem incorporar binários. O adapter experimental XSDK consulta estado e Gamertag dos quatro controles; a integração à interface e a validação física permanecem pendentes. [Auditoria e matriz de aproveitamento](Platform/Xbox360/docs/SYSTEMUPDATE-17559-AUDIT.md).
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
