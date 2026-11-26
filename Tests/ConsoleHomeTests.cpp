@@ -766,11 +766,11 @@ int main(int argc,char** argv) {
     artwork.Press(ConsoleHome::Accept);
     artwork.Draw(canvas,"20:05");
     assert(canvas.Pixels()[220*1280+850]==0xff0ac800u);
-    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    assert(canvas.Pixels()[250*1280+100]==0xffc80a00u);
     // Truncation is rejected after explicit reload; cached bytes remain stable until then.
     std::ofstream(artFolder/"cover.rgba",std::ios::binary|std::ios::trunc)<<"bad";
     artwork.Draw(canvas,"20:05");
-    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    assert(canvas.Pixels()[250*1280+100]==0xffc80a00u);
     artwork.Press(ConsoleHome::Refresh); // Back to listing, invalidate cache
     artwork.Draw(canvas,"20:05");
     assert(canvas.Pixels()[250*1280+60]!=0xffc80a00u);
@@ -799,14 +799,14 @@ int main(int argc,char** argv) {
     assert(canvas.Pixels()[250*1280+155]==0xff05b400u);
     artEdit.Press(ConsoleHome::Back); // cancel
     artEdit.Draw(canvas,"20:06");
-    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    assert(canvas.Pixels()[250*1280+100]==0xffc80a00u);
     artEdit.Press(ConsoleHome::Guide);
     artEdit.Press(ConsoleHome::Right); // alternate cover
     artEdit.Press(ConsoleHome::Down);
     artEdit.Press(ConsoleHome::Left); // original background
     artEdit.Press(ConsoleHome::Refresh); // save
     artEdit.Draw(canvas,"20:06");
-    assert(canvas.Pixels()[420*1280+1100]==0xff05b400u);
+    assert(canvas.Pixels()[250*1280+100]==0xff05b400u);
     assert(canvas.Pixels()[220*1280+850]!=0xff0ac800u);
     ConsoleHome artRestored(artRoot.string()+"/",noRoots);artRestored.Load();
     artRestored.Press(ConsoleHome::Accept);
@@ -817,7 +817,7 @@ int main(int argc,char** argv) {
     artRestored.Press(ConsoleHome::Favorite); // reset both to main
     artRestored.Press(ConsoleHome::Refresh);
     artRestored.Draw(canvas,"20:07");
-    assert(canvas.Pixels()[420*1280+1100]==0xffc80a00u);
+    assert(canvas.Pixels()[250*1280+100]==0xffc80a00u);
     assert(canvas.Pixels()[220*1280+850]==0xff0ac800u);
     assert(fs::file_size(artFolder/"cover-alt.rgba")==160u*240u*4u);
     assert(fs::file_size(artFolder/"background-alt.rgba")==640u*360u*4u);
