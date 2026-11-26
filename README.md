@@ -22,7 +22,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**69 capturas nativas** — commit [c1ab564e0af4](https://github.com/MichaelPriest/Infinity360/commit/c1ab564e0af42f2d8932be58db77b50605970d7a).
+**71 capturas nativas** — commit [ecda4e11457b](https://github.com/MichaelPriest/Infinity360/commit/ecda4e11457b0a8ef338cb8ff9e4be415996aacc).
 
 | Tela | Tela |
 | --- | --- |
@@ -94,8 +94,10 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 | Detalhes moderno | Store moderna |
 | ![67-store-produto-moderno](docs/screenshots/67-store-produto-moderno.png) | ![68-fontes-store](docs/screenshots/68-fontes-store.png) |
 | Store produto moderno | Fontes store |
-| ![69-iptv-moderno](docs/screenshots/69-iptv-moderno.png) |  |
-| Iptv moderno |  |
+| ![69-iptv-moderno](docs/screenshots/69-iptv-moderno.png) | ![70-perfil-teste](docs/screenshots/70-perfil-teste.png) |
+| Iptv moderno | Perfil teste |
+| ![71-guia-perfil-teste](docs/screenshots/71-guia-perfil-teste.png) |  |
+| Guia perfil teste |  |
 
 <!-- NATIVE-GALLERY-END -->
 
