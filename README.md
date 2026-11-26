@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.2.77 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.2.78 Alpha (código-fonte)**
 
 Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
@@ -32,13 +32,15 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Social | Cartão próprio/de amigos, lista de amigos/presença e amigos por título, jogadores recentes, edição de perfil, composição oficial de mensagens, central de comunicação/Party, consulta de permissões, chat e editor de avatar via XAM experimental; painel de avatar e leitor de geometria oficial e rasterização diagnóstica CPU e adaptador XAvatar/D3D9 e pass para textura opcionais (não integrados ao presenter XSDK), preferência visual Avatar/Gamerpic/Oculto |
 | Conteúdo | TU, DLC, saves, backups, DVD para XEX/GOD |
 | Store e downloads | Catálogo homebrew, fila persistente e fontes configuráveis |
-| Cloud360 IPTV | MPEG-PS; FFmpeg experimental para MP4/TS/HLS |
+| Cloud360 IPTV | FFmpeg integrado ao pacote principal (MP4/TS/HLS); homologação física pendente |
 | Sistema | Arquivos, FTP, rede, SMB experimental, armazenamento e sensores |
 | Personalização | Layouts alternativos, sete temas e três idiomas |
 
 Implementação no código não equivale a homologação física.
 
 ## Instalação e desenvolvimento
+
+O ZIP `Infinity360-<versão>-Xbox360.zip` é o pacote de instalação unificado com FFmpeg. O ZIP complementar `candidate` contém fontes LGPL, objetos para relink e diagnósticos; não é necessário copiá-lo ao console.
 
 - **Xbox 360:** [instalação e requisitos](Platform/Xbox360/README.md), [guia Alpha XSDK](IPTV/Cloud360/native/AURORAX-ALPHA-XSDK.md) e [Releases](https://github.com/MichaelPriest/Infinity360/releases). Não substitua a dashboard instalada por revisão não homologada.
 - **PC:** `cmake -S . -B build`, `cmake --build build` e `./build/aurorax`.

@@ -1,10 +1,6 @@
-name: INFINITY 360 first XEX - XSDK visual alpha
+name: INFINITY 360 legacy MPEG-only diagnostics
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'Platform/Xbox360/build-request.txt'
   workflow_dispatch:
     inputs:
       smc_read:
@@ -229,7 +225,7 @@ jobs:
   publish-prerelease:
     name: Publish verified XEX package to GitHub Releases
     needs: [xsdk-xex, portable-gate]
-    if: ${{ !inputs.smc_read && !inputs.power_control && github.ref == 'refs/heads/main' && needs.xsdk-xex.result == 'success' && needs.portable-gate.result == 'success' }}
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write

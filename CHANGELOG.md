@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.78 — Distribuição unificada com FFmpeg
+
+- Workflow principal compila FFmpeg integrado e gera ZIP de instalação com um único default.xex; fontes LGPL e diagnósticos em pacote complementar da mesma release.
+- Publicação condicionada a relink, integridade e testes portáteis. Workflow MPEG-only fica manual, sem release automática.
+- Catálogos Series360, X-Store e Andromeda e listas adicionais ainda dependem de fontes verificadas.
+
 ## V0.2.77 — Preparação do pacote de uso cotidiano
 
 - Retira executáveis de diagnóstico e mídia sintética do ZIP padrão e mantém a playlist pública no catálogo inicial.

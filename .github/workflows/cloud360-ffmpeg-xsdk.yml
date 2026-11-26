@@ -1,4 +1,4 @@
-name: Cloud360 FFmpeg PowerPC experimental build
+name: INFINITY 360 unified XEX with FFmpeg
 on:
   workflow_dispatch:
   push:
@@ -14,6 +14,8 @@ jobs:
   ffmpeg-xsdk:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - name: Read dashboard version
@@ -106,6 +108,16 @@ jobs:
           path: ${{ runner.temp }}/Infinity360-IPTV-FFmpeg-${{ steps.version.outputs.version }}-candidate.zip
           if-no-files-found: error
           retention-days: 14
+      - name: Upload clean installation and corresponding source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Infinity360-${{ steps.version.outputs.version }}-distribution
+          path: |
+            ${{ runner.temp }}/Infinity360-${{ steps.version.outputs.version }}-Xbox360.zip
+            ${{ runner.temp }}/Infinity360-${{ steps.version.outputs.version }}-Xbox360.zip.sha256
+            ${{ runner.temp }}/Infinity360-IPTV-FFmpeg-${{ steps.version.outputs.version }}-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Collect configure and linker diagnostics
         if: always()
         run: |
@@ -123,3 +135,56 @@ jobs:
           path: ${{ runner.temp }}/ffmpeg-diagnostics/
           retention-days: 14
           if-no-files-found: warn
+
+  portable-gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run portable regression suite
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg openssl libssl-dev
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
+          cmake --build build --parallel 2
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: store_zip"
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: disc_god"
+          ctest --test-dir build --output-on-failure
+
+  publish:
+    needs: [ffmpeg-xsdk, portable-gate]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Infinity360-${{ needs.ffmpeg-xsdk.outputs.version }}-distribution
+          path: release
+      - name: Publish unified installation and matching LGPL materials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.ffmpeg-xsdk.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum -c "Infinity360-$VERSION-Xbox360.zip.sha256"
+          python3 - <<'PY'
+          import os, zipfile
+          v=os.environ["VERSION"]
+          with zipfile.ZipFile(f"Infinity360-{v}-Xbox360.zip") as a, zipfile.ZipFile(f"Infinity360-IPTV-FFmpeg-{v}-candidate.zip") as b:
+              assert a.testzip() is None and b.testzip() is None
+              assert a.read("default.xex")==b.read("bin/default.xex")
+              assert a.read("BUILD-COMMIT.txt").decode().strip()==os.environ["GITHUB_SHA"]
+              assert a.read("VERSION.txt").decode().strip()==v
+              assert any(n.startswith("sources/ffmpeg-") for n in b.namelist())
+              assert "relink/commands.json" in b.namelist()
+              assert "Licenses/FFmpeg-LGPL-2.1.txt" in a.namelist()
+          PY
+          tag="unified-v${VERSION}-${GITHUB_SHA:0:12}"
+          if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
+          gh release create "$tag" "Infinity360-$VERSION-Xbox360.zip" "Infinity360-$VERSION-Xbox360.zip.sha256" "Infinity360-IPTV-FFmpeg-$VERSION-candidate.zip" --target "$GITHUB_SHA" --title "INFINITY 360 V$VERSION — FFmpeg integrado" --prerelease --latest=false --notes "Instalação: ZIP Xbox360, extrair em pasta separada e executar default.xex. O ZIP candidate contém materiais LGPL correspondentes e diagnósticos, não é necessário para instalar. Hardware ainda não homologado. Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -156,7 +156,28 @@ def main():
         assert z.read("bin/MenuPreview/enable-iptv-playback.txt") == b"ENABLE-IPTV-PLAYBACK\n"
         assert b"#EXTINF:" in z.read("bin/MenuPreview/playlist.m3u")
         assert not any(n.startswith("bin/MenuPreview/UserFiles/test.") for n in z.namelist())
+    # User distribution contains only runtime files and license notices.
+    install = stage.parent / f"Infinity360-{version}-Xbox360.zip"
+    with zipfile.ZipFile(install, "w", zipfile.ZIP_DEFLATED) as z:
+        for path in sorted((stage/"bin").rglob("*")):
+            name = path.relative_to(stage/"bin").as_posix()
+            if name.endswith(".xex") and name != "default.xex":
+                continue
+            if path.is_file() or path.is_dir() and not any(path.iterdir()):
+                z.write(path, name)
+        for path in sorted((stage/"licenses").iterdir()):
+            if path.is_file():
+                z.write(path, "Licenses/"+path.name)
+        z.writestr("LEIA-ME.txt", f"INFINITY 360 {version} - FFmpeg integrado\nExtrair em pasta separada e executar default.xex. Nao substituir a dashboard de boot.\nFFmpeg LGPL 2.1 ou posterior. Codigo fonte correspondente, objetos e instrucoes de relink no pacote complementar Infinity360-IPTV-FFmpeg-{version}-candidate.zip da mesma release.\n")
+    with zipfile.ZipFile(install) as z:
+        assert z.testzip() is None
+        assert z.read("default.xex")[:4] == b"XEX2"
+        assert [n for n in z.namelist() if n.endswith(".xex")] == ["default.xex"]
+        assert b"#EXTINF:" in z.read("MenuPreview/playlist.m3u")
+        assert "Licenses/FFmpeg-LGPL-2.1.txt" in z.namelist()
+    install.with_name(install.name+".sha256").write_text(f"{digest(install)}  {install.name}\n")
     print(archive, digest(archive))
+    print(install, digest(install))
 
 if __name__=="__main__":
     main()
