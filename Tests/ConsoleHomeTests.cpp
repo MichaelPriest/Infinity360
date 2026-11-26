@@ -141,7 +141,17 @@ static int captureScreens(const char* atlas,const char* destination) {
             modern.Press(ConsoleHome::Accept);ok=save("67-store-produto-moderno",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Search);ok=save("68-fontes-store",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);
-            modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("69-iptv-moderno",modern)&&ok;}
+            modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("69-iptv-moderno",modern)&&ok;
+            ConsoleHome profile(dir,roots);profile.Load();
+            InfinitySocial::Snapshot fixture;
+            fixture.slots[0]={InfinitySocial::SignIn::Local,InfinitySocial::Origin::Test,false,"PerfilTeste","",false,0};
+            profile.SetSocialSnapshot(fixture,0);
+            assert(profile.SocialHeader().origin==InfinitySocial::Origin::Test);
+            ok=save("70-perfil-teste",profile)&&ok;
+            profile.Press(ConsoleHome::Search);
+            assert(profile.QuickGuideOpen());
+            ok=save("71-guia-perfil-teste",profile)&&ok;
+        }
     }
     fs::remove_all(root);
     return ok?0:3;
