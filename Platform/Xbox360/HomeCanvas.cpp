@@ -1,5 +1,6 @@
 #include "HomeCanvas.h"
 #include "BrandLogoPixels.h"
+#include "InfinityIconPixels.h"
 #include "GlyphWidths.h"
 #include <algorithm>
 #include <cstdio>
@@ -161,6 +162,22 @@ void HomeCanvas::Image(int sx,int sy,int sw,int sh,int x,int y,int w,int h,unsig
         for (int i=std::max(0,-x); i<w && x+i<Width; ++i) {
             unsigned color=src[i*sw/w], alpha=color>>24;
             if (alpha) dst[x+i]=blend(tint==0xffffffffu ? color : tint,dst[x+i],alpha);
+        }
+    }
+}
+void HomeCanvas::RasterIcon(int kind,int x,int y,int size,unsigned tint){
+    if(kind<0||kind>=InfinityIconPixels::Count||size<=0||size>256)return;
+    tint=ThemeColor(tint);
+    const int extent=InfinityIconPixels::Size;
+    // Bilinear alpha sampling of stored pixels, no paths or line primitives.
+    for(int j=std::max(0,-y);j<size&&y+j<Height;++j){
+        const int sy=std::min((j*256+128)*extent/size-128,(extent-1)*256);
+        const int v=std::max(0,sy),iy=v/256,fy=v%256,iy1=std::min(iy+1,extent-1);
+        for(int i=std::max(0,-x);i<size&&x+i<Width;++i){
+            const int sx=std::min((i*256+128)*extent/size-128,(extent-1)*256);
+            const int u=std::max(0,sx),ix=u/256,fx=u%256,ix1=std::min(ix+1,extent-1);
+            const unsigned a=(InfinityIconPixels::Alpha(kind,ix,iy)*(256-fx)*(256-fy)+InfinityIconPixels::Alpha(kind,ix1,iy)*fx*(256-fy)+InfinityIconPixels::Alpha(kind,ix,iy1)*(256-fx)*fy+InfinityIconPixels::Alpha(kind,ix1,iy1)*fx*fy+32768u)>>16;
+            if(a){unsigned& dest=frame_[(y+j)*Width+x+i];dest=blend(tint,dest,a);}
         }
     }
 }

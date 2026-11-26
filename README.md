@@ -54,6 +54,12 @@ Carrossel de até quatro títulos com troca manual X ou automática a cada oito 
 
 B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa Sem verso. A capa traseira é independente do fundo e da capa frontal. No detalhe do jogo, START abre o editor de arte; Cima/Baixo seleciona o terceiro painel Verso e R3 importa cover-back.jpg/png de UserFiles/ArtImport/<TitleID>, com publicação exclusiva de cover-back.rgba (160×240). Também aceita o RGBA legado Art/<TitleID>/cover-back.rgba. START em Ver biblioteca solicita o lote XboxUnity existente (até 32 títulos sem capa, confirmação obrigatória, sem sobrescrita). Não é download automático silencioso nem inclui um provider remoto de versos/fundos. Necessita validação física e de rede.
 
+### Pacote de ícones em imagens
+
+![Atlas transparente de ícones](Platform/Xbox360/Assets/infinity-icons.png)
+
+32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.

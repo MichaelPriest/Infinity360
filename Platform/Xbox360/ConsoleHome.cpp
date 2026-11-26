@@ -3364,8 +3364,7 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     // Original neutral silhouette; no avatar image is claimed.
     const unsigned ink=signedIn?Lime:Muted;
     c.Box(x+8,y+7,38,38,0xff68716du,19);
-    c.Box(x+21,y+13,12,12,White,6);
-    c.Box(x+16,y+27,22,12,White,6);
+    InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
         social_.state==SignIn::Online?"Sessão online":
@@ -3384,7 +3383,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.SeriesTile(601,166,428,91,false,230);
     const unsigned ink=social_.controller>=0?Lime:Muted;
     c.Box(623,184,54,54,0xff68716du,27);
-    c.Box(642,193,16,16,White,8);c.Box(634,213,32,17,White,8);
+    InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
     if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
     c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,315);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":social_.state==SignIn::Online?"Sessão online":social_.state==SignIn::Local?"Sessão local":social_.state==SignIn::SignedOut?"Sem perfil":"Não consultado";
@@ -4162,8 +4161,8 @@ void ConsoleHome::DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const{
     const bool fresh=has&&weather_.Fresh(std::time(nullptr));
     if(has){
         const unsigned wc=fresh?accent:Muted;
-        if(weather_.code<=1){c.Box(785,25,22,22,wc,11);if(weather_.day){for(int i=0;i<4;++i){int dx=i%2?17:0,dy=i%2?0:17;int sign=i<2?-1:1;c.Stroke(796+sign*dx,36+sign*dy,796+sign*(dx+dx/3),36+sign*(dy+dy/3),wc,2);}}else c.Box(794,22,17,17,0xff101715u,8);}
-        else{c.Box(783,33,31,12,wc,6);c.Box(789,25,18,19,wc,9);if(weather_.code>=51){c.Stroke(789,48,786,53,wc,2);c.Stroke(799,48,796,53,wc,2);c.Stroke(809,48,806,53,wc,2);}}
+        const int weatherIcon=weather_.code<=1?(weather_.day?InfinityIcons::Sun:InfinityIcons::Moon):weather_.code>=51?InfinityIcons::Rain:25;
+        InfinityIcons::Draw(c,weatherIcon,783,22,31,wc);
         c.TextFit(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
     }else{approvedIcon(c,25,785,24,26,White);c.TextFit(821,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,209);c.TextFit(821,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,209);}

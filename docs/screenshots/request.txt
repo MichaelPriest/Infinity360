@@ -14,3 +14,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 Home front and back cover support, local back artwork import and missing covers shortcut
 2026-11-26 preserve portrait aspect on reverse cover and improve profile/weather label fit
 2026-11-26 approved raster logo in native shared header and README
+2026-11-26 raster icon atlas shared across native modules; weather and neutral profile images
