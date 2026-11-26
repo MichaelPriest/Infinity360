@@ -3285,7 +3285,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     using namespace InfinitySocial;
-    c.Glass(x,y,w,52,false);
+    c.SeriesTile(x,y,w,52,false);
     const bool signedIn=social_.controller>=0;
     // Original neutral silhouette; no avatar image is claimed.
     const unsigned ink=signedIn?Lime:Muted;
@@ -3296,12 +3296,12 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
         social_.state==SignIn::Online?"Sessao online":
         social_.state==SignIn::Local?"Sessao local":
         social_.state==SignIn::SignedOut?"Sem perfil":"Nao consultado";
-    c.Text(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
+    c.TextFit(x+52,y+5,signedIn?social_.displayName:std::string("Perfil Xbox"),17,White,w-58);
     c.Text(x+52,y+28,state,13,ink,w-58);
 }
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
-    c.Glass(545,129,695,330,false);
+    c.SeriesTile(545,129,695,330,false);
     c.Text(568,146,"Perfil e comunicacao",29,White,649);
     DrawSocialHeader(c,569,192,645);
     c.Text(569,264,social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponivel",20,Muted,643);
@@ -3309,7 +3309,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.Text(569,334,"Avatar: icone neutro",20,Muted,643);
     c.Text(569,369,"Chat Xbox: indisponivel",21,Lime,643);
     c.Text(569,408,"Amigos e mensagens: integracao pendente",17,Muted,643);
-    c.Glass(545,471,695,92,false);
+    c.SeriesTile(545,471,695,92,false);
     c.Text(569,482,"LB  Selecionar perfil Xbox",23,Lime,643);
 #if defined(__XSDK__)
     c.Text(569,518,"Abre a interface oficial do sistema.",17,Muted,643);
@@ -3319,12 +3319,13 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
 }
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
-    c.Box(37,126,485,525,Lime,10);c.Box(40,129,479,519,0xff102923u,9);
+    c.Translucent(0,79,1280,584,0xff090c0au,180);
+    c.SeriesTile(37,126,485,525,false,250);
     c.Text(58,141,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rapido"),30,White,445);
     for(int i=0;i<QuickGuide::Count;++i){
         const unsigned action=static_cast<unsigned>(order[i]-'0');
         const int y=193+i*48;
-        panel(c,53,y,453,42,Panel,i==quickGuideRow_);
+        if(i==quickGuideRow_)c.SeriesTile(53,y,453,42,true,245);
         c.Text(64,y+3,c.Tr(QuickGuide::Label(action)),20,i==quickGuideRow_?Lime:White,345);
         if(action==QuickGuide::Notifications&&notifications_.UnreadCount())
             c.Text(420,y+4,number(notifications_.UnreadCount()),18,Lime,76);
@@ -3334,7 +3335,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     c.Text(58,585,c.Tr(quickGuideEditing_?"LB/RB Mover | X Restaurar | Y Salvar":"A Abrir | X Editar | B Fechar"),17,Lime,440);
     c.Text(58,610,c.Tr(quickGuideEditing_?"B Cancelar edicao":"Guia local da dashboard"),16,Muted,440);
     if(!quickGuideEditing_)DrawSocialGuide(c);
-    if(!notice_.empty())c.Text(551,632,c.Tr(notice_.c_str()),17,Lime,680);
+    if(!notice_.empty()){c.SeriesTile(545,581,695,60,false,250);c.TextFit(559,596,c.Tr(notice_.c_str()),17,Lime,667);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
@@ -3343,7 +3344,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
     c.Background();
     const bool approved=ApprovedHeader()&&!weatherPanel_;
-    if(approved)c.NeonBackground();
+    if(approved)c.SeriesBackground();
     // Infinity mark: two overlapping outlined loops, no legacy atlas logo.
     c.Box(43,26,31,25,Lime,12);c.Box(47,30,23,17,0xff102923u,8);
     c.Box(65,26,31,25,Lime,12);c.Box(69,30,23,17,0xff102923u,8);
@@ -4005,19 +4006,19 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     const auto& appearance=preview?appearanceDraft_:appearance_;
     const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
     const unsigned accent=0xffa8ff00u;
-    c.NeonBackground();
-    c.Box(0,0,1280,78,0xff0d1311u);
+    c.SeriesBackground();
+    c.Translucent(0,0,1280,78,0xff101211u,190);
     // Continuous figure-eight logo, drawn from original strokes.
     const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
     for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
     c.Text(116,12,"INFINITY",30,White,172);c.Text(280,12,"360",30,accent,70);
     c.Text(117,47,"Xbox 360 Dashboard",16,Muted,233);
-    c.Glass(371,12,194,52,false);
+    c.SeriesTile(371,12,194,52,false);
     c.Text(380,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),14,White,178);
     c.Text(380,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),13,Muted,178);
     DrawSocialHeader(c,572,12,189);
     const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
-    c.Glass(772,12,266,52,active==ApprovedHome::Weather);
+    c.SeriesTile(772,12,266,52,active==ApprovedHome::Weather);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
     const bool fresh=has&&weather_.Fresh(std::time(nullptr));
     if(has){
@@ -4029,14 +4030,14 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     }else{c.Text(785,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,242);c.Text(785,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,242);}
     if(storage!=storageVolumes_.end())c.Text(793,638,StorageInfo::FormatBytes(storage->freeBytes)+" livres",15,Muted,440);
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
-    c.Box(0,79,1280,82,0xff111915u);
+    c.Translucent(0,79,1280,82,0xff161917u,170);
     for(int i=0;i<Hero;++i){
-        const auto a=Geometry(i);if(i==active)c.Glass(a.x,a.y,a.w,a.h,true);
-        approvedIcon(c,i,a.x+(a.w-29)/2,a.y+7,29,i==active?accent:White);
+        const auto a=Geometry(i);if(i==active)c.SeriesTile(a.x,a.y,a.w,a.h,true,210);
+        approvedIcon(c,i,a.x+(a.w-32)/2,a.y+5,32,i==active?accent:White);
         c.CenterText(a.x,a.y+43,a.w,c.Tr(names[i]),16,i==active?accent:White);
     }
-    c.Box(0,161,1280,1,0xff315b1bu);c.Box(570,160,140,3,accent,1);
-    const auto hero=Geometry(ApprovedHome::Hero);c.Glass(hero.x,hero.y,hero.w,hero.h,active==Hero);
+    c.Box(28,161,1224,1,0xff414743u);
+    const auto hero=Geometry(ApprovedHome::Hero);c.SeriesTile(hero.x,hero.y,hero.w,hero.h,active==Hero);
     bool art=false;
     if(!shelf.empty()&&appearance.ShowBackdrop()){
         auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+4,hero.y+4,hero.w-8,hero.h-8);
@@ -4046,32 +4047,31 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         auto cover=ArtPath(*shelf.front(),true);if(!cover.empty())c.LocalArt(cover,true,hero.x+430,hero.y+12,142,201);
     }
     c.Text(hero.x+20,hero.y+14,"XBOX 360  |  "+std::string(c.Tr("Destaque")),17,accent,hero.w-40);
-    c.Text(hero.x+20,hero.y+61,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,36,White,390);
-    c.Text(hero.x+20,hero.y+113,shelf.empty()?"Adicione jogos ao HDD ou USB":shelf.front()->device,19,White,390);
-    c.Glass(hero.x+20,hero.y+158,190,46,active==Hero);c.CenterText(hero.x+20,hero.y+166,190,shelf.empty()?"A  Biblioteca":"A  Detalhes",21,accent);
+    c.TextFit(hero.x+24,hero.y+55,shelf.empty()?std::string("INFINITY 360"):shelf.front()->name,38,White,390);
+    c.TextFit(hero.x+24,hero.y+112,shelf.empty()?"Adicione jogos ao HDD ou USB":"Biblioteca local | Xbox 360",19,Muted,390);
+    c.SeriesTile(hero.x+20,hero.y+158,190,46,active==Hero);c.CenterText(hero.x+20,hero.y+166,190,shelf.empty()?"A  Biblioteca":"A  Detalhes",21,accent);
     const char* quick[]={"Instalador","Gerenciador","System Link","IPTV","Loja Infinity","Conquistas"};
-    const char* desc[]={"DVD / GOD","Arquivos e dispositivos","Rede local","Canais e conteudos","Apps e extras","Gamerscore"};
+    const char* desc[]={"DVD / GOD","HDD e USB","Rede local","TV e video","Apps e extras","Gamerscore"};
     for(int i=Disc;i<FirstCover;++i){
-        const auto a=Geometry(i);c.Glass(a.x,a.y,a.w,a.h,i==active);
-        approvedIcon(c,i-Disc+13,a.x+13,a.y+17,35,accent);
-        c.Text(a.x+56,a.y+13,quick[i-Disc],20,White,a.w-63);
-        c.Text(a.x+56,a.y+46,desc[i-Disc],15,Muted,a.w-63);
-        c.Box(a.x+10,a.y+a.h-12,a.w-20,2,0xff466b26u,1);
+        const auto a=Geometry(i);c.SeriesTile(a.x,a.y,a.w,a.h,i==active);
+        approvedIcon(c,i-Disc+13,a.x+14,a.y+12,29,i==active?accent:White);
+        c.TextFit(a.x+14,a.y+44,quick[i-Disc],21,White,a.w-28);
+        c.TextFit(a.x+14,a.y+75,desc[i-Disc],14,Muted,a.w-28);
     }
     c.Text(29,412,"Meus Jogos ("+number(games_.size())+")",25,White,850);
     c.Text(1087,417,"Ver biblioteca >",17,accent,161);
     for(size_t i=0;i<shelf.size();++i){
         const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[i];
-        c.Glass(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
+        c.SeriesTile(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
         bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+4,a.y+4,a.w-8,a.h-8);}
         if(cover)c.Shade(a.x+4,a.y+a.h-29,a.w-8,25,0xff090f0bu,185,185);
-        else {approvedIcon(c,1,a.x+37,a.y+54,42,Muted);c.CenterText(a.x+3,a.y+7,a.w-6,"XBOX 360",14,Muted);}
-        c.CenterText(a.x+4,a.y+a.h-29,a.w-8,game.name,15,White);
+        else {approvedIcon(c,1,a.x+37,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,"Sem capa",13,Muted);}
+        c.TextFit(a.x+8,a.y+a.h-29,game.name,15,White,a.w-16);
         if(Starred(game))c.Text(a.x+9,a.y+8,"*",21,accent,30);
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
-    else c.Text(30,634,"R3 Guia | RB Loja | Y Atualizar | Clima: Open-Meteo",16,Muted,747);
+    else c.Text(30,634,"R3 Guia  |  RB Loja  |  Y Atualizar",16,Muted,747);
 }
 
 bool ConsoleHome::WeatherAutoDue(int64_t now){
