@@ -10,6 +10,18 @@ namespace InfinitySocial {
 enum class SignIn { Unknown, SignedOut, Local, Online };
 enum class Origin { Unavailable, Console, Test };
 enum class Chat { Unavailable, LocalOnly, XboxService };
+// Aurora-inspired display preference, independent of account data.
+enum class ProfileArt { Avatar, Gamerpic, Hidden };
+inline ProfileArt NextProfileArt(ProfileArt p){
+    return p==ProfileArt::Avatar?ProfileArt::Gamerpic:p==ProfileArt::Gamerpic?ProfileArt::Hidden:ProfileArt::Avatar;
+}
+inline bool ParseProfileArt(const std::string& v,ProfileArt& p){
+    if(v=="0")p=ProfileArt::Avatar;else if(v=="1")p=ProfileArt::Gamerpic;
+    else if(v=="2")p=ProfileArt::Hidden;else return false;return true;
+}
+inline const char* ProfileArtLabel(ProfileArt p){
+    return p==ProfileArt::Avatar?"Avatar":p==ProfileArt::Gamerpic?"Gamerpic":"Oculto";
+}
 constexpr std::size_t GamerpicSide=64, GamerpicBytes=GamerpicSide*GamerpicSide*4;
 inline bool ValidGamerpic(const std::vector<unsigned char>& rgba) {
     if(rgba.size()!=GamerpicBytes)return false;

@@ -196,6 +196,7 @@ void ConsoleHome::Load() {
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialQueue_.Clear();quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    profileArt_=InfinitySocial::ProfileArt::Avatar;
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -216,6 +217,7 @@ void ConsoleHome::Load() {
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
         if(line[0]=='L')UiLanguage::Parse(file,language_);
         if(line[0]=='Q'&&QuickGuide::Valid(file))quickGuideOrder_=file;
+        if(line[0]=='B')InfinitySocial::ParseProfileArt(file,profileArt_);
         if(line[0]=='D'&&disabledPluginIds_.size()<256){const auto id=PluginRegistry::Key(file);if(!id.empty())disabledPluginIds_.insert(id);}
         if(line[0]=='A' && file.size()==11 && file[8]=='\t') {
             const std::string id=file.substr(0,8), choice=file.substr(9);
@@ -289,6 +291,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"I\t"<<idleMinutes_<<"\n";
     out<<"L\t"<<language_<<"\n";
     out<<"Q\t"<<quickGuideOrder_<<"\n";
+    out<<"B\t"<<static_cast<int>(profileArt_)<<"\n";
     for(const auto& id:disabledPluginIds_)out<<"D\t"<<id<<"\n";
     launchStats_.Write(out);
     for(std::map<std::string,std::string>::const_iterator it=artChoices_.begin();
@@ -1010,6 +1013,9 @@ std::string ConsoleHome::Press(Key key) {
         if(communicationGuideOpen_){PressCommunicationGuide(key);return "";}
         if(avatarGuideOpen_){
             if(key!=Accept)avatarExitConfirm_.Cancel();
+            if(key==PageDown){const auto previous=profileArt_;profileArt_=InfinitySocial::NextProfileArt(profileArt_);
+                if(!SaveProfile()){profileArt_=previous;notice_="Falha ao salvar visual do perfil.";}
+                else notice_=std::string("Visual do perfil: ")+InfinitySocial::ProfileArtLabel(profileArt_);return "";}
             if(key==Back||key==Left){avatarGuideOpen_=false;avatarBodyPending_=false;notice_.clear();}
             if(key==Accept){
 #if defined(__XSDK__)
@@ -3488,10 +3494,10 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     // Real provider tile when available; neutral silhouette otherwise.
     const unsigned ink=signedIn?Lime:Muted;
     c.Box(x+8,y+7,38,38,0xff68716du,19);
-    const bool fullBody=avatarPreview_.KnownFor(social_)&&
+    const bool fullBody=profileArt_==ProfileArt::Avatar&&avatarPreview_.KnownFor(social_)&&
         c.AvatarFrame(avatarPreview_.Pixels(),avatarPreview_.Width(),avatarPreview_.Height(),x+8,y+5,38,42);
-    const bool avatar=fullBody||c.ProfilePicture(social_.avatarPortrait,x+9,y+8,36);
-    if(!avatar&&!c.ProfilePicture(social_.gamerpic,x+9,y+8,36))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
+    const bool avatar=profileArt_==ProfileArt::Avatar&&(fullBody||c.ProfilePicture(social_.avatarPortrait,x+9,y+8,36));
+    if(!avatar&&(profileArt_==ProfileArt::Hidden||!c.ProfilePicture(social_.gamerpic,x+9,y+8,36)))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
     if(avatar&&ValidGamerpic(social_.gamerpic)){
         c.Box(x+30,y+4,18,18,0xff68716du,9);
         c.ProfilePicture(social_.gamerpic,x+31,y+5,16);
@@ -3711,7 +3717,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(795,399,budget,15,Muted,230);
     if(avatarBudget_.state==AvatarBudgetState::Ready||avatarBudget_.state==AvatarBudgetState::ExceedsLimit)
         c.TextFit(795,425,"CPU "+number(avatarBudget_.cpu/1024)+" KiB | GPU "+number(avatarBudget_.gpu/1024)+" KiB",12,Muted,230);
-    c.TextFit(608,480,"Y consulta imagem, manifesto e memoria. 3D pendente.",15,Muted,412);
+    c.TextFit(608,480,std::string("RB Visual Home/Guide: ")+ProfileArtLabel(profileArt_),16,White,412);
     c.TextFit(608,523,"X Editar perfil | Y Atualizar | B Voltar",16,White,412);
     c.TextFit(608,563,"A Editor oficial (confirmar saida da dashboard)",14,Muted,412);
 }
@@ -3723,9 +3729,9 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.SeriesTile(601,166,428,91,false,230);
     const unsigned ink=social_.controller>=0?Lime:Muted;
     c.Box(623,184,54,54,0xff68716du,27);
-    if(!c.ProfilePicture(social_.gamerpic,624,185,52))InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
+    if(profileArt_==ProfileArt::Hidden||!c.ProfilePicture(social_.gamerpic,624,185,52))InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
     if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
-    const bool avatar=ValidGamerpic(social_.avatarPortrait);
+    const bool avatar=profileArt_==ProfileArt::Avatar&&ValidGamerpic(social_.avatarPortrait);
     if(avatar){
         c.Box(958,181,57,57,0xff68716du,28);
         c.ProfilePicture(social_.avatarPortrait,960,183,53);

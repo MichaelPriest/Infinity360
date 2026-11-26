@@ -474,6 +474,11 @@ int main() {
     CHECK(requests.Queue(NativeAction::Achievements,communication,0x1234));
     requested=requests.Take(communication);
     CHECK(requested.action==NativeAction::Achievements&&requested.title==0x1234);
+    ProfileArt art=ProfileArt::Avatar;
+    CHECK(NextProfileArt(art)==ProfileArt::Gamerpic);
+    CHECK(ParseProfileArt("2",art)&&art==ProfileArt::Hidden);
+    CHECK(!ParseProfileArt("3",art)&&art==ProfileArt::Hidden);
+    CHECK(NextProfileArt(art)==ProfileArt::Avatar);
     std::cout << "social profile checks passed\n";
     return 0;
 }

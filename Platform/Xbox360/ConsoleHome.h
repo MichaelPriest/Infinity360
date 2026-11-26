@@ -173,6 +173,7 @@ private:
     int socialGuideRow_=0;
     bool friendGuideOpen_=false,friendRosterPending_=false;
     bool avatarGuideOpen_=false,avatarBodyPending_=false;
+    InfinitySocial::ProfileArt profileArt_=InfinitySocial::ProfileArt::Avatar;
     bool communicationGuideOpen_=false;
     bool privilegeGuideOpen_=false,privilegePending_=false;
     InfinitySocial::ProfilePrivileges privileges_;

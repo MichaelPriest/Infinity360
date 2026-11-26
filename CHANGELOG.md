@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.75 — Fluxo de avatar oficial e preferência visual
+
+- Pass opcional XDK/D3D9 resolve avatar para textura 512×512, alvo de cor/profundidade e tiling, restaurando superfícies; requer host exclusivo e redesenho do EDRAM. Não integrado ao XSDK.
+- RB no painel Avatar alterna Avatar/Gamerpic/Oculto na Home e no Guide social, preferência persistente. Modo oculto mantém ícone neutro e dados de sessão.
+- Comparação técnica oficial, Freestyle e Aurora documentada; sem XEX/release.
+
 ## V0.2.74 — Home e central de perfil integradas
 
 - Perfis no grupo Perfil e serviços abre diretamente Guide social sem passar pela tela de energia/configurações; B retorna à Home, demais atalhos preservados.

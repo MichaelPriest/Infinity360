@@ -208,6 +208,9 @@ static int captureScreens(const char* atlas,const char* destination) {
             assert(!profile.AvatarAutoDue(0)); // fixture never arms native artwork
             profile.Press(ConsoleHome::Accept);profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+            profile.Press(ConsoleHome::PageDown);
+            {std::ifstream in(dir+"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("B\t1\n")!=std::string::npos);}
+            profile.Press(ConsoleHome::PageDown);profile.Press(ConsoleHome::PageDown);
             ok=save("75-avatar-diagnostico",profile)&&ok;
             profile.Press(ConsoleHome::Back);assert(!profile.AvatarGuideOpen());
             {HomeCanvas frameCanvas;std::vector<unsigned char> frame(32*64*4,255);

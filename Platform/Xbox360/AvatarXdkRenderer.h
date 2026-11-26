@@ -75,6 +75,7 @@ public:
         return S_OK; // renderer may still be loading; Ready() verifies status.
     }
     bool Ready()const{return renderer_&&SameAccount()&&renderer_->GetStatus()==S_OK;}
+    IDirect3DDevice9* Device()const{return device_;}
     HRESULT Update(float dt){
         if(!renderer_||!SameAccount())return E_FAIL;
         if(!(dt>=0.0f&&dt<=0.25f))return E_INVALIDARG;
