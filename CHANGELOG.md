@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.68 — Imagem oficial de corpo inteiro do avatar
+
+- Consulta manual da tile 15 do editor oficial e decodificação via XAM; PNG limitado e validação de perfil antes/depois, opt-in separado. Sem D3D concorrente.
+- Home e Guide aproveitam a imagem estática de corpo inteiro quando disponível, com fallback para retrato/Gamerpic; cabeçalho passa a acomodar Gamerscore e conquistas.
+- Testes estruturais e capturas solicitados. Não é avatar 3D animado; ABI/decodificação física pendentes. Sem XEX/release.
+
 ## V0.2.67 — Permissões oficiais do perfil
 
 - X na central de comunicação abre consulta de permissões de comunicação, visualização de perfis e multiplayer, incluindo estado somente amigos quando aplicável.

@@ -363,6 +363,21 @@ int main() {
     CHECK(!privileges.Set(partyLocal,partyLocal,values,100));
     CHECK(privileges.Set(communication,communication,values,100));
     CHECK(privileges.Expire(communication,99));
+    // Structurally bounded PNG fixture, not a valid compressed image.
+    const unsigned char png[]={137,80,78,71,13,10,26,10,
+        0,0,0,13,73,72,68,82,0,0,0,2,0,0,0,3,8,6,0,0,0,0,0,0,0,
+        0,0,0,1,73,68,65,84,1,0,0,0,0,
+        0,0,0,0,73,69,78,68,0,0,0,0};
+    unsigned pw=0,ph=0;
+    CHECK(InspectAvatarPng(png,sizeof(png),pw,ph)&&pw==2&&ph==3);
+    CHECK(!InspectAvatarPng(png,sizeof(png)-1,pw,ph)&&pw==0&&ph==0);
+    std::vector<unsigned char> badPng(png,png+sizeof(png));badPng[18]=2;
+    CHECK(!InspectAvatarPng(badPng.data(),badPng.size(),pw,ph));
+    unsigned char argb[]={255,10,20,30,0,0,0,0,128,40,50,60,0,0,0,0};
+    std::vector<unsigned char> decoded;
+    CHECK(DecodeAvatarArgb(argb,sizeof(argb),1,2,8,decoded));
+    CHECK(decoded==std::vector<unsigned char>({10,20,30,255,40,50,60,128}));
+    CHECK(!DecodeAvatarArgb(argb,sizeof(argb)-1,1,2,8,decoded)&&decoded.empty());
     std::cout << "social profile checks passed\n";
     return 0;
 }

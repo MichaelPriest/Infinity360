@@ -72,6 +72,10 @@ public:
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
     bool AvatarGuideOpen()const{return quickGuideOpen_&&avatarGuideOpen_;}
+    bool TakeAvatarBodyRequest(){const bool pending=avatarBodyPending_;avatarBodyPending_=false;return pending&&AvatarGuideOpen();}
+    void AvatarBodyResult(const InfinitySocial::AvatarPreview& preview,const std::string& message){
+        avatarPreview_=preview;avatarPreview_.Observe(social_);notice_=message;
+    }
     bool CommunicationGuideOpen()const{return quickGuideOpen_&&communicationGuideOpen_;}
     bool PrivilegeGuideOpen()const{return CommunicationGuideOpen()&&privilegeGuideOpen_;}
     bool TakePrivilegeRequest(){const bool requested=privilegePending_;privilegePending_=false;return requested&&PrivilegeGuideOpen();}
@@ -105,10 +109,10 @@ public:
         }
         return action;
     }
-    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();notice_=message;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -160,7 +164,7 @@ private:
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;
     bool friendGuideOpen_=false,friendRosterPending_=false;
-    bool avatarGuideOpen_=false;
+    bool avatarGuideOpen_=false,avatarBodyPending_=false;
     bool communicationGuideOpen_=false;
     bool privilegeGuideOpen_=false,privilegePending_=false;
     InfinitySocial::ProfilePrivileges privileges_;

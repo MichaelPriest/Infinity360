@@ -9,6 +9,7 @@
 #include "NativeSocialUiXsdk.h"
 #include "NativeProfilePrivilegesXsdk.h"
 #include "NativeAvatarProbeXsdk.h"
+#include "NativeAvatarBodyXsdk.h"
 #include "NativeFriendRosterXsdk.h"
 #include "NativeSocialListenerXsdk.h"
 #include "XexLaunchCheck.h"
@@ -651,6 +652,13 @@ int main(){
             const auto result=allowed?InfinitySocial::ReadNativeFriendRoster(menu.SocialHeader(),dir,roster):
                 std::string("Consulta bloqueada por outra operacao.");
             menu.FriendRosterResult(roster,result,TransferRate::Now());dirty=true;
+        }
+        if(menu.TakeAvatarBodyRequest()){
+            InfinitySocial::AvatarPreview preview;
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+            const auto result=allowed?InfinitySocial::ReadNativeAvatarBody(menu.SocialHeader(),dir,preview):
+                std::string("Consulta bloqueada por outra operacao.");
+            menu.AvatarBodyResult(preview,result);dirty=true;
         }
         if(menu.ExpirePrivileges(TransferRate::Now()))dirty=true;
         if(menu.TakePrivilegeRequest()){
