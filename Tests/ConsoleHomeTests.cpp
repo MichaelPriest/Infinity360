@@ -172,6 +172,14 @@ static int captureScreens(const char* atlas,const char* destination) {
             LegacyFixtureHome profile(dir,roots);profile.Load();
             InfinitySocial::Snapshot fixture;
             fixture.slots[0]={InfinitySocial::SignIn::Local,InfinitySocial::Origin::Test,false,"PerfilTeste","",false,0};
+            // Synthetic color tile exercises the renderer; origin remains Test.
+            fixture.slots[0].gamerpic.resize(InfinitySocial::GamerpicBytes);
+            for(std::size_t i=0;i<InfinitySocial::GamerpicBytes;i+=4){
+                fixture.slots[0].gamerpic[i]=40;
+                fixture.slots[0].gamerpic[i+1]=static_cast<unsigned char>((i/4)%64*4);
+                fixture.slots[0].gamerpic[i+2]=180;
+                fixture.slots[0].gamerpic[i+3]=255;
+            }
             profile.SetSocialSnapshot(fixture,0);
             assert(profile.SocialHeader().origin==InfinitySocial::Origin::Test);
             ok=save("70-perfil-teste",profile)&&ok;

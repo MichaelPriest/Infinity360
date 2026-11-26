@@ -14,6 +14,8 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 ## Perfil ativo e comunicação — integração na main
 
+**V0.2.53:** renderização circular do Gamerpic 64×64 na Home e Guide, em memória e com fallback neutro. Provider experimental XAM `XamReadTileToTexture` para o perfil selecionado, mediante arquivo local `enable-native-gamerpic.txt` com `ENABLE-NATIVE-GAMERPIC`, revalidação do XUID e estado sem persistência. Capturas de teste usam padrão de cores sintético identificado como PERFIL DE TESTE. A ABI física e a latência síncrona não foram verificadas; avatar 3D segue pendente. Sem build XEX ou release.
+
 **V0.2.52:** Guide com foco lateral direito e ações selecionáveis Cartão do jogador e Amigos. O presenter experimental solicita as interfaces nativas XAM por resolução de export em tempo de execução, somente com perfil compatível e opt-in local explícito (`enable-native-social-ui.txt`, conteúdo `ENABLE-NATIVE-SOCIAL-UI`, na pasta MenuPreview). O sistema continua responsável por permissões; nenhuma conta, amizade ou mensagem é fabricada. Gamerpic no cabeçalho, avatar 3D, mensagens e chat/voz seguem pendentes. Sem build XEX ou homologação.
 
 **V0.2.51:** linha do perfil ativo e Gamerscore corrigida na tela de conquistas (não na central de saves). A central de notificações recebe mudanças observadas da sessão local XAM após duas amostras consistentes, sem registrar Gamertag ou XUID. Não equivale a notificações de amigos/Xbox Live. Capturas nativas solicitadas separadamente; sem build XEX ou release.

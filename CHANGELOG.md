@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.53 — Gamerpic experimental na Home e Guide
+
+- Textura circular de perfil 64×64 em memória, conversão ARGB/RGBA, fallback neutro e invalidação visual por mudança de pixels/perfil.
+- Consulta experimental apenas para perfil selecionado, opt-in local e revalidação de identidade. Sem escrita em perfil, armazenamento de imagem ou serviço remoto implementado pela dashboard.
+- Testes de conversão, transparência e descarte preparados; captura sintética de perfil de teste solicitada. ABI física e latência não homologadas; sem build XEX ou release.
+
 ## V0.2.52 — Cartão do jogador e Amigos no Guide (experimental)
 
 - Navegação entre painel de atalhos e painel social por esquerda/direita; A solicita a ação selecionada.

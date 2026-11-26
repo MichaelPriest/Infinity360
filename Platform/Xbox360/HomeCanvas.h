@@ -34,6 +34,7 @@ public:
     void Shade(int x,int y,int w,int h,unsigned color,unsigned leftAlpha,unsigned rightAlpha);
     void CenterText(int x,int y,int w,const std::string& text,int size,unsigned color);
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
+    bool ProfilePicture(const std::vector<unsigned char>& rgba,int x,int y,int size);
     void BrandLogo(int x,int y);
     void ControllerButton(int kind,int x,int y,int height);
     void RasterIcon(int kind,int x,int y,int size,unsigned tint);

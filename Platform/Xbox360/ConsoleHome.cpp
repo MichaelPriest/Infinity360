@@ -552,7 +552,7 @@ bool ConsoleHome::Tick() {
     if(!socialPolled_||now<lastSocialPoll_||now-lastSocialPoll_>=2000){
         socialPolled_=true;lastSocialPoll_=now;
         const auto before=social_;
-        SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(),before.controller);
+        SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(!TransferRunning()&&InfinitySocial::GamerpicEnabled(dir_),before.controller),before.controller);
         socialChanged=!InfinitySocial::SameHeader(before,social_);
         if(const char* event=socialEvents_.Observe(social_)){RecordEvent(event);socialChanged=true;}
     }
@@ -3422,10 +3422,10 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     using namespace InfinitySocial;
     c.SeriesTile(x,y,w,52,false);
     const bool signedIn=social_.controller>=0;
-    // Original neutral silhouette; no avatar image is claimed.
+    // Real provider tile when available; neutral silhouette otherwise.
     const unsigned ink=signedIn?Lime:Muted;
     c.Box(x+8,y+7,38,38,0xff68716du,19);
-    InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
+    if(!c.ProfilePicture(social_.gamerpic,x+9,y+8,36))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
         social_.state==SignIn::Online?"Sessão online":
@@ -3445,7 +3445,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.SeriesTile(601,166,428,91,false,230);
     const unsigned ink=social_.controller>=0?Lime:Muted;
     c.Box(623,184,54,54,0xff68716du,27);
-    InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
+    if(!c.ProfilePicture(social_.gamerpic,624,185,52))InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
     if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
     c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,315);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":social_.state==SignIn::Online?"Sessão online":social_.state==SignIn::Local?"Sessão local":social_.state==SignIn::SignedOut?"Sem perfil":"Não consultado";

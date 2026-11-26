@@ -3,11 +3,30 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <vector>
+#include <cstdint>
 
 namespace InfinitySocial {
 enum class SignIn { Unknown, SignedOut, Local, Online };
 enum class Origin { Unavailable, Console, Test };
 enum class Chat { Unavailable, LocalOnly, XboxService };
+constexpr std::size_t GamerpicSide=64, GamerpicBytes=GamerpicSide*GamerpicSide*4;
+inline bool ValidGamerpic(const std::vector<unsigned char>& rgba) {
+    if(rgba.size()!=GamerpicBytes)return false;
+    for(std::size_t i=3;i<rgba.size();i+=4)if(rgba[i])return true;
+    return false;
+}
+// XAM tile provider returns linear ARGB; convert to the canvas RGBA format.
+inline bool DecodeGamerpic(const unsigned char* argb,std::size_t bytes,std::vector<unsigned char>& rgba) {
+    rgba.clear();
+    if(!argb||bytes!=GamerpicBytes)return false;
+    rgba.resize(bytes);
+    for(std::size_t i=0;i<bytes;i+=4){
+        rgba[i]=argb[i+1];rgba[i+1]=argb[i+2];rgba[i+2]=argb[i+3];rgba[i+3]=argb[i];
+    }
+    if(!ValidGamerpic(rgba)){rgba.clear();return false;}
+    return true;
+}
 
 struct Slot {
     SignIn state = SignIn::Unknown;
@@ -17,6 +36,7 @@ struct Slot {
     std::string avatarAsset; // Provider-owned local asset; never an arbitrary URL.
     bool gamerscoreKnown = false;
     unsigned gamerscore = 0;
+    std::vector<unsigned char> gamerpic;
 };
 struct Snapshot {
     std::array<Slot,4> slots{};
@@ -56,6 +76,7 @@ struct Header {
     bool gamerscoreKnown = false;
     unsigned gamerscore = 0;
     Chat chat = Chat::Unavailable;
+    std::vector<unsigned char> gamerpic;
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
@@ -74,7 +95,7 @@ inline bool SameHeader(const Header& a, const Header& b) {
            a.state == b.state && a.displayName == b.displayName &&
            a.avatarAsset == b.avatarAsset && a.guest == b.guest &&
            a.gamerscoreKnown == b.gamerscoreKnown &&
-           a.gamerscore == b.gamerscore && a.chat == b.chat;
+           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic;
 }
 
 // Confirm two consecutive console observations before emitting generic local
@@ -145,6 +166,7 @@ inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     result.displayName = ValidGamertag(slot.gamertag) ? slot.gamertag :
                          (slot.guest ? "Convidado" : "Perfil sem nome");
     if (ValidAvatarAsset(slot.avatarAsset)) result.avatarAsset = slot.avatarAsset;
+    if(!slot.guest && ValidGamerpic(slot.gamerpic))result.gamerpic=slot.gamerpic;
     result.gamerscoreKnown = !slot.guest && slot.gamerscoreKnown;
     if (result.gamerscoreKnown) result.gamerscore = slot.gamerscore;
     if (snapshot.chat == Chat::LocalOnly) result.chat = Chat::LocalOnly;

@@ -216,6 +216,23 @@ bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {
     }
     return true;
 }
+bool HomeCanvas::ProfilePicture(const std::vector<unsigned char>& rgba,int x,int y,int size) {
+    if(rgba.size()!=64u*64u*4u||size<=0||size>128||x<0||y<0||
+       x>Width-size||y>Height-size)return false;
+    bool visible=false;
+    for(std::size_t i=3;i<rgba.size();i+=4)if(rgba[i]){visible=true;break;}
+    if(!visible)return false;
+    for(int j=0;j<size;++j)for(int i=0;i<size;++i){
+        const int dx=2*i+1-size,dy=2*j+1-size;
+        if(dx*dx+dy*dy>size*size)continue;
+        const auto* p=&rgba[4*((j*64/size)*64+i*64/size)];
+        if(p[3]){
+            auto& dest=frame_[(y+j)*Width+x+i];
+            dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+        }
+    }
+    return true;
+}
 bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop,int radius) {
     if(file.empty() || w<=0 || h<=0 || x<0 || y<0 || x>=Width || y>=Height ||
        w>Width-x || h>Height-y) return false;

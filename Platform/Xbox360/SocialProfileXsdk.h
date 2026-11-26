@@ -40,7 +40,13 @@ inline Slot FromXam(std::uint32_t state, const std::string& name) {
 
 #if defined(INFINITY_SOCIAL_XSDK)
 #include <xsdk/xam.h>
+#include <fstream>
 namespace InfinitySocial {
+inline bool GamerpicEnabled(const std::string& dir) {
+    std::ifstream flag(dir+"enable-native-gamerpic.txt");
+    std::string line;
+    return std::getline(flag,line)&&(line=="ENABLE-NATIVE-GAMERPIC"||line=="ENABLE-NATIVE-GAMERPIC\r");
+}
 // Read-only, fixed-size request; no writes or remote XUID lookup.
 inline bool ReadXsdkGamerscore(std::uint32_t user, unsigned& score) {
     const std::uint32_t id = GamerscoreSetting;
@@ -53,8 +59,9 @@ inline bool ReadXsdkGamerscore(std::uint32_t user, unsigned& score) {
 }
 // Call from the dashboard thread on a bounded refresh interval.
 // The caller must not equate online sign-in with a verified chat service.
-inline Snapshot ReadXsdkProfiles() {
+inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
     Snapshot result;
+    std::array<std::uint64_t,4> identities{};
     for (std::uint32_t i = 0; i < XSDK_XAM_USERS && i < result.slots.size(); ++i) {
         auto state = XamUserGetSigninState(i);
         if (state == 0) {
@@ -76,7 +83,33 @@ inline Snapshot ReadXsdkProfiles() {
         result.slots[i] = FromXam(state, std::string(second.name, length));
         result.slots[i].gamerscoreKnown = scoreKnown;
         if (scoreKnown) result.slots[i].gamerscore = score;
+        identities[i]=second.xuid;
     }
+    // One selected user's picture per refresh, only with explicit opt-in.
+    // ABI is experimental: do not call when the export is missing.
+    const auto selected=Resolve(result,preferred);
+    if(!readPicture||selected.controller<0||selected.guest)return result;
+    const auto user=static_cast<std::uint32_t>(selected.controller);
+    HANDLE module=0;
+    void* address=nullptr;
+    if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
+       XexGetProcedureAddress(module,0x2f5u,&address)!=0||!address)return result;
+    USER_SIGNIN_INFO before{},after{};
+    const auto state=selected.state==SignIn::Online?2u:1u;
+    if(XamUserGetSigninInfo(user,0,&before)!=0||before.xuid!=identities[user]||
+       before.signin_state!=state)return result;
+    // Xenia Canary reference: tile type 2 (64x64 gamer tile), title/item 0,
+    // stride in bytes, height in rows, synchronous null overlapped.
+    alignas(128) std::array<unsigned char,GamerpicBytes> buffer{};
+    using ReadTile=std::uint32_t(*)(std::uint32_t,std::uint32_t,std::uint64_t,
+        std::uint32_t,void*,std::uint32_t,std::uint32_t,XAM_OVERLAPPED*);
+    const auto rc=reinterpret_cast<ReadTile>(address)(2u,0u,0u,user,buffer.data(),
+        static_cast<std::uint32_t>(GamerpicSide*4),static_cast<std::uint32_t>(GamerpicSide),nullptr);
+    if(XamUserGetSigninInfo(user,0,&after)!=0||after.xuid!=before.xuid||
+       after.signin_state!=state||XamUserGetSigninState(user)!=state){
+        result.slots[user]=Slot{};return result;
+    }
+    if(rc==0)DecodeGamerpic(buffer.data(),buffer.size(),result.slots[user].gamerpic);
     return result;
 }
 }
