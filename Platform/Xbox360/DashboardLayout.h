@@ -11,7 +11,7 @@ constexpr int Slots=10;
 struct Rect {int x,y,w,h;};
 struct Geometry {std::array<Rect,Slots> nav{};Rect hero{},shelf{};};
 inline const char* Name(unsigned i){
-    static const char* names[]={"Classic","Top Icons","Lateral Pro","Hybrid","Blade Neo","Immersive","Minimal","Arcade","Media Hub","Performance"};
+    static const char* names[]={"Classic (legado)","Series Infinity","Lateral Pro","Hybrid","Blade Neo","Immersive","Minimal","Arcade","Media Hub","Performance"};
     return names[i<Count?i:0];
 }
 inline bool Parse(const std::string& s,unsigned& out){
