@@ -2404,7 +2404,7 @@ void ConsoleHome::ToggleLocalPlugin(){
 }
 void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
     c.Text(47,349,"Plugins locais | "+number(localPluginItems_.size()),27,White,1170);
-    if(localPluginItems_.empty())c.Text(48,422,"Nenhum manifesto plugin.axplugin reconhecido.",21,Muted,1170);
+    if(localPluginItems_.empty())c.Text(48,422,"Nenhum plugin local. Verifique Plugins ou MenuPreview/Plugins.",21,Muted,1170);
     const int first=(localPluginRow_/4)*4;
     for(int i=first;i<first+4&&static_cast<size_t>(i)<localPluginItems_.size();++i){
         const auto& item=localPluginItems_[i];const int y=390+(i-first)*47;

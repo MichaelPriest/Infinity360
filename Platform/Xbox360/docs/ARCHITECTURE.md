@@ -32,3 +32,7 @@ O ZIP unificado contém default.xex, home.tga, cacert.pem, Licenses e MenuPrevie
 Nexus Horizon fornecido pelo usuário: quatro formatos Andromeda conferidos (V3: 4 campos, GOD: 3, Classic: 6, Games: 5). Cinema.m3u contém 29.661 entradas, 18.326 brazucaplay e 11.335 HTTPS; disponibilidade e direitos não verificados. Nenhum arquivo do ZIP externo é incorporado ao repositório.
 
 Build somente mediante autorização; regressões portáteis e relink obrigatório. Homologação Xbox físico continua pendente.
+
+### Extensões locais
+
+O registro aceita ambos os layouts `Plugins/<nome>/plugin.axplugin` e `MenuPreview/Plugins/<nome>/plugin.axplugin`. A descoberta não carrega módulos residentes. IDs repetidos em instalações distintas são bloqueados; aliases HDD1/HDD são normalizados no console.

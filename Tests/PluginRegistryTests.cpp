@@ -85,5 +85,14 @@ int main() {
     install(p1,"InvalidXex","invalid.xex","app");
     std::ofstream(p1/"InvalidXex"/"default.xex")<<"not XEX";
     assert(registry.Scan().size()==1);
+    // Both historical runtime layouts must discover the same standalone apps.
+    const auto app=root/"Unified";
+    fs::create_directories(app/"MenuPreview");
+    install(app/"Plugins","Standalone","infinity.standalone","app");
+    install(app/"MenuPreview"/"Plugins","Emulator","infinity.emulator","emulator");
+    for(const auto& directory:{app,app/"MenuPreview"}){
+        const auto discovered=PluginRegistry(PluginRegistry::DefaultRoots(directory.string()+"/")).Scan();
+        assert(discovered.size()==2);
+    }
     fs::remove_all(root);
 }

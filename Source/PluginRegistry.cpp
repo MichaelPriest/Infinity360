@@ -113,6 +113,17 @@ PluginRegistry::PluginRegistry(const std::vector<std::string>& roots):roots_(roo
 std::vector<std::string> PluginRegistry::DefaultRoots(const std::string& appDirectory) {
     std::vector<std::string> roots;
     roots.push_back(join(appDirectory,"Plugins"));
+    // The unified distribution keeps its runtime settings in MenuPreview,
+    // while previously installed standalone extensions may be beside default.xex.
+    std::string base=appDirectory;
+    while(!base.empty()&&(base.back()=='/'||base.back()=='\\'))base.pop_back();
+    const auto sep=base.find_last_of("/\\");
+    std::string leaf=base.substr(sep==std::string::npos?0:sep+1);
+    for(char& ch:leaf)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+    if(leaf=="menupreview"){
+        const std::string parent=sep==std::string::npos?"":base.substr(0,sep+1);
+        roots.push_back(join(parent,"Plugins"));
+    }else roots.push_back(join(join(appDirectory,"MenuPreview"),"Plugins"));
 #ifdef _XBOX
     roots.push_back("HDD1:\\Infinity360\\Plugins");
     roots.push_back("USB0:\\Infinity360\\Plugins");
@@ -154,7 +165,18 @@ std::vector<PluginDescriptor> PluginRegistry::Inventory() const {
             const auto key=Key(plugin.id);
             const auto previous=seen.find(key);
             if(previous!=seen.end()){
-                if(found[previous->second].executable!=plugin.executable)found[previous->second].conflict=true;
+                if(found[previous->second].executable!=plugin.executable){
+                    std::string a=found[previous->second].executable,b=plugin.executable;
+#if defined(_XBOX) || defined(__XSDK__)
+                    auto normalize=[](std::string s){
+                        for(char& ch:s){if(ch=='\\')ch='/';else if(ch>='A'&&ch<='Z')ch=char(ch-'A'+'a');}
+                        if(s.compare(0,6,"hdd1:/")==0)s="hdd:/"+s.substr(6);
+                        return s;
+                    };
+                    a=normalize(a);b=normalize(b);
+#endif
+                    if(a!=b)found[previous->second].conflict=true;
+                }
                 continue;
             }
             if(normalFile(plugin.executable)){

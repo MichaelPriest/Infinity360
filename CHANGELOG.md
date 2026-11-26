@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.82 — Compatibilidade de instalação de plugins
+
+- Registro local procura Plugins ao lado de default.xex e em MenuPreview/Plugins, independentemente da raiz recebida.
+- Normaliza aliases HDD1/HDD, barras e caixa no console ao detectar conflitos de IDs; instalações distintas continuam bloqueadas.
+- Teste portátil para ambos os layouts; documentação e mensagens da central atualizadas. Sem build nesta revisão.
+
 ## V0.2.81 — Política de fontes IPTV
 
 - Módulo compartilhado para autorização de fontes HTTPS e relay LAN, com aviso na interface XSDK antes de iniciar reprodução.

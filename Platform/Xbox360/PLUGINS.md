@@ -140,3 +140,7 @@ sem validar o retorno seguro da GPU.**
 ## INFINITY Plugins — módulos residentes
 
 Sistema > Plugins exibe os cinco slots `[Plugins]` do primeiro `launch.ini` legível (pasta local, HDD1, USB0, USB1). Reconhece a referência pelo nome `LiveEmulation.xex` e sinaliza slots duplicados. Y atualiza; B retorna. É inventário de configuração, não prova de módulo carregado, conexão, licença ou autenticidade. Não carrega/descarrega módulos nem altera o INI, o boot ou configurações de rede. Compatibilidade de coexistência e ABI ainda exige XDK e teste em console. Referência: https://liveemulation.com/wiki . Os plugins locais continuam com manifesto anterior e novas pastas Infinity360 mais pastas legadas AuroraX.
+
+## Layout unificado (V0.2.82)
+
+Plugins independentes podem ser instalados em `Plugins` ao lado de `default.xex` ou em `MenuPreview/Plugins`. Cada extensão exige manifesto próprio e XEX2 local. A validação do cabeçalho não confirma ABI, assinatura ou compatibilidade. Não mova NexusPlugin ou HidDriver para o registro de aplicativos: são módulos de outra arquitetura.
