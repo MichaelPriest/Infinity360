@@ -2357,7 +2357,8 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
     for(int i=0;i<3;++i){
         const int y=305+i*69;
         panel(c,55,y,1158,58,Panel,i==storeManageRow_);
-        c.Text(70,y+9,actions[i],22,ready[i]?White:Muted,850);
+        const int icons[]={40,39,35};InfinityIcons::Draw(c,icons[i],70,y+12,30,ready[i]?White:Muted);
+        c.TextFit(115,y+9,actions[i],22,ready[i]?White:Muted,790);
         c.Text(935,y+9,ready[i]?"Disponivel":"Indisponivel",18,ready[i]?Lime:Muted,265);
     }
     c.Text(55,535,"Backups no destino Store | nenhum arquivo apagado",19,Muted,1150);
@@ -2375,8 +2376,9 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
     for(int i=first;i<first+6&&static_cast<size_t>(i)<rows.size();++i){
         const auto& p=rows[i];const int y=182+(i-first)*65;
         panel(c,45,y,1189,58,Panel,i==providerRow_);
-        c.Text(60,y+3,p.name,23,White,800);
-        c.Text(60,y+30,p.note,17,Muted,850);
+        InfinityIcons::Draw(c,48,62,y+12,31,White);
+        c.TextFit(107,y+3,p.name,23,White,750);
+        c.TextFit(107,y+30,p.note,17,Muted,800);
         c.Text(950,y+12,p.id==storeSource_?"Selecionado":p.provider>=0?"Configurado":p.id=="@unity"?"Integrado":p.id.empty()||p.id=="*"?"Local":"Pendente",17,p.id==storeSource_?Lime:Muted,270);
     }
     if(!store_.ProvidersValid())c.Text(45,575,"Configuracao externa invalida; sem sincronizacao.",17,Muted,1170);
@@ -2507,8 +2509,9 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
         const TrainerEntry& item=trainers_[i];
         const int y=280+(i-first)*66;
         panel(c,45,y,1189,59,Panel,i==contentRow_);
-        c.Text(62,y+4,item.name,23,White,715);
-        c.Text(62,y+31,"Media "+hexId(item.mediaId)+" | Versao "+hexId(item.version),17,Muted,715);
+        InfinityIcons::Draw(c,41,63,y+13,29,White);
+        c.TextFit(105,y+4,item.name,23,White,665);
+        c.TextFit(105,y+31,"Media "+hexId(item.mediaId)+" | Versao "+hexId(item.version),17,Muted,665);
         const TrainerEntry::Match match=item.Compatibility(contentInfo_);
         const char* status=match==TrainerEntry::HeaderMatches?"Cabecalho coincide":
             match==TrainerEntry::DifferentMedia?"Media ID diferente":
@@ -2659,7 +2662,7 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
     if(contentInstallActive_){DrawContentInstall(c);return;}
     if(unityActive_){DrawUnity(c);return;}
-    c.Text(44,78,c.Tr("Conteudo instalado"),40,White,1170);
+    InfinityIcons::Draw(c,35,46,91,32,White);c.TextFit(91,78,c.Tr("Conteudo instalado"),40,White,1140);
     if(!contentKnown_) {
         c.Text(48,150,"Title ID indisponivel para este executavel.",26,White,1170);
         c.Text(48,198,"Nao e possivel associar TU, DLC ou saves com seguranca.",21,Muted,1170);
@@ -2673,7 +2676,9 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
         panel(c,x,183,141,47,Panel,i==contentTab_);
-        c.Text(x+6,191,c.Tr(tabs[i]),17,i==contentTab_?Lime:White,129);
+        const int icons[]={36,37,38,41,5,39,40,55};
+        InfinityIcons::Draw(c,icons[i],x+7,194,21,i==contentTab_?Lime:White);
+        c.TextFit(x+34,191,c.Tr(tabs[i]),16,White,101);
     }
     if(contentTab_==3) {DrawTrainers(c);return;}
     c.Text(48,241,number(ContentCount())+(contentTab_==0?" TUs locais | Ativacao desconhecida":" pacotes encontrados")+((contentTab_==0||contentTab_==1||contentTab_==4)&&!detailMetadata_.package?" | R3 Instalar TU/DLC local":" | Inventario"),20,Muted,1175);
@@ -2812,7 +2817,8 @@ void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     for(unsigned i=0;i<4;++i){
         const int x=45+int(i)*300;
         panel(c,x,396,289,121,Panel,false);
-        c.Text(x+12,405,c.Tr(labels[i]),19,Muted,260);
+        InfinityIcons::Draw(c,43,x+246,405,28,thermal_.available[i]?Lime:Muted);
+        c.TextFit(x+12,405,c.Tr(labels[i]),19,Muted,220);
         c.Text(x+12,432,thermal_.Celsius(i),27,thermal_.available[i]?Lime:Muted,260);
         c.Text(x+12,471,"Min: "+thermalHistory_.Min(i),17,White,260);
         c.Text(x+12,493,"Max: "+thermalHistory_.Max(i),17,White,260);
@@ -2860,7 +2866,8 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
         const int x=45+i*600;
         const bool selected=int(powerConfirm_.action)==i;
         panel(c,x,400,585,96,Panel,selected);
-        c.Text(x+16,426,c.Tr(names[i]),26,selected?Lime:White,550);
+        InfinityIcons::Draw(c,i?59:11,x+20,421,44,selected?Lime:White);
+        c.TextFit(x+84,426,c.Tr(names[i]),26,White,480);
     }
     const bool supported=ConsolePower::Supported(),busy=PowerBusy();
     c.Text(48,520,!supported?std::string(c.Tr("Provider nao incluido nesta build.")):busy?std::string(c.Tr("Bloqueado: encerre operacoes e FTP.")):std::string(c.Tr("Provider experimental: nao homologado no console.")),20,White,1170);
@@ -2917,7 +2924,8 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         const int y=391+(static_cast<int>(i)/2)*106;
         c.Box(x,y,589,97,Panel,10);
         const std::string label=index==0?std::string(c.Tr("Pasta INFINITY 360")):v.path;
-        c.Text(x+14,y+7,label,22,White,550);
+        InfinityIcons::Draw(c,14,x+14,y+9,22,White);
+        c.TextFit(x+45,y+7,label,22,White,520);
         if(!v.available) {
             c.Text(x+14,y+44,std::string(c.Tr("Indisponivel / capacidade nao informada")),18,Muted,552);
             continue;
@@ -3133,7 +3141,8 @@ void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     for(int i=0;i<4;++i) {
         const int y=240+i*72;
         panel(c,45,y,1189,60,Panel,i==fileActionRow_);
-        c.Text(63,y+12,actions[i],25,White,1100);
+        const int icons[]={56,55,57,59};InfinityIcons::Draw(c,icons[i],61,y+12,32,White);
+        c.TextFit(110,y+12,actions[i],25,White,1070);
     }
     c.Text(48,550,"Somente espaco pessoal. Exclusao nao recursiva; movimento no mesmo volume.",20,Muted,1175);
     c.Text(48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
@@ -3158,7 +3167,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
     if(contentActive_) {DrawContent(c);return;}
-    const int sectionIcons[]={23,3,2,1,14,10,20,21};
+    const int sectionIcons[]={23,3,2,1,InfinityIcons::Folder,10,20,21};
     InfinityIcons::Draw(c,sectionIcons[section_],46,91,32,White);
     c.TextFit(91,78,c.Tr(labels[section_]),40,White,1140);
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
@@ -3211,7 +3220,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         static const char* const titles[]={
             "Discos","Rede/FTP","Telemetria","Downloads","Plugins","Historico","DVD","Console"
         };
-        static const int marks[]={14,7,26,5,2,20,13,8};
+        static const int marks[]={14,7,43,5,42,22,13,8};
         static const char* const summaries[]={
             "Jogos e discos","Rede local","Telemetria","Tarefas locais","Residentes","Eventos","Instalar disco","Perfis e hora"
         };
@@ -3225,12 +3234,24 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Instalacao dos arquivos acessiveis pelo leitor DVD.",
             "Perfis Xbox, idioma e relogio do console."
         };
-        for(int i=0;i<8;++i) {
-            const int x=42+i*150;
-            panel(c,x,166,140,166,Panel,i==systemTab_);
-            InfinityIcons::Draw(c,marks[i],x+12,181,30,White);
-            c.TextFit(x+10,222,c.Tr(titles[i]),18,White,120);
-            c.TextFit(x+10,284,c.Tr(summaries[i]),15,Muted,120);
+        if(page_==Listing){
+            const char* groups[]={"Dispositivos e rede","Monitoramento e tarefas","Extensões e eventos","Instalação e console"};
+            for(int g=0;g<4;++g){
+                const int x=42+g*300;c.SeriesTile(x,166,289,166,false);
+                c.TextFit(x+12,176,groups[g],19,White,265);
+                for(int j=0;j<2;++j){const int i=g*2+j,y=212+j*55;
+                    c.SeriesTile(x+8,y,273,49,i==systemTab_);
+                    InfinityIcons::Draw(c,marks[i],x+18,y+10,27,i==systemTab_?Lime:White);
+                    c.TextFit(x+57,y+9,c.Tr(titles[i]),20,White,215);
+                }
+            }
+        }else{
+            // A single selected category replaces eight unrelated shortcuts on details pages.
+            c.SeriesTile(42,166,1196,166,false);
+            InfinityIcons::Draw(c,marks[systemTab_],65,193,68,Lime);
+            c.TextFit(155,185,c.Tr(titles[systemTab_]),34,White,1055);
+            c.TextFit(155,242,c.Tr(summaries[systemTab_]),23,Muted,1055);
+            InfinityButtons::Hint(c,InfinityButtons::B,155,285,26,"Voltar à central",250,White);
         }
         if(page_==Details && systemTab_==0) {DrawStorage(c);return;}
         if(page_==Details && systemTab_==1) {DrawNetwork(c);return;}
@@ -3311,7 +3332,10 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         for(int i=0;i<numTabs;++i) {
             const int x=45+i*(tabWidth+9);
             panel(c,x,148,tabWidth,43,Panel,i==subtab_);
-            c.CenterText(x,155,tabWidth,c.Tr(tabs[i]),numTabs==9?16:19,White);
+            const int gameIcons[]={23,1,35,13,35,24,20,49,34};
+            const int appIcons[]={2,50,42,35};
+            InfinityIcons::Draw(c,section_==Library?gameIcons[i]:appIcons[i],x+7,159,21,i==subtab_?Lime:White);
+            c.TextFit(x+33,155,c.Tr(tabs[i]),numTabs==9?15:19,White,tabWidth-38);
             if(GridListing()&&gridFilter_&&i==subtab_)c.Box(x+4,185,tabWidth-8,3,Lime);
         }
         c.Text(49,200,number(Count())+c.Tr(" itens nesta aba"),21,Muted,1120);
@@ -3753,7 +3777,8 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
         if(saveBackups_)label=saveRecords_[i].slot+" | "+saveRecords_[i].package.name+" | "+number(saveRecords_[i].bytes)+" B";
         else if(saveList_)label=hexId(saveItems_[i].titleId)+" | "+saveItems_[i].name+" | "+saveItems_[i].path.substr(saveItems_[i].path.find_last_of("/\\")+1);
         else label=saveProfiles_[i].owner+" | "+saveProfiles_[i].device+(saveProfiles_[i].owner=="0000000000000000"?std::string(c.Tr(" | Compartilhado")):std::string(c.Tr(" | Pasta de perfil")));
-        c.Text(58,y+6,label,19,White,1150);
+        InfinityIcons::Draw(c,saveBackups_?39:saveList_?38:27,58,y+6,23,White);
+        c.TextFit(94,y+6,label,19,White,1100);
     }
     if(!count)c.Text(48,410,std::string(c.Tr("Nenhum registro reconhecido.")),22,Muted,1170);
     c.Text(48,555,notice_.empty()?(saveBackups_?std::string(c.Tr("Backups por Title ID, podem pertencer a outros perfis.")):std::string(c.Tr("Inventario por pasta, nao comprova titularidade. "))+std::string(saveLimited_?std::string(c.Tr("Limite atingido.")):"")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
@@ -3809,7 +3834,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
         std::string label;
         if(achievementDetails_){const auto& a=achievementItems_[i];label=std::string(a.earned?"[OK] ":"[--] ")+a.name+" | "+number(a.score)+" G";}
         else{const auto& t=achievementSummary_.titles[i];label=hexId(t.id)+" | "+t.name+" | "+number(t.earned)+"/"+number(t.total)+" | "+number(t.earnedScore)+"/"+number(t.score)+" G";}
-        c.Text(58,y+4,label,18,White,1150);
+        InfinityIcons::Draw(c,9,58,y+4,22,White);c.TextFit(90,y+4,label,18,White,1110);
     }
     if(achievementLoaded_&&!count)c.Text(48,432,std::string(c.Tr("Nenhuma entrada de conquista reconhecida.")),21,Muted,1170);
     c.Text(48,555,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
@@ -3849,8 +3874,9 @@ void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
     for(unsigned i=0;i<8;++i){
         const int x=48+(i%2)*600,y=385+(i/2)*54;
         panel(c,x,y,582,49,Panel,i==appearanceRow_);
-        c.Text(x+12,y+4,c.Tr(labels[i]),17,Muted,550);
-        c.Text(x+12,y+21,"< "+values[i]+" >",20,Lime,550);
+        const int icons[]={10,62,46,62,24,23,20,25};InfinityIcons::Draw(c,icons[i],x+12,y+10,28,White);
+        c.TextFit(x+52,y+4,c.Tr(labels[i]),17,Muted,510);
+        c.TextFit(x+52,y+21,"< "+values[i]+" >",20,Lime,510);
     }
     c.Text(48,596,"Clima: Open-Meteo | Cidade manual | UTC nao altera o relogio do sistema",16,Muted,1170);
     c.Text(48,618,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),17,Lime,1170);
@@ -3995,7 +4021,8 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     for(int i=0;i<8;++i){
         const int x=45+i*149;panel(c,x,171,140,42,Panel,i==storeTab_);
-        c.Text(x+8,180,c.Tr(tabs[i]),18,i==storeTab_?Lime:White,124);
+        const int icons[]={2,1,35,42,2,1,37,45};InfinityIcons::Draw(c,icons[i],x+7,181,22,i==storeTab_?Lime:White);
+        c.TextFit(x+34,180,c.Tr(tabs[i]),16,White,100);
     }
     if(storeVisible_.empty()){
         c.Text(55,270,c.Tr("Nenhum item no catalogo desta categoria."),23,White,1170);

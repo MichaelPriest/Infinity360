@@ -58,7 +58,7 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 ![Atlas transparente de ícones](Platform/Xbox360/Assets/infinity-icons.png)
 
-32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
+64 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
 
 ### Botões do controle Xbox 360 — formas originais, alta legibilidade
 
@@ -71,6 +71,10 @@ Referência: [atlas original XNA](Platform/Xbox360/Assets/XNA-Controller/xbox-bu
 ### Home compacta e legibilidade
 
 A navegação padrão Series Infinity exibe apenas Início, Jogos, Apps, IPTV, Loja e Sistema. Os seis cartões antigos foram agrupados em Gerenciar, Rede e mídia e Perfil e serviços. Sistema abre um submenu com central, configurações, energia e downloads. Os atalhos anteriores permanecem acessíveis e a ordem de prioridade personalizada é preservada. A Home omite instruções redundantes e mostra comandos conforme o foco. Os botões usam letras/siglas integradas à imagem, de alto contraste; os ícones rasterizados têm contraste reforçado. Os layouts alternativos mantêm sua navegação própria.
+
+### Atalhos e ícones dos módulos
+
+O atlas compartilhado foi ampliado para 64 imagens, com IDs anteriores preservados. Sistema agora apresenta quatro grupos de duas funções e, nos detalhes, apenas a categoria atual; as rotas existentes permanecem. Biblioteca, conteúdo TU/DLC/saves/trainers, loja, fontes, ações de arquivos, energia, armazenamento, temperaturas, aparência, conquistas, perfis e IPTV usam símbolos específicos. Outros 32 símbolos foram preparados para uso nas próximas revisões. Textos auxiliares e layouts alternativos ainda exigem revisão individual.
 
 ## Galeria da interface nativa
 

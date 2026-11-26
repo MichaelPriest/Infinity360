@@ -457,7 +457,8 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
     for(int i=0;i<TvTabCount;++i){
         const int x=45+i*150;
         tile(c,x,141,143,43,i==tab_);
-        c.Text(x+8,151,c.Tr(tabs[i]),18,i==tab_?Lime:Soft,127);
+        const int icons[]={2,3,52,53,54,54,21,48};InfinityIcons::Draw(c,icons[i],x+7,151,23,i==tab_?Lime:Ink);
+        c.TextFit(x+35,151,c.Tr(tabs[i]),16,Ink,100);
     }
     if(!query_.empty())c.Text(47,192,c.Tr("Busca")+std::string(": ")+query_,17,Lime,1165);
     else c.Text(47,192,source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,17,Soft,1165);

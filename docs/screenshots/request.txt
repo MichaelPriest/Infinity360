@@ -20,3 +20,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 compact Home grouped shortcuts, contextual footer and high contrast controller glyphs
 2026-11-26 recreate controller button textures with integral lettering, remove runtime overlay
 2026-11-26 preserve exact original Microsoft XNA controller button alpha silhouettes; baked RGB contrast only
+2026-11-26 expand raster atlas to 64, grouped system navigation and semantic shortcuts across modules
