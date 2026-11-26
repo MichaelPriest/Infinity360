@@ -185,6 +185,7 @@ int main(int argc,char** argv) {
         assert(mixed!=original&&mixed!=0xffffffffu);
         modern.SeriesTile(200,200,80,70,true);
         assert(modern.Pixels()[200*HomeCanvas::Width+240]==0xffa8ff00u);
+        assert(modern.Pixels()[201*HomeCanvas::Width+201]!=0xffa8ff00u); // rounded corner, not a square outline
     }
 
     // A 2:1 source with 2:3 pixel aspect displays as 4:3, not stretched.
