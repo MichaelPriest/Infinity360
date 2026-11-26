@@ -40,7 +40,7 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**71 capturas nativas** — commit [28a663f06570](https://github.com/MichaelPriest/Infinity360/commit/28a663f06570cbdba4bccd0ea8fca84e32b9d1c2).
+**71 capturas nativas** — commit [17a6dcd9ecd4](https://github.com/MichaelPriest/Infinity360/commit/17a6dcd9ecd437ad489e43d5670a18cdf6d20ea2).
 
 | Tela | Tela |
 | --- | --- |
