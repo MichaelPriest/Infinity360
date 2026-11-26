@@ -34,6 +34,7 @@ public:
     void Shade(int x,int y,int w,int h,unsigned color,unsigned leftAlpha,unsigned rightAlpha);
     void CenterText(int x,int y,int w,const std::string& text,int size,unsigned color);
     void Image(int sx, int sy, int sw, int sh, int x, int y, int w, int h, unsigned tint = 0xffffffffu);
+    void BrandLogo(int x,int y);
     bool Logo(const std::string& file, int x, int y, int w, int h);
     // Fixed-size local RGBA files, cached including failed reads until refresh.
     bool LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop=false,int radius=0);

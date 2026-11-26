@@ -1,4 +1,5 @@
 #include "HomeCanvas.h"
+#include "BrandLogoPixels.h"
 #include "GlyphWidths.h"
 #include <algorithm>
 #include <cstdio>
@@ -161,6 +162,13 @@ void HomeCanvas::Image(int sx,int sy,int sw,int sh,int x,int y,int w,int h,unsig
             unsigned color=src[i*sw/w], alpha=color>>24;
             if (alpha) dst[x+i]=blend(tint==0xffffffffu ? color : tint,dst[x+i],alpha);
         }
+    }
+}
+void HomeCanvas::BrandLogo(int x,int y){
+    if(x<0||y<0||x+InfinityBrand::Width>Width||y+InfinityBrand::Height>Height)return;
+    for(int j=0;j<InfinityBrand::Height;++j)for(int i=0;i<InfinityBrand::Width;++i){
+        const unsigned p=InfinityBrand::Pixel(i,j),a=p>>24;
+        if(a){unsigned& d=frame_[(y+j)*Width+x+i];d=blend(p,d,a);}
     }
 }
 bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {

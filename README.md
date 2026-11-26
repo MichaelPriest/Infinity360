@@ -1,5 +1,9 @@
 # INFINITY 360
 
+![Logotipo INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
+
+O cabeçalho nativo usa o logotipo de imagem aprovado (320×46, RGBA indexado com transparência), embutido como pixels para dispensar carregamento externo e manter a marca em todos os temas. Não é desenho vetorial.
+
 > Nova identidade do projeto anteriormente chamado AuroraX. A estrutura de arquivos e as chaves de configuração legadas são preservadas para compatibilidade; Cloud360 IPTV mantém sua marca.
 
 

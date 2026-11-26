@@ -4144,9 +4144,8 @@ void ConsoleHome::OpenApprovedSlot(){
 void ConsoleHome::DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const{
     const unsigned accent=0xffa8ff00u;
     c.Translucent(0,0,1280,78,0xff101211u,100);
-    InfinityIcons::Logo(c,32,-2,73,accent);
-    c.Box(109,18,1,43,0xff65736du);c.Text(121,12,"INFINITY 360",28,White,233);
-    c.Text(122,43,"Xbox 360 Dashboard",16,Muted,233);
+    c.BrandLogo(28,15);
+    c.Box(357,18,1,43,0xff65736du);
     c.SeriesTile(371,12,194,52,false);
     const auto stamp=TransferRate::Now();
     const bool current=headerThermalSampled_&&stamp>=headerThermalAt_&&stamp-headerThermalAt_<=30000;
