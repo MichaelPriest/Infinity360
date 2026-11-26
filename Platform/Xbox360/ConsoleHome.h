@@ -30,6 +30,7 @@
 #include "GpdAchievements.h"
 #include "NotificationCenter.h"
 #include "QuickGuide.h"
+#include "SocialProfile.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
 #include "DisplaySafeArea.h"
@@ -58,6 +59,9 @@ public:
     void WeatherResult(const ClockWeather::Reading& reading,const std::string& message){if(reading.valid&&reading.city==clockSettings_.city)weather_=reading;lastWeatherAttempt_=std::time(nullptr);notice_=message;}
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
+    // Console provider or explicitly marked host test fixture.
+    void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);}
+    const InfinitySocial::Header& SocialHeader()const{return social_;}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -109,6 +113,11 @@ private:
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);
     void DrawQuickGuide(HomeCanvas& c)const;
+    void DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const;
+    void DrawSocialGuide(HomeCanvas& c)const;
+    InfinitySocial::Header social_;
+    uint64_t lastSocialPoll_=0;
+    bool socialPolled_=false;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
     std::set<unsigned> translationReferences_;
