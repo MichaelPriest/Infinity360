@@ -4017,9 +4017,7 @@ void ConsoleHome::OpenApprovedSlot(){
 void ConsoleHome::DrawApprovedHeader(HomeCanvas& c,bool weatherFocused)const{
     const unsigned accent=0xffa8ff00u;
     c.Translucent(0,0,1280,78,0xff101211u,100);
-    // Continuous figure-eight logo, drawn from original strokes.
-    const int logo[][2]={{0,12},{6,3},{16,2},{27,7},{45,24},{56,28},{66,25},{72,16},{72,9},{66,2},{56,2},{45,7},{27,24},{16,28},{6,25},{0,12}};
-    for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
+    InfinityIcons::Logo(c,32,-2,73,accent);
     c.Box(109,18,1,43,0xff65736du);c.Text(121,12,"INFINITY 360",28,White,233);
     c.Text(122,43,"Xbox 360 Dashboard",16,Muted,233);
     c.SeriesTile(371,12,194,52,false);
@@ -4058,9 +4056,20 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     }
     c.Box(28,148,1224,1,0xff414743u);
     const auto hero=Geometry(ApprovedHome::Hero);c.SeriesTile(hero.x,hero.y,hero.w,hero.h,active==Hero);
-    bool art=false;
+    bool art=false,illustration=false;
+    const auto builtinArt=[&](const Game& game,int x,int y,int w,int h){
+        // The original bundled atlas already contains these three illustrations.
+        int sx=600,sy=66;
+        if(game.name=="Halo 3")sx=742;
+        else if(game.name=="Gears of War 3")sy=132;
+        else if(game.name!="Forza Horizon")return false;
+        c.Image(sx,sy,140,64,x,y,w,h);return true;
+    };
     if(!shelf.empty()&&appearance.ShowBackdrop()){
         auto bg=ArtPath(*shelf.front(),false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+2,hero.y+2,hero.w-4,hero.h-4,true,10);
+    }
+    if(!art&&!shelf.empty()&&appearance.ShowBackdrop()){
+        illustration=builtinArt(*shelf.front(),hero.x+hero.w/3,hero.y+5,hero.w*2/3-5,hero.h-10);art=illustration;
     }
     if(art)c.Shade(hero.x+8,hero.y+8,hero.w-16,hero.h-16,0xff070c0au,230,4);
     else if(!shelf.empty()&&appearance.ShowCover()){
@@ -4072,6 +4081,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.Box(hero.x+30,hero.y+177,162,36,accent,9);
     c.Box(hero.x+43,hero.y+185,20,20,0xff102010u,10);c.CenterText(hero.x+43,hero.y+184,20,"A",14,accent);
     c.TextFit(hero.x+74,hero.y+179,shelf.empty()?"Biblioteca":"Detalhes",19,0xff101710u,110);
+    if(illustration)c.TextFit(hero.x+hero.w-130,hero.y+hero.h-25,"Arte ilustrativa",12,White,121);
     if(active==Hero)c.SeriesFocus(hero.x,hero.y,hero.w,hero.h);
     const char* quick[]={"Instalador","Gerenciador","System Link","IPTV","Loja Infinity","Conquistas"};
     const char* desc[]={"DVD / GOD","HDD e USB","Rede local","TV e vídeo","Apps e extras","Gamerscore"};
@@ -4087,10 +4097,14 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         const auto a=Geometry(FirstCover+static_cast<int>(i));const auto& game=*shelf[i];
         c.SeriesTile(a.x,a.y,a.w,a.h,active==FirstCover+static_cast<int>(i));
         bool cover=false;if(appearance.ShowCover()){const auto path=ArtPath(game,true);if(!path.empty())cover=c.LocalArt(path,true,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
+        bool demo=false;
+        if(!cover&&appearance.ShowBackdrop()){const auto file=ArtPath(game,false);if(!file.empty())cover=c.LocalArt(file,false,a.x+2,a.y+2,a.w-4,a.h-4,true,10);}
+        if(!cover&&appearance.ShowBackdrop()){demo=builtinArt(game,a.x+5,a.y+5,a.w-10,a.h-10);cover=demo;}
         if(cover){for(int dy=0;dy<55;++dy)c.Translucent(a.x+5,a.y+a.h-60+dy,a.w-10,1,0xff090f0bu,unsigned(80+dy*3));}
         else {approvedIcon(c,1,a.x+(a.w-42)/2,a.y+47,42,Muted);c.CenterText(a.x+3,a.y+10,a.w-6,"XBOX 360",13,Muted);c.CenterText(a.x+3,a.y+100,a.w-6,"Sem capa",13,Muted);}
         c.TextFit(a.x+12,a.y+a.h-32,game.name,17,White,a.w-24);
-        if(Starred(game))c.Text(a.x+9,a.y+8,"*",21,accent,30);
+        if(demo)c.TextFit(a.x+9,a.y+8,"Arte ilustrativa",12,White,a.w-18);
+        if(Starred(game))InfinityIcons::Draw(c,21,a.x+a.w-25,a.y+7,18,accent);
         if(active==FirstCover+static_cast<int>(i))c.SeriesFocus(a.x,a.y,a.w,a.h);
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
