@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.61 — Lista de amigos e presença
+
+- Guide com painel próprio de amigos, filtros Todos/Online/Pedidos, paginação de cinco registros, status e Title ID; X mantém acesso à lista oficial.
+- Provider experimental read-only XLiveBase 0xFC/0x58020 + XamEnumerate, consulta manual, opt-in dedicado, limites e revalidação de identidade. Sem persistência ou alteração de amizades.
+- Captura 73 adicionada para o estado indisponível no host; testes de filtro e navegação preparados. Sem XEX/release ou homologação física.
+
 ## V0.2.60 — Jogadores recentes e base de presença
 
 - Sexta ação do Guide: jogadores recentes via XamShowPlayersUI (0x2C8), experimental, restrita a perfil online.

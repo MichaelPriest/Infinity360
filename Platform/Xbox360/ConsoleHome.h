@@ -31,6 +31,7 @@
 #include "NotificationCenter.h"
 #include "QuickGuide.h"
 #include "SocialProfile.h"
+#include "FriendRoster.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
 #include "DisplaySafeArea.h"
@@ -61,9 +62,14 @@ public:
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     // Console provider or explicitly marked host test fixture.
-    void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);}
+    void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);}
     const InfinitySocial::Header& SocialHeader()const{return social_;}
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
+    bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
+    bool TakeFriendRosterRequest(){const bool pending=friendRosterPending_;friendRosterPending_=false;return pending&&FriendGuideOpen();}
+    void FriendRosterResult(const InfinitySocial::FriendRoster& roster,const std::string& message){
+        friendRoster_=roster;friendRoster_.Observe(social_);friendRow_=0;notice_=message;
+    }
     InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr){const auto action=nativeSocialPending_;if(title)*title=nativeSocialTitle_;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;return action;}
     void NativeSocialResult(const std::string& message){socialPolled_=false;notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
@@ -119,6 +125,12 @@ private:
     int quickGuideRow_=0;
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;
+    bool friendGuideOpen_=false,friendRosterPending_=false;
+    std::size_t friendRow_=0;
+    InfinitySocial::FriendFilter friendFilter_=InfinitySocial::FriendFilter::All;
+    InfinitySocial::FriendRoster friendRoster_;
+    void DrawFriendGuide(HomeCanvas& c)const;
+    void PressFriendGuide(Key key);
     InfinitySocial::AvatarExitConfirmation avatarExitConfirm_;
     InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
     unsigned nativeSocialTitle_=0;

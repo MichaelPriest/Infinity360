@@ -7,6 +7,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "NativeSocialUiXsdk.h"
+#include "NativeFriendRosterXsdk.h"
 #include "NativeSocialListenerXsdk.h"
 #include "XexLaunchCheck.h"
 #include "DashboardScreenshot.h"
@@ -631,6 +632,13 @@ int main(){
             const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning();
             const bool accepted=allowed&&XamShowSigninUI(4,0)==ERROR_SUCCESS;
             menu.SigninResult(accepted);dirty=true;
+        }
+        if(menu.TakeFriendRosterRequest()){
+            InfinitySocial::FriendRoster roster;
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+            const auto result=allowed?InfinitySocial::ReadNativeFriendRoster(menu.SocialHeader(),dir,roster):
+                std::string("Consulta bloqueada por outra operacao.");
+            menu.FriendRosterResult(roster,result);dirty=true;
         }
         unsigned socialTitle=0;
         const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle);

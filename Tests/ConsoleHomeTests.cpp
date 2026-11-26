@@ -194,7 +194,14 @@ static int captureScreens(const char* atlas,const char* destination) {
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);
             profile.Press(ConsoleHome::Accept);
+            assert(profile.FriendGuideOpen());
+            assert(!profile.TakeFriendRosterRequest());
+            ok=save("73-amigos-xbox",profile)&&ok;
+            profile.Press(ConsoleHome::PageDown);profile.Press(ConsoleHome::Refresh);
+            assert(!profile.TakeFriendRosterRequest());
+            profile.Press(ConsoleHome::Favorite);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+            profile.Press(ConsoleHome::Back);assert(!profile.FriendGuideOpen());
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
             assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);

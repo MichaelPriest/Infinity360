@@ -51,7 +51,28 @@ inline bool ParseFriendRoster(const unsigned char* data,std::size_t bytes,std::s
     rows.swap(parsed);
     return true;
 }
-// Bind a future roster provider result to the exact observed profile. The
+enum class FriendFilter { All, Online, Requests, Count };
+inline bool FriendMatches(FriendState state,FriendFilter filter){
+    switch(filter){
+        case FriendFilter::All:return true;
+        case FriendFilter::Online:return state==FriendState::Online||state==FriendState::Playing;
+        case FriendFilter::Requests:return state==FriendState::RequestSent||state==FriendState::RequestReceived;
+        default:return false;
+    }
+}
+inline const char* FriendStateLabel(FriendState state){
+    switch(state){
+        case FriendState::Offline:return "Offline";case FriendState::Online:return "Online";
+        case FriendState::Playing:return "Jogando";case FriendState::RequestSent:return "Solicitacao enviada";
+        case FriendState::RequestReceived:return "Solicitacao recebida";default:return "Desconhecido";
+    }
+}
+inline std::vector<std::size_t> FilterFriends(const std::vector<FriendRow>& rows,FriendFilter filter){
+    std::vector<std::size_t> indices;
+    for(std::size_t i=0;i<rows.size();++i)if(FriendMatches(rows[i].state,filter))indices.push_back(i);
+    return indices;
+}
+// Bind a roster provider result to the exact observed profile. The
 // snapshot contains display-only rows; identity never enters logs or UI.
 class FriendRoster {
     std::uint64_t identity_=0;

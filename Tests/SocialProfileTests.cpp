@@ -268,6 +268,11 @@ int main() {
     CHECK(!friends.Set(communication,swapped,record,sizeof(record),1));
     CHECK(friends.Set(communication,communication,nullptr,0,0)&&friends.KnownFor(communication));
     CHECK(friends.Rows().empty());
+    std::vector<FriendRow> sample={{"A",FriendState::Playing,1},{"B",FriendState::Offline,0},{"C",FriendState::RequestReceived,0}};
+    CHECK(FilterFriends(sample,FriendFilter::All).size()==3);
+    CHECK(FilterFriends(sample,FriendFilter::Online)==std::vector<std::size_t>{0});
+    CHECK(FilterFriends(sample,FriendFilter::Requests)==std::vector<std::size_t>{2});
+    CHECK(FilterFriends(sample,FriendFilter::Count).empty());
     std::cout << "social profile checks passed\n";
     return 0;
 }

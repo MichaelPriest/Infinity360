@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1000,6 +1000,7 @@ std::string ConsoleHome::Press(Key key) {
     if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
 #endif
     if(quickGuideOpen_){
+        if(friendGuideOpen_){PressFriendGuide(key);return "";}
         if(key!=Accept)avatarExitConfirm_.Cancel();
         if(!quickGuideEditing_){
             if(key==Right){socialGuideFocus_=true;notice_.clear();return "";}
@@ -1008,6 +1009,11 @@ std::string ConsoleHome::Press(Key key) {
                 if(key==Up||key==Down){socialGuideRow_=InfinitySocial::MoveGuideSocial(socialGuideRow_,key==Up?-1:1);notice_.clear();return "";}
                 if(key==Accept){
                     const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
+                    if(action==InfinitySocial::NativeAction::Friends){
+                        friendGuideOpen_=true;friendRow_=0;friendFilter_=InfinitySocial::FriendFilter::All;
+                        friendRoster_.Clear();friendRosterPending_=false;notice_.clear();
+                        PressFriendGuide(Refresh);return "";
+                    }
                     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
 #if defined(__XSDK__)
                     if(action==InfinitySocial::NativeAction::AvatarEditor){
@@ -2078,7 +2084,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
-        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;avatarExitConfirm_.Cancel();notice_.clear();return "";}
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -3444,6 +3450,72 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     c.TextFit(x+52,y+28,subtitle,13,ink,w-58);
 }
 namespace { void approvedIcon(HomeCanvas& c,int kind,int x,int y,int size,unsigned color); }
+void ConsoleHome::PressFriendGuide(Key key){
+    using namespace InfinitySocial;
+    if(key==Back||key==Left){friendGuideOpen_=false;friendRosterPending_=false;friendRoster_.Clear();notice_.clear();return;}
+    if(key==Refresh){
+        friendRoster_.Clear();friendRow_=0;
+        if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
+#if defined(__XSDK__)
+        if(CanRequestNative(NativeAction::Friends,social_)){friendRosterPending_=true;notice_="Consultando lista do sistema.";}
+        else notice_="Amigos requerem perfil online do console.";
+#else
+        notice_="Consulta nativa somente no Xbox 360.";
+#endif
+        return;
+    }
+    if(key==Favorite){
+        if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
+#if defined(__XSDK__)
+        if(CanRequestNative(NativeAction::Friends,social_)){nativeSocialPending_=NativeAction::Friends;nativeSocialTitle_=0;}
+        else notice_="Amigos requerem perfil online do console.";
+#else
+        notice_="Interface oficial somente no Xbox 360.";
+#endif
+        return;
+    }
+    if(key==PageUp||key==PageDown){
+        const int count=static_cast<int>(FriendFilter::Count);
+        friendFilter_=static_cast<FriendFilter>((static_cast<int>(friendFilter_)+count+(key==PageUp?-1:1))%count);
+        friendRow_=0;return;
+    }
+    const auto rows=FilterFriends(friendRoster_.Rows(),friendFilter_);
+    if(key==Up&&friendRow_>0)--friendRow_;
+    if(key==Down&&friendRow_+1<rows.size())++friendRow_;
+}
+void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
+    using namespace InfinitySocial;
+    c.SeriesTile(580,87,470,552,false,244);
+    approvedIcon(c,8,606,110,30,White);
+    c.TextFit(644,105,"Amigos Xbox",28,White,385);
+    const bool known=friendRoster_.KnownFor(social_);
+    const auto& all=friendRoster_.Rows();
+    const auto rows=known?FilterFriends(all,friendFilter_):std::vector<std::size_t>{};
+    const auto online=known?FilterFriends(all,FriendFilter::Online).size():0;
+    c.TextFit(606,159,known?number(all.size())+" registros | "+number(online)+" online/jogando":"Lista ainda nao consultada",17,Muted,413);
+    const char* filters[]={"Todos","Online","Pedidos"};
+    for(int i=0;i<3;++i){
+        const bool selected=i==static_cast<int>(friendFilter_);
+        c.SeriesTile(602+i*143,190,137,36,selected,220);
+        c.TextFit(612+i*143,198,filters[i],16,selected?White:Muted,117);
+    }
+    if(!known)c.TextFit(609,248,"Y consulta | X abre lista oficial",18,White,410);
+    else if(rows.empty())c.TextFit(609,248,"Nenhum registro neste filtro.",18,White,410);
+    const std::size_t selected=rows.empty()?0:std::min(friendRow_,rows.size()-1);
+    const std::size_t first=(selected/5)*5;
+    for(std::size_t i=first;i<rows.size()&&i<first+5;++i){
+        const auto& f=all[rows[i]];const int y=236+int(i-first)*60;
+        c.SeriesTile(601,y,428,56,i==selected,220);
+        const bool active=f.state==FriendState::Online||f.state==FriendState::Playing;
+        c.Box(614,y+19,12,12,active?Lime:Muted,6);
+        c.TextFit(642,y+4,f.name,20,White,370);
+        const std::string state=std::string(FriendStateLabel(f.state))+(f.title?" | Title "+hexId(f.title):"");
+        c.TextFit(642,y+30,state,14,Muted,370);
+    }
+    c.TextFit(607,548,"Consulta experimental; sem envio ou alteracao de amizade.",13,Muted,413);
+    c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
+    c.TextFit(607,594,"Cima/Baixo Navegar | B Voltar",15,White,413);
+}
 void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     using namespace InfinitySocial;
     c.SeriesTile(580,87,470,552,false,244);
@@ -3514,7 +3586,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     if(quickGuideEditing_)InfinityButtons::Strip(c,259,551,"LB/RB Mover | X Padrão | Y Salvar",13,White,284);
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Esquerda: atalhos | A Abrir":"Direita: perfil e amigos"),15,Muted,284);
-    if(!quickGuideEditing_)DrawSocialGuide(c);
+    if(!quickGuideEditing_){if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
     if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
