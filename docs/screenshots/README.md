@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**72 capturas nativas** — commit [cfde5920e592](https://github.com/MichaelPriest/Infinity360/commit/cfde5920e592e0eb82feca2d56bd95502be522d8).
+**73 capturas nativas** — commit [07b0b5216977](https://github.com/MichaelPriest/Infinity360/commit/07b0b5216977932c2de54ccb99767820222d5ab4).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -18,6 +18,8 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Guia rápido — personalização dos atalhos** | **Tela inicial — perfil local de teste** |
 | ![Guia rápido — perfil de teste e seis ações sociais (indisponíveis no host)](71-guia-perfil-teste.png) | ![Home — grupo Sistema, com funções secundárias](72-home-grupos.png) |
 | **Guia rápido — perfil de teste e seis ações sociais (indisponíveis no host)** | **Home — grupo Sistema, com funções secundárias** |
+| ![Guide — lista própria de amigos, consulta indisponível no host](73-amigos-xbox.png) |  |
+| **Guide — lista própria de amigos, consulta indisponível no host** |  |
 
 ### Biblioteca e conteúdo de jogos
 
