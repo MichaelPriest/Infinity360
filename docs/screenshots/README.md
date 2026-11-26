@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**77 capturas nativas** — commit [4ba51d6b9651](https://github.com/MichaelPriest/Infinity360/commit/4ba51d6b96513ddd553f678e3250c88a798acec4).
+**77 capturas nativas** — commit [8ff905bf9b91](https://github.com/MichaelPriest/Infinity360/commit/8ff905bf9b919786c557753e59d42c19646cb074).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
