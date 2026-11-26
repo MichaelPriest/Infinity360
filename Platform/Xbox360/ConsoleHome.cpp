@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1011,7 +1011,7 @@ std::string ConsoleHome::Press(Key key) {
         if(avatarGuideOpen_){
             if(key==Back||key==Left){avatarGuideOpen_=false;avatarBodyPending_=false;notice_.clear();}
             if(key==Refresh){
-                socialPolled_=false;socialArtPolled_=false;avatarPreview_.Clear();
+                socialPolled_=false;socialArtPolled_=false;avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};
 #if defined(__XSDK__)
                 if(!TransferRunning()&&InfinitySocial::CanRequestNative(InfinitySocial::NativeAction::GamerCard,social_)){
                     avatarBodyPending_=true;notice_="Consultando imagem do avatar.";
@@ -3690,9 +3690,9 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(795,267,"Backend ainda nao integrado",15,Muted,230);
     c.TextFit(795,305,"Exportacoes XAM",17,Lime,230);
     c.TextFit(795,333,avatarCapabilities_.checked?number(avatarCapabilities_.Count())+"/6 localizadas":"Nao consultadas",16,White,230);
-    c.TextFit(795,365,"Exportacao nao comprova suporte.",13,Muted,230);
+    c.TextFit(795,365,avatarManifest_.known?number(avatarManifest_.populated)+" componentes identificados":"Manifesto nao confirmado",13,Muted,230);
     c.TextFit(795,399,ValidGamerpic(social_.gamerpic)?"Gamerpic disponivel":"Gamerpic indisponivel",15,Muted,230);
-    c.TextFit(608,480,"Y consulta a imagem oficial. Animacao 3D pendente.",15,Muted,412);
+    c.TextFit(608,480,"Y consulta imagem e manifesto. Animacao 3D pendente.",15,Muted,412);
     c.TextFit(608,523,"X Editar perfil | Y Atualizar | B Voltar",16,White,412);
     c.TextFit(608,563,"Editor oficial: volte e selecione Editor de avatar.",14,Muted,412);
 }

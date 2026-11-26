@@ -3,6 +3,7 @@
 #include "NativeSocialSignals.h"
 #include "FriendRoster.h"
 #include "AvatarPreview.h"
+#include "AvatarManifest.h"
 #include "ProfilePrivileges.h"
 #include <iostream>
 using namespace InfinitySocial;
@@ -378,6 +379,24 @@ int main() {
     CHECK(DecodeAvatarArgb(argb,sizeof(argb),1,2,8,decoded));
     CHECK(decoded==std::vector<unsigned char>({10,20,30,255,40,50,60,128}));
     CHECK(!DecodeAvatarArgb(argb,sizeof(argb)-1,1,2,8,decoded)&&decoded.empty());
+    std::array<unsigned char,AvatarManifestBytes> manifest{};
+    CHECK(!InspectAvatarManifest(manifest.data(),manifest.size()).known);
+    manifest[AvatarComponentOffset]=1;
+    CHECK(!InspectAvatarManifest(manifest.data(),manifest.size()).known);
+    manifest[AvatarComponentOffset+AvatarComponentBytes]=1;
+    manifest[AvatarComponentOffset+2*AvatarComponentBytes]=1;
+    auto manifestResult=InspectAvatarManifest(manifest.data(),manifest.size());
+    CHECK(manifestResult.known&&manifestResult.populated==3);
+    CHECK(!InspectAvatarManifest(manifest.data(),manifest.size()-1).known);
+    AvatarRefresh avatarRefresh;
+    CHECK(avatarRefresh.Due(communication,0));
+    avatarRefresh.Mark(communication,100);
+    CHECK(!avatarRefresh.Due(communication,100));
+    CHECK(!avatarRefresh.Due(communication,120099));
+    CHECK(avatarRefresh.Due(communication,120100));
+    CHECK(avatarRefresh.Due(swapped,101)&&avatarRefresh.Due(communication,99));
+    avatarRefresh.Observe(swapped);
+    CHECK(avatarRefresh.Due(communication,101));
     std::cout << "social profile checks passed\n";
     return 0;
 }

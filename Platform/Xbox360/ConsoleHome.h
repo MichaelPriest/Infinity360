@@ -33,6 +33,7 @@
 #include "SocialProfile.h"
 #include "ProfilePrivileges.h"
 #include "AvatarPreview.h"
+#include "AvatarManifest.h"
 #include "FriendRoster.h"
 #include "SystemTelemetry.h"
 #include "VideoTelemetry.h"
@@ -65,7 +66,9 @@ public:
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
+        const auto previous=social_;
         social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);privileges_.Observe(social_);
+        avatarRefresh_.Observe(social_);if(!InfinitySocial::SameArtAccount(previous,social_))avatarManifest_={};
         if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
     }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
@@ -73,8 +76,14 @@ public:
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
     bool AvatarGuideOpen()const{return quickGuideOpen_&&avatarGuideOpen_;}
     bool TakeAvatarBodyRequest(){const bool pending=avatarBodyPending_;avatarBodyPending_=false;return pending&&AvatarGuideOpen();}
-    void AvatarBodyResult(const InfinitySocial::AvatarPreview& preview,const std::string& message){
-        avatarPreview_=preview;avatarPreview_.Observe(social_);notice_=message;
+    bool AvatarAutoDue(std::uint64_t now)const{return avatarRefresh_.Due(social_,now);}
+    void AvatarBodyResult(const InfinitySocial::AvatarPreview& preview,const std::string& message,
+                          std::uint64_t now=0,bool manual=true){
+        avatarPreview_=preview;avatarPreview_.Observe(social_);avatarRefresh_.Mark(social_,now);
+        if(manual)notice_=message;
+    }
+    void AvatarManifestResult(const InfinitySocial::Header& before,const InfinitySocial::AvatarManifestSummary& result){
+        avatarManifest_=InfinitySocial::SameArtAccount(before,social_)?result:InfinitySocial::AvatarManifestSummary{};
     }
     bool CommunicationGuideOpen()const{return quickGuideOpen_&&communicationGuideOpen_;}
     bool PrivilegeGuideOpen()const{return CommunicationGuideOpen()&&privilegeGuideOpen_;}
@@ -109,10 +118,10 @@ public:
         }
         return action;
     }
-    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();notice_=message;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -174,6 +183,8 @@ private:
     void PressCommunicationGuide(Key key);
     InfinitySocial::AvatarCapabilities avatarCapabilities_;
     InfinitySocial::AvatarPreview avatarPreview_;
+    InfinitySocial::AvatarRefresh avatarRefresh_;
+    InfinitySocial::AvatarManifestSummary avatarManifest_;
     void DrawAvatarGuide(HomeCanvas& c)const;
     std::size_t friendRow_=0;
     InfinitySocial::FriendFilter friendFilter_=InfinitySocial::FriendFilter::All;

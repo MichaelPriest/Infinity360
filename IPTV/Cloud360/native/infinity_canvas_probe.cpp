@@ -10,6 +10,7 @@
 #include "NativeProfilePrivilegesXsdk.h"
 #include "NativeAvatarProbeXsdk.h"
 #include "NativeAvatarBodyXsdk.h"
+#include "NativeAvatarManifestXsdk.h"
 #include "NativeFriendRosterXsdk.h"
 #include "NativeSocialListenerXsdk.h"
 #include "XexLaunchCheck.h"
@@ -653,12 +654,20 @@ int main(){
                 std::string("Consulta bloqueada por outra operacao.");
             menu.FriendRosterResult(roster,result,TransferRate::Now());dirty=true;
         }
-        if(menu.TakeAvatarBodyRequest()){
+        const bool manualAvatar=menu.TakeAvatarBodyRequest();
+        static const bool autoAvatar=[&](){
+            std::ifstream flag(dir+"enable-native-avatar-auto.txt");std::string line;
+            return std::getline(flag,line)&&(line=="ENABLE-NATIVE-AVATAR-AUTO"||line=="ENABLE-NATIVE-AVATAR-AUTO\r");
+        }();
+        const bool avatarAllowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+        if(manualAvatar||(autoAvatar&&avatarAllowed&&menu.AvatarAutoDue(TransferRate::Now()))){
             InfinitySocial::AvatarPreview preview;
-            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
-            const auto result=allowed?InfinitySocial::ReadNativeAvatarBody(menu.SocialHeader(),dir,preview):
+            const auto before=menu.SocialHeader();
+            const auto result=avatarAllowed?InfinitySocial::ReadNativeAvatarBody(before,dir,preview):
                 std::string("Consulta bloqueada por outra operacao.");
-            menu.AvatarBodyResult(preview,result);dirty=true;
+            menu.AvatarBodyResult(preview,result,TransferRate::Now(),manualAvatar);
+            if(manualAvatar&&avatarAllowed)menu.AvatarManifestResult(before,InfinitySocial::ReadNativeAvatarManifest(before,dir));
+            dirty=true;
         }
         if(menu.ExpirePrivileges(TransferRate::Now()))dirty=true;
         if(menu.TakePrivilegeRequest()){

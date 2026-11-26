@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.69 — Atualização de avatar e manifesto oficial
+
+- Consulta automática de imagem oficial opcional por perfil, intervalo mínimo 120 s, incluindo falhas; invalidação ao trocar identidade ou editar perfil; atualização manual preservada.
+- Leitura experimental do manifesto local XAM 0x5DE, buffer opaco de 1000 bytes, resumo da presença dos IDs dos componentes base; sem armazenar metadados/identidade em disco, sem chamada de inicialização de renderer.
+- Guide informa componentes identificados, não carregados/renderizados. Testes portáteis e capturas solicitados; sem XEX/release.
+
 ## V0.2.68 — Imagem oficial de corpo inteiro do avatar
 
 - Consulta manual da tile 15 do editor oficial e decodificação via XAM; PNG limitado e validação de perfil antes/depois, opt-in separado. Sem D3D concorrente.
