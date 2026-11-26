@@ -54,6 +54,12 @@ struct ThermalTelemetry {
         const unsigned tenths=(unsigned(rawValue)*10+128)/256;
         char value[24];std::snprintf(value,sizeof value,"%u.%u C",tenths/10,tenths%10);return value;
     }
+    std::string CompactCelsius(unsigned i)const{
+        return i<4&&available[i]?std::to_string((unsigned(raw[i])+128)/256)+" C":"--";
+    }
+    static bool HeaderDue(bool sampled,uint64_t last,uint64_t now){
+        return !sampled||now<last||now-last>=10000;
+    }
     std::string FanTargetLabel()const{return fanTargetAvailable?std::to_string(fanTarget)+"%":"--";}
     std::string Celsius(unsigned i)const{
         return i<4&&available[i]?FormatCelsius(raw[i]):"--";
