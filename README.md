@@ -30,6 +30,10 @@ O cabeçalho exibe CPU, GPU, EDRAM e temperatura do chassi (SYS), em Celsius, co
 
 A referência conceitual aprovada é o alvo visual, não uma captura do programa. A revisão seguinte remove serrilhamento de escala do atlas, suaviza ícones, restaura contorno arredondado contínuo de seleção, refina iluminação acrílica e corrige rótulos truncados. A comparação final exige capturas com capas e fundos autorizados: o executável de testes aceita a variável INFINITY_CAPTURE_ART_DIR apontando para pastas com os nomes dos jogos do cenário e arquivos cover.rgba (160×240 RGBA) e background.rgba (640×360 RGBA). Sem esses arquivos, os cartões declaram falta de capa. Não se publica o mockup como captura nativa. A aparência e o desempenho em hardware ainda não foram verificados.
 
+### Design system unificado
+
+O pacote InfinityIcons.h possui 28 símbolos vetoriais originais, seguindo o conceito aprovado: menu horizontal, Guide, perfil, clima, CPU, armazenamento e demais atalhos. Os componentes compartilhados de painel, vidro, fundo e tipografia são reutilizados nas telas de biblioteca, detalhes, aplicativos, arquivos, loja, downloads, sistema, sensores, rede, plugins, conteúdo, configurações e IPTV. O player permanece separado da camada de menus; layouts e temas existentes permanecem selecionáveis. Esta é a primeira aplicação transversal do design, não uma certificação de equivalência pixel a pixel. Telas com desenho específico ainda exigem revisão da galeria e teste no console.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
