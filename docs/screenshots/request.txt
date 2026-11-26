@@ -8,3 +8,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 shared vector icons and acrylic styling across all native pages
 2026-11-26 regenerate all 71 native screens after correcting focus regression and icon narrowing; diagnostics enabled
 2026-11-26 full migration batch 1: shared header, library, details, modern store and IPTV for all home layouts
+2026-11-26 production Home defaults to Series Infinity; migrate old classic preference, refined background logo and existing art fallback; primary screenshot uses production default
