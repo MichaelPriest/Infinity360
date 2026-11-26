@@ -40,3 +40,7 @@ O registro aceita ambos os layouts `Plugins/<nome>/plugin.axplugin` e `MenuPrevi
 ### Trainers independentes
 
 `Source/TrainerCatalog.*` mantém o contrato de manifesto local e validação de Title ID, Media ID, versão e TU. A distribuição unificada cria `MenuPreview/Trainers`; o registro também procura a pasta irmã `Trainers`. Patches de memória FPS e integração HID permanecem módulos futuros, não ativados.
+
+### Aplicativos e emuladores
+
+`Modules/Emulators/ToolRoots.h` centraliza os caminhos de descoberta de Apps, Emulators e Homebrew para os layouts raiz e MenuPreview. `GameScanner` continua responsável pela enumeração dos executáveis. O registro de plugins permanece independente; atalhos duplicados são consolidados.

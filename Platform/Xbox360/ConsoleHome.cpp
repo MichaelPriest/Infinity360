@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "Modules/Emulators/ToolRoots.h"
 #include "Modules/Patches/FpsCatalog.h"
 #if defined(__XSDK__)
 #define INFINITY_SOCIAL_XSDK 1
@@ -414,6 +415,7 @@ void ConsoleHome::Reload() {
             size_t sep=roots_[i].find_last_of("\\/");
             roots.push_back(roots_[i].substr(0,sep+1)+(section_==Apps?"Apps":"Emulators"));
         }
+        InfinityToolRoots::Append(roots,dir_,section_==Apps?"Apps":"Emulators");
         roots.push_back(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),section_==Apps?"Apps":"Emulators"));
         for(const char* id:{"hdd","usb0","usb1","usb2"}){
             const auto folder=StoreStorage::Personal(dir_,id);if(!folder.empty())roots.push_back(FileWorkspace::Join(folder,section_==Apps?"Apps":"Emulators"));
@@ -427,15 +429,16 @@ void ConsoleHome::Reload() {
         for(size_t i=0;i<plugins.size();++i) if(plugins[i].category==category&&PluginAllowed(plugins[i])) {
             Game app={plugins[i].name,plugins[i].executable,
                       "Plugin "+plugins[i].version,false};
-            tools_.push_back(app);
-            toolKinds_.push_back(2);
+            const auto existing=std::find_if(tools_.begin(),tools_.end(),[&](const Game& g){return GameScanner::SameRoot(g.executable,app.executable);});
+            if(existing!=tools_.end()){
+                const auto index=static_cast<size_t>(existing-tools_.begin());
+                *existing=app;toolKinds_[index]=2;
+            }else{tools_.push_back(app);toolKinds_.push_back(2);}
         }
         if(section_==Apps) {
             // Dedicated Homebrew tab: scan app-relative, HDD and USB folders.
             std::vector<std::string> homeRoots;
-            const char separator=dir_.find('\\')!=std::string::npos?'\\':'/';
-            homeRoots.push_back(dir_+(dir_.empty() || dir_[dir_.size()-1]==separator
-                                      ?"":std::string(1,separator))+"Homebrew");
+            InfinityToolRoots::Append(homeRoots,dir_,"Homebrew");
             for(size_t i=0;i<roots_.size();++i) {
                 const size_t split=roots_[i].find_last_of("\\/");
                 homeRoots.push_back(roots_[i].substr(0,split==std::string::npos?0:split+1)+"Homebrew");

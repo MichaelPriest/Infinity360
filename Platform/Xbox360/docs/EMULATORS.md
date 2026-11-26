@@ -1,0 +1,3 @@
+# Emuladores e aplicativos locais
+
+Instale um emulador Xbox 360 independente obtido de fonte autorizada em `MenuPreview/Emulators/<nome>/` ou `Emulators/<nome>/` ao lado de default.xex. Preserve os arquivos auxiliares do emulador. Abra Emuladores e atualize a lista. Para aplicativos e Homebrew use os diretórios correspondentes. O scanner reconhece executáveis locais; não há integração automática de BIOS, ROMs, driver HID ou módulos residentes Nexus. PCSXr360 pode ser testado como aplicativo independente somente com distribuição autorizada e arquivos próprios. Não se confirma compatibilidade física nesta revisão.

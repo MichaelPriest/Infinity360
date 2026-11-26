@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.85 — Aplicativos e emuladores no layout unificado
+
+- Busca explícita em Apps, Emulators e Homebrew nas duas raízes de instalação, independentemente das pastas de jogos.
+- Evita duplicação de atalhos de plugins registrados e executáveis já encontrados; manifesto de runtime inclui os três diretórios.
+- Documentação de instalação local de emuladores independentes, sem redistribuição de binários ou BIOS.
+
 ## V0.2.84 — Índice FPS local
 
 - Leitura limitada do índice XML de patches Nexus por Title ID, sem interpretar ou aplicar código de patch.
