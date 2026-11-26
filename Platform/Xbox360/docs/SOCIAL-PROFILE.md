@@ -25,3 +25,7 @@ O alvo CTest social_profile cobre seleção de controle, ausência de provider, 
 ## Integração do cabeçalho e Guide
 
 ConsoleHome consulta os quatro slots XAM a cada dois segundos no XSDK, mantém o controle selecionado enquanto autenticado e atualiza o cabeçalho. O layout horizontal preserva relógio e clima; o Guide mostra nome, controle, Gamerscore quando conhecido, ícone neutro e chat explicitamente indisponível. A interface de teste é identificada como PERFIL DE TESTE. Gamerscore e Gamerpic reais e interfaces de amigos/chat ainda não integrados. Capturas 70 e 71 previstas no workflow nativo da branch; não são fotos de hardware. Build XEX não solicitada, integração ainda não homologada.
+
+## Selecao oficial de perfil
+
+No Guide local (R3), LB solicita a interface nativa `XamShowSigninUI(4,0)` declarada no kernel.h do XSDK fixado. A solicitacao e consumida uma unica vez pelo presenter; recusada durante copia ou lancamento pendente. `xsdk_system_ui_open()` e consultado por frame para suprimir comandos da dashboard enquanto uma interface do sistema esta aberta. O retorno da chamada informa apenas aceitacao, nao autentica o usuario; a consulta periodica verifica o estado observado. No host, LB informa indisponibilidade. A etiqueta Alpha foi movida para o rodape para nao ocultar o perfil. Compilacao PPC e comportamento fisico ainda nao verificados.
