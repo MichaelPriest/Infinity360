@@ -14,7 +14,7 @@ import subprocess
 import sys
 import zipfile
 
-TARGETS = ("cloud360_container_probe", "cloud360_av_probe")
+TARGETS = ("cloud360_container_probe", "cloud360_av_probe", "infinity_menu_preview")
 FFLIBS = {"libavformat.a", "libavcodec.a", "libavutil.a"}
 
 def run(*args, **kwargs):
@@ -32,6 +32,7 @@ def main():
     p.add_argument("--toolchain", type=Path, required=True)
     p.add_argument("--tls", type=Path, required=True)
     p.add_argument("--curl", type=Path, required=True)
+    p.add_argument("--miniz", type=Path, required=True)
     p.add_argument("--repo", type=Path, required=True)
     p.add_argument("--stage", type=Path, required=True)
     args = p.parse_args()
@@ -88,10 +89,13 @@ def main():
             output.append(str(dest.relative_to(linkdir)))
         records[name] = output
     (linkdir / "commands.json").write_text(json.dumps(records, indent=2)+"\n")
+    import re
+    version = re.search(r'#define\s+INFINITY360_VERSION\s+"([0-9.]+)"', (args.repo/"Platform/Xbox360/InfinityVersion.h").read_text()).group(1)
+    (linkdir/"menu-version.txt").write_text(version+".0\n")
     shutil.copy2(Path(__file__).with_name("relink_ffmpeg_probe.py"), linkdir)
     # FFmpeg source must match exactly; git archive includes the complete
     # tracked LGPL sources and license files, not just a URL.
-    for label, root in (("ffmpeg",args.ffmpeg),("xsdk",args.sdk),("curl-xenon",args.curl),("infinity360",args.repo)):
+    for label, root in (("ffmpeg",args.ffmpeg),("xsdk",args.sdk),("curl-xenon",args.curl),("miniz",args.miniz),("infinity360",args.repo)):
         commit = run("git","-C",str(root),"rev-parse","HEAD",text=True).strip()
         with (stage/"sources"/f"{label}-{commit}.tar.gz").open("wb") as out:
             subprocess.run(["git","-C",str(root),"archive","--format=tar.gz","--prefix="+label+"/",commit],stdout=out,check=True)
@@ -103,9 +107,24 @@ def main():
         shutil.copy2(args.ffbuild/relative, stage/"config"/Path(relative).name)
     shutil.copy2(args.repo/"IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh",stage/"config")
     shutil.copy2(args.tls/"programs/xsdk/cacert.pem",stage/"bin")
+    shutil.copy2(args.miniz/"LICENSE",stage/"licenses"/"miniz-LICENSE.txt")
+    shutil.copy2(args.repo/"Platform/Xbox360/Assets/home.tga",stage/"bin")
+    shutil.copy2(stage/"bin"/"infinity_menu_preview.xex",stage/"bin"/"default.xex")
+    preview=stage/"bin"/"MenuPreview"
+    (preview/"UserFiles").mkdir(parents=True)
+    (preview/"UserFiles"/"ContentImport").mkdir()
+    (preview/"infinity-preview.txt").write_text("INFINITY360-XSDK-PREVIEW\n")
+    for filename in ("aurorax-store.tsv","infinity360-providers.tsv","infinity360-store-hosts.txt","FONTES.txt"):
+        shutil.copy2(args.repo/"Platform/Xbox360/StoreDefaults"/filename,preview)
+    for filename in ("aurorax-profile.txt","enable-file-writes.txt","enable-https-store.txt","enable-store-install.txt","enable-xboxunity.txt","enable-xex-launch.txt","enable-continuous-session.txt","enable-dvd-install.txt","enable-iptv-playback.txt","infinity360-iptv-bitrate.txt"):
+        shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults"/filename,preview)
+    (stage/"bin"/"VERSION.txt").write_text(version+"\n")
     # Deterministic, locally generated synthetic test clip (no service credentials).
     subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-f","lavfi","-i","testsrc2=size=128x72:rate=5","-f","lavfi","-i","sine=frequency=440:sample_rate=48000","-t","2","-c:v","libx264","-threads","1","-pix_fmt","yuv420p","-c:a","aac",str(stage/"bin"/"test.mp4")],check=True)
     subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(stage/"bin"/"test.mp4"),"-c","copy","-bsf:v","h264_mp4toannexb","-f","mpegts",str(stage/"bin"/"test.ts")],check=True)
+    shutil.copy2(stage/"bin"/"test.mp4",preview/"UserFiles"/"test.mp4")
+    shutil.copy2(stage/"bin"/"test.ts",preview/"UserFiles"/"test.ts")
+    (preview/"playlist.m3u").write_text('#EXTM3U\n#EXTINF:-1 group-title="Filmes",Teste local MP4\nUserFiles/test.mp4\n#EXTINF:-1 group-title="TV",Teste local TS\nUserFiles/test.ts\n')
     # Prove the staged object files and libraries can actually be relinked.
     subprocess.run([sys.executable,str(linkdir/"relink_ffmpeg_probe.py"),"--toolchain",str(args.toolchain),"--sdk",str(args.sdk),"--ffmpeg-libs",str(linkdir/"ffmpeg-libs")],check=True)
     for name in TARGETS:
@@ -115,9 +134,11 @@ def main():
         rebuilt.unlink()
         (linkdir/(name+".elf")).unlink()
     (stage/"LEIA-ME.txt").write_text(
-        "Cloud360 FFmpeg 0.5.11 - experimental diagnostics, NOT a dashboard replacement.\n"
+        f"INFINITY 360 {version} - FFmpeg experimental full menu and diagnostics, NOT a boot dashboard replacement.\n"
         "No physical-console validation yet. Run the container-only probe first, in a separate folder.\n"
-        "Copy bin/ to an isolated folder. Do not overwrite the boot dashboard.\n"
+        "Copy bin/ to an isolated folder. After probes open default.xex, then Cloud360 IPTV and the local MP4/TS test clips.\n"
+        "HLS/TS remote playback requires explicit approved HTTPS host or a configured private LAN relay. 720p decoder ceiling; no DRM.\n"
+        "Do not overwrite the boot dashboard.\n"
         "FFmpeg is LGPL 2.1 or later, statically linked, no GPL/nonfree options.\n"
         "Exact FFmpeg source, build configuration, object files and relink script are included.\n"
         "Relink: python3 relink/relink_ffmpeg_probe.py --toolchain PATH --sdk PATH --ffmpeg-libs PATH\n"
@@ -128,7 +149,7 @@ def main():
     archive=stage.parent / (stage.name+".zip")
     with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
         for path in sorted(stage.rglob("*")):
-            if path.is_file():z.write(path,path.relative_to(stage))
+            if path.is_file() or path.is_dir() and not any(path.iterdir()):z.write(path,path.relative_to(stage))
     with zipfile.ZipFile(archive) as z:
         assert z.testzip() is None
     print(archive, digest(archive))

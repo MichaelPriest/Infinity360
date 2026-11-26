@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.42 — IPTV player na próxima build (sem build)
+
+- Marcador de reprodução MPEG-PS incluído no ZIP completo.
+- Workflow FFmpeg disparado junto à próxima solicitação XEX, candidato separado com menu moderno, Store ZIP, clipes locais MP4/TS, fontes e relink do menu.
+- HLS/TS remoto experimental, hosts explícitos, limite 720p; sem validação no console.
+
 ## V0.2.41 — Defaults integrados e IPTV moderno (sem build)
 
 - ZIP completo inicia Top Icons e grade Auto; sete marcadores de funcionalidades manuais incluídos.

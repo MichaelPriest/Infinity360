@@ -1,6 +1,9 @@
 name: Cloud360 FFmpeg PowerPC experimental build
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [Platform/Xbox360/build-request.txt]
 
 permissions:
   contents: read
@@ -55,7 +58,11 @@ jobs:
           git -C "$HOME/mbedtls-xenon" submodule update --init --recursive
           git clone https://github.com/xenosworks/curl-xenon.git "$HOME/curl-xenon"
           git -C "$HOME/curl-xenon" checkout a6b70bd06820e1c625f47fe0e592e08c5daaa6b4
-      - name: Link both experimental XEX targets
+      - name: Pin ZIP installer dependency
+        run: |
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
+      - name: Link experimental menu and diagnostic XEX targets
         shell: bash
         run: |
           set -o pipefail
@@ -63,6 +70,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
+            -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" \
             -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" -DINFINITY_EXPERIMENTAL_MENU_FFMPEG=ON \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF -DCMAKE_BUILD_TYPE=Release \
             2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/cmake.log"
@@ -85,12 +93,12 @@ jobs:
           python3 IPTV/Cloud360/tools/package_ffmpeg_probe.py \
             --build "$RUNNER_TEMP/av-native" --ffmpeg "$HOME/ffmpeg" \
             --ffbuild "$RUNNER_TEMP/ffmpeg-build" --sdk "$HOME/xsdk" --toolchain "$HOME/xsdk-gcc" \
-            --tls "$HOME/mbedtls-xenon" --curl "$HOME/curl-xenon" --repo "$GITHUB_WORKSPACE" \
-            --stage "$RUNNER_TEMP/Cloud360-FFmpeg-XSDK-0.5.11-candidate"
+            --tls "$HOME/mbedtls-xenon" --curl "$HOME/curl-xenon" --miniz "$HOME/infinity-miniz" --repo "$GITHUB_WORKSPACE" \
+            --stage "$RUNNER_TEMP/Infinity360-IPTV-FFmpeg-candidate"
       - uses: actions/upload-artifact@v4
         with:
-          name: Cloud360-FFmpeg-XSDK-0.5.11-candidate
-          path: ${{ runner.temp }}/Cloud360-FFmpeg-XSDK-0.5.11-candidate.zip
+          name: Infinity360-IPTV-FFmpeg-candidate
+          path: ${{ runner.temp }}/Infinity360-IPTV-FFmpeg-candidate.zip
           if-no-files-found: error
           retention-days: 14
       - name: Collect configure and linker diagnostics

@@ -127,7 +127,7 @@ jobs:
               "infinity_canvas_probe.xex is a separate textured GPU experiment.\n"
               "Run it only after both earlier GPU/no-GPU diagnostics pass.\n"
               "infinity_menu_preview.xex uses the full menu with isolated preview data.\n"
-              "Optional XEX launch and experimental MPEG-PS playback only after GPU checks pass.\n"
+              "MPEG-PS IPTV player enabled in fresh ZIP; use authorized sources or local files. FFmpeg candidate is a separate Actions artifact for MP4/TS/HLS.\n"
               "Fresh full ZIP: Top Icons, continuous menu, HTTPS Store, XboxUnity, workspace writes, XEX launch, app installer and DVD-to-workspace enabled. See MenuPreview/LEIA-ME-RECURSOS.txt.\n"
               "Requires file writes, exact hostname allowlist infinity360-store-hosts.txt and trusted cacert.pem.\n"
               "Console clock must be correct. HTTPS only; only allowlisted GitHub release asset redirects for packages; SHA-256 verified.\n"
@@ -169,7 +169,7 @@ jobs:
               archive.writestr("Licenses/SOURCES.txt", "Mbed TLS: https://github.com/xenosworks/mbedtls-xenon/tree/591b04adbec4bc5582649601f4407506a610162b\nlibcurl: https://github.com/xenosworks/curl-xenon/tree/a6b70bd06820e1c625f47fe0e592e08c5daaa6b4\nCA bundle: Mozilla roots, MPL-2.0; source https://curl.se/docs/caextract.html\n")
               archive.writestr("MenuPreview/infinity-preview.txt", "INFINITY360-XSDK-PREVIEW\n")
               release_defaults = Path("Platform/Xbox360/ReleaseDefaults")
-              for name in ("enable-file-writes.txt", "enable-https-store.txt", "enable-store-install.txt", "enable-xboxunity.txt", "enable-xex-launch.txt", "enable-continuous-session.txt", "enable-dvd-install.txt", "aurorax-profile.txt"):
+              for name in ("enable-file-writes.txt", "enable-https-store.txt", "enable-store-install.txt", "enable-xboxunity.txt", "enable-xex-launch.txt", "enable-continuous-session.txt", "enable-dvd-install.txt", "enable-iptv-playback.txt", "infinity360-iptv-bitrate.txt", "aurorax-profile.txt"):
                   archive.write(release_defaults/name, "MenuPreview/"+name)
               archive.write(release_defaults/"README.md", "MenuPreview/LEIA-ME-RECURSOS.txt")
               for filename in ("aurorax-store.tsv", "infinity360-providers.tsv", "infinity360-store-hosts.txt", "FONTES.txt"):
@@ -188,7 +188,7 @@ jobs:
               assert archive.testzip() is None
               assert archive.read("default.xex")[:4] == b"XEX2"
               assert archive.read("MenuPreview/aurorax-profile.txt") == b"J\t1\nG\t0\n"
-              for name, value in [["enable-file-writes.txt","ENABLE-FILE-WRITES"],["enable-https-store.txt","ENABLE-HTTPS-STORE"],["enable-store-install.txt","ENABLE-STORE-INSTALL"],["enable-xboxunity.txt","ENABLE-XBOXUNITY"],["enable-xex-launch.txt","ENABLE-XEX-LAUNCH"],["enable-continuous-session.txt","ENABLE-CONTINUOUS-SESSION"],["enable-dvd-install.txt","ENABLE-DVD-INSTALL"]]:
+              for name, value in [["enable-file-writes.txt","ENABLE-FILE-WRITES"],["enable-https-store.txt","ENABLE-HTTPS-STORE"],["enable-store-install.txt","ENABLE-STORE-INSTALL"],["enable-xboxunity.txt","ENABLE-XBOXUNITY"],["enable-xex-launch.txt","ENABLE-XEX-LAUNCH"],["enable-continuous-session.txt","ENABLE-CONTINUOUS-SESSION"],["enable-dvd-install.txt","ENABLE-DVD-INSTALL"],["enable-iptv-playback.txt","ENABLE-IPTV-PLAYBACK"]]:
                   assert archive.read("MenuPreview/"+name) == (value+"\n").encode("ascii")
               assert b"xboxunity.net\n" in archive.read("MenuPreview/infinity360-store-hosts.txt")
               for name in ("enable-ftp.txt","enable-ftp-upload.txt","enable-package-launch.txt","enable-content-install.txt","enable-dashboard-update.txt","enable-smb-session.txt"):
