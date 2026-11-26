@@ -547,7 +547,15 @@ bool ConsoleHome::Tick() {
             before.state!=social_.state||before.displayName!=social_.displayName;
     }
 #endif
-    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged;
+    bool thermalChanged=false;
+    if(ThermalTelemetry::Supported()&&ApprovedHeader()&&!TransferRunning()){
+        const auto stamp=TransferRate::Now();
+        if(ThermalTelemetry::HeaderDue(headerThermalSampled_,headerThermalAt_,stamp)){
+            headerThermalAt_=stamp;headerThermalSampled_=true;
+            headerThermal_=ThermalTelemetry::Read();thermalChanged=true;
+        }
+    }
+    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged||thermalChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -4042,10 +4050,15 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.Box(109,18,1,43,0xff65736du);c.Text(121,12,"INFINITY 360",28,White,233);
     c.Text(122,43,"Xbox 360 Dashboard",16,Muted,233);
     c.SeriesTile(371,12,194,52,false);
-    c.Text(380,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),14,White,178);
-    c.Text(380,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),13,Muted,178);
+    const auto stamp=TransferRate::Now();
+    const bool current=headerThermalSampled_&&stamp>=headerThermalAt_&&stamp-headerThermalAt_<=30000;
+    const ThermalTelemetry empty;
+    const auto& reading=current?headerThermal_:empty;
+    const bool warning=ThermalAdvisory::Evaluate(reading,thermalLimit_)==ThermalAdvisory::Reached;
+    c.TextFit(380,14,"CPU "+reading.CompactCelsius(0)+" | GPU "+reading.CompactCelsius(1),13,warning?0xffffb34du:White,178);
+    c.TextFit(380,31,"EDRAM "+reading.CompactCelsius(2)+" | SYS "+reading.CompactCelsius(3),12,Muted,178);
+    c.TextFit(380,47,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),11,Muted,178);
     DrawSocialHeader(c,572,12,189);
-    const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
     c.SeriesTile(772,12,266,52,active==ApprovedHome::Weather);
     const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
     const bool fresh=has&&weather_.Fresh(std::time(nullptr));
@@ -4056,7 +4069,6 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
         c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
     }else{c.Text(785,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,242);c.Text(785,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,242);}
-    if(storage!=storageVolumes_.end())c.TextFit(850,678,StorageInfo::FormatBytes(storage->freeBytes)+" livres",16,Muted,390);
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
     c.Translucent(0,82,1280,66,0xff161917u,100);
     for(int i=0;i<Hero;++i){
