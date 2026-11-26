@@ -1019,6 +1019,12 @@ std::string ConsoleHome::Press(Key key) {
 #endif
                 return "";
             }
+            if(key==PageDown){
+                if(TransferRunning()){notice_="Conclua ou cancele as copias antes de abrir conquistas.";return "";}
+                quickGuideOpen_=false;quickGuideEditing_=false;
+                OpenApprovedAction(ApprovedHome::Achievements);
+                return "";
+            }
             if(key==Search){quickGuideOpen_=false;notice_.clear();}
             if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditStartRow_=quickGuideRow_;quickGuideEditing_=true;notice_.clear();}
             if(key==Accept)OpenQuickGuideAction(static_cast<unsigned>(quickGuideOrder_[quickGuideRow_]-'0'));
@@ -3437,15 +3443,18 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
         else c.TextFit(649,y+3,labels[row],18,row==0?White:Muted,365);
         if(row<4)c.Box(611,y+39,403,1,0xff414743u);
     }
-    c.SeriesTile(601,522,428,84,false,215);
-    InfinityButtons::Draw(c,InfinityButtons::LB,616,543,30);
-    c.Box(676,537,1,48,0xff65736du);
-    c.TextFit(690,532,"Selecionar perfil Xbox",20,White,327);
+    c.SeriesTile(601,500,428,57,false,215);
+    InfinityButtons::Draw(c,InfinityButtons::LB,616,513,30);
+    c.TextFit(678,506,"Selecionar perfil Xbox",19,White,336);
 #if defined(__XSDK__)
-    c.TextFit(690,565,"Abre a interface oficial do sistema.",14,Muted,327);
+    c.TextFit(678,532,"Interface oficial do sistema.",13,Muted,336);
 #else
-    c.TextFit(690,565,"Interface oficial apenas no console.",14,Muted,327);
+    c.TextFit(678,532,"Interface oficial apenas no console.",13,Muted,336);
 #endif
+    c.SeriesTile(601,565,428,57,false,215);
+    InfinityButtons::Draw(c,InfinityButtons::RB,616,578,30);
+    c.TextFit(678,571,"Conquistas",19,White,336);
+    c.TextFit(678,597,"Perfil ativo e copia GPD offline.",13,Muted,336);
 }
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
@@ -3793,6 +3802,10 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
         c.TextFit(94,y+6,label,19,White,1100);
     }
     if(!count)c.Text(48,410,std::string(c.Tr("Nenhum registro reconhecido.")),22,Muted,1170);
+    const std::string active=social_.controller<0?"Perfil ativo: indisponivel":
+        (social_.origin==InfinitySocial::Origin::Test?"Perfil de teste: ":"Perfil ativo: ")+social_.displayName+
+        (social_.gamerscoreKnown?" | G reportado: "+number(social_.gamerscore):" | G indisponivel");
+    c.TextFit(48,531,active+" | GPD nao vinculado ao perfil",16,White,1170);
     c.Text(48,555,notice_.empty()?(saveBackups_?std::string(c.Tr("Backups por Title ID, podem pertencer a outros perfis.")):std::string(c.Tr("Inventario por pasta, nao comprova titularidade. "))+std::string(saveLimited_?std::string(c.Tr("Limite atingido.")):"")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
     InfinityButtons::Strip(c,48,607,saveConfirm_?std::string(c.Tr("A Confirmar | B Cancelar")):saveBackups_?std::string(c.Tr("A Recuperar copia | X Verificar | Y Atualizar | B Voltar")):saveList_?std::string(c.Tr("A Backup | START Backups do jogo | Y Atualizar | B Voltar")):std::string(c.Tr("A Saves | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);
 }
@@ -3810,7 +3823,7 @@ void ConsoleHome::RefreshAchievements(){
 void ConsoleHome::PressAchievements(Key key){
     if(key==Back){
         if(achievementDetails_){achievementDetails_=false;achievementItems_.clear();notice_.clear();}
-        else{achievementsPage_=false;achievementSummary_={};achievementItems_.clear();notice_.clear();}
+        else{achievementsPage_=false;achievementLoaded_=false;achievementSummary_={};achievementItems_.clear();notice_.clear();}
         return;
     }
     if(key==Refresh){RefreshAchievements();return;}
@@ -3836,7 +3849,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
     c.Text(45,349,achievementDetails_?std::string(c.Tr("Conquistas | "))+achievementSummary_.titles[achievementRow_].name:std::string(c.Tr("Conquistas Xbox | GPD offline")),26,White,1170);
     if(achievementLoaded_&&!achievementDetails_){
         const auto& s=achievementSummary_;
-        c.Text(48,382,"G "+number(s.earnedScore)+"/"+number(s.score)+std::string(c.Tr(" | Conquistas "))+number(s.earned)+"/"+number(s.total)+std::string(c.Tr(" | Titulos "))+number(s.titles.size()),19,Lime,1170);
+        c.TextFit(48,382,"GPD offline: G "+number(s.earnedScore)+"/"+number(s.score)+std::string(c.Tr(" | Conquistas "))+number(s.earned)+"/"+number(s.total)+std::string(c.Tr(" | Titulos "))+number(s.titles.size()),19,Lime,1170);
     }
     const size_t row=achievementDetails_?achievementDetailRow_:achievementRow_;
     const size_t count=achievementDetails_?achievementItems_.size():achievementSummary_.titles.size();
