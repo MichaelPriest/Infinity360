@@ -81,7 +81,7 @@ std::string movieTarget(const std::string& playlist,const std::string& uri) {
 std::string playbackHint(const std::string& uri) {
     MediaUrl url;
     if(url.Parse(uri) && url.NeedsConverter()) return "Use a lista do conversor Cloud360 para este formato.";
-    if(tvLower(uri.substr(0,12))=="brazucaplay:") return "Esta referência do Nexus precisa de uma URL de mídia.";
+    if(tvLower(uri.substr(0,12))=="brazucaplay:") return "Fonte externa sem integração autorizada. Use uma URL de mídia compatível.";
     return "Fonte incompatível com o player do console.";
 }
 std::string protocol(const TvItem& item,const std::string& source) {

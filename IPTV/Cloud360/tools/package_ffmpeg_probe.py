@@ -111,9 +111,11 @@ def main():
     shutil.copy2(args.repo/"Platform/Xbox360/Assets/home.tga",stage/"bin")
     shutil.copy2(stage/"bin"/"infinity_menu_preview.xex",stage/"bin"/"default.xex")
     preview=stage/"bin"/"MenuPreview"
-    (preview/"UserFiles").mkdir(parents=True)
-    (preview/"UserFiles"/"ContentImport").mkdir()
-    (preview/"Listas").mkdir()
+    runtime_dirs = (args.repo/"Platform/Xbox360/ReleaseDefaults/runtime-dirs.txt").read_text(encoding="utf-8").splitlines()
+    for name in runtime_dirs:
+        rel = Path(name)
+        if not name or rel.is_absolute() or ".." in rel.parts: raise ValueError("Invalid runtime directory")
+        (preview/rel).mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/README.md",preview/"LEIA-ME-RECURSOS.txt")
     (preview/"infinity-preview.txt").write_text("INFINITY360-XSDK-PREVIEW\n")
     for filename in ("aurorax-store.tsv","infinity360-providers.tsv","infinity360-store-hosts.txt","FONTES.txt"):
@@ -123,8 +125,7 @@ def main():
     (stage/"bin"/"VERSION.txt").write_text(version+"\n")
     (stage/"bin"/"BUILD-COMMIT.txt").write_text(run("git","-C",str(args.repo),"rev-parse","HEAD",text=True))
     shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/playlist.m3u",preview/"playlist.m3u")
-    (preview/"Plugins").mkdir()
-    (preview/"Andromeda").mkdir()
+
     # Prove the staged object files and libraries can actually be relinked.
     subprocess.run([sys.executable,str(linkdir/"relink_ffmpeg_probe.py"),"--toolchain",str(args.toolchain),"--sdk",str(args.sdk),"--ffmpeg-libs",str(linkdir/"ffmpeg-libs")],check=True)
     for name in TARGETS:

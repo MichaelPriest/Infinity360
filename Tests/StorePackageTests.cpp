@@ -54,6 +54,10 @@ int main(){
     fs::create_directories(root/"Andromeda");
     {std::ofstream f(root/"Andromeda/Xbox360Games.txt");f<<"NEXUS_CATALOG_V3\n0|123|12345678|Example title\n0|124|12345678|Duplicate\n";}
     {StoreCatalog imported(base);assert(imported.Load());assert(imported.Items().size()==1);assert(imported.Items()[0].titleId==0x12345678);assert(imported.Items()[0].url.empty());assert(!imported.QueueNative(imported.Items()[0]));}
+    {std::ofstream f(root/"Andromeda/GodGames.txt");f<<"NEXUS_GOD_V1\n1|12345678|Duplicate across formats\n2|12345679|GOD title\n";}
+    {std::ofstream f(root/"Andromeda/ClassicGames.txt");f<<"NEXUS_CLASSIC_ISO_V1\n1234567890ABCDEF|Classic title|123|ignored|ignored|ignored\n";}
+    {std::ofstream f(root/"Andromeda/Games.txt");f<<"NEXUS_GAMES_V1\n1234567A|Game title|ignored|ignored|ignored\n";}
+    {StoreCatalog imported(base);assert(imported.Load());assert(imported.Items().size()==4);for(const auto& e:imported.Items())assert(e.url.empty()&&e.sha256.empty());}
     fs::remove_all(root/"Andromeda");
     assert(cat.Request(unknown));assert(cat.ListedDownload(unknown));
     assert(cat.Cancel(unknown));assert(!cat.ListedDownload(unknown));

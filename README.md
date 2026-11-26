@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.2.79 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.2.80 Alpha (código-fonte)**
 
 Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
@@ -47,6 +47,8 @@ O ZIP `Infinity360-<versão>-Xbox360.zip` é o pacote de instalação unificado 
 - **Prévia web:** `python -m http.server 8080` e abra `http://localhost:8080/Web/`. Usa dados de teste.
 
 ## Documentação
+
+[Arquitetura modular e estrutura de instalação](Platform/Xbox360/docs/ARCHITECTURE.md) · [Importação Nexus](Platform/Xbox360/docs/NEXUS-IMPORT.md)
 
 | Recurso | Link |
 | --- | --- |

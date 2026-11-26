@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.80 — Organização modular e contratos de integração
+
+- Isola o importador Andromeda em Modules/Store, valida os quatro formatos com quantidade exata de campos observada no Nexus Horizon e mantém metadados separados de downloads.
+- Expande os testes sintéticos para todos os formatos; documenta responsabilidades, diretórios de instalação, serviços externos e limites de compatibilidade.
+- Centraliza a estrutura de diretórios de runtime em um manifesto de empacotamento; sem nova build.
+
 ## V0.2.79 — Compatibilidade local Andromeda
 
 - Leitura limitada dos formatos Nexus V3, GOD, Classic ISO e Games; deduplicação por identificador e filtro Andromeda na Store. Metadados apenas, sem importar URLs, hashes de torrent ou magnets.
