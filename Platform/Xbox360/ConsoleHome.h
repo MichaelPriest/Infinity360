@@ -75,10 +75,10 @@ public:
     bool HasFriendPresence()const{return friendRoster_.KnownFor(social_);}
     std::size_t FriendsPlaying(std::uint32_t title)const{return HasFriendPresence()?InfinitySocial::FriendsPlayingTitle(friendRoster_.Rows(),title):0;}
     InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr){const auto action=nativeSocialPending_;if(title)*title=nativeSocialTitle_;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;return action;}
-    void NativeSocialResult(const std::string& message){socialPolled_=false;notice_=message;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -150,6 +150,8 @@ private:
     InfinitySocial::SessionEvents socialEvents_;
     InfinitySocial::CounterEvents socialCounters_;
     uint64_t lastSocialPoll_=0;
+    uint64_t lastSocialArtPoll_=0;
+    bool socialArtPolled_=false;
     bool socialPolled_=false,signinPending_=false;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;

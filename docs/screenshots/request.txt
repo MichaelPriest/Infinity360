@@ -46,3 +46,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.61 own friends panel and opt-in roster enumeration; host tests and 73 captures only
 
 2026-11-26 V0.2.62 bounded presence auto refresh and title counts; host tests/captures only
+
+2026-11-26 V0.2.63 avatar portrait tile and identity-bound art cache; host tests and 74 captures only

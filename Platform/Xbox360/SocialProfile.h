@@ -40,6 +40,7 @@ struct Slot {
     bool achievementsKnown=false;
     unsigned achievements=0;
     std::uint64_t identity=0; // RAM only; never serialize or render.
+    std::vector<unsigned char> avatarPortrait; // 64x64 raster tile, not 3D.
 };
 struct Snapshot {
     std::array<Slot,4> slots{};
@@ -83,6 +84,7 @@ struct Header {
     bool achievementsKnown=false;
     unsigned achievements=0;
     std::uint64_t identity=0; // RAM only; never serialize or render.
+    std::vector<unsigned char> avatarPortrait; // 64x64 raster tile, not 3D.
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
@@ -129,13 +131,23 @@ public:
         identity_=h.identity;slot_=h.controller;state_=h.state;return false;
     }
 };
+inline bool SameArtAccount(const Header& a,const Header& b){
+    return a.origin==Origin::Console&&b.origin==Origin::Console&&!a.guest&&!b.guest&&
+        a.identity!=0&&a.identity==b.identity&&a.controller==b.controller&&
+        a.state==b.state&&(b.state==SignIn::Local||b.state==SignIn::Online);
+}
+inline void RetainProfileArt(const Header& previous,Header& next,bool gamerpic,bool avatar){
+    if(!SameArtAccount(previous,next))return;
+    if(gamerpic&&ValidGamerpic(previous.gamerpic))next.gamerpic=previous.gamerpic;
+    if(avatar&&ValidGamerpic(previous.avatarPortrait))next.avatarPortrait=previous.avatarPortrait;
+}
 // Compare every display-affecting field, not just name and sign-in state.
 inline bool SameHeader(const Header& a, const Header& b) {
     return a.controller == b.controller && a.origin == b.origin &&
            a.state == b.state && a.displayName == b.displayName &&
            a.avatarAsset == b.avatarAsset && a.guest == b.guest &&
            a.gamerscoreKnown == b.gamerscoreKnown &&
-           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic && a.achievementsKnown==b.achievementsKnown && a.achievements==b.achievements && a.identity==b.identity;
+           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic && a.avatarPortrait==b.avatarPortrait && a.achievementsKnown==b.achievementsKnown && a.achievements==b.achievements && a.identity==b.identity;
 }
 
 // Confirm two consecutive console observations before emitting generic local
@@ -243,6 +255,7 @@ inline Header Resolve(const Snapshot& snapshot, int preferredController) {
                          (slot.guest ? "Convidado" : "Perfil sem nome");
     if (ValidAvatarAsset(slot.avatarAsset)) result.avatarAsset = slot.avatarAsset;
     if(!slot.guest && ValidGamerpic(slot.gamerpic))result.gamerpic=slot.gamerpic;
+    if(!slot.guest && ValidGamerpic(slot.avatarPortrait))result.avatarPortrait=slot.avatarPortrait;
     result.gamerscoreKnown = !slot.guest && slot.gamerscoreKnown;
     if (result.gamerscoreKnown) result.gamerscore = slot.gamerscore;
     result.achievementsKnown=!slot.guest&&slot.achievementsKnown;

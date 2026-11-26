@@ -183,6 +183,17 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.SetSocialSnapshot(fixture,0);
             assert(profile.SocialHeader().origin==InfinitySocial::Origin::Test);
             ok=save("70-perfil-teste",profile)&&ok;
+            // Second synthetic tile verifies avatar + gamerpic compositing, never a real identity.
+            fixture.slots[0].avatarPortrait.resize(InfinitySocial::GamerpicBytes);
+            for(std::size_t i=0;i<InfinitySocial::GamerpicBytes;i+=4){
+                fixture.slots[0].avatarPortrait[i]=180;
+                fixture.slots[0].avatarPortrait[i+1]=85;
+                fixture.slots[0].avatarPortrait[i+2]=static_cast<unsigned char>((i/4)%64*4);
+                fixture.slots[0].avatarPortrait[i+3]=255;
+            }
+            profile.SetSocialSnapshot(fixture,0);
+            assert(InfinitySocial::ValidGamerpic(profile.SocialHeader().avatarPortrait));
+            ok=save("74-avatar-perfil-teste",profile)&&ok;
             profile.Press(ConsoleHome::Search);
             assert(profile.QuickGuideOpen());
             profile.Press(ConsoleHome::PageUp);

@@ -552,7 +552,14 @@ bool ConsoleHome::Tick() {
     if(!socialPolled_||now<lastSocialPoll_||now-lastSocialPoll_>=2000){
         socialPolled_=true;lastSocialPoll_=now;
         const auto before=social_;
-        SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(!TransferRunning()&&InfinitySocial::GamerpicEnabled(dir_),before.controller),before.controller);
+        const bool allowArt=!TransferRunning();
+        const bool gamerpic=allowArt&&InfinitySocial::GamerpicEnabled(dir_);
+        const bool avatar=allowArt&&InfinitySocial::AvatarPortraitEnabled(dir_);
+        const bool artDue=!socialArtPolled_||now<lastSocialArtPoll_||now-lastSocialArtPoll_>=15000;
+        SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(gamerpic&&artDue,before.controller,avatar&&artDue),before.controller);
+        if(!artDue)InfinitySocial::RetainProfileArt(before,social_,gamerpic,avatar);
+        if(!InfinitySocial::SameArtAccount(before,social_)||(!gamerpic&&!avatar))socialArtPolled_=false;
+        else if(artDue){socialArtPolled_=true;lastSocialArtPoll_=now;}
         socialChanged=!InfinitySocial::SameHeader(before,social_);
         if(const char* event=socialEvents_.Observe(social_)){RecordEvent(event);socialChanged=true;}
         if(const char* event=socialCounters_.Observe(social_)){RecordEvent(event);socialChanged=true;}
@@ -3439,7 +3446,12 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     // Real provider tile when available; neutral silhouette otherwise.
     const unsigned ink=signedIn?Lime:Muted;
     c.Box(x+8,y+7,38,38,0xff68716du,19);
-    if(!c.ProfilePicture(social_.gamerpic,x+9,y+8,36))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
+    const bool avatar=c.ProfilePicture(social_.avatarPortrait,x+9,y+8,36);
+    if(!avatar&&!c.ProfilePicture(social_.gamerpic,x+9,y+8,36))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
+    if(avatar&&ValidGamerpic(social_.gamerpic)){
+        c.Box(x+30,y+4,18,18,0xff68716du,9);
+        c.ProfilePicture(social_.gamerpic,x+31,y+5,16);
+    }
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":
         social_.state==SignIn::Online?"Sessão online":
@@ -3552,9 +3564,15 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.Box(623,184,54,54,0xff68716du,27);
     if(!c.ProfilePicture(social_.gamerpic,624,185,52))InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
     if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
-    c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,315);
+    const bool avatar=ValidGamerpic(social_.avatarPortrait);
+    if(avatar){
+        c.Box(958,181,57,57,0xff68716du,28);
+        c.ProfilePicture(social_.avatarPortrait,960,183,53);
+        c.TextFit(951,239,"Avatar",11,Muted,76);
+    }
+    c.TextFit(697,181,social_.controller>=0?social_.displayName:"Perfil Xbox",25,White,avatar?250:315);
     const char* state=social_.origin==Origin::Test?"PERFIL DE TESTE":social_.state==SignIn::Online?"Sessão online":social_.state==SignIn::Local?"Sessão local":social_.state==SignIn::SignedOut?"Sem perfil":"Não consultado";
-    c.TextFit(697,218,state,16,Muted,315);
+    c.TextFit(697,218,state,16,Muted,avatar?250:315);
     const std::string controls=social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível";
     const std::string counters=(social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
         (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis");

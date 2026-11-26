@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.2.62 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.2.63 Alpha (código-fonte)**
 
 Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
@@ -18,7 +18,7 @@ Interface nativa em 720p inspirada no Xbox Series, com navegação por controle,
 | **INFINITY Store** | **Cloud360 IPTV** |
 | ![Store](docs/screenshots/66-store-moderna.png) | ![IPTV](docs/screenshots/69-iptv-moderno.png) |
 
-**[Galeria completa — 73 capturas](docs/screenshots/README.md)** · [Commit das imagens](docs/screenshots/source.txt)
+**[Galeria completa — 74 capturas previstas](docs/screenshots/README.md)** · [Commit das imagens](docs/screenshots/source.txt)
 
 Capturas do renderizador C++ com dados de teste, não fotografias do console. A galeria pode estar em revisão anterior ao código.
 
@@ -28,7 +28,7 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | --- | --- |
 | Home e Guide | Menu horizontal, transparências, atalhos agrupados, relógio e clima |
 | Biblioteca | XEX/GOD/XBLA, recentes, favoritos, capas frente/verso, filtros e multidisco |
-| Perfil Xbox | Seleção, Gamerpic, Gamerscore e conquistas por título via XAM experimental |
+| Perfil Xbox | Seleção, Gamerpic, retrato do avatar, Gamerscore e conquistas por título via XAM experimental |
 | Social | Cartão, lista de amigos/presença e amigos por título, jogadores recentes, mensagens, chat e editor de avatar via XAM experimental; avatar 3D pendente |
 | Conteúdo | TU, DLC, saves, backups, DVD para XEX/GOD |
 | Store e downloads | Catálogo homebrew, fila persistente e fontes configuráveis |

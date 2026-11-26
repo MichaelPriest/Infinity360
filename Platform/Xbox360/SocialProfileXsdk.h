@@ -53,6 +53,11 @@ inline bool GamerpicEnabled(const std::string& dir) {
     std::string line;
     return std::getline(flag,line)&&(line=="ENABLE-NATIVE-GAMERPIC"||line=="ENABLE-NATIVE-GAMERPIC\r");
 }
+inline bool AvatarPortraitEnabled(const std::string& dir){
+    std::ifstream flag(dir+"enable-native-avatar-portrait.txt");
+    std::string line;
+    return std::getline(flag,line)&&(line=="ENABLE-NATIVE-AVATAR-PORTRAIT"||line=="ENABLE-NATIVE-AVATAR-PORTRAIT\r");
+}
 // Read-only, fixed-size request; no writes or remote XUID lookup.
 inline bool ReadXsdkCounter(std::uint32_t user,std::uint32_t id,unsigned& score) {
     alignas(8) unsigned char buffer[128] = {};
@@ -64,7 +69,7 @@ inline bool ReadXsdkCounter(std::uint32_t user,std::uint32_t id,unsigned& score)
 }
 // Call from the dashboard thread on a bounded refresh interval.
 // The caller must not equate online sign-in with a verified chat service.
-inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
+inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1,bool readAvatar=false) {
     Snapshot result;
     std::array<std::uint64_t,4> identities{};
     for (std::uint32_t i = 0; i < XSDK_XAM_USERS && i < result.slots.size(); ++i) {
@@ -106,7 +111,7 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
     }
     result.slots[user].achievementsKnown=known;
     if(known)result.slots[user].achievements=achievements;
-    if(!readPicture)return result;
+    if(!readPicture&&!readAvatar)return result;
     HANDLE module=0;
     void* address=nullptr;
     if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
@@ -115,18 +120,22 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
     const auto state=selected.state==SignIn::Online?2u:1u;
     if(XamUserGetSigninInfo(user,0,&before)!=0||before.xuid!=identities[user]||
        before.signin_state!=state){result.slots[user]=Slot{};return result;}
-    // Xenia Canary reference: tile type 2 (64x64 gamer tile), title/item 0,
-    // stride in bytes, height in rows, synchronous null overlapped.
+    // 2 = Gamer tile, 13 = Avatar gamer tile. Both are raster portraits.
+    // Separate zeroed buffers per request; no arbitrary tile keys.
     alignas(128) std::array<unsigned char,GamerpicBytes> buffer{};
     using ReadTile=std::uint32_t(*)(std::uint32_t,std::uint32_t,std::uint64_t,
         std::uint32_t,void*,std::uint32_t,std::uint32_t,XAM_OVERLAPPED*);
-    const auto rc=reinterpret_cast<ReadTile>(address)(2u,0u,0u,user,buffer.data(),
-        static_cast<std::uint32_t>(GamerpicSide*4),static_cast<std::uint32_t>(GamerpicSide),nullptr);
-    if(XamUserGetSigninInfo(user,0,&after)!=0||after.xuid!=before.xuid||
-       after.signin_state!=state||XamUserGetSigninState(user)!=state){
-        result.slots[user]=Slot{};return result;
-    }
-    if(rc==0)DecodeGamerpic(buffer.data(),buffer.size(),result.slots[user].gamerpic);
+    const auto read=[&](std::uint32_t type,std::vector<unsigned char>& output){
+        buffer.fill(0);
+        const auto rc=reinterpret_cast<ReadTile>(address)(type,0u,0u,user,buffer.data(),
+            static_cast<std::uint32_t>(GamerpicSide*4),static_cast<std::uint32_t>(GamerpicSide),nullptr);
+        if(XamUserGetSigninInfo(user,0,&after)!=0||after.xuid!=before.xuid||
+           after.signin_state!=state||XamUserGetSigninState(user)!=state)return false;
+        if(rc==0)DecodeGamerpic(buffer.data(),buffer.size(),output);
+        return true;
+    };
+    if(readPicture&&!read(2u,result.slots[user].gamerpic)){result.slots[user]=Slot{};return result;}
+    if(readAvatar&&!read(13u,result.slots[user].avatarPortrait)){result.slots[user]=Slot{};return result;}
     return result;
 }
 }

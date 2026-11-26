@@ -29,6 +29,10 @@
       {
         "stem": "73-amigos-xbox",
         "caption": "Guide — lista própria de amigos, consulta indisponível no host"
+      },
+      {
+        "stem": "74-avatar-perfil-teste",
+        "caption": "Home — composição de retrato e Gamerpic com tiles sintéticos (perfil de teste)"
       }
     ]
   },

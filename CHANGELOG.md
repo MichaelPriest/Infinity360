@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.63 — Retrato do avatar na Home e Guide
+
+- Leitura experimental do tile de avatar 64x64 (tipo 13) independente do Gamerpic, composição de ambos e fallback neutro; não é um modelo 3D animado.
+- Consultas de arte limitadas a 15 s, reutilização em RAM somente para a mesma identidade e estado, descarte na troca de perfil e invalidação após UI oficial.
+- Captura 74 com tiles sintéticos explicitamente marcados; testes portáteis preparados. Sem XEX/release ou homologação física.
+
 ## V0.2.62 — Presença atualizável e amigos por título
 
 - Atualização opcional a cada 30 s enquanto a lista está aberta, armada somente após consulta bem-sucedida, interrompida em falha, troca de perfil ou operação concorrente.

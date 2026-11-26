@@ -286,6 +286,22 @@ int main() {
     CHECK(freshness.Expire(999));
     freshness.Result(true,1000);freshness.Result(false,31000);
     CHECK(!freshness.Due(61000)&&!freshness.Fresh(61000));
+    Snapshot artFixture;
+    artFixture.slots[0]=FromXam(2,"Player");
+    artFixture.slots[0].identity=42;
+    artFixture.slots[0].avatarPortrait.assign(GamerpicBytes,255);
+    artFixture.slots[0].gamerpic.assign(GamerpicBytes,127);
+    auto artHeader=Resolve(artFixture,0);
+    CHECK(ValidGamerpic(artHeader.avatarPortrait)&&ValidGamerpic(artHeader.gamerpic));
+    auto noArt=artHeader;noArt.gamerpic.clear();noArt.avatarPortrait.clear();
+    CHECK(!SameHeader(artHeader,noArt));
+    RetainProfileArt(artHeader,noArt,true,true);CHECK(SameHeader(artHeader,noArt));
+    noArt=artHeader;noArt.identity=43;noArt.gamerpic.clear();noArt.avatarPortrait.clear();
+    RetainProfileArt(artHeader,noArt,true,true);CHECK(noArt.gamerpic.empty()&&noArt.avatarPortrait.empty());
+    artFixture.slots[0].guest=true;
+    CHECK(Resolve(artFixture,0).avatarPortrait.empty());
+    artFixture.slots[0].guest=false;artFixture.slots[0].avatarPortrait.assign(3,255);
+    CHECK(Resolve(artFixture,0).avatarPortrait.empty());
     std::cout << "social profile checks passed\n";
     return 0;
 }
