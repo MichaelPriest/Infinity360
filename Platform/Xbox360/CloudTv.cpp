@@ -1,5 +1,6 @@
 ﻿#include "CloudTv.h"
 #include "InfinityIcons.h"
+#include "ControllerButtons.h"
 #include "GameScanner.h"
 #include "SavedFile.h"
 #include "MediaUrl.h"
@@ -407,13 +408,13 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     }
     c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
     const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri).empty();
-    if(view_!=Details||playable){c.Box(44,675,24,24,0xff85d42du,12);c.CenterText(44,674,24,"A",16,0xff102010u);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
-    c.Box(240,675,24,24,0xffe34a35u,12);c.CenterText(240,674,24,"B",16,0xff102010u);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
-    if(tab_!=TvSources)c.Text(390,675,c.Tr("X  Favorito"),19,Ink,150);
-    c.Text(567,675,c.Tr("Y  Atualizar"),19,Ink,151);
-    if(view_!=Details && view_!=Episodes)c.Text(764,675,c.Tr("Start  Guia"),19,Ink,159);
-    if(view_!=Details)c.Text(922,675,c.Tr("LB/RB  Página"),18,Ink,155);
-    if(view_==Browse && tab_!=TvSources)c.Text(1092,675,c.Tr("RS  Buscar"),18,Ink,152);
+    if(view_!=Details||playable){InfinityButtons::Draw(c,InfinityButtons::A,44,675,24);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
+    InfinityButtons::Draw(c,InfinityButtons::B,240,675,24);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
+    if(tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::X,390,675,22,c.Tr("Favorito"),120,Ink);
+    InfinityButtons::Hint(c,InfinityButtons::Y,567,675,22,c.Tr("Atualizar"),125,Ink);
+    if(view_!=Details && view_!=Episodes)InfinityButtons::Hint(c,InfinityButtons::Start,764,675,22,c.Tr("Guia"),105,Ink);
+    if(view_!=Details){InfinityButtons::Draw(c,InfinityButtons::LB,908,675,22);InfinityButtons::Hint(c,InfinityButtons::RB,943,675,22,c.Tr("Página"),80,Ink);}
+    if(view_==Browse && tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::R3,1092,675,22,c.Tr("Buscar"),120,Ink);
 }
 void CloudTv::SearchKey(MenuKey key) {
     if(key==MenuBack) {view_=Browse;return;}
@@ -443,8 +444,8 @@ void CloudTv::DrawSearch(HomeCanvas& c) const {
         c.Text(x+15,y+8,i<36?std::string(1,letters[i]):c.Tr(actions[i-36]),20,i==letter_?Lime:Ink,155);
     }
     c.Box(0,663,1280,57,0xff061915u);
-    c.Text(44,675,c.Tr("A  Selecionar"),19,Lime,203);c.Text(260,675,c.Tr("B  Cancelar"),19,Ink,205);
-    c.Text(482,675,c.Tr("X  Apagar"),19,Ink,209);c.Text(706,675,c.Tr("Y  Buscar"),19,Ink,200);
+    InfinityButtons::Hint(c,InfinityButtons::A,44,675,22,c.Tr("Selecionar"),165,Lime);InfinityButtons::Hint(c,InfinityButtons::B,260,675,22,c.Tr("Cancelar"),165,Ink);
+    InfinityButtons::Hint(c,InfinityButtons::X,482,675,22,c.Tr("Apagar"),165,Ink);InfinityButtons::Hint(c,InfinityButtons::Y,706,675,22,c.Tr("Buscar"),165,Ink);
 }
 
 void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {

@@ -1,6 +1,7 @@
 #include "HomeCanvas.h"
 #include "BrandLogoPixels.h"
 #include "InfinityIconPixels.h"
+#include "ControllerButtonPixels.h"
 #include "GlyphWidths.h"
 #include <algorithm>
 #include <cstdio>
@@ -179,6 +180,20 @@ void HomeCanvas::RasterIcon(int kind,int x,int y,int size,unsigned tint){
             const unsigned a=(InfinityIconPixels::Alpha(kind,ix,iy)*(256-fx)*(256-fy)+InfinityIconPixels::Alpha(kind,ix1,iy)*fx*(256-fy)+InfinityIconPixels::Alpha(kind,ix,iy1)*(256-fx)*fy+InfinityIconPixels::Alpha(kind,ix1,iy1)*fx*fy+32768u)>>16;
             if(a){unsigned& dest=frame_[(y+j)*Width+x+i];dest=blend(tint,dest,a);}
         }
+    }
+}
+void HomeCanvas::ControllerButton(int kind,int x,int y,int h){
+    if(kind<0||kind>=ControllerButtonPixels::Count||h<=0||h>128)return;
+    const bool wide=kind>=4&&kind<=9;
+    const int sw=wide?48:32,sx=wide?0:8,w=wide?h*3/2:h;
+    // Supersample when reducing; average premultiplied colors to retain transparent edges.
+    for(int j=std::max(0,-y);j<h&&j+y<Height;++j)for(int i=std::max(0,-x);i<w&&i+x<Width;++i){
+        unsigned a=0,r=0,g=0,b=0;
+        for(int yy=0;yy<2;++yy)for(int xx=0;xx<2;++xx){
+            const unsigned p=ControllerButtonPixels::Pixel(kind,sx+((i*4+1+2*xx)*sw)/(w*4),((j*4+1+2*yy)*32)/(h*4));
+            const unsigned alpha=p>>24;a+=alpha;r+=((p>>16)&255)*alpha;g+=((p>>8)&255)*alpha;b+=(p&255)*alpha;
+        }
+        if(a){const unsigned rgb=((r/a)<<16)|((g/a)<<8)|(b/a);auto& dest=frame_[(y+j)*Width+x+i];dest=blend(rgb,dest,(a+2)/4);}
     }
 }
 void HomeCanvas::BrandLogo(int x,int y){

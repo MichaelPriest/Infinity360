@@ -4,6 +4,7 @@
 #include "DashboardLayout.h"
 #include "ApprovedHome.h"
 #include "InfinityIcons.h"
+#include "ControllerButtons.h"
 #include "GameGrid.h"
 #include "DashboardScreenshot.h"
 #include "MediaUrl.h"
@@ -235,6 +236,18 @@ int main(int argc,char** argv) {
      brand.SeriesBackground();bool changed=false;size_t n=0;
      for(int y=15;y<61;++y)for(int x=28;x<348;++x)if(first[n++]!=brand.Pixels()[y*1280+x])changed=true;
      assert(changed);}
+    // Verify every controller sprite changes pixels, remains clipped, and preserves physical button colors across themes.
+    {HomeCanvas buttons;buttons.SeriesBackground();
+     for(int k=0;k<InfinityButtons::Count;++k){
+         buttons.Box(80,80,100,50,0xff101010u);
+         InfinityButtons::Draw(buttons,k,80,80,32);
+         bool changed=false;for(int y=80;y<112;++y)for(int x=80;x<80+InfinityButtons::Width(k,32);++x)if(buttons.Pixels()[y*1280+x]!=0xff101010u)changed=true;
+         assert(changed&&buttons.Pixels()[80*1280+80]==0xff101010u);
+     }
+     buttons.SetTheme(0);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);unsigned green=buttons.Pixels()[106*1280+116];
+     buttons.SetTheme(1);InfinityButtons::Draw(buttons,InfinityButtons::A,100,100,32);assert(buttons.Pixels()[106*1280+116]==green);
+     InfinityButtons::Draw(buttons,InfinityButtons::RB,-10,-10,32);
+    }
     // Exercise actual framebuffer composition, not a screenshot mockup.
     {
         HomeCanvas modern;modern.SeriesBackground();

@@ -60,6 +60,12 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 32 ícones rasterizados de 48×48, com transparência de 16 níveis. O pacote substitui a geometria em tempo de execução e mantém os identificadores anteriores para Home, Guide, biblioteca, loja, IPTV, sistema e layouts alternativos. Inclui sol, lua, chuva e perfil neutro. A cor de seleção acompanha o tema; o avatar ainda não representa um Gamerpic real. Botões de controle e indicadores geométricos de interface permanecem elementos funcionais.
 
+### Botões do controle Xbox 360
+
+![Botões rasterizados do controle](Platform/Xbox360/Assets/xbox-buttons.png)
+
+14 imagens transparentes (A, B, X, Y, LB, RB, LT, RT, START, BACK, L3, R3, direcional e Guide). Os botões preservam suas cores independentemente do tema. Aplicados ao rodapé compartilhado, destaque da Home, atalhos contextuais, detalhes de jogos, Guide e IPTV. Outros textos de ajuda permanecem como texto. O atlas é incorporado ao renderizador sem leitura de disco; nenhuma mudança nos mapeamentos dos controles.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.

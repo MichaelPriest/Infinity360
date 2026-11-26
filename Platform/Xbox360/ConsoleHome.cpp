@@ -7,6 +7,7 @@
 #include "GameGrid.h"
 #include "ApprovedHome.h"
 #include "InfinityIcons.h"
+#include "ControllerButtons.h"
 #include "StoreSourceDirectory.h"
 #include "InfinityVersion.h"
 #include "DiscIdentity.h"
@@ -2238,8 +2239,9 @@ void panel(HomeCanvas& c,int x,int y,int w,int h,unsigned bg,bool active) {
     if(bg!=Panel&&w>20&&h>20)c.Translucent(x+3,y+3,w-6,h-6,bg,34,8);
 }
 void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned color) {
-    c.Box(x,674,29,29,color,14);
-    c.CenterText(x,673,29,key,20,0xff101710u);
+    (void)color;
+    const int kind=key[0]=='A'?InfinityButtons::A:key[0]=='B'?InfinityButtons::B:key[0]=='X'?InfinityButtons::X:InfinityButtons::Y;
+    InfinityButtons::Draw(c,kind,x,674,29);
     c.TextFit(x+38,672,c.Tr(action),19,White,150);
 }
 }
@@ -3402,8 +3404,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
         if(row<4)c.Box(611,y+39,403,1,0xff414743u);
     }
     c.SeriesTile(601,522,428,84,false,215);
-    c.Box(616,543,48,28,0xff65736du,8);c.Box(618,545,44,24,0xff232b28u,7);
-    c.CenterText(618,546,44,"LB",16,White);
+    InfinityButtons::Draw(c,InfinityButtons::LB,616,543,30);
     c.Box(676,537,1,48,0xff65736du);
     c.TextFit(690,532,"Selecionar perfil Xbox",20,White,327);
 #if defined(__XSDK__)
@@ -3432,7 +3433,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     }
     c.Box(255,545,292,1,0xff414743u);
     if(quickGuideEditing_)c.TextFit(259,555,"LB/RB Mover | X Restaurar | Y Salvar",14,White,284);
-    else {c.Box(260,561,20,20,0xff85d42du,10);c.CenterText(260,560,20,"A",13,0xff102010u);c.Text(286,558,"Abrir",15,White,59);c.Box(350,561,20,20,0xff209de8u,10);c.CenterText(350,560,20,"X",13,0xff102010u);c.Text(376,558,"Editar",15,White,58);c.Box(439,561,20,20,0xffe34a35u,10);c.CenterText(439,560,20,"B",13,0xff102010u);c.Text(465,558,"Fechar",15,White,78);}
+    else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":"Guia local da dashboard"),15,Muted,284);
     if(!quickGuideEditing_)DrawSocialGuide(c);
     if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
@@ -3953,14 +3954,14 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     if(m.discCount)c.TextFit(219,277,std::string(c.Tr("Disco"))+" "+number(m.discNumber)+"/"+number(m.discCount),17,Muted,398);
     c.TextFit(219,305,contains(pinned_,game.executable)?c.Tr("FIXADO"):Starred(game)?c.Tr("Favorito"):"",15,Lime,398);
     c.Box(219,337,250,39,0xffa8ff00u,8);
-    c.Box(232,346,22,22,0xff102010u,11);c.CenterText(232,345,22,"A",14,0xffa8ff00u);
+    InfinityButtons::Draw(c,InfinityButtons::A,232,344,25);
     c.TextFit(266,340,c.Tr(m.package?"Solicitar montagem":"Jogar"),19,0xff101710u,194);
-    const char* actions[]={"RB TU / DLC / Saves","LB Fixar / Desafixar","START Capa e fundo","X Favorito"};
-    const int actionIcons[]={5,23,2,21};
+    const char* actions[]={"TU / DLC / Saves","Fixar / Desafixar","Capa e fundo","Favorito"};
+    const int actionIcons[]={InfinityButtons::RB,InfinityButtons::LB,InfinityButtons::Start,InfinityButtons::X};
     for(int i=0;i<4;++i){
         const int x=45+i*300;c.SeriesTile(x,401,289,49,false);
-        InfinityIcons::Draw(c,actionIcons[i],x+10,413,22,White);
-        c.TextFit(x+41,413,c.Tr(actions[i]),16,White,237);
+        InfinityButtons::Draw(c,actionIcons[i],x+10,410,28);
+        c.TextFit(x+58,413,c.Tr(actions[i]),16,White,220);
     }
     panel(c,45,461,590,125,Panel,false);
     panel(c,646,461,589,125,Panel,false);
@@ -4206,7 +4207,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     c.TextFit(hero.x+30,hero.y+61,shelf.empty()?std::string("INFINITY 360"):featured->name,45,White,435);
     c.TextFit(hero.x+30,hero.y+124,shelf.empty()?"Adicione jogos ao HDD ou USB":"Biblioteca local | Xbox 360",19,Muted,390);
     c.Box(hero.x+30,hero.y+177,162,36,accent,9);
-    c.Box(hero.x+43,hero.y+185,20,20,0xff102010u,10);c.CenterText(hero.x+43,hero.y+184,20,"A",14,accent);
+    InfinityButtons::Draw(c,InfinityButtons::A,hero.x+40,hero.y+183,25);
     c.TextFit(hero.x+74,hero.y+179,shelf.empty()?"Biblioteca":"Detalhes",19,0xff101710u,110);
     if(illustration)c.TextFit(hero.x+hero.w-130,hero.y+hero.h-25,"Arte ilustrativa",12,White,121);
     for(size_t i=0;i<std::min(HeroSize,shelf.size());++i)c.Box(hero.x+hero.w/2-25+int(i)*15,hero.y+hero.h-13,8,8,i==Featured(preview?0:approvedHero_,shelf.size())?accent:Muted,4);
@@ -4246,7 +4247,13 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
-    else c.TextFit(30,634,CoverSlot(active)?"LB/RB Página | B Frente/Verso | START Fixar | X Favorito":active==Hero?"X Próximo destaque | R3 Guia":active==LibraryLink?"A Biblioteca | START Baixar capas faltantes":"R3 Guia | START Personalizar | LB Notificações | RB Loja",16,Muted,1190);
+    else {
+        namespace IB=InfinityButtons;
+        if(CoverSlot(active)){IB::Draw(c,IB::LB,30,632,22);IB::Hint(c,IB::RB,66,632,22,"Página",95,White);IB::Hint(c,IB::B,190,632,22,"Frente/Verso",160,White);IB::Hint(c,IB::Start,400,632,22,"Fixar",100,White);IB::Hint(c,IB::X,555,632,22,"Favorito",120,White);}
+        else if(active==Hero){IB::Hint(c,IB::X,30,632,22,"Próximo destaque",220,White);IB::Hint(c,IB::R3,300,632,22,"Guia",100,White);}
+        else if(active==LibraryLink){IB::Hint(c,IB::A,30,632,22,"Biblioteca",145,White);IB::Hint(c,IB::Start,220,632,22,"Baixar capas faltantes",260,White);}
+        else {IB::Hint(c,IB::R3,30,632,22,"Guia",100,White);IB::Hint(c,IB::Start,170,632,22,"Personalizar",170,White);IB::Hint(c,IB::LB,395,632,22,"Notificações",180,White);IB::Hint(c,IB::RB,630,632,22,"Loja",100,White);}
+    }
 }
 
 bool ConsoleHome::WeatherAutoDue(int64_t now){
