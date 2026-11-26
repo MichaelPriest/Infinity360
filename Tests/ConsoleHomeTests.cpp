@@ -1308,6 +1308,8 @@ int main(int argc,char** argv) {
     }
     {unsigned char smc[16]={0x07,0x80,60,0,70,0,65,0,40};
      auto t=ThermalTelemetry::Decode(smc,sizeof smc);assert(t.state==ThermalTelemetry::Valid&&t.Celsius(0)=="60.5 C");
+     assert(t.CompactCelsius(0)=="61 C"&&t.CompactCelsius(5)=="--");
+     assert(ThermalTelemetry::HeaderDue(false,0,0)&&!ThermalTelemetry::HeaderDue(true,1000,10999)&&ThermalTelemetry::HeaderDue(true,1000,11000)&&ThermalTelemetry::HeaderDue(true,1000,999));
      smc[3]=0;smc[4]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Partial);
      assert(ThermalTelemetry::Decode(smc,8).state==ThermalTelemetry::Invalid);
      smc[0]=0;assert(ThermalTelemetry::Decode(smc,sizeof smc).state==ThermalTelemetry::Invalid);}
