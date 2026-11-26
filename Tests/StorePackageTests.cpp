@@ -1,3 +1,4 @@
+#include "StoreSourceDirectory.h"
 #include "StoreHostPolicy.h"
 #include "StorePackage.h"
 #include "StoreStorage.h"
@@ -155,11 +156,16 @@ int main(){
      config<<"test\tTest provider\thttps://example.org/catalog.tsv\t"<<catalogRow.size()<<"\t"<<pinned<<"\n";}
     StoreCatalog remote(base);assert(remote.Load());assert(remote.Providers().size()==1);
     StoreProvider provider=remote.Providers()[0];assert(!provider.cached);
+    const auto sources=StoreSourceDirectory::Rows(remote.Providers());
+    assert(sources.size()==7&&sources[0].id=="*"&&sources[1].id.empty());
+    assert(sources[3].id=="series360"&&sources[3].provider==-1&&sources[6].id=="test"&&sources[6].provider==0);
     std::string providerError;
     assert(!remote.ImportProvider(provider,catalogRow+"x",providerError));
     assert(remote.ImportProvider(provider,catalogRow,providerError));
     assert(remote.Providers()[0].cached&&remote.Providers()[0].items==1);
     StoreItem entry=remote.Items().back();assert(entry.id=="test-demo"&&entry.provider=="test");
+    assert(StoreSourceDirectory::Matches("*",entry)&&StoreSourceDirectory::Matches("test",entry));
+    assert(!StoreSourceDirectory::Matches("",entry)&&!StoreSourceDirectory::Matches("andromeda",entry));
     assert(!remote.Request(entry));assert(remote.QueueNative(entry));
     StoreCatalog offline(base);assert(offline.Load());assert(offline.Providers()[0].cached);
     {std::ofstream corrupt(root/"UserFiles/StoreCatalogs/test.tsv");corrupt<<catalogRow<<"x";}

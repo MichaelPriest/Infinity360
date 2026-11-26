@@ -14,3 +14,9 @@ Series360: projeto e distribuicao do dashboard; endpoint de catalogo ainda nao c
 Freestyle Rev800 / X-Store: referencia funcional; endpoint e direitos de distribuicao ainda nao confirmados.
 Nexus Andromeda: https://github.com/DevIshimura/Nexus (projeto; nao e endpoint TSV).
 IDs reservados para configuracao de catalogos autorizados: series360, xstore, andromeda.
+
+Nexus Dashboard v1.0: https://github.com/DevIshimura/Nexus/releases/tag/v1.0
+Manifesto oficial: https://github.com/DevIshimura/Nexus/blob/main/update.json
+Download oficial de dashboard, nao catalogo Andromeda. Tamanho e SHA-256 conferidos entre manifesto e release; instalacao manual.
+Series360 (pagina de referencia nao validada como API): https://x360.pistatrack.com/dashboard
+X-Store (projeto de referencia, nao API Rev800 homologada): https://github.com/951261/X-Store

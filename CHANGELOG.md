@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.40 — Catálogo Nexus oficial e build solicitada
+
+- Nexus Dashboard v1.0 no catálogo local, tamanho e SHA-256 confirmados em manifesto e release oficiais; instalação manual.
+- Referências Series360, X-Store e Nexus; APIs comerciais originais continuam não homologadas.
+- Testes de fontes e solicitação da build XSDK.
+
 ## V0.2.39 — Central de fontes (sem build)
 
 - Fontes independentes, filtro real por ID, sincronização apenas para TSV configurado.

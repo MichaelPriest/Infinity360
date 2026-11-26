@@ -1,1 +1,2 @@
-V0.2.16 — solicitação explícita de atualização da galeria real pelo responsável do projeto.
+V0.2.40 native renderer screenshots requested alongside build
+Baseline e53abfb5571fe6d0b657f54bce514c6634f12aa2

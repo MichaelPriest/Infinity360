@@ -37,3 +37,7 @@ O snapshot oficial Homebrew App Catalogue 88542fda8a098b00fc4c37b9c70a4cb9ba3573
 ## V0.2.39 — Fontes independentes
 
 R3 abre Central de fontes. A filtra o catálogo por origem (inclusive fonte vazia); START sincroniza apenas uma linha configurada e validada; X volta a todos; Y relê. Use IDs `series360`, `xstore`, `andromeda` em `infinity360-providers.tsv` para associar um catálogo HTTPS TSV autorizado e compatível com o parser, tamanho e SHA-256 exatos. Não é integração das APIs originais: enquanto faltarem os endpoints e autorização, a origem fica vazia. Outros IDs continuam aparecendo como fontes independentes. Nenhuma fonte é consultada automaticamente.
+
+## V0.2.40 — Nexus Dashboard oficial
+
+Incluído no catálogo local o pacote NexusDashbord.zip v1.0 (15.616.416 bytes), conforme https://github.com/DevIshimura/Nexus/blob/main/update.json e https://github.com/DevIshimura/Nexus/releases/tag/v1.0 . Tamanho e SHA-256 do asset conferidos via GitHub. Download e instalação não testados; não se trata de integração Andromeda. Instalação manual recomendada, nunca substitua a dashboard de boot.
