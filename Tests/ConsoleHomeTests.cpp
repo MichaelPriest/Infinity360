@@ -240,6 +240,14 @@ int main(int argc,char** argv) {
      brand.SeriesBackground();bool changed=false;size_t n=0;
      for(int y=15;y<61;++y)for(int x=28;x<348;++x)if(first[n++]!=brand.Pixels()[y*1280+x])changed=true;
      assert(changed);}
+    {using namespace InfinityButtons;
+     const auto commands=ParseCommands("LB/RB Página | START Opções | B Voltar | Fonte: local");
+     assert(commands.size()==4&&commands[0].first==LB&&commands[0].second==RB&&commands[0].label=="Página");
+     assert(commands[1].first==Start&&commands[2].first==B&&commands[3].first==-1);
+     assert(ParseCommand("BACKUP local").first==-1&&ParseCommand("RS Buscar").first==R3);
+     assert(ParseCommand("Esq/Dir Campo").first==Dpad);
+     HomeCanvas hints;Strip(hints,45,610,"LB/RB Página | B Voltar",18,0xffffffffu,600);
+    }
     // Check the exact original alpha silhouette for each of the 14 XNA images.
     for(int k=0;k<ControllerButtonPixels::Count;++k){
         unsigned h=2166136261u;

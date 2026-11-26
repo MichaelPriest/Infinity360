@@ -76,6 +76,10 @@ A navegação padrão Series Infinity exibe apenas Início, Jogos, Apps, IPTV, L
 
 O atlas compartilhado foi ampliado para 64 imagens, com IDs anteriores preservados. Sistema agora apresenta quatro grupos de duas funções e, nos detalhes, apenas a categoria atual; as rotas existentes permanecem. Biblioteca, conteúdo TU/DLC/saves/trainers, loja, fontes, ações de arquivos, energia, armazenamento, temperaturas, aparência, conquistas, perfis e IPTV usam símbolos específicos. Outros 32 símbolos foram preparados para uso nas próximas revisões. Textos auxiliares e layouts alternativos ainda exigem revisão individual.
 
+### Comandos contextuais compartilhados
+
+As instruções de controle das telas técnicas usam agora a mesma faixa de imagens dos botões Xbox 360, com suporte a pares LB/RB, direcional, START e R3. A conversão preserva as descrições existentes e as ações. O rodapé de loja, modais, personalização, clima e detalhes de sistema deixa de apresentar comandos genéricos da Home. Os quatro grupos do Sistema também aceitam cima/baixo para alternar as duas funções. Os comandos laterais e telas não abrangidos continuam em revisão.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.

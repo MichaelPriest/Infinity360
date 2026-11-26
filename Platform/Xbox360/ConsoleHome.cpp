@@ -2023,6 +2023,8 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
             if(key==Right && systemTab_<7) ++systemTab_;
+            if(key==Up&&systemTab_%2==1)--systemTab_;
+            if(key==Down&&systemTab_%2==0)++systemTab_;
             if(key==Accept) {
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerOptions_=false;peerProbe_.Stop();smbPage_=false;smbEditing_=false;smbProbe_.Stop();}
@@ -2281,7 +2283,7 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
         }
     }
     c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
-    c.Text(47,610,"LB/RB Fonte | START Plugins locais | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,47,610,"LB/RB Fonte | START Plugins locais | Y Atualizar | B Voltar",18,Lime,1170);
 }
 bool ConsoleHome::PluginAllowed(const PluginDescriptor& item)const{
     return item.manifestEnabled&&item.headerValid&&!item.conflict&&!disabledPluginIds_.count(PluginRegistry::Key(item.id));
@@ -2317,7 +2319,7 @@ void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
         c.Text(806,y+9,state,19,PluginAllowed(item)?Lime:Muted,400);
     }
     c.Text(48,585,"Preferencia local; nao altera launch.ini, nao carrega modulos residentes.",18,Muted,1170);
-    c.Text(48,610,"X Alternar | START DashLaunch | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,610,"X Alternar | START DashLaunch | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     if(layout_==DashboardLayout::TopIcons){
@@ -2325,7 +2327,7 @@ void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
         c.TextFit(45,85,"Personalizar início",38,White,1180);
         c.TextFit(45,143,"Organize a prioridade dos atalhos dentro dos grupos",22,Muted,1180);
         for(int i=0;i<6;++i){int x=45+(i%3)*400,y=200+(i/3)*155;int item=approvedDraft_[i]-'0';c.SeriesTile(x,y,385,140,i==homeEditSlot_);InfinityIcons::Draw(c,13+item,x+25,y+23,42,White);c.TextFit(x+25,y+77,names[item],25,White,330);}
-        c.TextFit(45,548,"Direcional Selecionar | LB/RB Mover | X Restaurar | Y Salvar | B Cancelar",18,Lime,1180);return;
+        InfinityButtons::Strip(c,45,548,"Direcional Selecionar | LB/RB Mover | X Restaurar | Y Salvar | B Cancelar",18,Lime,1180);return;
     }
     c.Text(44,82,c.Tr("Personalizar inicio"),40,White,1190);
     c.Text(46,150,c.Tr("Organize os quatro atalhos da segunda fileira."),24,Muted,1180);
@@ -2338,7 +2340,7 @@ void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
         c.Text(x+16,414,"Posicao "+number(i+1),18,Muted,252);
     }
     c.Text(46,500,"Direcional: selecionar | LB/RB: mover o atalho",23,White,1180);
-    c.Text(46,550,"X Restaurar padrao | Y Salvar | B Cancelar",23,Lime,1180);
+    InfinityButtons::Strip(c,46,550,"X Restaurar padrao | Y Salvar | B Cancelar",23,Lime,1180);
 }
 void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(44,78,"Importar perfil Aurora",40,White,1180);
@@ -2348,7 +2350,7 @@ void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(70,308,"Registros de historico encontrados: "+number(importHistory_.size()),26,White,1130);
     c.Text(70,370,"Recentes locais tem prioridade. Jogos ambiguos ou ausentes sao ignorados.",21,Muted,1130);
     c.Text(70,417,"Nenhum jogo ou banco Aurora sera alterado.",22,Muted,1130);
-    c.Text(48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
+    InfinityButtons::Strip(c,48,560,"A Confirmar mesclagem | B Cancelar",24,Lime,1180);
 }
 void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
     c.Text(55,250,item.name+" | Gerenciar",28,White,1150);
@@ -2362,7 +2364,7 @@ void ConsoleHome::DrawStoreManage(HomeCanvas& c,const StoreItem& item) const{
         c.Text(935,y+9,ready[i]?"Disponivel":"Indisponivel",18,ready[i]?Lime:Muted,265);
     }
     c.Text(55,535,"Backups no destino Store | nenhum arquivo apagado",19,Muted,1150);
-    c.Text(55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
+    InfinityButtons::Strip(c,55,583,storeManageConfirm_?"A Confirmar | B Cancelar":"Cima/Baixo Selecionar | A Preparar | B Voltar",20,Lime,1150);
 }
 std::string ConsoleHome::StoreSourceLabel()const{
     for(const auto& row:StoreSourceDirectory::Rows(store_.Providers()))if(row.id==storeSource_)return row.name;
@@ -2382,7 +2384,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
         c.Text(950,y+12,p.id==storeSource_?"Selecionado":p.provider>=0?"Configurado":p.id=="@unity"?"Integrado":p.id.empty()||p.id=="*"?"Local":"Pendente",17,p.id==storeSource_?Lime:Muted,270);
     }
     if(!store_.ProvidersValid())c.Text(45,575,"Configuracao externa invalida; sem sincronizacao.",17,Muted,1170);
-    c.Text(45,602,"A Abrir fonte | START Sincronizar | X Todos | Y Recarregar | B Voltar",18,Lime,1175);
+    InfinityButtons::Strip(c,45,602,"A Abrir fonte | START Sincronizar | X Todos | Y Recarregar | B Voltar",18,Lime,1175);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
     if(storeProviders_){DrawProviders(c);return;}
@@ -2417,7 +2419,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
         c.Text(55,560,store_.Staged(item)&&!store_.Installed(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator")?"R3 duas vezes: instalar/atualizar XEX/ZIP | RB Gerenciar":store_.NativeQueued(item)?"LB Remover da fila nativa":"LB Adicionar a fila nativa",20,Lime,1150);
 #endif
         c.Text(55,535,"RB Gerenciar (ou descartar parcial) | LB Fila nativa",18,Muted,1150);
-        c.Text(55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover PC | B Voltar",21,Lime,1150);
+        InfinityButtons::Strip(c,55,590,storeConfirm_?"A Confirmar pedido | B Cancelar":"Start Baixar no Xbox | A Pedido PC | X Remover PC | B Voltar",21,Lime,1150);
         return;
     } else {
         const int first=(storeRow_/5)*5;
@@ -2430,7 +2432,7 @@ void ConsoleHome::DrawStore(HomeCanvas& c) const {
             c.Text(835,y+15,store_.Staged(item)?"Arquivo local":store_.Requested(item)?"Na fila PC":"Disponivel",20,Lime,360);
         }
     }
-    c.Text(48,590,"A Detalhes | LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar",21,Lime,1175);
+    InfinityButtons::Strip(c,48,590,"A Detalhes | LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar",21,Lime,1175);
 }
 void ConsoleHome::DrawHome(HomeCanvas& c) const {
     if(weatherPanel_){DrawWeatherPanel(c);return;}
@@ -2554,7 +2556,7 @@ void ConsoleHome::DrawDashboardUpdate(HomeCanvas& c) const{
     }else c.Text(48,250,"Nenhum manifesto valido. Consulte a Release no GitHub.",24,White,1170);
     c.Text(48,490,"Requer escrita, instalador ZIP e enable-dashboard-update.txt.",20,Muted,1170);
     c.Text(48,535,"Versao anterior preservada; retorno manual pelo gerenciador externo.",20,Muted,1170);
-    c.Text(48,600,updateConfirm_?"A Confirmar | B Cancelar":"A Instalar candidata | Y Consultar | B Voltar",19,Lime,1170);
+    InfinityButtons::Strip(c,48,600,updateConfirm_?"A Confirmar | B Cancelar":"A Instalar candidata | Y Consultar | B Voltar",19,Lime,1170);
 }
 void ConsoleHome::PrepareCoverBatch(){
     coverBatch_.clear();std::set<unsigned> seen;
@@ -2624,7 +2626,7 @@ void ConsoleHome::DrawUnity(HomeCanvas& c) const{
         c.Text(60,y+33,tu.filename.empty()?"Nome original indisponivel":tu.filename,16,Muted,840);
         c.Text(905,y+12,tu.bytes?StorageInfo::FormatBytes(tu.bytes):"Tamanho desconhecido",18,Muted,300);
     }
-    c.Text(48,590,unityConfirm_?"A Confirmar download | B Cancelar":"A Baixar TU verificada | Y Consultar | B Voltar | Sem ativacao",19,Lime,1175);
+    InfinityButtons::Strip(c,48,590,unityConfirm_?"A Confirmar download | B Cancelar":"A Baixar TU verificada | Y Consultar | B Voltar | Sem ativacao",19,Lime,1175);
 }
 void ConsoleHome::RefreshContentInstall(){
     contentInstallConfirm_=false;std::string error;
@@ -2657,7 +2659,7 @@ void ConsoleHome::DrawContentInstall(HomeCanvas& c) const{
     c.Text(48,425,"Requer enable-content-install.txt e enable-file-writes.txt.",20,Muted,1170);
     c.Text(48,470,"Somente copia verificada. Nao altera licencas, nao remove outras TUs.",20,Muted,1170);
     c.Text(48,515,"Ativacao e reconhecimento pelo Xbox permanecem nao confirmados.",20,Muted,1170);
-    c.Text(48,600,contentInstallConfirm_?"A Confirmar | B Cancelar":"A Instalar | Y Consultar | B Voltar",19,Lime,1170);
+    InfinityButtons::Strip(c,48,600,contentInstallConfirm_?"A Confirmar | B Cancelar":"A Instalar | Y Consultar | B Voltar",19,Lime,1170);
 }
 void ConsoleHome::DrawContent(HomeCanvas& c) const {
     if(contentInstallActive_){DrawContentInstall(c);return;}
@@ -2761,8 +2763,8 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
         c.Text(48,486,"Retornar ao sistema para instalar pelo recurso oficial.",22,White,1170);
         c.Text(48,520,"Nao inicia instalacao automaticamente; destino depende da configuracao de boot.",18,Muted,1170);
     }
-    c.Text(48,565,discConfirm_?"A Confirmar | B Cancelar":"Esq/Dir Metodo | Cima/Baixo Destino | Y Atualizar | A Selecionar",19,Lime,1170);
-    c.Text(48,594,"Extrair e converter usam as permissoes de DVD e escrita | B Voltar",18,Muted,1170);
+    InfinityButtons::Strip(c,48,565,discConfirm_?"A Confirmar | B Cancelar":"Esq/Dir Metodo | Cima/Baixo Destino | Y Atualizar | A Selecionar",19,Lime,1170);
+    InfinityButtons::Strip(c,48,594,"Extrair e converter usam as permissoes de DVD e escrita | B Voltar",18,Muted,1170);
 #else
     c.Text(48,400,"Instalador DVD disponivel no XSDK.",22,Muted,1170);
 #endif
@@ -2786,9 +2788,9 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
             c.Text(x+9,y+5,c.Tr(labels[i].c_str()),17,Muted,270);
             c.Text(x+9,y+30,values[i],22,White,270);
         }
-        c.Text(48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
+        InfinityButtons::Strip(c,48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
         c.Text(48,580,v.available&&v.width==1920&&v.height==1080&&!v.interlaced?"Saida 1080p detectada | UI 720p escalonada pelo console":"UI 720p | Para 1080p, configure a saida no menu oficial Xbox",18,Muted,1170);
-        c.Text(48,606,c.Tr("LB/RB Pagina | Y Atualizar | B Voltar"),17,Lime,1170);
+        InfinityButtons::Strip(c,48,606,c.Tr("LB/RB Pagina | Y Atualizar | B Voltar"),17,Lime,1170);
         return;
     }
     c.Text(45,349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);
@@ -2807,8 +2809,8 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
         c.Text(65,420,std::string(c.Tr("Memoria: provider indisponivel ou consulta recusada.")),23,White,1145);
         c.Text(65,467,std::string(c.Tr("Nenhuma medida simulada e exibida.")),19,Muted,1145);
     }
-    c.Text(48,559,std::string(c.Tr("START Sensores SMC | Consulta experimental somente leitura")),18,Muted,1170);
-    c.Text(48,585,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,559,std::string(c.Tr("START Sensores SMC | Consulta experimental somente leitura")),18,Muted,1170);
+    InfinityButtons::Strip(c,48,585,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     if(coolingPage_){DrawCooling(c);return;}
@@ -2826,8 +2828,8 @@ void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     const char* state=!ThermalTelemetry::Supported()?"Provider nao incluido nesta build.":thermal_.state==ThermalTelemetry::NotRead?"A solicita leitura manual.":thermal_.state==ThermalTelemetry::Valid?"Resposta SMC valida; leitura instantanea.":thermal_.state==ThermalTelemetry::Partial?"Resposta parcial; sensores ausentes nao estimados.":"Resposta invalida ou indisponivel.";
     c.Text(48,526,c.Tr(state),20,White,1170);
     c.Text(48,554,"Sessao: "+number(thermalHistory_.attempts)+" consultas | "+number(thermalHistory_.valid)+" validas | "+number(thermalHistory_.partial)+" parciais | "+number(thermalHistory_.invalid)+" invalidas",18,Muted,1170);
-    c.Text(48,580,std::string(c.Tr("LB/RB Refrigeracao | Min/max apenas de leituras manuais.")),17,Muted,1170);
-    c.Text(48,607,std::string(c.Tr("A Consultar | X Limpar historico | START Telemetria | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,580,std::string(c.Tr("LB/RB Refrigeracao | Min/max apenas de leituras manuais.")),17,Muted,1170);
+    InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Consultar | X Limpar historico | START Telemetria | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawCooling(HomeCanvas& c)const{
     c.Text(45,349,std::string(c.Tr("SMC | Diagnostico de refrigeracao")),27,White,1170);
@@ -2847,7 +2849,7 @@ void ConsoleHome::DrawCooling(HomeCanvas& c)const{
     c.Text(48,525,c.Tr(message),20,status==ThermalAdvisory::Reached?0xffffb454u:White,1170);
     c.Text(48,553,std::string(c.Tr("Aviso apenas na leitura manual; nao substitui a protecao do hardware.")),18,Muted,1170);
     c.Text(48,579,std::string(c.Tr("Nenhuma escrita SMC; controle real da ventoinha indisponivel.")),17,Muted,1170);
-    c.Text(48,607,std::string(c.Tr("A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Consultar | X Limpar amostras | LB/RB Sensores | START Telemetria")),18,Lime,1170);
 }
 bool ConsoleHome::PowerBusy()const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
@@ -2872,7 +2874,7 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
     const bool supported=ConsolePower::Supported(),busy=PowerBusy();
     c.Text(48,520,!supported?std::string(c.Tr("Provider nao incluido nesta build.")):busy?std::string(c.Tr("Bloqueado: encerre operacoes e FTP.")):std::string(c.Tr("Provider experimental: nao homologado no console.")),20,White,1170);
     c.Text(48,556,powerConfirm_.armed?std::string(c.Tr("CONFIRMACAO: A executa a acao selecionada; B cancela.")):std::string(c.Tr("Nenhuma acao automatica; exige dupla confirmacao.")),19,Muted,1170);
-    c.Text(48,607,std::string(c.Tr("Esq/Dir Selecionar | A Confirmar | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,std::string(c.Tr("Esq/Dir Selecionar | A Confirmar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     if(appearanceEditor_){if(layoutPreview_)DrawModernHome(c,layoutDraft_,true);else DrawAppearance(c);return;}
@@ -2888,9 +2890,9 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
         c.Text(x+12,y+3,std::string(c.Tr("Controle "))+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),20,White,560);
         c.Text(x+12,y+30,c.Tr(ConsoleStatus::StateLabel(status_.profileProvider,status_.signin[i])),16,Muted,550);
     }
-    c.Text(48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
+    InfinityButtons::Strip(c,48,565,std::string(c.Tr("Tema "))+number(theme_+1)+"/"+number(HomeCanvas::ThemeCount)+": < "+HomeCanvas::ThemeName(theme_)+c.Tr(" > | Esq/Dir Alterar"),19,Lime,1170);
     c.Text(48,612,std::string("LB/RB Language: ")+UiLanguage::Name(language_)+" | "+c.Tr("Cima/Baixo Marcos locais")+" | A Energia",18,Lime,1170);
-    c.Text(48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
+    InfinityButtons::Strip(c,48,590,std::string(c.Tr("X Protetor: "))+(idleMinutes_?number(idleMinutes_)+" min":c.Tr("Desativado"))+c.Tr(" | START Capas em lote | R3 Atualizar | B Voltar"),18,Lime,1170);
 }
 void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
     c.Text(45,349,c.Tr("Marcos locais da dashboard"),27,White,1170);
@@ -2912,8 +2914,8 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
         c.Text(x+10,y+28,std::to_string(values[i]),26,Lime,365);
     }
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
-    c.Text(48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
-    c.Text(48,606,std::string(c.Tr("START Central de saves | X Aparencia | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
+    InfinityButtons::Strip(c,48,606,std::string(c.Tr("START Central de saves | X Aparencia | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
@@ -2937,7 +2939,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         if(percent)c.Box(x+14,y+63,static_cast<int>(551*percent/100),10,Lime,5);
         c.Text(x+14,y+76,number(percent)+std::string(c.Tr("% ocupado")),15,White,550);
     }
-    c.Text(45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
+    InfinityButtons::Strip(c,45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
 }
 void ConsoleHome::DrawSmb(HomeCanvas& c)const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
@@ -2965,9 +2967,9 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
         std::string(result.preauthSha512?std::string(c.Tr("SHA-512 selecionado | ")):"")+std::string(c.Tr("Token de seguranca: "))+number(result.securityTokenBytes)+std::string(c.Tr(" bytes | Sessao nao autenticada")):
         std::string(c.Tr("SMB 2.0.2 a 3.1.1 | Sem SMB1 ou acesso anonimo.")),17,Muted,1170);
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
-    c.Text(48,607,std::string(c.Tr("A Testar | X Cancelar | START IP | R3 Sessao | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Testar | X Cancelar | START IP | R3 Sessao | B Voltar")),18,Lime,1170);
 #else
-    c.Text(48,607,std::string(c.Tr("A Testar | X Cancelar | START Configurar | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Testar | X Cancelar | START Configurar | B Voltar")),18,Lime,1170);
 #endif
 }
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
@@ -2980,7 +2982,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
             c.Text(48,445,std::string(c.Tr("Duracao: "))+number(durations[peerDuration_])+std::string(c.Tr(" segundos")),25,White,1170);
             c.Text(48,492,std::string(c.Tr("Anfitriao responde | Cliente envia | Bidirecional envia e responde")),19,Muted,1170);
             c.Text(48,550,std::string(c.Tr("Protocolo de diagnostico INFL; nao cria sala de jogo.")),18,Muted,1170);
-            c.Text(48,607,std::string(c.Tr("Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar")),18,Lime,1170);return;
+            InfinityButtons::Strip(c,48,607,std::string(c.Tr("Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar")),18,Lime,1170);return;
         }
         if(peerEditing_){
             c.Text(48,392,std::string(c.Tr("IPv4 privado do outro console")),23,White,1170);
@@ -2998,7 +3000,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         const unsigned durations[]={15,30,60};
         c.Text(48,540,std::string(c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))))+" | "+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s"+(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished?std::string(c.Tr(" | Sem resposta: "))+number(peerProbe_.LossPercent())+"%":""),18,Muted,1170);
         c.Text(48,560,std::string(c.Tr("Inicie nos dois consoles. Nao confirma System Link de jogos.")),18,Muted,1170);
-        c.Text(48,607,std::string(c.Tr("A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina")),18,Lime,1170);return;
+        InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina")),18,Lime,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
     c.Box(42,391,589,190,Panel,10);
@@ -3014,7 +3016,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?std::string(c.Tr("FTP: cliente conectado")):std::string(c.Tr("FTP: aguardando cliente"))):std::string(c.Tr("FTP: desligado")),21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string(c.Tr("A Leitura | X Leitura/upload (ALLO)")),20,Muted,558);
     c.Text(660,534,std::string(c.Tr("Internet e Xbox Live: nao testados")),19,Muted,558);
-    c.Text(45,607,std::string(c.Tr("A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar")),18,Muted,1180);
+    InfinityButtons::Strip(c,45,607,std::string(c.Tr("A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar")),18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     const auto rows=notifications_.Visible(eventFilter_);
@@ -3036,7 +3038,7 @@ void ConsoleHome::DrawEvents(HomeCanvas& c) const {
         c.Text(203,y+3,item.text,17,White,825);
         c.Text(1044,y+3,c.Tr(item.read?"Lida":"Nova"),17,item.read?Muted:Lime,170);
     }
-    c.Text(48,600,c.Tr("LB/RB Filtro | A Ler | X Ler todas | Cima/Baixo | B Voltar"),18,Lime,1175);
+    InfinityButtons::Strip(c,48,600,c.Tr("LB/RB Filtro | A Ler | X Ler todas | Cima/Baixo | B Voltar"),18,Lime,1175);
 }
 void ConsoleHome::RebuildStoreDownloads() {
     storeDownloadItems_=store_.NativeQueue();
@@ -3065,11 +3067,11 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
     }
     if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
 #if defined(INFINITY_XSDK_HTTPS)
-    c.Text(48,590,"A Baixar/Retomar | START Rodar fila | R3 Priorizar | X Remover",18,Muted,1170);
-    c.Text(48,612,"LB Limpar ausentes ("+number(store_.OrphanNativeCount())+") | RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,590,"A Baixar/Retomar | START Rodar fila | R3 Priorizar | X Remover",18,Muted,1170);
+    InfinityButtons::Strip(c,48,612,"LB Limpar ausentes ("+number(store_.OrphanNativeCount())+") | RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
 #else
     c.Text(48,590,"Registros locais do Xbox e PC; nao indicam conexao ativa.",18,Muted,1170);
-    c.Text(48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,612,"RB Copias locais | Y Atualizar | B Voltar",18,Lime,1170);
 #endif
 }
 void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
@@ -3110,8 +3112,8 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
         c.TextFit(455,277,"UserFiles/ArtImport/"+artEditId_+"/cover-back.jpg",18,White,740);
         c.TextFit(455,310,"ou cover-back.png | Importacao sem sobrescrita",18,Muted,740);
         c.TextFit(455,380,"Na Home, B alterna a frente e o verso do jogo selecionado.",18,White,740);
-        c.TextFit(46,570,"Cima/Baixo Selecionar | R3 Importar | RB Recarregar",19,White,1180);
-        c.TextFit(46,604,"Y Salvar | B Voltar",18,Lime,1180);return;
+        InfinityButtons::Strip(c,46,570,"Cima/Baixo Selecionar | R3 Importar | RB Recarregar",19,White,1180);
+        InfinityButtons::Strip(c,46,604,"Y Salvar | B Voltar",18,Lime,1180);return;
     }
     c.Text(46,137,"Title ID: "+artEditId_,21,Muted,1180);
     static const char* const modes[]={"Principal","Alternativa","Visual padrao"};
@@ -3130,8 +3132,8 @@ void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
             (artDraft_[i]=='1'?"background-alt.rgba":"background.rgba"):
             (artDraft_[i]=='1'?"cover-alt.rgba":"cover.rgba"),17,Muted,w-32);
     }
-    c.Text(46,570,"Cima/Baixo Frente/Fundo/Verso | Esq/Dir ou A Alterar | RB Recarregar",19,White,1180);
-    c.Text(46,604,artArchiveConfirm_?"A Confirmar | B Cancelar":"START Capa XboxUnity | R3 Importar | LB Arquivar/Restaurar | Y Salvar | B Voltar",18,Lime,1180);
+    InfinityButtons::Strip(c,46,570,"Cima/Baixo Frente/Fundo/Verso | Esq/Dir ou A Alterar | RB Recarregar",19,White,1180);
+    InfinityButtons::Strip(c,46,604,artArchiveConfirm_?"A Confirmar | B Cancelar":"START Capa XboxUnity | R3 Importar | LB Arquivar/Restaurar | Y Salvar | B Voltar",18,Lime,1180);
 }
 void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
     c.Text(45,145,"Acoes do arquivo",31,White,1180);
@@ -3145,7 +3147,7 @@ void ConsoleHome::DrawFileActions(HomeCanvas& c) const {
         c.TextFit(110,y+12,actions[i],25,White,1070);
     }
     c.Text(48,550,"Somente espaco pessoal. Exclusao nao recursiva; movimento no mesmo volume.",20,Muted,1175);
-    c.Text(48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
+    InfinityButtons::Strip(c,48,600,deleteConfirm_?"A Confirmar exclusao definitiva | B Cancelar":"A Selecionar | B Voltar",20,Lime,1175);
 }
 void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
     c.Text(44,78,"Jogos multidisco | Selecionar disco",37,White,1170);
@@ -3160,7 +3162,7 @@ void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
         c.Text(60,y+32,e.path+" | Media "+hexId(e.info.mediaId),17,Muted,1150);
     }
     if(discSet_.empty())c.Text(48,270,"Nenhum disco correspondente instalado.",24,Muted,1170);
-    c.Text(48,590,"A Selecionar XEX | Y Revalidar | B Voltar | Sem troca automatica",19,Lime,1170);
+    InfinityButtons::Strip(c,48,590,"A Selecionar XEX | Y Revalidar | B Voltar | Sem troca automatica",19,Lime,1170);
 }
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(updateActive_){DrawDashboardUpdate(c);return;}
@@ -3361,7 +3363,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Espaco pessoal | escrita habilitada":"Navegacao somente leitura | Start cria espaco pessoal no dispositivo",
             18,Muted,1140);
         c.Text(49,594,"Esquerda: busca de jogos | Direita: acoes do item",18,Muted,1180);
-        c.Text(49,615,"RB Dispositivo | Start Nova pasta | RS Renomear | X Copiar | LB Colar",18,Lime,1180);
+        InfinityButtons::Strip(c,49,615,"RB Dispositivo | Start Nova pasta | RS Renomear | X Copiar | LB Colar",18,Lime,1180);
     }
     else c.Text(49,157,number(Count())+" títulos",21,Muted,1140);
     if(!Count() && notice_.empty())
@@ -3464,7 +3466,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
             c.TextFit(509,y+7,number(transfer_.Percent())+"%",15,Lime,34);
     }
     c.Box(255,545,292,1,0xff414743u);
-    if(quickGuideEditing_)c.TextFit(259,555,"LB/RB Mover | X Restaurar | Y Salvar",14,White,284);
+    if(quickGuideEditing_)InfinityButtons::Strip(c,259,551,"LB/RB Mover | X Padrão | Y Salvar",13,White,284);
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":"Guia local da dashboard"),15,Muted,284);
     if(!quickGuideEditing_)DrawSocialGuide(c);
@@ -3501,6 +3503,16 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         c.Text(51,630,c.Tr(notice_.c_str()),18,Lime,1170);
     }
     c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
+    // Modals and specialised pages must not inherit unrelated Home commands.
+    if(weatherPanel_){InfinityButtons::Strip(c,45,674,"Y Atualizar | B Voltar",19,White,1190);return;}
+    if(storeActive_){
+        const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?"A Pedido PC | B Voltar | X Remover PC | START Baixar":"A Detalhes | B Voltar | Y Atualizar | R3 Fontes";
+        InfinityButtons::Strip(c,45,674,commands,19,White,1190);return;
+    }
+    if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
+    if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
+    if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
+    if(contentActive_||artEditing_||discSetActive_||updateActive_||fileAction_||collectionPicker_||searchActive_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     if(!approved||ApprovedHome::CoverSlot(focus_))buttonHint(c,254,"B",approved?"Girar capa":"Voltar",0xffb83c28u);
     if(!approved||ApprovedHome::CoverSlot(focus_)||focus_==ApprovedHome::Hero)buttonHint(c,429,"X",approved&&ApprovedHome::CoverSlot(focus_)?"Favorito":approved&&focus_==ApprovedHome::Hero?"Destaque":page_==Home && !homeEditing_ && !importPreview_?"Importar":(artEditing_ || (page_==Home && homeEditing_))?"Restaurar":section_==System && page_==Details && systemTab_==3?"Cancelar":
@@ -3667,7 +3679,7 @@ void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
         }
         c.Text(48,515,std::string(std::string(c.Tr("Caractere selecionado: [")))+char(32+smbChar_)+std::string(c.Tr("] | A adiciona | X apaga")),20,Lime,1170);
         c.Text(48,550,smbMessage_.empty()?std::string(c.Tr("Credenciais em RAM; use conta de teste. Nunca use senha real no emulador.")):c.Tr(smbMessage_.c_str()),17,Muted,1170);
-        c.Text(48,607,std::string(c.Tr("Direcoes Caractere | LB/RB Campo | Y Conectar | B Cancelar")),18,Lime,1170);return;
+        InfinityButtons::Strip(c,48,607,std::string(c.Tr("Direcoes Caractere | LB/RB Campo | Y Conectar | B Cancelar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbBrowsing){
         c.Text(48,386,"/"+smbBrowser_.Current(),20,White,1170);
@@ -3683,13 +3695,13 @@ void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
             if(rows.empty())c.Text(48,434,std::string(c.Tr("Diretorio vazio.")),22,Muted,1170);
         }
         c.Text(48,561,smbMessage_.empty()?(smbBrowser_.Truncated()?std::string(c.Tr("Listagem limitada a 512 itens.")):std::string(c.Tr("Somente leitura remota; arquivos copiados apenas em workspace."))):std::string(c.Tr(smbMessage_.c_str())),17,Muted,1170);
-        c.Text(48,607,std::string(c.Tr("A Abrir/Copiar | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);return;
+        InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Abrir/Copiar | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbDestination){
         c.Text(48,395,smbPlan_.name+" | "+number(smbPlan_.bytes)+" B",22,White,1170);
         c.Text(48,447,std::string(c.Tr("Destino: "))+fileWorkspace_.WorkspaceFor(smbDestinations_[smbDest_]),22,Lime,1170);
         c.Text(48,503,smbConfirm_?std::string(c.Tr("A novamente confirma a copia sem sobrescrever.")):std::string(c.Tr("Esquerda/Direita escolhe HDD ou USB.")),20,Muted,1170);
-        c.Text(48,607,std::string(c.Tr("A Confirmar | B Cancelar")),18,Lime,1170);return;
+        InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Confirmar | B Cancelar")),18,Lime,1170);return;
     }
     if(smbUi_==SmbCopying){
         const auto done=smbSession_.Done(),total=smbSession_.Total();
@@ -3782,7 +3794,7 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
     }
     if(!count)c.Text(48,410,std::string(c.Tr("Nenhum registro reconhecido.")),22,Muted,1170);
     c.Text(48,555,notice_.empty()?(saveBackups_?std::string(c.Tr("Backups por Title ID, podem pertencer a outros perfis.")):std::string(c.Tr("Inventario por pasta, nao comprova titularidade. "))+std::string(saveLimited_?std::string(c.Tr("Limite atingido.")):"")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
-    c.Text(48,607,saveConfirm_?std::string(c.Tr("A Confirmar | B Cancelar")):saveBackups_?std::string(c.Tr("A Recuperar copia | X Verificar | Y Atualizar | B Voltar")):saveList_?std::string(c.Tr("A Backup | START Backups do jogo | Y Atualizar | B Voltar")):std::string(c.Tr("A Saves | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,saveConfirm_?std::string(c.Tr("A Confirmar | B Cancelar")):saveBackups_?std::string(c.Tr("A Recuperar copia | X Verificar | Y Atualizar | B Voltar")):saveList_?std::string(c.Tr("A Backup | START Backups do jogo | Y Atualizar | B Voltar")):std::string(c.Tr("A Saves | Y Atualizar | LB/RB Pagina | B Voltar")),18,Lime,1170);
 }
 
 void ConsoleHome::RefreshAchievements(){
@@ -3838,7 +3850,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
     }
     if(achievementLoaded_&&!count)c.Text(48,432,std::string(c.Tr("Nenhuma entrada de conquista reconhecida.")),21,Muted,1170);
     c.Text(48,555,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
-    c.Text(48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
 }
 
 void ConsoleHome::PressAppearance(Key key){
@@ -3879,7 +3891,7 @@ void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
         c.TextFit(x+52,y+21,"< "+values[i]+" >",20,Lime,510);
     }
     c.Text(48,596,"Clima: Open-Meteo | Cidade manual | UTC nao altera o relogio do sistema",16,Muted,1170);
-    c.Text(48,618,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),17,Lime,1170);
+    InfinityButtons::Strip(c,48,618,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),17,Lime,1170);
 }
 
 void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const{
@@ -4060,12 +4072,12 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     }else c.Text(x+20,445,item.provider.empty()?c.Tr("Catalogo local"):item.provider,18,Muted,w-40);
     if(storeDetails_){
         c.Text(x+20,515,item.url,16,Muted,w-40);
-        c.Text(45,581,c.Tr(storeConfirm_?"A Confirmar pedido | B Cancelar":"START Baixar | A Pedido PC | X Remover PC | B Voltar"),19,Lime,1170);
-        c.Text(45,608,c.Tr("LB Fila nativa | RB Gerenciar | R3 Instalar XEX/ZIP"),18,Muted,1170);
+        InfinityButtons::Strip(c,45,581,c.Tr(storeConfirm_?"A Confirmar pedido | B Cancelar":"START Baixar | A Pedido PC | X Remover PC | B Voltar"),19,Lime,1170);
+        InfinityButtons::Strip(c,45,608,c.Tr("LB Fila nativa | RB Gerenciar | R3 Instalar XEX/ZIP"),18,Muted,1170);
     }else{
         c.Text(x+20,528,c.Tr("A Detalhes"),21,Lime,w-40);
-        c.Text(45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
-        c.Text(45,608,c.Tr("LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar"),18,Muted,1170);
+        InfinityButtons::Strip(c,45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
+        InfinityButtons::Strip(c,45,608,c.Tr("LB Destino HDD/USB | R3 Provedores | Y Atualizar | B Voltar"),18,Muted,1170);
     }
 }
 
@@ -4193,7 +4205,8 @@ void ConsoleHome::DrawApprovedGroup(HomeCanvas& c)const{
     for(int i=0;i<4&&actions[i]>=0;++i){
         const int y=255+i*63;const int item=actions[i];
         c.SeriesTile(375,y,530,55,i==approvedGroupRow_);
-        InfinityIcons::Draw(c,item,391,y+10,34,White);c.TextFit(442,y+12,labels[item],23,White,443);
+        const int icons[]={0,1,2,3,4,5,10,7,8,9,10,11,1,13,32,15,3,4,9};
+        InfinityIcons::Draw(c,icons[item],391,y+10,34,i==approvedGroupRow_?Lime:White);c.TextFit(442,y+12,labels[item],23,White,443);
     }
     InfinityButtons::Hint(c,InfinityButtons::A,378,551,28,"Abrir",130,White);
     InfinityButtons::Hint(c,InfinityButtons::B,593,551,28,"Voltar",130,White);
@@ -4349,5 +4362,5 @@ void ConsoleHome::DrawWeatherPanel(HomeCanvas& c)const{
         c.CenterText(x,441,230,temps,26,White);
         c.CenterText(x,493,230,day.rain<0?"Chuva -":"Chuva "+number(day.rain)+"%",18,Muted);
     }
-    c.Text(48,600,"Y Atualizar | B Voltar | Minima / maxima | Fonte: Open-Meteo",18,Lime,1170);
+    InfinityButtons::Strip(c,48,600,"Y Atualizar | B Voltar | Minima / maxima | Fonte: Open-Meteo",18,Lime,1170);
 }
