@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1033,7 +1033,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(key==Up||key==Down){socialGuideRow_=InfinitySocial::MoveGuideSocial(socialGuideRow_,key==Up?-1:1);notice_.clear();return "";}
                 if(key==Accept){
                     const auto action=InfinitySocial::GuideSocialAction(socialGuideRow_);
-                    if(action==InfinitySocial::NativeAction::QuickChat){communicationGuideOpen_=true;communicationRow_=0;notice_.clear();return "";}
+                    if(action==InfinitySocial::NativeAction::QuickChat){communicationGuideOpen_=true;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;notice_.clear();return "";}
                     if(action==InfinitySocial::NativeAction::Friends){
                         friendGuideOpen_=true;friendRow_=0;friendFilter_=InfinitySocial::FriendFilter::All;
                         friendRosterPending_=false;notice_.clear();
@@ -2110,7 +2110,7 @@ std::string ConsoleHome::Press(Key key) {
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
         if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
-        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
+        if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
@@ -3587,7 +3587,21 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
 }
 void ConsoleHome::PressCommunicationGuide(Key key){
     using namespace InfinitySocial;
-    if(key==Back||key==Left){communicationGuideOpen_=false;notice_.clear();return;}
+    if(privilegeGuideOpen_){
+        if(key==Back||key==Left){privilegeGuideOpen_=false;privilegePending_=false;notice_.clear();return;}
+        if(key==Refresh){
+            privileges_.Clear();
+#if defined(__XSDK__)
+            if(!TransferRunning()&&CanRequestNative(NativeAction::Party,social_)){privilegePending_=true;notice_="Consultando permissoes do sistema.";}
+            else notice_="Requer perfil online e nenhuma copia ativa.";
+#else
+            notice_="Consulta oficial somente no Xbox 360.";
+#endif
+        }
+        return;
+    }
+    if(key==Favorite){privilegeGuideOpen_=true;notice_.clear();return;}
+    if(key==Back||key==Left){communicationGuideOpen_=false;privilegePending_=false;notice_.clear();return;}
     if(key==Up||key==Down){communicationRow_=MoveCommunication(communicationRow_,key==Up?-1:1);notice_.clear();return;}
     if(key!=Accept)return;
     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
@@ -3599,7 +3613,29 @@ void ConsoleHome::PressCommunicationGuide(Key key){
     (void)action;notice_="Interface oficial somente no Xbox 360.";
 #endif
 }
+void ConsoleHome::DrawPrivilegeGuide(HomeCanvas& c)const{
+    using namespace InfinitySocial;
+    c.SeriesTile(580,87,470,552,false,244);
+    approvedIcon(c,19,606,110,30,White);
+    c.TextFit(644,105,"Permissoes Xbox",28,White,385);
+    c.TextFit(606,155,"Somente leitura | perfil ativo",16,Muted,412);
+    const bool fresh=privileges_.Fresh(social_,TransferRate::Now());
+    const char* names[]={"Comunicacao","Visualizar perfis","Multiplayer"};
+    const AccessScope values[]={privileges_.Communications(),privileges_.Profiles(),privileges_.Multiplayer()};
+    for(int i=0;i<3;++i){
+        const int y=198+i*82;
+        const auto value=fresh?values[i]:AccessScope::Unknown;
+        c.SeriesTile(601,y,428,71,false,220);
+        c.TextFit(618,y+8,names[i],19,White,387);
+        c.TextFit(618,y+36,AccessLabel(value),17,value==AccessScope::Granted?Lime:Muted,387);
+    }
+    c.TextFit(608,467,"Consulta nao altera privacidade ou controle familiar.",14,Muted,412);
+    c.TextFit(608,492,"Permissao nao confirma disponibilidade de voz ou LIVE.",14,Muted,412);
+    c.TextFit(608,526,"Resultado valido por ate 60 segundos.",14,Muted,412);
+    c.TextFit(608,571,"Y Consultar | B Voltar",17,White,412);
+}
 void ConsoleHome::DrawCommunicationGuide(HomeCanvas& c)const{
+    if(privilegeGuideOpen_){DrawPrivilegeGuide(c);return;}
     using namespace InfinitySocial;
     c.SeriesTile(580,87,470,552,false,244);
     approvedIcon(c,19,606,110,30,White);
@@ -3618,7 +3654,7 @@ void ConsoleHome::DrawCommunicationGuide(HomeCanvas& c)const{
         c.TextFit(660,y+34,details[i],13,Muted,356);
     }
     c.TextFit(607,508,"Voz e convites dependem do sistema e servico Xbox.",13,Muted,412);
-    c.TextFit(607,536,"Sem sessao de jogo criada pela dashboard.",13,Muted,412);
+    c.TextFit(607,536,"X Permissoes do perfil | somente leitura",15,White,412);
     InfinityButtons::Draw(c,InfinityButtons::A,609,571,22);
     c.TextFit(638,570,"Abrir",16,White,135);
     InfinityButtons::Draw(c,InfinityButtons::B,805,571,22);

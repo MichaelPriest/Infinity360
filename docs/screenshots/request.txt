@@ -54,3 +54,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.65 official profile editor, friend gamer card and compose UI; host tests/captures only
 
 2026-11-26 V0.2.66 communication hub and official party UI opt-in; host tests and 76 captures only
+
+2026-11-26 V0.2.67 read-only profile privilege panel; host tests and 77 captures only

@@ -233,6 +233,10 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.Press(ConsoleHome::Down);profile.Press(ConsoleHome::Accept);
             assert(profile.CommunicationGuideOpen());
             ok=save("76-comunicacao-xbox",profile)&&ok;
+            profile.Press(ConsoleHome::Favorite);assert(profile.PrivilegeGuideOpen());
+            profile.Press(ConsoleHome::Refresh);assert(!profile.TakePrivilegeRequest());
+            ok=save("77-permissoes-xbox",profile)&&ok;
+            profile.Press(ConsoleHome::Back);assert(!profile.PrivilegeGuideOpen()&&profile.CommunicationGuideOpen());
             for(int i=0;i<4;++i){
                 profile.Press(ConsoleHome::Accept);
                 assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);

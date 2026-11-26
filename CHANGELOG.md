@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.67 — Permissões oficiais do perfil
+
+- X na central de comunicação abre consulta de permissões de comunicação, visualização de perfis e multiplayer, incluindo estado somente amigos quando aplicável.
+- XamUserCheckPrivilege (0x212) somente leitura, opt-in e verificação de identidade entre chamadas; resultado incerto não vira permissão concedida, cache RAM de 60 s.
+- Nenhuma alteração de privacidade, controle familiar, acesso ou licença; permissões não provam serviço/voz ativo. Testes e captura 77 preparados; sem XEX/release.
+
 ## V0.2.66 — Central de comunicação e Xbox Party
 
 - Chat e Party no Guide abre painel com Xbox Party, chat rápido, amigos/convites e mensagens; delegação às interfaces oficiais.

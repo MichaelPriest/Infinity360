@@ -31,6 +31,7 @@
 #include "NotificationCenter.h"
 #include "QuickGuide.h"
 #include "SocialProfile.h"
+#include "ProfilePrivileges.h"
 #include "AvatarPreview.h"
 #include "FriendRoster.h"
 #include "SystemTelemetry.h"
@@ -64,7 +65,7 @@ public:
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
-        social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);
+        social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);privileges_.Observe(social_);
         if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
     }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
@@ -72,6 +73,12 @@ public:
     bool FriendGuideOpen()const{return quickGuideOpen_&&friendGuideOpen_;}
     bool AvatarGuideOpen()const{return quickGuideOpen_&&avatarGuideOpen_;}
     bool CommunicationGuideOpen()const{return quickGuideOpen_&&communicationGuideOpen_;}
+    bool PrivilegeGuideOpen()const{return CommunicationGuideOpen()&&privilegeGuideOpen_;}
+    bool TakePrivilegeRequest(){const bool requested=privilegePending_;privilegePending_=false;return requested&&PrivilegeGuideOpen();}
+    void PrivilegeResult(const InfinitySocial::ProfilePrivileges& result,const std::string& message){
+        privileges_=result;privileges_.Observe(social_);notice_=message;
+    }
+    bool ExpirePrivileges(std::uint64_t now){return privileges_.Expire(social_,now);}
     void SetAvatarCapabilities(const InfinitySocial::AvatarCapabilities& caps){avatarCapabilities_=caps;}
     bool SetAvatarFrame(const InfinitySocial::Header& before,unsigned w,unsigned h,const std::vector<unsigned char>& rgba){
         return avatarPreview_.Set(before,social_,w,h,rgba);
@@ -98,10 +105,10 @@ public:
         }
         return action;
     }
-    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;notice_=message;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -155,6 +162,9 @@ private:
     bool friendGuideOpen_=false,friendRosterPending_=false;
     bool avatarGuideOpen_=false;
     bool communicationGuideOpen_=false;
+    bool privilegeGuideOpen_=false,privilegePending_=false;
+    InfinitySocial::ProfilePrivileges privileges_;
+    void DrawPrivilegeGuide(HomeCanvas& c)const;
     int communicationRow_=0;
     void DrawCommunicationGuide(HomeCanvas& c)const;
     void PressCommunicationGuide(Key key);

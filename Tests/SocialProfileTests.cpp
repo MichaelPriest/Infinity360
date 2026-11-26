@@ -3,6 +3,7 @@
 #include "NativeSocialSignals.h"
 #include "FriendRoster.h"
 #include "AvatarPreview.h"
+#include "ProfilePrivileges.h"
 #include <iostream>
 using namespace InfinitySocial;
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "line " << __LINE__ << ": " #expr "\n"; return 1; } } while (false)
@@ -343,6 +344,25 @@ int main() {
     CHECK(!CanRequestNative(NativeAction::Party,partyLocal));
     partyLocal.state=SignIn::Online;partyLocal.guest=true;
     CHECK(!CanRequestNative(NativeAction::Party,partyLocal));
+    CHECK(DecodePrivilege(0,0)==PrivilegeValue::Denied);
+    CHECK(DecodePrivilege(0,1)==PrivilegeValue::Granted);
+    CHECK(DecodePrivilege(1,1)==PrivilegeValue::Unknown);
+    CHECK(DecodePrivilege(0,2)==PrivilegeValue::Unknown);
+    CHECK(Scope(PrivilegeValue::Unknown,PrivilegeValue::Granted)==AccessScope::Unknown);
+    CHECK(Scope(PrivilegeValue::Denied,PrivilegeValue::Granted)==AccessScope::FriendsOnly);
+    CHECK(Scope(PrivilegeValue::Denied,PrivilegeValue::Denied)==AccessScope::Denied);
+    ProfilePrivileges privileges;
+    PrivilegeValues values={{PrivilegeValue::Denied,PrivilegeValue::Granted,PrivilegeValue::Granted,PrivilegeValue::Unknown,PrivilegeValue::Denied}};
+    CHECK(privileges.Set(communication,communication,values,100));
+    CHECK(privileges.Fresh(communication,100)&&privileges.Fresh(communication,60099));
+    CHECK(privileges.Communications()==AccessScope::FriendsOnly);
+    CHECK(privileges.Profiles()==AccessScope::Granted);
+    CHECK(privileges.Multiplayer()==AccessScope::Denied);
+    CHECK(privileges.Expire(communication,60100)&&!privileges.Fresh(communication,60100));
+    CHECK(!privileges.Set(communication,swapped,values,100));
+    CHECK(!privileges.Set(partyLocal,partyLocal,values,100));
+    CHECK(privileges.Set(communication,communication,values,100));
+    CHECK(privileges.Expire(communication,99));
     std::cout << "social profile checks passed\n";
     return 0;
 }

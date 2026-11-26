@@ -7,6 +7,7 @@
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
 #include "NativeSocialUiXsdk.h"
+#include "NativeProfilePrivilegesXsdk.h"
 #include "NativeAvatarProbeXsdk.h"
 #include "NativeFriendRosterXsdk.h"
 #include "NativeSocialListenerXsdk.h"
@@ -650,6 +651,14 @@ int main(){
             const auto result=allowed?InfinitySocial::ReadNativeFriendRoster(menu.SocialHeader(),dir,roster):
                 std::string("Consulta bloqueada por outra operacao.");
             menu.FriendRosterResult(roster,result,TransferRate::Now());dirty=true;
+        }
+        if(menu.ExpirePrivileges(TransferRate::Now()))dirty=true;
+        if(menu.TakePrivilegeRequest()){
+            InfinitySocial::ProfilePrivileges privileges;
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+            const auto result=allowed?InfinitySocial::ReadNativePrivileges(menu.SocialHeader(),dir,privileges,TransferRate::Now()):
+                std::string("Consulta bloqueada por outra operacao.");
+            menu.PrivilegeResult(privileges,result);dirty=true;
         }
         unsigned socialTitle=0;std::uint64_t socialTarget=0;
         const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle,&socialTarget);
