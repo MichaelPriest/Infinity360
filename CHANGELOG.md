@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.47 — Consistência do perfil na Home e Guide (sem build)
+
+- Consulta parcial dos controles não equivale a logout confirmado.
+- Atualização visual considera todos os campos do perfil; convidados de teste mantêm identificação.
+- README e contrato social reconciliados com a main. Gamerpic, Gamerscore real e comunicação Xbox ainda dependem de providers e homologação.
+- Sem compilação XEX, novas capturas ou release nesta revisão.
+
 ## V0.2.46 — Previsão meteorológica e cabeçalho (sem build XEX)
 
 - Cartão selecionável abre previsão de cinco dias, mínima/máxima e probabilidade de chuva.
