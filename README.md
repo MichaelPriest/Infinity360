@@ -10,7 +10,7 @@ Protótipo open-source de uma dashboard para Xbox 360 com interface portátil pa
 
 ## Perfil ativo e comunicação — desenvolvimento isolado
 
-A branch `feature/profile-social-provider` contém o contrato portátil para identificar perfis ativos por controle, origem real ou de teste, Gamerscore opcional, avatar e disponibilidade de comunicação. A integração XAM, o cabeçalho/Guide e o chat real ainda dependem da recuperação das alterações mais recentes do Work e da homologação do provider. [Contrato e testes](Platform/Xbox360/docs/SOCIAL-PROFILE.md). A versão permanece V0.2.46 nesta base até reconciliar as alterações; nenhuma build iniciada.
+A branch `feature/profile-social-provider` contém o contrato portátil para identificar perfis ativos por controle, origem real ou de teste, Gamerscore opcional, avatar e disponibilidade de comunicação. A branch integra leitura XAM de quatro slots ao cabeçalho e Guide, atualizada a cada dois segundos. Avatar permanece ícone neutro; Gamerscore, amigos e chat reais ainda indisponíveis. Capturas 70 e 71 são solicitadas ao renderizador C++ nativo, com perfil de teste identificado; integração em hardware e reconciliação com Work pendentes. [Contrato e testes](Platform/Xbox360/docs/SOCIAL-PROFILE.md). A versão permanece V0.2.46 nesta base até reconciliar as alterações; nenhuma build iniciada.
 
 ## Atualização oficial 17559 — auditoria
 
