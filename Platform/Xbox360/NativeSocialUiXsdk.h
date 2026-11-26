@@ -12,6 +12,12 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     std::string line;
     if(!std::getline(flag,line)|| (line!="ENABLE-NATIVE-SOCIAL-UI"&&line!="ENABLE-NATIVE-SOCIAL-UI\r"))
         return "Interface experimental: habilite enable-native-social-ui.txt.";
+    if(action==NativeAction::AvatarEditor){
+        std::ifstream avatarFlag(dir+"enable-native-avatar-editor.txt");
+        std::string avatarLine;
+        if(!std::getline(avatarFlag,avatarLine)||(avatarLine!="ENABLE-NATIVE-AVATAR-EDITOR"&&avatarLine!="ENABLE-NATIVE-AVATAR-EDITOR\r"))
+            return "Editor experimental: habilite enable-native-avatar-editor.txt.";
+    }
     if(XamIsUIActive())return "Outra interface Xbox esta aberta.";
     HANDLE module=0;
     void* address=nullptr;
@@ -33,6 +39,13 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
         return "O perfil ou a interface mudou; tente novamente.";
     using ShowUI=std::uint32_t(*)(std::uint32_t);
     using ShowAchievements=std::uint32_t(*)(std::uint32_t,std::uint32_t);
+    // This API launches the system editor rather than an overlay, and may
+    // terminate the dashboard. Three arguments are required by the reference ABI.
+    if(action==NativeAction::AvatarEditor){
+        using LaunchEditor=std::int32_t(*)(std::uint32_t,std::uint32_t,const std::uint16_t*);
+        const auto status=reinterpret_cast<LaunchEditor>(address)(user,0,nullptr);
+        return status==0?"Editor Xbox solicitado; retorno depende do sistema.":"Sistema recusou o editor de avatar.";
+    }
     const auto result=action==NativeAction::Achievements?
         reinterpret_cast<ShowAchievements>(address)(user,title):reinterpret_cast<ShowUI>(address)(user);
     return result==0?"Interface Xbox solicitada; acesso depende do sistema.":

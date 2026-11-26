@@ -86,11 +86,12 @@ struct Header {
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
-enum class NativeAction { None, GamerCard, Friends, Achievements, Messages, QuickChat };
-constexpr int GuideSocialCount=4;
+enum class NativeAction { None, GamerCard, Friends, Achievements, Messages, QuickChat, AvatarEditor };
+constexpr int GuideSocialCount=5;
 inline NativeAction GuideSocialAction(int row){
     switch(row){case 0:return NativeAction::GamerCard;case 1:return NativeAction::Friends;
-        case 2:return NativeAction::Messages;case 3:return NativeAction::QuickChat;default:return NativeAction::None;}
+        case 2:return NativeAction::Messages;case 3:return NativeAction::QuickChat;
+        case 4:return NativeAction::AvatarEditor;default:return NativeAction::None;}
 }
 inline int MoveGuideSocial(int row,int delta){
     if(row<0||row>=GuideSocialCount)row=0;
@@ -99,17 +100,35 @@ inline int MoveGuideSocial(int row,int delta){
 inline std::uint32_t NativeSocialOrdinal(NativeAction action){
     switch(action){case NativeAction::GamerCard:return 0x2c4u;case NativeAction::Friends:return 0x2bfu;
         case NativeAction::Achievements:return 0x2c5u;case NativeAction::Messages:return 0x2c0u;
-        case NativeAction::QuickChat:return 0x2c2u;default:return 0;}
+        case NativeAction::QuickChat:return 0x2c2u;case NativeAction::AvatarEditor:return 0x7dbu;default:return 0;}
 }
 inline bool CanRequestNative(NativeAction action,const Header& h,std::uint32_t title=0) {
     if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
        !ValidGamertag(h.displayName)||h.identity==0)return false;
-    if(action==NativeAction::GamerCard)return h.state==SignIn::Local || h.state==SignIn::Online;
+    if(action==NativeAction::GamerCard||action==NativeAction::AvatarEditor)return h.state==SignIn::Local || h.state==SignIn::Online;
     if(action==NativeAction::Friends||action==NativeAction::Messages||action==NativeAction::QuickChat)return h.state==SignIn::Online;
     if(action==NativeAction::Achievements)return title!=0&&(h.state==SignIn::Local||h.state==SignIn::Online);
     return false;
 }
 
+// Avatar editor may terminate the running title. Confirmation is tied to the
+// current account, slot and sign-in state, and never persisted.
+class AvatarExitConfirmation {
+    std::uint64_t identity_=0;
+    int slot_=-1;
+    SignIn state_=SignIn::Unknown;
+public:
+    void Cancel(){identity_=0;slot_=-1;state_=SignIn::Unknown;}
+    bool Matches(const Header& h)const{
+        return identity_!=0&&identity_==h.identity&&slot_==h.controller&&state_==h.state&&
+            CanRequestNative(NativeAction::AvatarEditor,h);
+    }
+    bool Accept(const Header& h){
+        if(!CanRequestNative(NativeAction::AvatarEditor,h)){Cancel();return false;}
+        if(Matches(h)){Cancel();return true;}
+        identity_=h.identity;slot_=h.controller;state_=h.state;return false;
+    }
+};
 // Compare every display-affecting field, not just name and sign-in state.
 inline bool SameHeader(const Header& a, const Header& b) {
     return a.controller == b.controller && a.origin == b.origin &&

@@ -38,3 +38,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.57 native social event listener; host tests and screenshots only
 
 2026-11-26 V0.2.58 native message and quick-chat Guide actions; host tests/captures only
+
+2026-11-26 V0.2.59 avatar editor launch confirmation and screenshot workflow repair; host tests only

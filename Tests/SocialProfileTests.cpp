@@ -205,13 +205,14 @@ int main() {
     CHECK(EligibleForSocialSignals(account));
     account.guest=true;CHECK(!EligibleForSocialSignals(account));
     account.guest=false;account.identity=0;CHECK(!EligibleForSocialSignals(account));
-    CHECK(GuideSocialCount==4);
+    CHECK(GuideSocialCount==5);
     CHECK(GuideSocialAction(0)==NativeAction::GamerCard);
     CHECK(GuideSocialAction(1)==NativeAction::Friends);
     CHECK(GuideSocialAction(2)==NativeAction::Messages);
     CHECK(GuideSocialAction(3)==NativeAction::QuickChat);
-    CHECK(GuideSocialAction(4)==NativeAction::None);
-    CHECK(MoveGuideSocial(0,-1)==3&&MoveGuideSocial(3,1)==0);
+    CHECK(GuideSocialAction(4)==NativeAction::AvatarEditor);
+    CHECK(GuideSocialAction(5)==NativeAction::None);
+    CHECK(MoveGuideSocial(0,-1)==4&&MoveGuideSocial(4,1)==0);
     CHECK(NativeSocialOrdinal(NativeAction::Messages)==0x2c0u);
     CHECK(NativeSocialOrdinal(NativeAction::QuickChat)==0x2c2u);
     CHECK(NativeSocialOrdinal(NativeAction::None)==0);
@@ -226,6 +227,18 @@ int main() {
     CHECK(!CanRequestNative(NativeAction::Messages,communication));
     communication.origin=Origin::Console;communication.guest=true;
     CHECK(!CanRequestNative(NativeAction::QuickChat,communication));
+    CHECK(NativeSocialOrdinal(NativeAction::AvatarEditor)==0x7dbu);
+    communication.guest=false;communication.state=SignIn::Local;
+    CHECK(CanRequestNative(NativeAction::AvatarEditor,communication));
+    AvatarExitConfirmation confirm;
+    CHECK(!confirm.Accept(communication)&&confirm.Matches(communication));
+    auto different=communication;different.identity=2;
+    CHECK(!confirm.Matches(different)&&!confirm.Accept(different));
+    CHECK(confirm.Accept(different)&&!confirm.Matches(different));
+    CHECK(!confirm.Accept(communication));confirm.Cancel();
+    CHECK(!confirm.Matches(communication));
+    communication.origin=Origin::Test;
+    CHECK(!confirm.Accept(communication)&&!confirm.Matches(communication));
     std::cout << "social profile checks passed\n";
     return 0;
 }

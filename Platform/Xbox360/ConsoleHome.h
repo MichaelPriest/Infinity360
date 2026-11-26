@@ -76,6 +76,7 @@ public:
     std::string TakeMovie();
     bool Tick();
     void StopFtp() {ftp_.Stop();}
+    bool AvatarLaunchBusy()const{return TransferRunning()||ftp_.Running()||peerProbe_.Running();}
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
     bool TakeUnityRequest(XboxExecutionInfo& info);
@@ -118,6 +119,7 @@ private:
     int quickGuideRow_=0;
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;
+    InfinitySocial::AvatarExitConfirmation avatarExitConfirm_;
     InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
     unsigned nativeSocialTitle_=0;
     int quickGuideEditStartRow_=0;

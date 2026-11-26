@@ -635,7 +635,8 @@ int main(){
         unsigned socialTitle=0;
         const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle);
         if(socialAction!=InfinitySocial::NativeAction::None){
-            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active()&&
+                (socialAction!=InfinitySocial::NativeAction::AvatarEditor||!menu.AvatarLaunchBusy());
             menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir,socialTitle):
                 "Interface social bloqueada por outra operacao.");
             dirty=true;

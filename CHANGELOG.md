@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.59 — Editor de avatar e correção da galeria
+
+- Atalho experimental para editor oficial do avatar (0x7DB), com confirmação vinculada à conta e bloqueio durante cópia, FTP ou diagnóstico de rede; opt-in separado por poder encerrar a dashboard.
+- Guide com cinco ações sociais, preservando o painel e atalhos LB/RB; não renderiza o avatar 3D inline.
+- Corrige regex do CTest e bloco duplicado no workflow de capturas; mantém publicação na galeria separada. Testes preparados, sem XEX/release.
+
 ## V0.2.58 — Mensagens e chat pelo Guide nativo
 
 - Guide social com quatro ações: cartão, amigos, mensagens e chat, mantendo geometria, transparências e atalhos.
