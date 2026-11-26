@@ -51,6 +51,10 @@ int main(){
     assert(!cat.Requested(item));assert(cat.ListedDownload(item));
     StoreItem unknown=item;unknown.id="unknown";assert(!cat.ListedDownload(unknown));
     assert(cat.Load()==false); // missing catalog, but requests storage is initialized
+    fs::create_directories(root/"Andromeda");
+    {std::ofstream f(root/"Andromeda/Xbox360Games.txt");f<<"NEXUS_CATALOG_V3\n0|123|12345678|Example title\n0|124|12345678|Duplicate\n";}
+    {StoreCatalog imported(base);assert(imported.Load());assert(imported.Items().size()==1);assert(imported.Items()[0].titleId==0x12345678);assert(imported.Items()[0].url.empty());assert(!imported.QueueNative(imported.Items()[0]));}
+    fs::remove_all(root/"Andromeda");
     assert(cat.Request(unknown));assert(cat.ListedDownload(unknown));
     assert(cat.Cancel(unknown));assert(!cat.ListedDownload(unknown));
     assert(!out.Begin(item,base));

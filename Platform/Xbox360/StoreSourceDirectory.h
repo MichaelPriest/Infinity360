@@ -8,7 +8,7 @@ inline const std::vector<Reference>& References(){
     static const std::vector<Reference> rows={
         {"series360","Series360","Catalogo autorizado TSV necessario"},
         {"xstore","Freestyle Rev800 / X-Store","Catalogo autorizado TSV necessario"},
-        {"andromeda","Nexus Andromeda","Catalogo autorizado TSV necessario"},
+        {"andromeda","Nexus Andromeda","Metadados locais em Andromeda; TSV para downloads autorizados"},
     };
     return rows;
 }

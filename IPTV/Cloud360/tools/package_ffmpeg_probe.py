@@ -124,6 +124,7 @@ def main():
     (stage/"bin"/"BUILD-COMMIT.txt").write_text(run("git","-C",str(args.repo),"rev-parse","HEAD",text=True))
     shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/playlist.m3u",preview/"playlist.m3u")
     (preview/"Plugins").mkdir()
+    (preview/"Andromeda").mkdir()
     # Prove the staged object files and libraries can actually be relinked.
     subprocess.run([sys.executable,str(linkdir/"relink_ffmpeg_probe.py"),"--toolchain",str(args.toolchain),"--sdk",str(args.sdk),"--ffmpeg-libs",str(linkdir/"ffmpeg-libs")],check=True)
     for name in TARGETS:

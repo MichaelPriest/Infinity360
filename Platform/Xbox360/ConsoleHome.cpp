@@ -916,6 +916,7 @@ void ConsoleHome::RebuildStore() {
     clampRow(storeRow_,storeVisible_.size());
 }
 bool ConsoleHome::StartNativeStore(const StoreItem& item){
+    if(item.url.empty()){notice_="Catalogo de referencia; sem pacote autorizado.";return false;}
 #if defined(INFINITY_XSDK_HTTPS) || defined(_XBOX)
     if(TransferRunning()||!TranslationMatches(item)){notice_="Copia ativa ou traducao incompativel.";return false;}
     if(store_.Staged(item)){notice_="Arquivo local ja existe; RB gerencia pacote na ficha.";return false;}
@@ -1238,6 +1239,7 @@ std::string ConsoleHome::Press(Key key) {
             }
         } else if(!storeVisible_.empty()) {
             const StoreItem& item=store_.Items()[storeVisible_[storeRow_]];
+            if(item.url.empty()&&key!=Back){notice_="Catalogo de referencia; sem pacote autorizado.";return "";}
             if(key==Guide) {
 #if defined(_XBOX) || defined(INFINITY_XSDK_HTTPS)
                 nativeBatch_=false;storeConfirm_=false;StartNativeStore(item);
@@ -4434,6 +4436,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     }
     const auto& item=store_.Items()[storeVisible_[storeRow_]];
     const auto status=[&](const StoreItem& p)->const char*{
+        if(p.url.empty())return "Catalogo de referencia";
         if(store_.Installed(p))return "Instalado";
         if(store_.Progress(p).state==StoreProgress::NativePaused)return "Parcial salvo";
         if(store_.Staged(p))return "Arquivo local";
@@ -4463,6 +4466,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
         if(storeDetails_)c.Text(x+20,479,c.Tr(storeTranslationMatch_?"Cabecalho local coincide; TU ativa nao validada":"Nenhum XEX local correspondente; pedido bloqueado"),17,storeTranslationMatch_?Lime:Muted,w-40);
     }else c.Text(x+20,445,item.provider.empty()?c.Tr("Catalogo local"):item.provider,18,Muted,w-40);
     if(storeDetails_){
+        if(item.url.empty()){c.Text(x+20,515,"Sem pacote autorizado para download.",16,Muted,w-40);InfinityButtons::Strip(c,45,581,"B Voltar",19,Lime,1170);return;}
         c.Text(x+20,515,item.url,16,Muted,w-40);
         InfinityButtons::Strip(c,45,581,c.Tr(storeConfirm_?"A Confirmar pedido | B Cancelar":"START Baixar | A Pedido PC | X Remover PC | B Voltar"),19,Lime,1170);
         InfinityButtons::Strip(c,45,608,c.Tr("LB Fila nativa | RB Gerenciar | R3 Instalar XEX/ZIP"),18,Muted,1170);

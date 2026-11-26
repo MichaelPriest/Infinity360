@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.79 — Compatibilidade local Andromeda
+
+- Leitura limitada dos formatos Nexus V3, GOD, Classic ISO e Games; deduplicação por identificador e filtro Andromeda na Store. Metadados apenas, sem importar URLs, hashes de torrent ou magnets.
+- Ficha sem ações de download para metadados sem pacote autorizado. Teste de regressão incluído.
+- Pasta Andromeda no pacote unificado; listas M3U autorizadas continuam em Listas.
+
 ## V0.2.78 — Distribuição unificada com FFmpeg
 
 - Workflow principal compila FFmpeg integrado e gera ZIP de instalação com um único default.xex; fontes LGPL e diagnósticos em pacote complementar da mesma release.
