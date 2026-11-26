@@ -150,6 +150,9 @@ static int captureScreens(const char* atlas,const char* destination) {
             ok=save("70-perfil-teste",profile)&&ok;
             profile.Press(ConsoleHome::Search);
             assert(profile.QuickGuideOpen());
+            profile.Press(ConsoleHome::PageUp);
+            assert(!profile.TakeSigninRequest()); // Host never opens a native Xbox dialog.
+            assert(profile.QuickGuideOpen());
             ok=save("71-guia-perfil-teste",profile)&&ok;
         }
     }
