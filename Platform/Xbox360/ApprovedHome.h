@@ -9,7 +9,7 @@ struct Rect {int x,y,w,h;};
 inline Rect Geometry(int i){
     if(i==Weather)return {772,12,266,52};
     if(i<Hero){
-        static const int widths[]={94,88,75,79,74,114,94,74,84,111,107,86};
+        static const int widths[]={99,86,75,78,74,112,100,78,87,120,119,90};
         int x=28;for(int j=0;j<i;++j)x+=widths[j]+8;
         return {x,94,widths[i],46};
     }
