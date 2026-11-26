@@ -6,6 +6,7 @@
 #include "TvCatalog.h"
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
+#include "NativeSocialUiXsdk.h"
 #include "XexLaunchCheck.h"
 #include "DashboardScreenshot.h"
 #include "XsdkPackageMount.h"
@@ -628,6 +629,13 @@ int main(){
             const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning();
             const bool accepted=allowed&&XamShowSigninUI(4,0)==ERROR_SUCCESS;
             menu.SigninResult(accepted);dirty=true;
+        }
+        const auto socialAction=menu.TakeNativeSocialRequest();
+        if(socialAction!=InfinitySocial::NativeAction::None){
+            const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
+            menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir):
+                "Interface social bloqueada por outra operacao.");
+            dirty=true;
         }
         if(menu.Tick())dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}

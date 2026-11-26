@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.52 — Cartão do jogador e Amigos no Guide (experimental)
+
+- Navegação entre painel de atalhos e painel social por esquerda/direita; A solicita a ação selecionada.
+- Adapter experimental para XamShowGamerCardUI e XamShowFriendsUI com opt-in local, resolução dinâmica e revalidação de perfil; bloqueio por transferências, lançamento e interface do sistema.
+- Testes portáteis de elegibilidade e navegação preparados. Galeria solicitada sem build XEX ou release. Mensagens, voz, Gamerpic inline e avatar 3D ainda pendentes.
+
 ## V0.2.51 — Perfil e notificações de sessão (sem build XEX)
 
 - Corrige a posição da linha do perfil ativo/Gamerscore na central de conquistas, removendo-a da central de saves.

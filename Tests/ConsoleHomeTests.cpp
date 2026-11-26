@@ -180,7 +180,17 @@ static int captureScreens(const char* atlas,const char* destination) {
             profile.Press(ConsoleHome::PageUp);
             assert(!profile.TakeSigninRequest()); // Host never opens a native Xbox dialog.
             assert(profile.QuickGuideOpen());
+            profile.Press(ConsoleHome::Right);
+            assert(profile.SocialGuideFocused());
+            profile.Press(ConsoleHome::Accept);
+            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
+            profile.Press(ConsoleHome::Down);
+            profile.Press(ConsoleHome::Accept);
+            assert(profile.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);
             ok=save("71-guia-perfil-teste",profile)&&ok;
+            profile.Press(ConsoleHome::Left);
+            assert(!profile.SocialGuideFocused());
+            assert(profile.QuickGuideOpen());
         }
     }
     fs::remove_all(root);

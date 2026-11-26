@@ -62,6 +62,9 @@ public:
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);}
     const InfinitySocial::Header& SocialHeader()const{return social_;}
+    bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
+    InfinitySocial::NativeAction TakeNativeSocialRequest(){const auto action=nativeSocialPending_;nativeSocialPending_=InfinitySocial::NativeAction::None;return action;}
+    void NativeSocialResult(const std::string& message){socialPolled_=false;notice_=message;}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
     void SigninResult(bool accepted){socialPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
@@ -111,6 +114,9 @@ private:
     LaunchStatistics launchStats_;
     bool quickGuideOpen_=false,quickGuideEditing_=false;
     int quickGuideRow_=0;
+    bool socialGuideFocus_=false;
+    int socialGuideRow_=0;
+    InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
     int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);

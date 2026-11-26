@@ -58,6 +58,16 @@ struct Header {
     Chat chat = Chat::Unavailable;
 };
 
+// Native system UI delegation is not a verified Xbox Live service.
+enum class NativeAction { None, GamerCard, Friends };
+inline bool CanRequestNative(NativeAction action,const Header& h) {
+    if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
+       !ValidGamertag(h.displayName))return false;
+    if(action==NativeAction::GamerCard)return h.state==SignIn::Local || h.state==SignIn::Online;
+    if(action==NativeAction::Friends)return h.state==SignIn::Online;
+    return false;
+}
+
 // Compare every display-affecting field, not just name and sign-in state.
 inline bool SameHeader(const Header& a, const Header& b) {
     return a.controller == b.controller && a.origin == b.origin &&
