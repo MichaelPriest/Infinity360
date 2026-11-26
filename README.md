@@ -14,37 +14,78 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**28 capturas publicadas** — fonte [d4594e7](https://github.com/MichaelPriest/Infinity360/commit/d4594e71255b66b87753cff67445c49a7f9d39f3). A atualização V0.2.16 falhou antes da atribuição de runner (run 45705203325); 45 capturas estão preparadas para a próxima solicitação.
+**67 capturas nativas** — commit [3f15a5317c39](https://github.com/MichaelPriest/Infinity360/commit/3f15a5317c39dfaa1bf3ab67a49adcbd86999479).
 
-| Início | Biblioteca |
+| Tela | Tela |
 | --- | --- |
-| ![Início](docs/screenshots/01-inicio.png) | ![Biblioteca](docs/screenshots/02-biblioteca.png) |
-| Detalhes do título | Loja |
-| ![Detalhes](docs/screenshots/03-detalhes.png) | ![Loja](docs/screenshots/04-loja.png) |
-| Produto | Cloud360 IPTV |
-| ![Produto](docs/screenshots/05-produto.png) | ![IPTV](docs/screenshots/06-iptv.png) |
-| Sistema | Rede e FTP |
-| ![Sistema](docs/screenshots/07-sistema.png) | ![Rede](docs/screenshots/08-rede.png) |
-| Plugins | Title Updates |
-| ![Plugins](docs/screenshots/09-plugins.png) | ![TU](docs/screenshots/10-conteudo-tu.png) |
-| DLC | Saves |
-| ![DLC](docs/screenshots/11-dlc.png) | ![Saves](docs/screenshots/12-saves.png) |
-| Trainers | TU baixadas |
-| ![Trainers](docs/screenshots/13-trainers.png) | ![TU baixadas](docs/screenshots/14-tu-baixadas.png) |
-| Backups | TU arquivadas |
-| ![Backups](docs/screenshots/15-backups.png) | ![TU arquivadas](docs/screenshots/16-tu-arquivadas.png) |
+| ![01-inicio](docs/screenshots/01-inicio.png) | ![02-biblioteca](docs/screenshots/02-biblioteca.png) |
+| Inicio | Biblioteca |
+| ![03-detalhes](docs/screenshots/03-detalhes.png) | ![04-loja](docs/screenshots/04-loja.png) |
+| Detalhes | Loja |
+| ![05-produto](docs/screenshots/05-produto.png) | ![06-iptv](docs/screenshots/06-iptv.png) |
+| Produto | Iptv |
+| ![07-sistema](docs/screenshots/07-sistema.png) | ![08-rede](docs/screenshots/08-rede.png) |
+| Sistema | Rede |
+| ![09-plugins](docs/screenshots/09-plugins.png) | ![10-conteudo-tu](docs/screenshots/10-conteudo-tu.png) |
+| Plugins | Conteudo tu |
+| ![11-dlc](docs/screenshots/11-dlc.png) | ![12-saves](docs/screenshots/12-saves.png) |
+| Dlc | Saves |
+| ![13-trainers](docs/screenshots/13-trainers.png) | ![14-tu-baixadas](docs/screenshots/14-tu-baixadas.png) |
+| Trainers | Tu baixadas |
+| ![15-backups](docs/screenshots/15-backups.png) | ![16-tu-arquivadas](docs/screenshots/16-tu-arquivadas.png) |
+| Backups | Tu arquivadas |
+| ![17-aplicativos](docs/screenshots/17-aplicativos.png) | ![18-emuladores](docs/screenshots/18-emuladores.png) |
 | Aplicativos | Emuladores |
-| ![Aplicativos](docs/screenshots/17-aplicativos.png) | ![Emuladores](docs/screenshots/18-emuladores.png) |
+| ![19-arquivos](docs/screenshots/19-arquivos.png) | ![20-armazenamento](docs/screenshots/20-armazenamento.png) |
 | Arquivos | Armazenamento |
-| ![Arquivos](docs/screenshots/19-arquivos.png) | ![Armazenamento](docs/screenshots/20-armazenamento.png) |
+| ![21-sensores](docs/screenshots/21-sensores.png) | ![22-downloads](docs/screenshots/22-downloads.png) |
 | Sensores | Downloads |
-| ![Sensores](docs/screenshots/21-sensores.png) | ![Downloads](docs/screenshots/22-downloads.png) |
-| Eventos | DVD |
-| ![Eventos](docs/screenshots/23-eventos.png) | ![DVD](docs/screenshots/24-dvd.png) |
-| Configurações | TU retiradas |
-| ![Configurações](docs/screenshots/25-configuracoes.png) | ![TU retiradas](docs/screenshots/26-tu-retiradas.png) |
-| Fila da Store | Vídeo e kernel |
-| ![Fila da Store](docs/screenshots/27-fila-store.png) | ![Vídeo e kernel](docs/screenshots/28-video-kernel.png) |
+| ![23-eventos](docs/screenshots/23-eventos.png) | ![24-dvd](docs/screenshots/24-dvd.png) |
+| Eventos | Dvd |
+| ![25-configuracoes](docs/screenshots/25-configuracoes.png) | ![26-tu-retiradas](docs/screenshots/26-tu-retiradas.png) |
+| Configuracoes | Tu retiradas |
+| ![27-fila-store](docs/screenshots/27-fila-store.png) | ![28-video-kernel](docs/screenshots/28-video-kernel.png) |
+| Fila store | Video kernel |
+| ![29-rede-udp](docs/screenshots/29-rede-udp.png) | ![30-tema-azul](docs/screenshots/30-tema-azul.png) |
+| Rede udp | Tema azul |
+| ![31-tema-ambar](docs/screenshots/31-tema-ambar.png) | ![32-tema-violeta](docs/screenshots/32-tema-violeta.png) |
+| Tema ambar | Tema violeta |
+| ![33-tema-vermelho](docs/screenshots/33-tema-vermelho.png) | ![34-tema-ciano](docs/screenshots/34-tema-ciano.png) |
+| Tema vermelho | Tema ciano |
+| ![35-tema-grafite](docs/screenshots/35-tema-grafite.png) | ![36-english](docs/screenshots/36-english.png) |
+| Tema grafite | English |
+| ![37-espanol](docs/screenshots/37-espanol.png) | ![38-notificacoes-pendentes](docs/screenshots/38-notificacoes-pendentes.png) |
+| Espanol | Notificacoes pendentes |
+| ![39-notificacoes-alertas](docs/screenshots/39-notificacoes-alertas.png) | ![40-guia-rapido](docs/screenshots/40-guia-rapido.png) |
+| Notificacoes alertas | Guia rapido |
+| ![41-guia-edicao](docs/screenshots/41-guia-edicao.png) | ![42-marcos-locais](docs/screenshots/42-marcos-locais.png) |
+| Guia edicao | Marcos locais |
+| ![43-configurar-rede](docs/screenshots/43-configurar-rede.png) | ![44-plugins-locais](docs/screenshots/44-plugins-locais.png) |
+| Configurar rede | Plugins locais |
+| ![45-temperaturas](docs/screenshots/45-temperaturas.png) | ![46-energia](docs/screenshots/46-energia.png) |
+| Temperaturas | Energia |
+| ![47-refrigeracao](docs/screenshots/47-refrigeracao.png) | ![48-smb](docs/screenshots/48-smb.png) |
+| Refrigeracao | Smb |
+| ![49-smb-config](docs/screenshots/49-smb-config.png) | ![50-link-opcoes](docs/screenshots/50-link-opcoes.png) |
+| Smb config | Link opcoes |
+| ![51-perfis-saves](docs/screenshots/51-perfis-saves.png) | ![52-conquistas-gpd](docs/screenshots/52-conquistas-gpd.png) |
+| Perfis saves | Conquistas gpd |
+| ![53-aparencia](docs/screenshots/53-aparencia.png) | ![54-layout-1](docs/screenshots/54-layout-1.png) |
+| Aparencia | Layout 1 |
+| ![55-layout-2](docs/screenshots/55-layout-2.png) | ![56-layout-3](docs/screenshots/56-layout-3.png) |
+| Layout 2 | Layout 3 |
+| ![57-layout-4](docs/screenshots/57-layout-4.png) | ![58-layout-5](docs/screenshots/58-layout-5.png) |
+| Layout 4 | Layout 5 |
+| ![59-layout-6](docs/screenshots/59-layout-6.png) | ![60-layout-7](docs/screenshots/60-layout-7.png) |
+| Layout 6 | Layout 7 |
+| ![61-layout-8](docs/screenshots/61-layout-8.png) | ![62-layout-9](docs/screenshots/62-layout-9.png) |
+| Layout 8 | Layout 9 |
+| ![63-biblioteca-grade](docs/screenshots/63-biblioteca-grade.png) | ![64-biblioteca-filtros](docs/screenshots/64-biblioteca-filtros.png) |
+| Biblioteca grade | Biblioteca filtros |
+| ![65-detalhes-moderno](docs/screenshots/65-detalhes-moderno.png) | ![66-store-moderna](docs/screenshots/66-store-moderna.png) |
+| Detalhes moderno | Store moderna |
+| ![67-store-produto-moderno](docs/screenshots/67-store-produto-moderno.png) |  |
+| Store produto moderno |  |
 
 <!-- NATIVE-GALLERY-END -->
 
