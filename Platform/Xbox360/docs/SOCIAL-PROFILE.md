@@ -37,3 +37,7 @@ Logout confirmado exige os quatro slots consultados com origem Console e estado 
 ## V0.2.48 — identidade consistente
 
 O XSDK fixado em 74dfcca8 declara e importa XamUserGetSigninInfo. Dois resultados válidos com XUID não nulo e estado consistente são exigidos para publicar o perfil autenticado. XUID é comparado em memória e não integra o Snapshot. Falha de leitura permanece Unknown. A estrutura não documenta flags de convidado, portanto elas não são inferidas. XamUserReadProfileSettings está declarado, mas seu layout de saída e IDs ainda precisam de validação para Gamerscore/Gamerpic. Amigos, mensagens e voz permanecem indisponíveis. Testes atualizados sem execução; nenhuma build solicitada.
+
+## V0.2.49 — Gamerscore experimental
+
+XamUserReadProfileSettings consulta 0x10040006 (XPROFILE_GAMERCARD_CRED) em buffer de 128 bytes, sem escrita ou lookup remoto. O parser exige cabeçalho de 8 bytes, registro de 40 bytes, origem global, slot, ID, INT32 e valor não negativo. Identidade é revalidada após a consulta. Referências de ABI: [xam_user.cc](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/xam_user.cc), [user_profile.h](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/user_profile.h), [user_profile.cc](https://github.com/xenia-project/xenia/blob/master/src/xenia/kernel/xam/user_profile.cc). Xenia pode devolver valores sintéticos; não comprova dados Xbox Live. A chamada síncrona não tem timeout garantido e precisa de avaliação de latência em hardware. Testes preparados, não executados. Sem build ou release.
