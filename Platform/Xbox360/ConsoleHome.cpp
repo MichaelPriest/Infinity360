@@ -172,7 +172,7 @@ bool libraryTabMatch(const Game& item,int tab) {
 }
 }
 
-ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots)
+ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::string>& roots,unsigned initialLayout)
     : dir_(dataDir),roots_(roots),baseRoots_(roots),tv_(dataDir),
       collections_(dataDir+"aurorax-collections.txt"),
       fileWorkspace_(dataDir),ftp_(fileWorkspace_),copyPaused_(false),storeDownloads_(false),storeDownloadRow_(0),storagePage_(0),fileRoot_(0),pasteConfirm_(false),scanPathConfirm_(false),fileAction_(false),deleteConfirm_(false),cutMode_(false),fileActionRow_(0),multiSelect_(false),
@@ -181,7 +181,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
       collectionIndex_(0),collectionRow_(0),keyboardMode_(0),
       searchActive_(false),collectionPicker_(false),deleteCollectionConfirm_(false),
       contentActive_(false),contentKnown_(false),contentTab_(0),contentRow_(0),
-      contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),trainerConfirm_(false),section_(Library),page_(Home) {}
+      contentInfo_(),artDirty_(true),artEditing_(false),artEditRow_(0),trainerConfirm_(false),section_(Library),page_(Home) {initialLayout_=initialLayout<DashboardLayout::Count?initialLayout:DashboardLayout::TopIcons;layout_=layoutDraft_=initialLayout_;}
 
 void ConsoleHome::Load() {
     LoadEvents();
@@ -192,11 +192,12 @@ void ConsoleHome::Load() {
     std::ifstream in(src.c_str());
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
-    appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=0;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
+    appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
+    bool designSelected=false;
     std::string line;
     while (std::getline(in,line)) {
         if (!line.empty() && line[line.size()-1]=='\r') line.erase(line.size()-1);
@@ -206,6 +207,7 @@ void ConsoleHome::Load() {
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
         if(line[0]=='W')AppearanceSettings::Parse(file,appearance_);
         if(line[0]=='J')DashboardLayout::Parse(file,layout_);
+        if(line[0]=='M'&&file=="1")designSelected=true;
         if(line[0]=='Z')ClockWeather::Settings::Parse(file,clockSettings_);
         if(line[0]=='G')GameGrid::Parse(file,gridPreference_);
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
@@ -229,6 +231,9 @@ void ConsoleHome::Load() {
         if(line[0]=='P' && launched_.size()<4096 && !contains(launched_,file))
             launched_.push_back(file);
     }
+    // M marks a layout choice made after the approved design migration.
+    if(initialLayout_==DashboardLayout::TopIcons&&!designSelected&&layout_==DashboardLayout::Classic)layout_=DashboardLayout::TopIcons;
+    layoutDraft_=layout_;
     // Legacy profiles recorded only R; these were also launch requests.
     for(size_t i=0;i<history_.size() && launched_.size()<4096;++i)
         if(!contains(launched_,history_[i])) launched_.push_back(history_[i]);
@@ -274,6 +279,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"T\t"<<theme_<<"\n";
     out<<"W\t"<<appearance_.Encode()<<"\n";
     out<<"J\t"<<layout_<<"\n";
+    out<<"M\t1\n";
     out<<"Z\t"<<clockSettings_.Encode()<<"\n";
     out<<"G\t"<<gridPreference_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
@@ -3760,7 +3766,7 @@ void ConsoleHome::PressAppearance(Key key){
         if(appearanceRow_==6)clockDraft_.offset=ClockWeather::NextOffset(clockDraft_.offset,key==Left?-1:1);
         if(appearanceRow_==7)cycle(clockDraft_.city,ClockWeather::CityCount);
     }
-    if(key==Favorite){appearanceDraft_={};clockDraft_={};themeDraft_=0;layoutDraft_=0;gridDraft_=0;notice_.clear();}
+    if(key==Favorite){appearanceDraft_={};clockDraft_={};themeDraft_=0;layoutDraft_=initialLayout_;gridDraft_=0;notice_.clear();}
     if(key==Guide){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";}
     if(key==Refresh){
         const auto previous=appearance_;const auto previousClock=clockSettings_;const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
