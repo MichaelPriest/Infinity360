@@ -45,6 +45,10 @@
       {
         "stem": "77-permissoes-xbox",
         "caption": "Guide — permissões oficiais de comunicação, perfil e multiplayer (consulta indisponível no host)"
+      },
+      {
+        "stem": "78-perfis-home",
+        "caption": "Home — acesso direto à central de perfil e comunicação pelo grupo Perfil e serviços (host)"
       }
     ]
   },

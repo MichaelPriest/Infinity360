@@ -293,6 +293,11 @@ int main(int argc,char** argv) {
         assert(seen[target]);for(int d:routes[target])home.Press(static_cast<ConsoleHome::Key>(d));};
      home.Press(ConsoleHome::Guide);home.Press(ConsoleHome::PageDown);home.Press(ConsoleHome::Refresh);
      {std::ifstream in(p/"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("U\t102345\n")!=std::string::npos);}
+     home.Load();go(Awards);home.Press(ConsoleHome::Accept);
+     home.Press(ConsoleHome::Down);home.Press(ConsoleHome::Down);home.Press(ConsoleHome::Accept);
+     assert(home.QuickGuideOpen()&&home.SocialGuideFocused()&&home.ApprovedHeader());
+     ok=save("78-perfis-home",home)&&ok;
+     home.Press(ConsoleHome::Back);assert(!home.QuickGuideOpen()&&home.ApprovedHeader());
      home.Load();go(FirstCover);home.Press(ConsoleHome::PageDown);home.Press(ConsoleHome::Favorite);
      {std::ifstream in(p/"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("F\t")!=std::string::npos&&data.find("Title7")!=std::string::npos);}
     }

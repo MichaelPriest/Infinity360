@@ -153,6 +153,30 @@ inline bool SameArtAccount(const Header& a,const Header& b){
         a.identity!=0&&a.identity==b.identity&&a.controller==b.controller&&
         a.state==b.state&&(b.state==SignIn::Local||b.state==SignIn::Online);
 }
+struct NativeRequest {
+    NativeAction action=NativeAction::None;
+    std::uint32_t title=0;
+    std::uint64_t target=0;
+};
+class NativeRequestQueue {
+    Header owner_;
+    NativeRequest pending_;
+public:
+    void Clear(){owner_=Header{};pending_=NativeRequest{};}
+    bool Queue(NativeAction action,const Header& h,std::uint32_t title=0,std::uint64_t target=0){
+        Clear();
+        if(!CanRequestNative(action,h,title,target))return false;
+        owner_.identity=h.identity;owner_.controller=h.controller;owner_.origin=h.origin;
+        owner_.state=h.state;owner_.guest=h.guest;
+        pending_={action,title,target};return true;
+    }
+    void Observe(const Header& h){if(!SameArtAccount(owner_,h))Clear();}
+    NativeRequest Take(const Header& h){
+        const auto request=pending_;
+        const bool ok=SameArtAccount(owner_,h)&&CanRequestNative(request.action,h,request.title,request.target);
+        Clear();return ok?request:NativeRequest{};
+    }
+};
 inline void RetainProfileArt(const Header& previous,Header& next,bool gamerpic,bool avatar){
     if(!SameArtAccount(previous,next))return;
     if(gamerpic&&ValidGamerpic(previous.gamerpic))next.gamerpic=previous.gamerpic;

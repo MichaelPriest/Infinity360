@@ -68,3 +68,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.72 avatar mesh strides fixed and portable geometry rasterizer; host tests/captures only
 
 2026-11-26 V0.2.73 optional official XDK renderer source and direct avatar editor navigation; host tests/captures only
+
+2026-11-26 V0.2.74 direct Home profile guide and identity-bound native request queue; host tests/78 captures only

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.74 — Home e central de perfil integradas
+
+- Perfis no grupo Perfil e serviços abre diretamente Guide social sem passar pela tela de energia/configurações; B retorna à Home, demais atalhos preservados.
+- Fila única de pedidos XAM vincula todas as ações ao perfil, slot e estado no momento do comando; consumo único e cancelamento em troca de conta. Cartões e mensagens mantêm validação da lista de amigos.
+- Painel Avatar distingue adaptador D3D9 separado do backend ativo. Captura 78 e testes portáteis preparados; sem XEX/release.
+
 ## V0.2.73 — Adaptador do renderizador oficial XAvatar
 
 - Caminho XDK/D3D9 opcional com XAvatarInitialize, manifesto local, XAvatarCreateRenderer, Update/Render, animações Wave/Clap e encerramento; usa device fornecido pelo host, sem copiar biblioteca ou assets Microsoft. Não faz parte da build XSDK atual.

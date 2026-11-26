@@ -457,6 +457,23 @@ int main() {
     CHECK(!RenderAvatarGeometry(cpuView,gpuView,64,96,0,render));
     PutBE32(agpu.data(),0xbf800000u);
     CHECK(!RenderAvatarGeometry(cpuView,gpuView,257,96,0,render));
+    NativeRequestQueue requests;
+    CHECK(requests.Queue(NativeAction::Party,communication));
+    CHECK(requests.Take(swapped).action==NativeAction::None);
+    CHECK(requests.Take(communication).action==NativeAction::None);
+    CHECK(requests.Queue(NativeAction::ComposeMessage,communication,0,77));
+    auto requested=requests.Take(communication);
+    CHECK(requested.action==NativeAction::ComposeMessage&&requested.target==77);
+    CHECK(requests.Take(communication).action==NativeAction::None);
+    CHECK(requests.Queue(NativeAction::Achievements,communication,0x1234));
+    auto offlineRequest=communication;offlineRequest.state=SignIn::Local;
+    CHECK(requests.Take(offlineRequest).action==NativeAction::None);
+    CHECK(requests.Queue(NativeAction::GamerCard,communication));
+    requests.Observe(swapped);CHECK(requests.Take(communication).action==NativeAction::None);
+    CHECK(!requests.Queue(NativeAction::ComposeMessage,communication,0,communication.identity));
+    CHECK(requests.Queue(NativeAction::Achievements,communication,0x1234));
+    requested=requests.Take(communication);
+    CHECK(requested.action==NativeAction::Achievements&&requested.title==0x1234);
     std::cout << "social profile checks passed\n";
     return 0;
 }

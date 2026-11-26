@@ -68,7 +68,7 @@ public:
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
         const auto previous=social_;
         social_=InfinitySocial::Resolve(snapshot,preferred);friendRoster_.Observe(social_);avatarPreview_.Observe(social_);privileges_.Observe(social_);
-        avatarRefresh_.Observe(social_);if(!InfinitySocial::SameArtAccount(previous,social_)){avatarManifest_={};avatarBudget_={};}
+        avatarRefresh_.Observe(social_);nativeSocialQueue_.Observe(social_);if(!InfinitySocial::SameArtAccount(previous,social_)){avatarManifest_={};avatarBudget_={};avatarExitConfirm_.Cancel();avatarBodyPending_=false;privilegePending_=false;friendRosterPending_=false;}
         if(!friendRoster_.KnownFor(social_)){friendFreshness_.Clear();friendRow_=0;}
     }
     const InfinitySocial::Header& SocialHeader()const{return social_;}
@@ -105,29 +105,22 @@ public:
     bool HasFriendPresence()const{return friendRoster_.KnownFor(social_);}
     std::size_t FriendsPlaying(std::uint32_t title)const{return HasFriendPresence()?InfinitySocial::FriendsPlayingTitle(friendRoster_.Rows(),title):0;}
     InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr,std::uint64_t* target=nullptr){
-        auto action=nativeSocialPending_;
-        const auto recipient=nativeSocialTarget_;
-        const auto owner=nativeSocialOwner_;
-        const auto slot=nativeSocialSlot_;
-        if(title)*title=nativeSocialTitle_;
+        const auto request=nativeSocialQueue_.Take(social_);
+        if(title)*title=0;
         if(target)*target=0;
-        nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;
-        nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;
-        if(action==InfinitySocial::NativeAction::AvatarEditor&&
-           (owner!=social_.identity||slot!=social_.controller||!InfinitySocial::CanRequestNative(action,social_)))
-            return InfinitySocial::NativeAction::None;
-        if(InfinitySocial::TargetedSocialAction(action)){
-            if(!target||!FriendGuideOpen()||owner!=social_.identity||slot!=social_.controller||
-               !friendFreshness_.Fresh(TransferRate::Now())||!friendRoster_.ContainsTarget(social_,recipient,action))
+        if(InfinitySocial::TargetedSocialAction(request.action)){
+            if(!target||!FriendGuideOpen()||!friendFreshness_.Fresh(TransferRate::Now())||
+               !friendRoster_.ContainsTarget(social_,request.target,request.action))
                 return InfinitySocial::NativeAction::None;
-            *target=recipient;
+            *target=request.target;
         }
-        return action;
+        if(title)*title=request.title;
+        return request.action;
     }
     void NativeSocialResult(const std::string& message){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=message;}
     void NativeSocialSignal(const char* message){if(message)RecordEvent(message);}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
-    void SigninResult(bool accepted){socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
+    void SigninResult(bool accepted){nativeSocialQueue_.Clear();socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -201,10 +194,8 @@ private:
     void DrawFriendGuide(HomeCanvas& c)const;
     void PressFriendGuide(Key key);
     InfinitySocial::AvatarExitConfirmation avatarExitConfirm_;
-    InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
-    unsigned nativeSocialTitle_=0;
-    std::uint64_t nativeSocialTarget_=0,nativeSocialOwner_=0;
-    int nativeSocialSlot_=-1;
+    InfinitySocial::NativeRequestQueue nativeSocialQueue_;
+    void OpenProfileGuide();
     int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);

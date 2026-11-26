@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;nativeSocialTarget_=nativeSocialOwner_=0;nativeSocialSlot_=-1;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};friendRosterPending_=false;friendRoster_.Clear();friendFreshness_.Clear();friendAutoEnabled_=false;avatarExitConfirm_.Cancel();nativeSocialQueue_.Clear();quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1017,8 +1017,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(AvatarLaunchBusy()){avatarExitConfirm_.Cancel();notice_="Encerre FTP, rede e copias antes de sair.";return "";}
                 if(!CanRequestNative(NativeAction::AvatarEditor,social_)){avatarExitConfirm_.Cancel();notice_="Editor requer perfil ativo.";return "";}
                 if(!avatarExitConfirm_.Accept(social_)){notice_="Editor sai da dashboard. A confirma; B cancela.";return "";}
-                nativeSocialPending_=NativeAction::AvatarEditor;nativeSocialTitle_=0;
-                nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;
+                nativeSocialQueue_.Queue(NativeAction::AvatarEditor,social_);
 #else
                 notice_="Editor oficial somente no Xbox 360.";
 #endif
@@ -1038,7 +1037,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
 #if defined(__XSDK__)
                 if(InfinitySocial::CanRequestNative(InfinitySocial::NativeAction::EditProfile,social_)){
-                    nativeSocialPending_=InfinitySocial::NativeAction::EditProfile;nativeSocialTitle_=0;
+                    nativeSocialQueue_.Queue(InfinitySocial::NativeAction::EditProfile,social_);
                 }else notice_="Edicao requer perfil ativo no console.";
 #else
                 notice_="Edicao oficial somente no Xbox 360.";
@@ -1071,8 +1070,7 @@ std::string ConsoleHome::Press(Key key) {
                         if(!avatarExitConfirm_.Accept(social_)){notice_="Editor sai da dashboard. A confirma; B cancela.";return "";}
                     }
                     if(InfinitySocial::CanRequestNative(action,social_)){
-                        nativeSocialPending_=action;nativeSocialTitle_=0;
-                        if(action==InfinitySocial::NativeAction::AvatarEditor){nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;}
+                        nativeSocialQueue_.Queue(action,social_);
                     }
                     else notice_=action==InfinitySocial::NativeAction::GamerCard?"Cartao requer perfil ativo do console.":"Esta interface requer perfil online do console.";
 #else
@@ -3554,7 +3552,7 @@ void ConsoleHome::PressFriendGuide(Key key){
     if(key==Favorite){
         if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
 #if defined(__XSDK__)
-        if(CanRequestNative(NativeAction::Friends,social_)){nativeSocialPending_=NativeAction::Friends;nativeSocialTitle_=0;}
+        if(CanRequestNative(NativeAction::Friends,social_)){nativeSocialQueue_.Queue(NativeAction::Friends,social_);}
         else notice_="Amigos requerem perfil online do console.";
 #else
         notice_="Interface oficial somente no Xbox 360.";
@@ -3572,8 +3570,7 @@ void ConsoleHome::PressFriendGuide(Key key){
 #if defined(__XSDK__)
         const auto target=friendRoster_.SelectedTarget(social_,friendFilter_,friendRow_,action);
         if(!friendFreshness_.Fresh(TransferRate::Now())||!target){notice_="Selecione um amigo valido e consulte novamente.";return;}
-        nativeSocialPending_=action;nativeSocialTitle_=0;nativeSocialTarget_=target;
-        nativeSocialOwner_=social_.identity;nativeSocialSlot_=social_.controller;
+        nativeSocialQueue_.Queue(action,social_,0,target);
 #else
         (void)action;notice_="Interface oficial somente no Xbox 360.";
 #endif
@@ -3638,7 +3635,7 @@ void ConsoleHome::PressCommunicationGuide(Key key){
     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
     const auto action=CommunicationAction(communicationRow_);
 #if defined(__XSDK__)
-    if(CanRequestNative(action,social_)){nativeSocialPending_=action;nativeSocialTitle_=0;}
+    if(CanRequestNative(action,social_)){nativeSocialQueue_.Queue(action,social_);}
     else notice_="Comunicacao requer perfil online do console.";
 #else
     (void)action;notice_="Interface oficial somente no Xbox 360.";
@@ -3704,7 +3701,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(795,165,social_.origin==Origin::Test?"PERFIL DE TESTE":social_.controller>=0?social_.displayName:"Perfil Xbox",18,White,230);
     c.TextFit(795,201,frame?"Corpo inteiro (estatico)":portrait?"Retrato 2D":"Imagem indisponivel",16,White,230);
     c.TextFit(795,239,"Renderizador 3D",17,Lime,230);
-    c.TextFit(795,267,"Rasterizador CPU em teste",15,Muted,230);
+    c.TextFit(795,267,"XAvatar/D3D9: adaptador separado",13,Muted,230);
     c.TextFit(795,305,"Exportacoes XAM",17,Lime,230);
     c.TextFit(795,333,avatarCapabilities_.checked?number(avatarCapabilities_.Count())+"/6 localizadas":"Nao consultadas",16,White,230);
     c.TextFit(795,365,avatarManifest_.known?number(avatarManifest_.populated)+" componentes identificados":"Manifesto nao confirmado",13,Muted,230);
@@ -4160,7 +4157,7 @@ void ConsoleHome::PressAchievements(Key key){
             const unsigned title=nativeAchievementTitles_[nativeAchievementRow_].first;
 #if defined(__XSDK__)
             if(InfinitySocial::CanRequestNative(InfinitySocial::NativeAction::Achievements,social_,title)){
-                nativeSocialPending_=InfinitySocial::NativeAction::Achievements;nativeSocialTitle_=title;
+                nativeSocialQueue_.Queue(InfinitySocial::NativeAction::Achievements,social_,title);
             }else notice_="Conquistas nativas requerem perfil ativo.";
 #else
             (void)title;notice_="Interface nativa experimental apenas no Xbox 360.";
@@ -4566,8 +4563,18 @@ void ConsoleHome::OpenApprovedSlot(){
     }
     OpenApprovedAction(selected);
 }
+void ConsoleHome::OpenProfileGuide(){
+    quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;
+    socialGuideFocus_=true;socialGuideRow_=0;
+    friendGuideOpen_=false;friendRosterPending_=false;
+    avatarGuideOpen_=false;avatarBodyPending_=false;avatarExitConfirm_.Cancel();
+    communicationGuideOpen_=false;communicationRow_=0;
+    privilegeGuideOpen_=false;privilegePending_=false;
+    nativeSocialQueue_.Clear();socialPolled_=false;notice_.clear();
+}
 void ConsoleHome::OpenApprovedAction(int action){
     using namespace ApprovedHome;
+    if(action==ApprovedHome::Profiles){OpenProfileGuide();return;}
     if(action==ApprovedHome::Games){searchTerm_.clear();Enter(Library);return;}
     if(action==ApprovedHome::Apps){Enter(ConsoleHome::Apps);return;}
     if(action==ApprovedHome::Iptv||action==Tv){Enter(ConsoleHome::Iptv);return;}
