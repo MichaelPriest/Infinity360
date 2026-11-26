@@ -178,7 +178,7 @@ void HomeCanvas::RasterIcon(int kind,int x,int y,int size,unsigned tint){
             const int sx=std::min((i*256+128)*extent/size-128,(extent-1)*256);
             const int u=std::max(0,sx),ix=u/256,fx=u%256,ix1=std::min(ix+1,extent-1);
             const unsigned a=(InfinityIconPixels::Alpha(kind,ix,iy)*(256-fx)*(256-fy)+InfinityIconPixels::Alpha(kind,ix1,iy)*fx*(256-fy)+InfinityIconPixels::Alpha(kind,ix,iy1)*(256-fx)*fy+InfinityIconPixels::Alpha(kind,ix1,iy1)*fx*fy+32768u)>>16;
-            if(a){unsigned& dest=frame_[(y+j)*Width+x+i];dest=blend(tint,dest,a);}
+            if(a){unsigned& dest=frame_[(y+j)*Width+x+i];dest=blend(tint,dest,std::min(255u,a+a/4));}
         }
     }
 }

@@ -65,7 +65,7 @@ public:
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
     void SigninResult(bool accepted){socialPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
-    bool IdleEligible()const{return page_==Home&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
+    bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
@@ -329,6 +329,9 @@ private:
     bool ApprovedCarouselTick(uint64_t now);
     bool PressApprovedHome(Key key);
     void OpenApprovedSlot();
+    void OpenApprovedAction(int action);
+    void DrawApprovedGroup(HomeCanvas& c)const;
+    int approvedGroup_=-1,approvedGroupRow_=0;
     unsigned themeDraft_=0,appearanceRow_=0;
     bool appearanceEditor_=false;
     mutable bool wallpaperDirty_=true;

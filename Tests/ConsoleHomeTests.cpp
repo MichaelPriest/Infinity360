@@ -102,6 +102,7 @@ static int captureScreens(const char* atlas,const char* destination) {
     bool ok=true;
     ConsoleHome approved(dir,roots);approved.Load();assert(approved.ApprovedHeader());
     ok=save("01-inicio",approved)&&ok;
+    {ConsoleHome groups(dir,roots);groups.Load();for(int i=0;i<5;++i)groups.Press(ConsoleHome::Right);groups.Press(ConsoleHome::Accept);ok=save("72-home-grupos",groups)&&ok;groups.Press(ConsoleHome::Back);assert(groups.ApprovedHeader());}
     approved.Press(ConsoleHome::Search);assert(approved.QuickGuideOpen());ok=save("40-guia-rapido",approved)&&ok;
     approved.Press(ConsoleHome::Favorite);approved.Press(ConsoleHome::PageDown);ok=save("41-guia-edicao",approved)&&ok;
     approved.Press(ConsoleHome::Back);assert(approved.QuickGuideOrder()==QuickGuide::Default());approved.Press(ConsoleHome::Back);assert(!approved.QuickGuideOpen());
@@ -204,6 +205,8 @@ int main(int argc,char** argv) {
      assert(Featured(4,8)==0&&Featured(3,2)==1&&Featured(99,0)==0);
      assert(ValidOrder("012345")&&ValidOrder("543210")&&!ValidOrder("012344")&&!ValidOrder("01234"));
      assert(Move(LibraryLink,3,6)>=FirstCover&&Move(LibraryLink,3,6)<Weather);
+     assert(GroupOrder("450123")[0]==2&&GroupActions(0,"102345")[0]==Files);
+     for(int i=0;i<End;++i)if(!HiddenSlot(i))for(int d=0;d<4;++d)assert(!HiddenSlot(Move(i,d,6)));
     }
     {using namespace ApprovedHome;
      const auto p=root/"ApprovedNavigation";fs::create_directories(p);

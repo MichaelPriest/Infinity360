@@ -68,6 +68,10 @@ B no cartão selecionado alterna a capa frontal e traseira; sem arquivo, informa
 
 Fonte: [arquivo XNA](https://github.com/SimonDarksideJ/XNAGameStudio/wiki/Xbox-360-Controller-Button-Images). [Licença original](Platform/Xbox360/Assets/XNA-Controller/Microsoft%20Permissive%20License.rtf) e [proveniência dos arquivos](Platform/Xbox360/Assets/XNA-Controller/SOURCE.json). A distribuição não implica afiliação ou endosso da Microsoft.
 
+### Home compacta e legibilidade
+
+A navegação padrão Series Infinity exibe apenas Início, Jogos, Apps, IPTV, Loja e Sistema. Os seis cartões antigos foram agrupados em Gerenciar, Rede e mídia e Perfil e serviços. Sistema abre um submenu com central, configurações, energia e downloads. Os atalhos anteriores permanecem acessíveis e a ordem de prioridade personalizada é preservada. A Home omite instruções redundantes e mostra comandos conforme o foco. Os botões oficiais XNA recebem letras/siglas de alto contraste em tamanhos pequenos; os ícones rasterizados têm contraste reforçado. Os layouts alternativos mantêm sua navegação própria.
+
 ## Galeria da interface nativa
 
 Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não são fotografias do console. A versão das imagens pode ser anterior à main; confira o [commit de origem](docs/screenshots/source.txt). O [workflow da galeria](https://github.com/MichaelPriest/Infinity360/actions/workflows/dashboard-screenshots.yml) é manual ou disparado por solicitação explícita em `docs/screenshots/request.txt`; não gera XEX nem Release.
