@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.55 — Conquistas nativas por jogo instalado
+
+- Central alterna GPD offline e títulos instalados com Title ID conhecido, sem atribuir inventário ao histórico Xbox.
+- Ação experimental XamShowAchievementsUI por título e perfil ativo, protegida pelo opt-in social e revalidação de identidade.
+- Inventário deduplicado, limitado e paginado; testes de navegação/elegibilidade preparados. Sem XEX, release ou homologação física.
+
 ## V0.2.54 — Conquistas do perfil e documentação compacta
 
 - Contagem de conquistas reportada via XAM (0x10040013), separada dos arquivos GPD offline; validação de identidade e tipo.

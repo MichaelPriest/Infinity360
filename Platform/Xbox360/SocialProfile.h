@@ -84,12 +84,13 @@ struct Header {
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
-enum class NativeAction { None, GamerCard, Friends };
-inline bool CanRequestNative(NativeAction action,const Header& h) {
+enum class NativeAction { None, GamerCard, Friends, Achievements };
+inline bool CanRequestNative(NativeAction action,const Header& h,std::uint32_t title=0) {
     if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
        !ValidGamertag(h.displayName))return false;
     if(action==NativeAction::GamerCard)return h.state==SignIn::Local || h.state==SignIn::Online;
     if(action==NativeAction::Friends)return h.state==SignIn::Online;
+    if(action==NativeAction::Achievements)return title!=0&&(h.state==SignIn::Local||h.state==SignIn::Online);
     return false;
 }
 

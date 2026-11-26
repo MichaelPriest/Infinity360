@@ -41,6 +41,7 @@
 #include "PluginRegistry.h"
 #include "FtpServer.h"
 #include <map>
+#include <utility>
 #include <set>
 
 class ConsoleHome {
@@ -63,7 +64,7 @@ public:
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);}
     const InfinitySocial::Header& SocialHeader()const{return social_;}
     bool SocialGuideFocused()const{return quickGuideOpen_&&!quickGuideEditing_&&socialGuideFocus_;}
-    InfinitySocial::NativeAction TakeNativeSocialRequest(){const auto action=nativeSocialPending_;nativeSocialPending_=InfinitySocial::NativeAction::None;return action;}
+    InfinitySocial::NativeAction TakeNativeSocialRequest(unsigned* title=nullptr){const auto action=nativeSocialPending_;if(title)*title=nativeSocialTitle_;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;return action;}
     void NativeSocialResult(const std::string& message){socialPolled_=false;notice_=message;}
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
     void SigninResult(bool accepted){socialPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
@@ -117,6 +118,7 @@ private:
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;
     InfinitySocial::NativeAction nativeSocialPending_=InfinitySocial::NativeAction::None;
+    unsigned nativeSocialTitle_=0;
     int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);
@@ -349,6 +351,10 @@ private:
     void DrawLocalMilestones(HomeCanvas& c)const;
     bool localMilestones_=false;
     bool achievementsPage_=false,achievementDetails_=false,achievementLoaded_=false;
+    bool nativeAchievements_=false,nativeTitlesLimited_=false;
+    size_t nativeAchievementRow_=0;
+    std::vector<std::pair<unsigned,std::string>> nativeAchievementTitles_;
+    void RefreshNativeAchievementTitles();
     size_t achievementRow_=0,achievementDetailRow_=0;
     GpdAchievements::Summary achievementSummary_;
     std::vector<GpdAchievements::Achievement> achievementItems_;

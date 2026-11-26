@@ -630,10 +630,11 @@ int main(){
             const bool accepted=allowed&&XamShowSigninUI(4,0)==ERROR_SUCCESS;
             menu.SigninResult(accepted);dirty=true;
         }
-        const auto socialAction=menu.TakeNativeSocialRequest();
+        unsigned socialTitle=0;
+        const auto socialAction=menu.TakeNativeSocialRequest(&socialTitle);
         if(socialAction!=InfinitySocial::NativeAction::None){
             const bool allowed=!systemUiOpen&&pendingLaunch.empty()&&!menu.TransferRunning()&&!idleScreen.Active();
-            menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir):
+            menu.NativeSocialResult(allowed?InfinitySocial::OpenNativeSocialUI(socialAction,menu.SocialHeader(),dir,socialTitle):
                 "Interface social bloqueada por outra operacao.");
             dirty=true;
         }

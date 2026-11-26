@@ -195,7 +195,7 @@ void ConsoleHome::Load() {
     homeOrder_=DefaultHomeOrder;homeEditing_=false;approvedPage_=approvedHero_=0;approvedHeroAt_=0;approvedReversePath_.clear();approvedGroup_=-1;approvedGroupRow_=0;approvedShortcuts_="012345";approvedDraft_.clear();theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=initialLayout_;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
     clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;weatherPanel_=false;lastWeatherAttempt_=0;
-    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;nativeSocialPending_=InfinitySocial::NativeAction::None;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
+    quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;nativeSocialPending_=InfinitySocial::NativeAction::None;nativeSocialTitle_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
     bool designSelected=false;
@@ -1008,7 +1008,7 @@ std::string ConsoleHome::Press(Key key) {
                     const auto action=socialGuideRow_==0?InfinitySocial::NativeAction::GamerCard:InfinitySocial::NativeAction::Friends;
                     if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return "";}
 #if defined(__XSDK__)
-                    if(InfinitySocial::CanRequestNative(action,social_))nativeSocialPending_=action;
+                    if(InfinitySocial::CanRequestNative(action,social_)){nativeSocialPending_=action;nativeSocialTitle_=0;}
                     else notice_=action==InfinitySocial::NativeAction::Friends?"Amigos requerem perfil online do console.":"Cartao requer perfil ativo do console.";
 #else
                     (void)action;notice_="Interface nativa experimental apenas no Xbox 360.";
@@ -3835,6 +3835,7 @@ void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
 }
 
 void ConsoleHome::RefreshAchievements(){
+    nativeAchievements_=false;nativeAchievementTitles_.clear();nativeAchievementRow_=0;nativeTitlesLimited_=false;
     achievementSummary_={};achievementItems_.clear();achievementRow_=achievementDetailRow_=0;
     achievementDetails_=false;achievementLoaded_=false;notice_.clear();
     const auto path=FileWorkspace::Join(FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"Achievements"),"FFFE07D1.gpd");
@@ -3844,7 +3845,44 @@ void ConsoleHome::RefreshAchievements(){
         notice_="Copia GPD local; dados nao autenticados nem sincronizados.";
     }else notice_="Importe FFFE07D1.gpd em UserFiles/Achievements.";
 }
+void ConsoleHome::RefreshNativeAchievementTitles(){
+    nativeAchievementTitles_.clear();nativeAchievementRow_=0;nativeTitlesLimited_=false;
+    std::set<unsigned> seen;
+    size_t checked=0;
+    // Bounded, manually initiated inventory; not Xbox play history.
+    for(const auto& game:games_){
+        if(contains(hidden_,game.executable))continue;
+        if(checked++>=512||nativeAchievementTitles_.size()>=256){nativeTitlesLimited_=true;break;}
+        const auto info=ContentCatalog::DescribeTitle(game.executable,isContentPackage(game));
+        if(info.known&&info.titleId&&seen.insert(info.titleId).second)
+            nativeAchievementTitles_.emplace_back(info.titleId,game.name);
+    }
+}
 void ConsoleHome::PressAchievements(Key key){
+    if(nativeAchievements_){
+        if(key==Back||key==Favorite){nativeAchievements_=false;nativeAchievementTitles_.clear();notice_.clear();return;}
+        if(key==Refresh){RefreshNativeAchievementTitles();notice_.clear();return;}
+        const auto count=nativeAchievementTitles_.size();
+        if(key==Up&&nativeAchievementRow_>0)--nativeAchievementRow_;
+        if(key==Down&&nativeAchievementRow_+1<count)++nativeAchievementRow_;
+        if(key==PageUp)nativeAchievementRow_=nativeAchievementRow_>=4?nativeAchievementRow_-4:0;
+        if(key==PageDown&&count)nativeAchievementRow_=std::min(count-1,nativeAchievementRow_+4);
+        if(key==Accept&&nativeAchievementRow_<count){
+            if(TransferRunning()){notice_="Conclua ou cancele as copias primeiro.";return;}
+            const unsigned title=nativeAchievementTitles_[nativeAchievementRow_].first;
+#if defined(__XSDK__)
+            if(InfinitySocial::CanRequestNative(InfinitySocial::NativeAction::Achievements,social_,title)){
+                nativeSocialPending_=InfinitySocial::NativeAction::Achievements;nativeSocialTitle_=title;
+            }else notice_="Conquistas nativas requerem perfil ativo.";
+#else
+            (void)title;notice_="Interface nativa experimental apenas no Xbox 360.";
+#endif
+        }
+        return;
+    }
+    if(key==Favorite&&!achievementDetails_){
+        nativeAchievements_=true;RefreshNativeAchievementTitles();notice_.clear();return;
+    }
     if(key==Back){
         if(achievementDetails_){achievementDetails_=false;achievementItems_.clear();notice_.clear();}
         else{achievementsPage_=false;achievementLoaded_=false;achievementSummary_={};achievementItems_.clear();notice_.clear();}
@@ -3870,6 +3908,25 @@ void ConsoleHome::PressAchievements(Key key){
     }
 }
 void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
+    if(nativeAchievements_){
+        c.TextFit(45,349,"Conquistas Xbox | Jogos instalados",26,White,1170);
+        c.TextFit(48,382,"Selecione o titulo para abrir as conquistas do perfil no sistema.",18,Lime,1170);
+        const size_t first=(nativeAchievementRow_/4)*4;
+        for(size_t i=first;i<nativeAchievementTitles_.size()&&i<first+4;++i){
+            const int y=412+int(i-first)*32;
+            panel(c,48,y,1184,30,Panel,i==nativeAchievementRow_);
+            InfinityIcons::Draw(c,9,58,y+4,22,White);
+            const auto& title=nativeAchievementTitles_[i];
+            c.TextFit(90,y+4,hexId(title.first)+" | "+title.second,18,White,1110);
+        }
+        if(nativeAchievementTitles_.empty())c.TextFit(48,432,"Nenhum jogo instalado com Title ID reconhecido.",20,Muted,1170);
+        const std::string active=social_.controller<0?"Perfil indisponivel":
+            (social_.origin==InfinitySocial::Origin::Test?"Perfil de teste: ":"Perfil ativo: ")+social_.displayName;
+        c.TextFit(48,541,active+(nativeTitlesLimited_?" | Limite de inventario atingido":""),16,White,1170);
+        c.TextFit(48,568,notice_.empty()?"Lista de instalados, nao historico Xbox Live. Interface nativa experimental.":notice_,17,Muted,1170);
+        InfinityButtons::Strip(c,48,607,"A Abrir Xbox | X GPD offline | Y Atualizar | LB/RB Pagina | B Voltar",16,Lime,1170);
+        return;
+    }
     c.Text(45,349,achievementDetails_?std::string(c.Tr("Conquistas | "))+achievementSummary_.titles[achievementRow_].name:std::string(c.Tr("Conquistas Xbox | GPD offline")),26,White,1170);
     if(achievementLoaded_&&!achievementDetails_){
         const auto& s=achievementSummary_;
@@ -3891,7 +3948,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
         (social_.gamerscoreKnown?" | G reportado: "+number(social_.gamerscore):" | G indisponivel");
     c.TextFit(48,541,active+(social_.achievementsKnown?" | Conquistas reportadas: "+number(social_.achievements):" | Conquistas indisponiveis")+" | GPD nao vinculado",16,White,1170);
     c.TextFit(48,568,notice_.empty()?std::string(c.Tr("Dados locais, nao verificados pela Xbox Live.")):std::string(c.Tr(notice_.c_str())),17,Muted,1170);
-    InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | LB/RB Pagina | Y Importar novamente | B Voltar")),18,Lime,1170);
+    InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | X Jogos instalados | LB/RB Pagina | Y Recarregar | B Voltar")),18,Lime,1170);
 }
 
 void ConsoleHome::PressAppearance(Key key){

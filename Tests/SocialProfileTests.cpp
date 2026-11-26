@@ -96,12 +96,15 @@ int main() {
     Header native;
     native.origin=Origin::Console;native.controller=0;native.state=SignIn::Local;native.displayName="Player";
     CHECK(CanRequestNative(NativeAction::GamerCard,native));
+    CHECK(!CanRequestNative(NativeAction::Achievements,native));
+    CHECK(CanRequestNative(NativeAction::Achievements,native,0x12345678u));
     CHECK(!CanRequestNative(NativeAction::Friends,native));
     native.state=SignIn::Online;
     CHECK(CanRequestNative(NativeAction::Friends,native));
     CHECK(!CanRequestNative(NativeAction::None,native));
     native.guest=true;
     CHECK(!CanRequestNative(NativeAction::Friends,native));
+    CHECK(!CanRequestNative(NativeAction::Achievements,native,0x12345678u));
     native.guest=false;native.origin=Origin::Test;
     CHECK(!CanRequestNative(NativeAction::GamerCard,native));
     native.origin=Origin::Console;native.controller=4;

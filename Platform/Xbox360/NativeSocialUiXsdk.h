@@ -6,8 +6,8 @@
 #include <fstream>
 
 namespace InfinitySocial {
-inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected,const std::string& dir) {
-    if(!CanRequestNative(action,expected))return "Perfil nao elegivel para esta interface.";
+inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected,const std::string& dir,std::uint32_t title=0) {
+    if(!CanRequestNative(action,expected,title))return "Perfil nao elegivel para esta interface.";
     std::ifstream flag(dir+"enable-native-social-ui.txt");
     std::string line;
     if(!std::getline(flag,line)|| (line!="ENABLE-NATIVE-SOCIAL-UI"&&line!="ENABLE-NATIVE-SOCIAL-UI\r"))
@@ -15,7 +15,8 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     if(XamIsUIActive())return "Outra interface Xbox esta aberta.";
     HANDLE module=0;
     void* address=nullptr;
-    const std::uint32_t ordinal=action==NativeAction::GamerCard?0x2c4u:0x2bfu;
+    const std::uint32_t ordinal=action==NativeAction::Achievements?0x2c5u:
+        action==NativeAction::GamerCard?0x2c4u:0x2bfu;
     if(XexGetModuleHandle("xam.xex",&module)!=0||!module||
        XexGetProcedureAddress(module,ordinal,&address)!=0||!address)
         return "Interface nao exportada por este sistema.";
@@ -31,7 +32,9 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     if(std::string(second.name,length)!=expected.displayName||XamIsUIActive())
         return "O perfil ou a interface mudou; tente novamente.";
     using ShowUI=std::uint32_t(*)(std::uint32_t);
-    const auto result=reinterpret_cast<ShowUI>(address)(user);
+    using ShowAchievements=std::uint32_t(*)(std::uint32_t,std::uint32_t);
+    const auto result=action==NativeAction::Achievements?
+        reinterpret_cast<ShowAchievements>(address)(user,title):reinterpret_cast<ShowUI>(address)(user);
     return result==0?"Interface Xbox solicitada; acesso depende do sistema.":
                      "O sistema recusou a interface social.";
 }
