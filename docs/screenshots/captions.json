@@ -1,0 +1,326 @@
+[
+  {
+    "title": "Tela inicial e Guide",
+    "images": [
+      {
+        "stem": "01-inicio",
+        "caption": "Tela inicial — Series Infinity (layout padrão)"
+      },
+      {
+        "stem": "40-guia-rapido",
+        "caption": "Guia rápido — atalhos e painel de perfil"
+      },
+      {
+        "stem": "41-guia-edicao",
+        "caption": "Guia rápido — personalização dos atalhos"
+      },
+      {
+        "stem": "70-perfil-teste",
+        "caption": "Tela inicial — perfil local de teste"
+      },
+      {
+        "stem": "71-guia-perfil-teste",
+        "caption": "Guia rápido — perfil de teste e comunicação indisponível"
+      }
+    ]
+  },
+  {
+    "title": "Biblioteca e conteúdo de jogos",
+    "images": [
+      {
+        "stem": "02-biblioteca",
+        "caption": "Biblioteca — visualização em lista"
+      },
+      {
+        "stem": "63-biblioteca-grade",
+        "caption": "Biblioteca — visualização em grade"
+      },
+      {
+        "stem": "64-biblioteca-filtros",
+        "caption": "Biblioteca — foco nos filtros de categorias"
+      },
+      {
+        "stem": "03-detalhes",
+        "caption": "Detalhes do jogo — acesso pela biblioteca em lista"
+      },
+      {
+        "stem": "65-detalhes-moderno",
+        "caption": "Detalhes do jogo — acesso pela biblioteca em grade"
+      },
+      {
+        "stem": "10-conteudo-tu",
+        "caption": "Conteúdo instalado — Title Updates (TU)"
+      },
+      {
+        "stem": "11-dlc",
+        "caption": "Conteúdo instalado — DLC"
+      },
+      {
+        "stem": "12-saves",
+        "caption": "Conteúdo instalado — Saves"
+      },
+      {
+        "stem": "13-trainers",
+        "caption": "Conteúdo instalado — Trainers locais"
+      },
+      {
+        "stem": "14-tu-baixadas",
+        "caption": "Conteúdo instalado — TU baixadas"
+      },
+      {
+        "stem": "15-backups",
+        "caption": "Conteúdo instalado — backups"
+      },
+      {
+        "stem": "16-tu-arquivadas",
+        "caption": "Conteúdo instalado — TU arquivadas"
+      },
+      {
+        "stem": "26-tu-retiradas",
+        "caption": "Conteúdo instalado — TU retiradas"
+      }
+    ]
+  },
+  {
+    "title": "Aplicativos, loja e mídia",
+    "images": [
+      {
+        "stem": "17-aplicativos",
+        "caption": "Aplicativos — catálogo local e plugins"
+      },
+      {
+        "stem": "18-emuladores",
+        "caption": "Emuladores — catálogo sem itens de teste"
+      },
+      {
+        "stem": "04-loja",
+        "caption": "INFINITY Store — catálogo e resumo do item"
+      },
+      {
+        "stem": "05-produto",
+        "caption": "INFINITY Store — detalhes e ações do produto"
+      },
+      {
+        "stem": "66-store-moderna",
+        "caption": "INFINITY Store — catálogo acessado pelo Series Infinity"
+      },
+      {
+        "stem": "67-store-produto-moderno",
+        "caption": "INFINITY Store — produto acessado pelo Series Infinity"
+      },
+      {
+        "stem": "68-fontes-store",
+        "caption": "INFINITY Store — central de fontes e provedores"
+      },
+      {
+        "stem": "06-iptv",
+        "caption": "Cloud360 IPTV — categoria TV ao vivo"
+      },
+      {
+        "stem": "69-iptv-moderno",
+        "caption": "Cloud360 IPTV — categoria Todos"
+      }
+    ]
+  },
+  {
+    "title": "Sistema, arquivos e downloads",
+    "images": [
+      {
+        "stem": "07-sistema",
+        "caption": "Sistema — menu de seções e resumo local"
+      },
+      {
+        "stem": "19-arquivos",
+        "caption": "Gerenciador de arquivos — navegação local"
+      },
+      {
+        "stem": "20-armazenamento",
+        "caption": "Armazenamento — dispositivos e espaço disponível"
+      },
+      {
+        "stem": "22-downloads",
+        "caption": "Downloads — transferências locais"
+      },
+      {
+        "stem": "27-fila-store",
+        "caption": "Downloads — fila de itens da INFINITY Store"
+      },
+      {
+        "stem": "24-dvd",
+        "caption": "Instalador de DVD — extração XEX e opções GOD/XBLA"
+      },
+      {
+        "stem": "09-plugins",
+        "caption": "Plugins residentes — leitura do launch.ini (DashLaunch)"
+      },
+      {
+        "stem": "44-plugins-locais",
+        "caption": "Plugins locais — gerenciamento dos atalhos"
+      },
+      {
+        "stem": "23-eventos",
+        "caption": "Notificações — histórico completo de eventos"
+      },
+      {
+        "stem": "38-notificacoes-pendentes",
+        "caption": "Notificações — filtro Não lidas"
+      },
+      {
+        "stem": "39-notificacoes-alertas",
+        "caption": "Notificações — filtro Atenção"
+      }
+    ]
+  },
+  {
+    "title": "Rede e diagnóstico",
+    "images": [
+      {
+        "stem": "08-rede",
+        "caption": "Rede — diagnóstico IPv4 e serviços FTP"
+      },
+      {
+        "stem": "29-rede-udp",
+        "caption": "Rede — diagnóstico UDP entre consoles"
+      },
+      {
+        "stem": "43-configurar-rede",
+        "caption": "Rede — configuração do IPv4 do outro console"
+      },
+      {
+        "stem": "50-link-opcoes",
+        "caption": "Rede — modo e duração do diagnóstico UDP"
+      },
+      {
+        "stem": "48-smb",
+        "caption": "Rede — diagnóstico SMB2/3 (experimental)"
+      },
+      {
+        "stem": "49-smb-config",
+        "caption": "Rede — configuração do IPv4 do servidor SMB"
+      }
+    ]
+  },
+  {
+    "title": "Console, perfis e telemetria",
+    "images": [
+      {
+        "stem": "25-configuracoes",
+        "caption": "Console — perfis conectados e preferências"
+      },
+      {
+        "stem": "21-sensores",
+        "caption": "Telemetria — memória e sensores (página 1/2)"
+      },
+      {
+        "stem": "28-video-kernel",
+        "caption": "Telemetria — vídeo, kernel e margem segura (página 2/2)"
+      },
+      {
+        "stem": "45-temperaturas",
+        "caption": "Temperaturas SMC — CPU, GPU, EDRAM e chassi (experimental)"
+      },
+      {
+        "stem": "47-refrigeracao",
+        "caption": "Refrigeração — diagnóstico SMC e limite de aviso"
+      },
+      {
+        "stem": "46-energia",
+        "caption": "Energia — desligar ou reiniciar (experimental)"
+      },
+      {
+        "stem": "42-marcos-locais",
+        "caption": "Marcos locais — indicadores da dashboard (não são Gamerscore)"
+      },
+      {
+        "stem": "51-perfis-saves",
+        "caption": "Perfis e saves — inventário de armazenamento"
+      },
+      {
+        "stem": "52-conquistas-gpd",
+        "caption": "Conquistas Xbox — importação de GPD offline"
+      },
+      {
+        "stem": "53-aparencia",
+        "caption": "Aparência — paleta, fundo, layout, biblioteca, UTC e clima"
+      }
+    ]
+  },
+  {
+    "title": "Temas e idiomas",
+    "images": [
+      {
+        "stem": "30-tema-azul",
+        "caption": "Configurações do console — tema Azul"
+      },
+      {
+        "stem": "31-tema-ambar",
+        "caption": "Configurações do console — tema Âmbar"
+      },
+      {
+        "stem": "32-tema-violeta",
+        "caption": "Configurações do console — tema Violeta"
+      },
+      {
+        "stem": "33-tema-vermelho",
+        "caption": "Configurações do console — tema Vermelho"
+      },
+      {
+        "stem": "34-tema-ciano",
+        "caption": "Configurações do console — tema Ciano"
+      },
+      {
+        "stem": "35-tema-grafite",
+        "caption": "Configurações do console — tema Grafite"
+      },
+      {
+        "stem": "36-english",
+        "caption": "Configurações do console — idioma inglês"
+      },
+      {
+        "stem": "37-espanol",
+        "caption": "Configurações do console — idioma espanhol"
+      }
+    ]
+  },
+  {
+    "title": "Layouts da Home",
+    "images": [
+      {
+        "stem": "54-layout-1",
+        "caption": "Series Infinity — menu horizontal (padrão)"
+      },
+      {
+        "stem": "55-layout-2",
+        "caption": "Lateral Pro — menu vertical"
+      },
+      {
+        "stem": "56-layout-3",
+        "caption": "Hybrid — menu superior e lateral"
+      },
+      {
+        "stem": "57-layout-4",
+        "caption": "Blade Neo — navegação em painéis"
+      },
+      {
+        "stem": "58-layout-5",
+        "caption": "Immersive — destaque amplo e menu inferior"
+      },
+      {
+        "stem": "59-layout-6",
+        "caption": "Minimal — navegação em grade"
+      },
+      {
+        "stem": "60-layout-7",
+        "caption": "Arcade — biblioteca e menu inferior"
+      },
+      {
+        "stem": "61-layout-8",
+        "caption": "Media Hub — destaque de mídia e menu lateral"
+      },
+      {
+        "stem": "62-layout-9",
+        "caption": "Performance — indicadores locais e menu em duas colunas"
+      }
+    ]
+  }
+]

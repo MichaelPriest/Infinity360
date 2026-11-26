@@ -72,7 +72,7 @@ unsigned HomeCanvas::ThemeColor(unsigned color) const {
     const unsigned r=(color>>16)&255,g=(color>>8)&255,b=color&255;
     // Recolor only green UI accents and green-tinted panels; retain warning colors and artwork.
     if(g<=r||g<=b)return color;
-    if(theme_==1)return (color&0xff000000u)|(r<<16)|(b<<8)|g;
+    if(theme_==1){const unsigned low=std::min(r,b),delta=g-low;return (color&0xff000000u)|(low<<16)|((low+delta/2)<<8)|g;}
     if(theme_==2)return (color&0xff000000u)|(g<<16)|(r<<8)|b;
     // Preserve luminance contrast and use only green-dominant UI pixels.
     // Text, artwork, video and non-green semantic warning colors stay intact.

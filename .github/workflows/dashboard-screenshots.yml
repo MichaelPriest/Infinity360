@@ -5,7 +5,7 @@ on:
   # Explicit screenshot requests only; no Xbox executable is built here.
   push:
     branches: [main, feature/profile-social-provider]
-    paths: [docs/screenshots/request.txt, .github/workflows/dashboard-screenshots.yml]
+    paths: [docs/screenshots/request.txt, docs/screenshots/captions.json, .github/workflows/dashboard-screenshots.yml]
 
 permissions:
   contents: write
@@ -71,16 +71,27 @@ jobs:
           start="<!-- NATIVE-GALLERY-BEGIN -->"
           end="<!-- NATIVE-GALLERY-END -->"
           assert contents.count(start)==1 and contents.count(end)==1
-          names=[(p.stem,p.with_suffix(".png").name) for p in images]
-          lines=[f"**{len(names)} capturas nativas** — commit [{os.environ['GITHUB_SHA'][:12]}](https://github.com/MichaelPriest/Infinity360/commit/{os.environ['GITHUB_SHA']}).", "", "| Tela | Tela |", "| --- | --- |"]
-          for i in range(0,len(names),2):
-              pair=names[i:i+2]
-              cells=[f"![{stem}](docs/screenshots/{file})" for stem,file in pair]
-              if len(cells)==1: cells.append("")
-              lines.append("| "+" | ".join(cells)+" |")
-              labels=[stem[3:].replace("-"," ").capitalize() for stem,_ in pair]
-              if len(labels)==1: labels.append("")
-              lines.append("| "+" | ".join(labels)+" |")
+          import json
+          groups=json.loads((output/"captions.json").read_text(encoding="utf-8"))
+          entries=[entry for group in groups for entry in group["images"]]
+          assert len(entries)==len(images)
+          assert len({entry["stem"] for entry in entries})==len(images)
+          assert {entry["stem"] for entry in entries}=={p.stem for p in images}
+          assert all(entry["caption"].strip() for entry in entries)
+          sha=os.environ["GITHUB_SHA"]
+          lines=[f"**{len(images)} capturas nativas** — commit [{sha[:12]}](https://github.com/MichaelPriest/Infinity360/commit/{sha}).", "", "As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.", ""]
+          for group in groups:
+              lines.extend(["### "+group["title"], "", "| Tela | Tela |", "| --- | --- |"])
+              items=group["images"]
+              for i in range(0,len(items),2):
+                  pair=items[i:i+2]
+                  cells=[f"![{item['caption']}](docs/screenshots/{item['stem']}.png)" for item in pair]
+                  labels=["**"+item["caption"]+"**" for item in pair]
+                  if len(cells)==1:
+                      cells.append("")
+                      labels.append("")
+                  lines.extend(["| "+" | ".join(cells)+" |", "| "+" | ".join(labels)+" |"])
+              lines.append("")
           left,rest=contents.split(start,1)
           _,right=rest.split(end,1)
           readme.write_text(left+start+"\n\n"+"\n".join(lines)+"\n\n"+end+right,encoding="utf-8")

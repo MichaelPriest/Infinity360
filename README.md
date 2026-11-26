@@ -50,80 +50,123 @@ Capturas 1280 × 720 do renderizador C++ real, com dados de teste locais. Não s
 
 **71 capturas nativas** — commit [d4a06442ab07](https://github.com/MichaelPriest/Infinity360/commit/d4a06442ab07674555e4728b80c92d806ad302ae).
 
+As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
+
+### Tela inicial e Guide
+
 | Tela | Tela |
 | --- | --- |
-| ![01-inicio](docs/screenshots/01-inicio.png) | ![02-biblioteca](docs/screenshots/02-biblioteca.png) |
-| Inicio | Biblioteca |
-| ![03-detalhes](docs/screenshots/03-detalhes.png) | ![04-loja](docs/screenshots/04-loja.png) |
-| Detalhes | Loja |
-| ![05-produto](docs/screenshots/05-produto.png) | ![06-iptv](docs/screenshots/06-iptv.png) |
-| Produto | Iptv |
-| ![07-sistema](docs/screenshots/07-sistema.png) | ![08-rede](docs/screenshots/08-rede.png) |
-| Sistema | Rede |
-| ![09-plugins](docs/screenshots/09-plugins.png) | ![10-conteudo-tu](docs/screenshots/10-conteudo-tu.png) |
-| Plugins | Conteudo tu |
-| ![11-dlc](docs/screenshots/11-dlc.png) | ![12-saves](docs/screenshots/12-saves.png) |
-| Dlc | Saves |
-| ![13-trainers](docs/screenshots/13-trainers.png) | ![14-tu-baixadas](docs/screenshots/14-tu-baixadas.png) |
-| Trainers | Tu baixadas |
-| ![15-backups](docs/screenshots/15-backups.png) | ![16-tu-arquivadas](docs/screenshots/16-tu-arquivadas.png) |
-| Backups | Tu arquivadas |
-| ![17-aplicativos](docs/screenshots/17-aplicativos.png) | ![18-emuladores](docs/screenshots/18-emuladores.png) |
-| Aplicativos | Emuladores |
-| ![19-arquivos](docs/screenshots/19-arquivos.png) | ![20-armazenamento](docs/screenshots/20-armazenamento.png) |
-| Arquivos | Armazenamento |
-| ![21-sensores](docs/screenshots/21-sensores.png) | ![22-downloads](docs/screenshots/22-downloads.png) |
-| Sensores | Downloads |
-| ![23-eventos](docs/screenshots/23-eventos.png) | ![24-dvd](docs/screenshots/24-dvd.png) |
-| Eventos | Dvd |
-| ![25-configuracoes](docs/screenshots/25-configuracoes.png) | ![26-tu-retiradas](docs/screenshots/26-tu-retiradas.png) |
-| Configuracoes | Tu retiradas |
-| ![27-fila-store](docs/screenshots/27-fila-store.png) | ![28-video-kernel](docs/screenshots/28-video-kernel.png) |
-| Fila store | Video kernel |
-| ![29-rede-udp](docs/screenshots/29-rede-udp.png) | ![30-tema-azul](docs/screenshots/30-tema-azul.png) |
-| Rede udp | Tema azul |
-| ![31-tema-ambar](docs/screenshots/31-tema-ambar.png) | ![32-tema-violeta](docs/screenshots/32-tema-violeta.png) |
-| Tema ambar | Tema violeta |
-| ![33-tema-vermelho](docs/screenshots/33-tema-vermelho.png) | ![34-tema-ciano](docs/screenshots/34-tema-ciano.png) |
-| Tema vermelho | Tema ciano |
-| ![35-tema-grafite](docs/screenshots/35-tema-grafite.png) | ![36-english](docs/screenshots/36-english.png) |
-| Tema grafite | English |
-| ![37-espanol](docs/screenshots/37-espanol.png) | ![38-notificacoes-pendentes](docs/screenshots/38-notificacoes-pendentes.png) |
-| Espanol | Notificacoes pendentes |
-| ![39-notificacoes-alertas](docs/screenshots/39-notificacoes-alertas.png) | ![40-guia-rapido](docs/screenshots/40-guia-rapido.png) |
-| Notificacoes alertas | Guia rapido |
-| ![41-guia-edicao](docs/screenshots/41-guia-edicao.png) | ![42-marcos-locais](docs/screenshots/42-marcos-locais.png) |
-| Guia edicao | Marcos locais |
-| ![43-configurar-rede](docs/screenshots/43-configurar-rede.png) | ![44-plugins-locais](docs/screenshots/44-plugins-locais.png) |
-| Configurar rede | Plugins locais |
-| ![45-temperaturas](docs/screenshots/45-temperaturas.png) | ![46-energia](docs/screenshots/46-energia.png) |
-| Temperaturas | Energia |
-| ![47-refrigeracao](docs/screenshots/47-refrigeracao.png) | ![48-smb](docs/screenshots/48-smb.png) |
-| Refrigeracao | Smb |
-| ![49-smb-config](docs/screenshots/49-smb-config.png) | ![50-link-opcoes](docs/screenshots/50-link-opcoes.png) |
-| Smb config | Link opcoes |
-| ![51-perfis-saves](docs/screenshots/51-perfis-saves.png) | ![52-conquistas-gpd](docs/screenshots/52-conquistas-gpd.png) |
-| Perfis saves | Conquistas gpd |
-| ![53-aparencia](docs/screenshots/53-aparencia.png) | ![54-layout-1](docs/screenshots/54-layout-1.png) |
-| Aparencia | Layout 1 |
-| ![55-layout-2](docs/screenshots/55-layout-2.png) | ![56-layout-3](docs/screenshots/56-layout-3.png) |
-| Layout 2 | Layout 3 |
-| ![57-layout-4](docs/screenshots/57-layout-4.png) | ![58-layout-5](docs/screenshots/58-layout-5.png) |
-| Layout 4 | Layout 5 |
-| ![59-layout-6](docs/screenshots/59-layout-6.png) | ![60-layout-7](docs/screenshots/60-layout-7.png) |
-| Layout 6 | Layout 7 |
-| ![61-layout-8](docs/screenshots/61-layout-8.png) | ![62-layout-9](docs/screenshots/62-layout-9.png) |
-| Layout 8 | Layout 9 |
-| ![63-biblioteca-grade](docs/screenshots/63-biblioteca-grade.png) | ![64-biblioteca-filtros](docs/screenshots/64-biblioteca-filtros.png) |
-| Biblioteca grade | Biblioteca filtros |
-| ![65-detalhes-moderno](docs/screenshots/65-detalhes-moderno.png) | ![66-store-moderna](docs/screenshots/66-store-moderna.png) |
-| Detalhes moderno | Store moderna |
-| ![67-store-produto-moderno](docs/screenshots/67-store-produto-moderno.png) | ![68-fontes-store](docs/screenshots/68-fontes-store.png) |
-| Store produto moderno | Fontes store |
-| ![69-iptv-moderno](docs/screenshots/69-iptv-moderno.png) | ![70-perfil-teste](docs/screenshots/70-perfil-teste.png) |
-| Iptv moderno | Perfil teste |
-| ![71-guia-perfil-teste](docs/screenshots/71-guia-perfil-teste.png) |  |
-| Guia perfil teste |  |
+| ![Tela inicial — Series Infinity (layout padrão)](docs/screenshots/01-inicio.png) | ![Guia rápido — atalhos e painel de perfil](docs/screenshots/40-guia-rapido.png) |
+| **Tela inicial — Series Infinity (layout padrão)** | **Guia rápido — atalhos e painel de perfil** |
+| ![Guia rápido — personalização dos atalhos](docs/screenshots/41-guia-edicao.png) | ![Tela inicial — perfil local de teste](docs/screenshots/70-perfil-teste.png) |
+| **Guia rápido — personalização dos atalhos** | **Tela inicial — perfil local de teste** |
+| ![Guia rápido — perfil de teste e comunicação indisponível](docs/screenshots/71-guia-perfil-teste.png) |  |
+| **Guia rápido — perfil de teste e comunicação indisponível** |  |
+
+### Biblioteca e conteúdo de jogos
+
+| Tela | Tela |
+| --- | --- |
+| ![Biblioteca — visualização em lista](docs/screenshots/02-biblioteca.png) | ![Biblioteca — visualização em grade](docs/screenshots/63-biblioteca-grade.png) |
+| **Biblioteca — visualização em lista** | **Biblioteca — visualização em grade** |
+| ![Biblioteca — foco nos filtros de categorias](docs/screenshots/64-biblioteca-filtros.png) | ![Detalhes do jogo — acesso pela biblioteca em lista](docs/screenshots/03-detalhes.png) |
+| **Biblioteca — foco nos filtros de categorias** | **Detalhes do jogo — acesso pela biblioteca em lista** |
+| ![Detalhes do jogo — acesso pela biblioteca em grade](docs/screenshots/65-detalhes-moderno.png) | ![Conteúdo instalado — Title Updates (TU)](docs/screenshots/10-conteudo-tu.png) |
+| **Detalhes do jogo — acesso pela biblioteca em grade** | **Conteúdo instalado — Title Updates (TU)** |
+| ![Conteúdo instalado — DLC](docs/screenshots/11-dlc.png) | ![Conteúdo instalado — Saves](docs/screenshots/12-saves.png) |
+| **Conteúdo instalado — DLC** | **Conteúdo instalado — Saves** |
+| ![Conteúdo instalado — Trainers locais](docs/screenshots/13-trainers.png) | ![Conteúdo instalado — TU baixadas](docs/screenshots/14-tu-baixadas.png) |
+| **Conteúdo instalado — Trainers locais** | **Conteúdo instalado — TU baixadas** |
+| ![Conteúdo instalado — backups](docs/screenshots/15-backups.png) | ![Conteúdo instalado — TU arquivadas](docs/screenshots/16-tu-arquivadas.png) |
+| **Conteúdo instalado — backups** | **Conteúdo instalado — TU arquivadas** |
+| ![Conteúdo instalado — TU retiradas](docs/screenshots/26-tu-retiradas.png) |  |
+| **Conteúdo instalado — TU retiradas** |  |
+
+### Aplicativos, loja e mídia
+
+| Tela | Tela |
+| --- | --- |
+| ![Aplicativos — catálogo local e plugins](docs/screenshots/17-aplicativos.png) | ![Emuladores — catálogo sem itens de teste](docs/screenshots/18-emuladores.png) |
+| **Aplicativos — catálogo local e plugins** | **Emuladores — catálogo sem itens de teste** |
+| ![INFINITY Store — catálogo e resumo do item](docs/screenshots/04-loja.png) | ![INFINITY Store — detalhes e ações do produto](docs/screenshots/05-produto.png) |
+| **INFINITY Store — catálogo e resumo do item** | **INFINITY Store — detalhes e ações do produto** |
+| ![INFINITY Store — catálogo acessado pelo Series Infinity](docs/screenshots/66-store-moderna.png) | ![INFINITY Store — produto acessado pelo Series Infinity](docs/screenshots/67-store-produto-moderno.png) |
+| **INFINITY Store — catálogo acessado pelo Series Infinity** | **INFINITY Store — produto acessado pelo Series Infinity** |
+| ![INFINITY Store — central de fontes e provedores](docs/screenshots/68-fontes-store.png) | ![Cloud360 IPTV — categoria TV ao vivo](docs/screenshots/06-iptv.png) |
+| **INFINITY Store — central de fontes e provedores** | **Cloud360 IPTV — categoria TV ao vivo** |
+| ![Cloud360 IPTV — categoria Todos](docs/screenshots/69-iptv-moderno.png) |  |
+| **Cloud360 IPTV — categoria Todos** |  |
+
+### Sistema, arquivos e downloads
+
+| Tela | Tela |
+| --- | --- |
+| ![Sistema — menu de seções e resumo local](docs/screenshots/07-sistema.png) | ![Gerenciador de arquivos — navegação local](docs/screenshots/19-arquivos.png) |
+| **Sistema — menu de seções e resumo local** | **Gerenciador de arquivos — navegação local** |
+| ![Armazenamento — dispositivos e espaço disponível](docs/screenshots/20-armazenamento.png) | ![Downloads — transferências locais](docs/screenshots/22-downloads.png) |
+| **Armazenamento — dispositivos e espaço disponível** | **Downloads — transferências locais** |
+| ![Downloads — fila de itens da INFINITY Store](docs/screenshots/27-fila-store.png) | ![Instalador de DVD — extração XEX e opções GOD/XBLA](docs/screenshots/24-dvd.png) |
+| **Downloads — fila de itens da INFINITY Store** | **Instalador de DVD — extração XEX e opções GOD/XBLA** |
+| ![Plugins residentes — leitura do launch.ini (DashLaunch)](docs/screenshots/09-plugins.png) | ![Plugins locais — gerenciamento dos atalhos](docs/screenshots/44-plugins-locais.png) |
+| **Plugins residentes — leitura do launch.ini (DashLaunch)** | **Plugins locais — gerenciamento dos atalhos** |
+| ![Notificações — histórico completo de eventos](docs/screenshots/23-eventos.png) | ![Notificações — filtro Não lidas](docs/screenshots/38-notificacoes-pendentes.png) |
+| **Notificações — histórico completo de eventos** | **Notificações — filtro Não lidas** |
+| ![Notificações — filtro Atenção](docs/screenshots/39-notificacoes-alertas.png) |  |
+| **Notificações — filtro Atenção** |  |
+
+### Rede e diagnóstico
+
+| Tela | Tela |
+| --- | --- |
+| ![Rede — diagnóstico IPv4 e serviços FTP](docs/screenshots/08-rede.png) | ![Rede — diagnóstico UDP entre consoles](docs/screenshots/29-rede-udp.png) |
+| **Rede — diagnóstico IPv4 e serviços FTP** | **Rede — diagnóstico UDP entre consoles** |
+| ![Rede — configuração do IPv4 do outro console](docs/screenshots/43-configurar-rede.png) | ![Rede — modo e duração do diagnóstico UDP](docs/screenshots/50-link-opcoes.png) |
+| **Rede — configuração do IPv4 do outro console** | **Rede — modo e duração do diagnóstico UDP** |
+| ![Rede — diagnóstico SMB2/3 (experimental)](docs/screenshots/48-smb.png) | ![Rede — configuração do IPv4 do servidor SMB](docs/screenshots/49-smb-config.png) |
+| **Rede — diagnóstico SMB2/3 (experimental)** | **Rede — configuração do IPv4 do servidor SMB** |
+
+### Console, perfis e telemetria
+
+| Tela | Tela |
+| --- | --- |
+| ![Console — perfis conectados e preferências](docs/screenshots/25-configuracoes.png) | ![Telemetria — memória e sensores (página 1/2)](docs/screenshots/21-sensores.png) |
+| **Console — perfis conectados e preferências** | **Telemetria — memória e sensores (página 1/2)** |
+| ![Telemetria — vídeo, kernel e margem segura (página 2/2)](docs/screenshots/28-video-kernel.png) | ![Temperaturas SMC — CPU, GPU, EDRAM e chassi (experimental)](docs/screenshots/45-temperaturas.png) |
+| **Telemetria — vídeo, kernel e margem segura (página 2/2)** | **Temperaturas SMC — CPU, GPU, EDRAM e chassi (experimental)** |
+| ![Refrigeração — diagnóstico SMC e limite de aviso](docs/screenshots/47-refrigeracao.png) | ![Energia — desligar ou reiniciar (experimental)](docs/screenshots/46-energia.png) |
+| **Refrigeração — diagnóstico SMC e limite de aviso** | **Energia — desligar ou reiniciar (experimental)** |
+| ![Marcos locais — indicadores da dashboard (não são Gamerscore)](docs/screenshots/42-marcos-locais.png) | ![Perfis e saves — inventário de armazenamento](docs/screenshots/51-perfis-saves.png) |
+| **Marcos locais — indicadores da dashboard (não são Gamerscore)** | **Perfis e saves — inventário de armazenamento** |
+| ![Conquistas Xbox — importação de GPD offline](docs/screenshots/52-conquistas-gpd.png) | ![Aparência — paleta, fundo, layout, biblioteca, UTC e clima](docs/screenshots/53-aparencia.png) |
+| **Conquistas Xbox — importação de GPD offline** | **Aparência — paleta, fundo, layout, biblioteca, UTC e clima** |
+
+### Temas e idiomas
+
+| Tela | Tela |
+| --- | --- |
+| ![Configurações do console — tema Azul](docs/screenshots/30-tema-azul.png) | ![Configurações do console — tema Âmbar](docs/screenshots/31-tema-ambar.png) |
+| **Configurações do console — tema Azul** | **Configurações do console — tema Âmbar** |
+| ![Configurações do console — tema Violeta](docs/screenshots/32-tema-violeta.png) | ![Configurações do console — tema Vermelho](docs/screenshots/33-tema-vermelho.png) |
+| **Configurações do console — tema Violeta** | **Configurações do console — tema Vermelho** |
+| ![Configurações do console — tema Ciano](docs/screenshots/34-tema-ciano.png) | ![Configurações do console — tema Grafite](docs/screenshots/35-tema-grafite.png) |
+| **Configurações do console — tema Ciano** | **Configurações do console — tema Grafite** |
+| ![Configurações do console — idioma inglês](docs/screenshots/36-english.png) | ![Configurações do console — idioma espanhol](docs/screenshots/37-espanol.png) |
+| **Configurações do console — idioma inglês** | **Configurações do console — idioma espanhol** |
+
+### Layouts da Home
+
+| Tela | Tela |
+| --- | --- |
+| ![Series Infinity — menu horizontal (padrão)](docs/screenshots/54-layout-1.png) | ![Lateral Pro — menu vertical](docs/screenshots/55-layout-2.png) |
+| **Series Infinity — menu horizontal (padrão)** | **Lateral Pro — menu vertical** |
+| ![Hybrid — menu superior e lateral](docs/screenshots/56-layout-3.png) | ![Blade Neo — navegação em painéis](docs/screenshots/57-layout-4.png) |
+| **Hybrid — menu superior e lateral** | **Blade Neo — navegação em painéis** |
+| ![Immersive — destaque amplo e menu inferior](docs/screenshots/58-layout-5.png) | ![Minimal — navegação em grade](docs/screenshots/59-layout-6.png) |
+| **Immersive — destaque amplo e menu inferior** | **Minimal — navegação em grade** |
+| ![Arcade — biblioteca e menu inferior](docs/screenshots/60-layout-7.png) | ![Media Hub — destaque de mídia e menu lateral](docs/screenshots/61-layout-8.png) |
+| **Arcade — biblioteca e menu inferior** | **Media Hub — destaque de mídia e menu lateral** |
+| ![Performance — indicadores locais e menu em duas colunas](docs/screenshots/62-layout-9.png) |  |
+| **Performance — indicadores locais e menu em duas colunas** |  |
 
 <!-- NATIVE-GALLERY-END -->
 
