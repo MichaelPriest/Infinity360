@@ -188,6 +188,7 @@ void ConsoleHome::Load() {
     history_.clear(); favorites_.clear(); pinned_.clear(); hidden_.clear(); launched_.clear();launchStats_.Clear();
     homeOrder_=DefaultHomeOrder;homeEditing_=false;theme_=0;safeArea_=0;idleMinutes_=0;language_=0;
     appearance_={};appearanceDraft_={};appearanceEditor_=false;wallpaperDirty_=true;layout_=layoutDraft_=0;layoutPreview_=false;focus_=0;gridPreference_=gridDraft_=0;gridFilter_=false;
+    clockSettings_={};clockDraft_={};weather_={};weatherPending_=false;
     quickGuideOpen_=false;quickGuideEditing_=false;quickGuideRow_=0;quickGuideOrder_=QuickGuide::Default();quickGuideDraft_.clear();
     artChoices_.clear();artEditing_=false;importPreview_=false;
     disabledPluginIds_.clear();localPlugins_=false;localPluginRow_=0;
@@ -200,6 +201,7 @@ void ConsoleHome::Load() {
         if(line[0]=='T'&&file.size()==1&&file[0]>='0'&&static_cast<unsigned>(file[0]-'0')<HomeCanvas::ThemeCount)theme_=file[0]-'0';
         if(line[0]=='W')AppearanceSettings::Parse(file,appearance_);
         if(line[0]=='J')DashboardLayout::Parse(file,layout_);
+        if(line[0]=='Z')ClockWeather::Settings::Parse(file,clockSettings_);
         if(line[0]=='G')GameGrid::Parse(file,gridPreference_);
         if(line[0]=='V')DisplaySafeArea::Parse(file,safeArea_);
         if(line[0]=='I')IdleScreen::Parse(file,idleMinutes_);
@@ -267,6 +269,7 @@ bool ConsoleHome::SaveProfile() const {
     out<<"T\t"<<theme_<<"\n";
     out<<"W\t"<<appearance_.Encode()<<"\n";
     out<<"J\t"<<layout_<<"\n";
+    out<<"Z\t"<<clockSettings_.Encode()<<"\n";
     out<<"G\t"<<gridPreference_<<"\n";
     out<<"V\t"<<safeArea_<<"\n";
     out<<"I\t"<<idleMinutes_<<"\n";
@@ -1710,6 +1713,7 @@ std::string ConsoleHome::Press(Key key) {
             else notice_="Este servico ainda nao possui provider nativo.";
             return "";
         }
+        if(page_==Home&&clockSettings_.city)weatherPending_=true;
         if(page_==Details) page_=Listing;
         Reload();
         if(notice_.empty()) notice_="Atualizado";
@@ -1727,7 +1731,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -2776,7 +2780,7 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     if(powerPage_){DrawPower(c);return;}
     if(localMilestones_){DrawLocalMilestones(c);return;}
     c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
-    c.Text(48,389,std::string(c.Tr("Hora local: "))+status_.clock+std::string(c.Tr(" | Idioma: "))+status_.language+" | Locale: "+status_.country,21,Muted,1170);
+    c.Text(48,389,std::string(c.Tr("Hora local: "))+ClockLabel(std::time(nullptr))+" | "+ClockWeather::Zone(clockSettings_.offset)+std::string(c.Tr(" | Idioma: "))+status_.language,21,Muted,1170);
     for(int i=0;i<4;++i){
         const int x=45+(i%2)*600,y=430+(i/2)*65;
         panel(c,x,y,585,58,Panel,false);
@@ -3286,7 +3290,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.Text(282,16,"360",32,Lime,84);
     c.Text(364,30,"V" INFINITY360_VERSION,15,Muted,150);
     if(notifications_.UnreadCount())c.Text(540,26,std::string(c.Tr("Notificacoes"))+": "+number(notifications_.UnreadCount()),18,Lime,330);
-    c.Text(1088,19,clock,26,White,90);
+    c.Text(1088,19,clockSettings_.offset==ClockWeather::Auto?clock:ClockLabel(now<0?static_cast<int64_t>(std::time(nullptr)):now),26,White,90);
     c.Box(1189,15,49,49,Lime,24); c.Box(1192,18,43,43,Panel,22);
     c.Text(1197,26,"360",16,White,37);
     if(page_!=Home && section_==Iptv) {
@@ -3294,7 +3298,11 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
-    if(approved){c.Box(1105,15,130,48,0xff101715u,5);c.Text(1120,17,clock,26,White,112);}
+    if(approved){const int64_t stamp=now<0?static_cast<int64_t>(std::time(nullptr)):now;
+        c.Box(1046,5,227,66,0xff0d1311u,5);c.Text(1063,4,ClockLabel(stamp),28,White,194);
+        c.Text(1064,33,ClockWeather::Date(stamp,clockSettings_.offset),15,Muted,198);
+        c.Text(1064,51,ClockWeather::Zone(clockSettings_.offset),13,Lime,198);}
+
 
     if(quickGuideOpen_){DrawQuickGuide(c);return;}
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
@@ -3648,8 +3656,8 @@ void ConsoleHome::PressAppearance(Key key){
     if(layoutPreview_){if(key==Back||key==Search)layoutPreview_=false;return;}
     if(key==Back){appearanceEditor_=false;notice_.clear();return;}
     if(key==Search){layoutPreview_=layoutDraft_!=0;return;}
-    if(key==Up)appearanceRow_=(appearanceRow_+5)%6;
-    if(key==Down)appearanceRow_=(appearanceRow_+1)%6;
+    if(key==Up)appearanceRow_=(appearanceRow_+7)%8;
+    if(key==Down)appearanceRow_=(appearanceRow_+1)%8;
     if(key==Left||key==Right||key==Accept){
         auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
         if(appearanceRow_==0)cycle(themeDraft_,HomeCanvas::ThemeCount);
@@ -3658,30 +3666,30 @@ void ConsoleHome::PressAppearance(Key key){
         if(appearanceRow_==3)cycle(appearanceDraft_.artwork,AppearanceSettings::ArtworkCount);
         if(appearanceRow_==4)cycle(layoutDraft_,DashboardLayout::Count);
         if(appearanceRow_==5)cycle(gridDraft_,GameGrid::Count);
+        if(appearanceRow_==6)clockDraft_.offset=ClockWeather::NextOffset(clockDraft_.offset,key==Left?-1:1);
+        if(appearanceRow_==7)cycle(clockDraft_.city,ClockWeather::CityCount);
     }
-    if(key==Favorite){appearanceDraft_={};themeDraft_=0;layoutDraft_=0;gridDraft_=0;notice_.clear();}
+    if(key==Favorite){appearanceDraft_={};clockDraft_={};themeDraft_=0;layoutDraft_=0;gridDraft_=0;notice_.clear();}
     if(key==Guide){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";}
     if(key==Refresh){
-        const auto previous=appearance_;const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
-        appearance_=appearanceDraft_;theme_=themeDraft_;layout_=layoutDraft_;gridPreference_=gridDraft_;gridFilter_=false;
-        if(SaveProfile()){appearanceEditor_=false;focus_=0;notice_="Aparencia salva.";}
-        else{appearance_=previous;theme_=previousTheme;layout_=previousLayout;gridPreference_=previousGrid;notice_="Falha ao salvar aparencia.";}
+        const auto previous=appearance_;const auto previousClock=clockSettings_;const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
+        appearance_=appearanceDraft_;clockSettings_=clockDraft_;theme_=themeDraft_;layout_=layoutDraft_;gridPreference_=gridDraft_;gridFilter_=false;
+        if(SaveProfile()){appearanceEditor_=false;focus_=0;if(previousClock.city!=clockSettings_.city)weather_={};if(clockSettings_.city)weatherPending_=true;notice_="Configuracoes salvas.";}
+        else{appearance_=previous;clockSettings_=previousClock;theme_=previousTheme;layout_=previousLayout;gridPreference_=previousGrid;notice_="Falha ao salvar configuracoes.";}
     }
 }
 void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
     c.Text(45,349,c.Tr("Personalizar aparencia"),27,White,1170);
-    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos","Layout","Biblioteca"};
-    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),DashboardLayout::Name(layoutDraft_),c.Tr(GameGrid::Name(gridDraft_))};
-    for(unsigned i=0;i<6;++i){
+    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos","Layout","Biblioteca","Fuso horario / UTC","Cidade para clima"};
+    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),DashboardLayout::Name(layoutDraft_),c.Tr(GameGrid::Name(gridDraft_)),ClockWeather::Zone(clockDraft_.offset),ClockWeather::Cities[clockDraft_.city].name};
+    for(unsigned i=0;i<8;++i){
         const int x=48+(i%2)*600,y=385+(i/2)*54;
         panel(c,x,y,582,49,Panel,i==appearanceRow_);
         c.Text(x+12,y+4,c.Tr(labels[i]),17,Muted,550);
         c.Text(x+12,y+21,"< "+values[i]+" >",20,Lime,550);
     }
-    if(appearanceDraft_.background==AppearanceSettings::Wallpaper)
-        c.Text(48,543,c.Tr(c.WallpaperReady()?"Imagem local carregada.":"Imagem ausente/invalida: fundo padrao aplicado."),19,White,1170);
-    c.Text(48,565,c.Tr("UserFiles/wallpaper.rgba | RGBA 640x360 | START Recarregar"),17,Muted,1170);
-    c.Text(48,607,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),18,Lime,1170);
+    c.Text(48,596,"Clima: Open-Meteo | Cidade manual | UTC nao altera o relogio do sistema",16,Muted,1170);
+    c.Text(48,618,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),17,Lime,1170);
 }
 
 void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const{
@@ -3928,7 +3936,7 @@ void ConsoleHome::OpenApprovedSlot(){
     Press(Accept);
     if(selected==Link){networkPeer_=true;}
     if(selected==Achievements||selected==Awards){localMilestones_=true;achievementsPage_=true;RefreshAchievements();}
-    if(selected==Settings){localMilestones_=true;appearanceDraft_=appearance_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;}
+    if(selected==Settings){localMilestones_=true;appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;}
     if(selected==Power){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();}
 }
 void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
@@ -3943,12 +3951,21 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     for(unsigned i=1;i<sizeof logo/sizeof logo[0];++i)c.Stroke(31+logo[i-1][0],19+logo[i-1][1],31+logo[i][0],19+logo[i][1],accent,5);
     c.Text(116,12,"INFINITY",30,White,172);c.Text(280,12,"360",30,accent,70);
     c.Text(117,47,"Xbox 360 Dashboard",16,Muted,233);
-    c.Glass(397,12,627,52,false);
-    c.Text(411,17,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),17,White,282);
-    c.Text(411,39,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),15,Muted,300);
+    c.Glass(371,12,390,52,false);
+    c.Text(383,16,"CPU "+thermal_.Celsius(0)+" | GPU "+thermal_.Celsius(1),16,White,370);
+    c.Text(383,38,"IP "+(network_.ipv4.empty()?std::string("-"):network_.ipv4),15,Muted,370);
     const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
-    c.Text(709,17,storage==storageVolumes_.end()?"HDD / USB -":StorageInfo::FormatBytes(storage->freeBytes)+" livres",17,White,300);
-    c.Text(709,39,"V" INFINITY360_VERSION,15,Muted,280);
+    c.Glass(772,12,266,52,false);
+    const bool has=weather_.valid&&weather_.city==clockSettings_.city&&clockSettings_.city;
+    const bool fresh=has&&weather_.Fresh(std::time(nullptr));
+    if(has){
+        const unsigned wc=fresh?accent:Muted;
+        if(weather_.code<=1){c.Box(785,25,22,22,wc,11);if(weather_.day){for(int i=0;i<4;++i){int dx=i%2?17:0,dy=i%2?0:17;int sign=i<2?-1:1;c.Stroke(796+sign*dx,36+sign*dy,796+sign*(dx+dx/3),36+sign*(dy+dy/3),wc,2);}}else c.Box(794,22,17,17,0xff101715u,8);}
+        else{c.Box(783,33,31,12,wc,6);c.Box(789,25,18,19,wc,9);if(weather_.code>=51){c.Stroke(789,48,786,53,wc,2);c.Stroke(799,48,796,53,wc,2);c.Stroke(809,48,806,53,wc,2);}}
+        c.Text(821,15,weather_.Temperature()+" | "+ClockWeather::Cities[weather_.city].name,17,White,209);
+        c.Text(821,39,fresh?weather_.Condition():"Clima desatualizado",13,Muted,209);
+    }else{c.Text(785,16,clockSettings_.city?ClockWeather::Cities[clockSettings_.city].name:"Clima desativado",17,White,242);c.Text(785,39,clockSettings_.city?"Y Consultar clima":"Configure a cidade",14,Muted,242);}
+    if(storage!=storageVolumes_.end())c.Text(793,638,StorageInfo::FormatBytes(storage->freeBytes)+" livres",15,Muted,440);
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};
     c.Box(0,79,1280,82,0xff111915u);
     for(int i=0;i<Hero;++i){
@@ -3992,5 +4009,5 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     }
     if(shelf.empty())c.Text(45,477,"Nenhum jogo localizado. Y Atualizar biblioteca.",23,Muted,1160);
     if(preview)c.Text(40,636,"Previa de layout | B Voltar ao editor",17,accent,1180);
-    else c.Text(30,634,"R3 Guia rapido | RB Loja | LB Notificacoes | START Atalhos",16,Muted,1190);
+    else c.Text(30,634,"R3 Guia | RB Loja | Y Atualizar | Clima: Open-Meteo",16,Muted,747);
 }

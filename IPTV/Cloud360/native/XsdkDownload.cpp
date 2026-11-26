@@ -3,6 +3,7 @@
 #include "ArtImport.h"
 #include "DownloadRange.h"
 #include "StoreHostPolicy.h"
+#include "WeatherJson.h"
 #include <cctype>
 #include <curl/curl.h>
 #include <fstream>
@@ -311,4 +312,12 @@ std::string XsdkUnityCover(unsigned title,const std::string& root,const std::fun
     if(!fetched)return error;
     success=ArtImport::Save(ws,root,title,true,data,error);
     return success?"Capa XboxUnity salva na area pessoal.":error;
+}
+
+std::string XsdkWeather(unsigned city,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,ClockWeather::Reading& reading){
+    reading={};const auto url=ClockWeather::Url(city);if(url.empty())return "Selecione uma cidade.";
+    std::string data;bool success=false;const auto error=fetchMetadata(url,16384,false,root,progress,data,success);
+    if(!success)return "Clima indisponivel | "+error;
+    if(!ClockWeather::ParseReading(data,city,reading))return "Resposta meteorologica invalida.";
+    return "Clima atualizado | Open-Meteo";
 }

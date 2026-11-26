@@ -1,6 +1,7 @@
 #pragma once
 #include "StorePackage.h"
 #include "UnityCatalog.h"
+#include "ClockWeather.h"
 #include <functional>
 // Downloads only explicitly authorized store packages. Callback returns false
 // on cancellation/display failure. A successful result is verified staging.
@@ -18,3 +19,5 @@ std::string XsdkUnityDownload(const XboxExecutionInfo& info,const UnityUpdate& s
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
 
 std::string XsdkUnityCover(unsigned title,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
+
+std::string XsdkWeather(unsigned city,const std::string& root,const std::function<bool(unsigned long long,unsigned long long)>& progress,ClockWeather::Reading& reading);

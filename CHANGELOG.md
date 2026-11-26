@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.45 — Clima, hora e UTC (sem build)
+
+- Cabeçalho com relógio, data, UTC, cidade e pictogramas de condições atuais.
+- Configuração persistente, offset de 15 em 15 minutos, 16 cidades manuais, consulta HTTPS explícita Open-Meteo.
+- Testes de parsing e virada de data preparados; capturas solicitadas.
+
 ## V0.2.44 — Reconstrução visual Top Icons (sem build XEX)
 
 - Composição do mockup aprovado: barra de 12 ícones, hero, seis atalhos e até dez capas verticais.

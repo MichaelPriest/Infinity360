@@ -1,3 +1,4 @@
+#include "WeatherJson.h"
 #include "ConsoleHome.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
@@ -1195,6 +1196,18 @@ int main(int argc,char** argv) {
         }
         unsigned mode=0;assert(DashboardLayout::Parse("9",mode)&&mode==9);
         assert(!DashboardLayout::Parse("10",mode)&&mode==9);
+    }
+    // Clock settings and bounded weather parser: no network dependency.
+    {
+        ClockWeather::Settings z;assert(ClockWeather::Settings::Parse("-180:1",z));assert(z.Encode()=="-180:1");
+        assert(!ClockWeather::Settings::Parse("900:1",z)&&z.offset==-180);
+        assert(!ClockWeather::Settings::Parse("-181:1",z));assert(!ClockWeather::Settings::Parse("0:999",z));
+        assert(ClockWeather::Zone(-180)=="UTC-03:00");assert(ClockWeather::Time(1704067200,-180)=="21:00");
+        assert(ClockWeather::Date(1704067200,-180)=="31/12/2023");
+        ClockWeather::Reading wx;assert(ClockWeather::ParseReading(R"({"current":{"temperature_2m":24.2,"weather_code":2,"is_day":1,"time":1704067200}})",1,wx));
+        assert(wx.valid&&wx.city==1&&wx.Fresh(1704069000)&&!wx.Fresh(1704075000));
+        assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":null,"weather_code":2,"is_day":1,"time":1704067200}})",1,wx));
+        assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":20,"weather_code":999,"is_day":1,"time":1704067200}})",1,wx));
     }
     // Appearance: invalid profile values leave the old preferences intact.
     {

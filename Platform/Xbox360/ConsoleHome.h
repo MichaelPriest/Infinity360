@@ -25,6 +25,7 @@
 #include "DiscInstaller.h"
 #include "DashboardUpdate.h"
 #include "ConsoleStatus.h"
+#include "ClockWeather.h"
 #include "LaunchStatistics.h"
 #include "GpdAchievements.h"
 #include "NotificationCenter.h"
@@ -50,6 +51,9 @@ public:
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
     unsigned Language()const{return language_;}
+    std::string ClockLabel(int64_t epoch)const{return ClockWeather::Time(epoch,clockSettings_.offset);}
+    bool TakeWeatherRequest(unsigned& city){if(!weatherPending_)return false;weatherPending_=false;city=clockSettings_.city;return city!=0;}
+    void WeatherResult(const ClockWeather::Reading& reading,const std::string& message){if(reading.valid&&reading.city==clockSettings_.city)weather_=reading;notice_=message;}
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
@@ -283,6 +287,9 @@ private:
     void PrepareCoverBatch();
     unsigned artTitle_=0;
     ConsoleStatus status_;
+    ClockWeather::Settings clockSettings_,clockDraft_;
+    ClockWeather::Reading weather_;
+    bool weatherPending_=false;
     unsigned theme_=0,safeArea_=0,idleMinutes_=0,language_=0;
     AppearanceSettings appearance_,appearanceDraft_;
     unsigned layout_=0,layoutDraft_=0;

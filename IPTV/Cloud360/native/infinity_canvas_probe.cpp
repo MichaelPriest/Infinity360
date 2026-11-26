@@ -257,7 +257,7 @@ int main(){
     // Longer than the minimal GPU probe, but still bounded.
     std::string clock;
     for(unsigned frame=0;continuous||frame<3600;++frame){
-        if(frame%60==0){const auto now=std::time(nullptr);char value[8]{};if(auto* local=std::localtime(&now))std::strftime(value,sizeof value,"%H:%M",local);if(clock!=value){clock=value;dirty=true;}}
+        if(frame%60==0){const auto value=menu.ClockLabel(std::time(nullptr));if(clock!=value){clock=value;dirty=true;}}
         INPUT_STATE input{};
         uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
         if(input.gamepad.thumb_lx < -16000)buttons|=INPUT_GAMEPAD_DPAD_LEFT;
@@ -375,6 +375,15 @@ int main(){
                 }
                 menu.CoverBatchResult(saved,failed,cancelled);
                 if(videoFailed){ok=false;break;}
+            }
+            unsigned weatherCity=0;
+            if(menu.TakeWeatherRequest(weatherCity)){
+                ClockWeather::Reading reading;bool displayFailed=false;
+                auto progress=[&](unsigned long long,unsigned long long){INPUT_STATE state{};return XamInputGetState(0,0,&state)!=ERROR_SUCCESS||!(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));};
+                canvas.Background();canvas.Text(48,100,"INFINITY | Consultando clima",36,WHITE,1180);
+                canvas.Text(48,560,"B Cancelar | Open-Meteo",22,LIME,1180);
+                if(!p.Show(canvas,true)){ok=false;break;}
+                auto message=XsdkWeather(weatherCity,dir,progress,reading);menu.WeatherResult(reading,message);dirty=true;
             }
             if(menu.TakeArtRequest(artTitle,artCover,artRemote)){
                 menu.StopFtp();bool success=false,videoFailed=false;std::string result;
