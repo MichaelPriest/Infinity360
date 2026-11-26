@@ -21,3 +21,7 @@ Este módulo portátil é uma etapa isolada, baseada na main V0.2.46. A sessão 
 ## Teste portátil
 
 O alvo CTest social_profile cobre seleção de controle, ausência de provider, saída de sessão, convidado, origem de teste, Gamerscore zero, identificador de avatar inválido e habilitação de chat condicionada. Os testes foram adicionados, mas não houve execução de CI ou compilação XEX nesta revisão.
+
+## Integração do cabeçalho e Guide
+
+ConsoleHome consulta os quatro slots XAM a cada dois segundos no XSDK, mantém o controle selecionado enquanto autenticado e atualiza o cabeçalho. O layout horizontal preserva relógio e clima; o Guide mostra nome, controle, Gamerscore quando conhecido, ícone neutro e chat explicitamente indisponível. A interface de teste é identificada como PERFIL DE TESTE. Gamerscore e Gamerpic reais e interfaces de amigos/chat ainda não integrados. Capturas 70 e 71 previstas no workflow nativo da branch; não são fotos de hardware. Build XEX não solicitada, integração ainda não homologada.
