@@ -9,8 +9,8 @@ enum Slot { Home, Games, Apps, Iptv, Store, Downloads, System, Network, Profiles
 struct Rect {int x,y,w,h;};
 constexpr size_t ShelfSize=6,HeroSize=4;
 inline size_t Pages(size_t count){return count?1+(count-1)/ShelfSize:1;}
-inline size_t Page(size_t page,size_t count){return std::min(page,Pages(count)-1);}
-inline size_t Visible(size_t page,size_t count){return std::min(ShelfSize,count-Page(page,count)*ShelfSize);}
+inline size_t PageIndex(size_t page,size_t count){return std::min(page,Pages(count)-1);}
+inline size_t Visible(size_t page,size_t count){return std::min(ShelfSize,count-PageIndex(page,count)*ShelfSize);}
 inline size_t Featured(size_t index,size_t count){return count?index%std::min(HeroSize,count):0;}
 inline bool ValidOrder(const std::string& order){
     if(order.size()!=6)return false;

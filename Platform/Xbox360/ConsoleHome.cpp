@@ -1751,6 +1751,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(key==Refresh) {
+        if(ApprovedHeader()){PressApprovedHome(key);return "";}
         if(section_==System && page_!=Home) {
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
@@ -4024,12 +4025,13 @@ bool ConsoleHome::ApprovedCarouselTick(uint64_t now){
 bool ConsoleHome::PressApprovedHome(Key key){
     using namespace ApprovedHome;
     const auto shelf=ApprovedShelf();
-    approvedPage_=Page(approvedPage_,shelf.size());approvedHero_=Featured(approvedHero_,shelf.size());
+    approvedPage_=ApprovedHome::PageIndex(approvedPage_,shelf.size());approvedHero_=Featured(approvedHero_,shelf.size());
     const size_t visible=Visible(approvedPage_,shelf.size());
     if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=visible)focus_=LibraryLink;
     if(key==Refresh){
         Reload();RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();approvedPage_=0;approvedHero_=0;
         if(clockSettings_.city)weatherPending_=true;
+        if(notice_.empty())notice_="Biblioteca e indicadores atualizados.";
         if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=Visible(0,ApprovedShelf().size()))focus_=LibraryLink;
         return true;
     }
@@ -4062,7 +4064,7 @@ void ConsoleHome::OpenApprovedSlot(){
     if(selected==LibraryLink){searchTerm_.clear();Enter(Library);return;}
     if(selected==Weather){weatherPanel_=true;notice_.clear();if(clockSettings_.city&&!weather_.valid)weatherPending_=true;return;}
     if(selected==Hero||CoverSlot(selected)){
-        const size_t i=selected==Hero?Featured(approvedHero_,shelf.size()):Page(approvedPage_,shelf.size())*ShelfSize+static_cast<size_t>(selected-FirstCover);
+        const size_t i=selected==Hero?Featured(approvedHero_,shelf.size()):ApprovedHome::PageIndex(approvedPage_,shelf.size())*ShelfSize+static_cast<size_t>(selected-FirstCover);
         if(i>=shelf.size()){Enter(Library);return;}
         const std::string path=shelf[i]->executable;searchTerm_.clear();Enter(Library);
         for(size_t j=0;j<visible_.size();++j)if(visible_[j]->executable==path){row_=static_cast<int>(j);page_=Details;RefreshTitleMetadata();return;}
@@ -4117,7 +4119,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     using namespace ApprovedHome;
     const auto& appearance=preview?appearanceDraft_:appearance_;
     const auto shelf=ApprovedShelf();const int active=preview?Home:focus_;
-    const size_t page=Page(preview?0:approvedPage_,shelf.size()), visible=Visible(page,shelf.size());
+    const size_t page=ApprovedHome::PageIndex(preview?0:approvedPage_,shelf.size()), visible=Visible(page,shelf.size());
     const Game* featured=shelf.empty()?nullptr:shelf[Featured(preview?0:approvedHero_,shelf.size())];
     const unsigned accent=0xffa8ff00u;
     const char* names[]={"Início","Jogos","Apps","IPTV","Loja","Downloads","Sistema","Rede","Perfis","Conquistas","Configurar","Energia"};

@@ -199,10 +199,23 @@ int main(int argc,char** argv) {
     }
     {using namespace ApprovedHome;
      assert(Pages(0)==1&&Pages(6)==1&&Pages(7)==2&&Pages(13)==3);
-     assert(Page(99,7)==1&&Visible(0,7)==6&&Visible(1,7)==1&&Visible(2,0)==0);
+     assert(PageIndex(99,7)==1&&Visible(0,7)==6&&Visible(1,7)==1&&Visible(2,0)==0);
      assert(Featured(4,8)==0&&Featured(3,2)==1&&Featured(99,0)==0);
      assert(ValidOrder("012345")&&ValidOrder("543210")&&!ValidOrder("012344")&&!ValidOrder("01234"));
      assert(Move(LibraryLink,3,6)>=FirstCover&&Move(LibraryLink,3,6)<Weather);
+    }
+    {using namespace ApprovedHome;
+     const auto p=root/"ApprovedNavigation";fs::create_directories(p);
+     for(int n=1;n<=7;++n){auto g=p/"Games"/("Title"+std::to_string(n));fs::create_directories(g);std::ofstream(g/"default.xex")<<"fixture";}
+     ConsoleHome home(p.string()+"/",{(p/"Games").string()});home.Load();
+     // Find a route using the same public directional geometry, then execute it.
+     auto go=[&](int target){std::vector<std::vector<int>> routes(End);std::vector<bool> seen(End,false);std::vector<int> queue{Home};seen[Home]=true;
+        for(size_t k=0;k<queue.size()&&!seen[target];++k)for(int d=0;d<4;++d){int n=Move(queue[k],d,6);if(!seen[n]){seen[n]=true;routes[n]=routes[queue[k]];routes[n].push_back(d);queue.push_back(n);}}
+        assert(seen[target]);for(int d:routes[target])home.Press(static_cast<ConsoleHome::Key>(d));};
+     home.Press(ConsoleHome::Guide);home.Press(ConsoleHome::PageDown);home.Press(ConsoleHome::Refresh);
+     {std::ifstream in(p/"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("U\t102345\n")!=std::string::npos);}
+     home.Load();go(FirstCover);home.Press(ConsoleHome::PageDown);home.Press(ConsoleHome::Favorite);
+     {std::ifstream in(p/"aurorax-profile.txt");std::string data((std::istreambuf_iterator<char>(in)),{});assert(data.find("F\t")!=std::string::npos&&data.find("Title7")!=std::string::npos);}
     }
     fs::create_directories(root/"Games"/"Halo 3");
     const std::string exe=(root/"Games"/"Halo 3"/"default.xex").string();
