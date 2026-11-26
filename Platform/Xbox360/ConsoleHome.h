@@ -62,6 +62,8 @@ public:
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){social_=InfinitySocial::Resolve(snapshot,preferred);}
     const InfinitySocial::Header& SocialHeader()const{return social_;}
+    bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
+    void SigninResult(bool accepted){socialPolled_=false;notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
     bool IdleEligible()const{return page_==Home&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
@@ -117,7 +119,7 @@ private:
     void DrawSocialGuide(HomeCanvas& c)const;
     InfinitySocial::Header social_;
     uint64_t lastSocialPoll_=0;
-    bool socialPolled_=false;
+    bool socialPolled_=false,signinPending_=false;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
     std::vector<Game> games_, tools_;
     std::set<unsigned> translationReferences_;
