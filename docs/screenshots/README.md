@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**72 capturas nativas** — commit [df839ec079fa](https://github.com/MichaelPriest/Infinity360/commit/df839ec079fae8a0d62114ac9537b24f5e39bbeb).
+**72 capturas nativas** — commit [60d31fcba62e](https://github.com/MichaelPriest/Infinity360/commit/60d31fcba62e7ff87e774f68d2c88fbf04d175a0).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -16,8 +16,8 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Tela inicial — Series Infinity (layout padrão)** | **Guia rápido — atalhos e painel de perfil** |
 | ![Guia rápido — personalização dos atalhos](41-guia-edicao.png) | ![Tela inicial — perfil local de teste](70-perfil-teste.png) |
 | **Guia rápido — personalização dos atalhos** | **Tela inicial — perfil local de teste** |
-| ![Guia rápido — perfil de teste e comunicação indisponível](71-guia-perfil-teste.png) | ![Home — grupo Sistema, com funções secundárias](72-home-grupos.png) |
-| **Guia rápido — perfil de teste e comunicação indisponível** | **Home — grupo Sistema, com funções secundárias** |
+| ![Guia rápido — perfil de teste, mensagens, chat e editor de avatar (indisponíveis no host)](71-guia-perfil-teste.png) | ![Home — grupo Sistema, com funções secundárias](72-home-grupos.png) |
+| **Guia rápido — perfil de teste, mensagens, chat e editor de avatar (indisponíveis no host)** | **Home — grupo Sistema, com funções secundárias** |
 
 ### Biblioteca e conteúdo de jogos
 
