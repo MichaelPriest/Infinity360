@@ -3687,7 +3687,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(795,165,social_.origin==Origin::Test?"PERFIL DE TESTE":social_.controller>=0?social_.displayName:"Perfil Xbox",18,White,230);
     c.TextFit(795,201,frame?"Corpo inteiro (estatico)":portrait?"Retrato 2D":"Imagem indisponivel",16,White,230);
     c.TextFit(795,239,"Renderizador 3D",17,Lime,230);
-    c.TextFit(795,267,"Leitor de geometria preparado",15,Muted,230);
+    c.TextFit(795,267,"Rasterizador CPU em teste",15,Muted,230);
     c.TextFit(795,305,"Exportacoes XAM",17,Lime,230);
     c.TextFit(795,333,avatarCapabilities_.checked?number(avatarCapabilities_.Count())+"/6 localizadas":"Nao consultadas",16,White,230);
     c.TextFit(795,365,avatarManifest_.known?number(avatarManifest_.populated)+" componentes identificados":"Manifesto nao confirmado",13,Muted,230);

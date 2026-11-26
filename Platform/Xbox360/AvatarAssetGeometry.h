@@ -32,7 +32,7 @@ struct AvatarMemoryView {
 };
 struct AvatarMeshRange {
     std::uint32_t vertices=0,vertexBytes=0,indices=0,indexBytes=0;
-    std::uint32_t triangles=0,vertexCount=0,uvCount=0;
+    std::uint32_t triangles=0,vertexCount=0,uvCount=0,vertexStride=0,indexStride=0;
 };
 struct AvatarGeometry {
     unsigned joints=0,components=0,textures=0;
@@ -74,18 +74,26 @@ inline bool ParseAvatarGeometry(const AvatarMemoryView& cpu,const AvatarMemoryVi
                 const auto* b=batches+j*512u;
                 AvatarMeshRange mesh;
                 mesh.triangles=AvatarBE32(b+484);mesh.vertexCount=AvatarBE32(b+488);
-                mesh.uvCount=AvatarBE32(b+492);mesh.vertexBytes=AvatarBE32(b+496);
-                mesh.indexBytes=AvatarBE32(b+500);mesh.vertices=AvatarBE32(b+504);
+                mesh.uvCount=AvatarBE32(b+492);mesh.vertexStride=AvatarBE32(b+496);
+                mesh.indexStride=AvatarBE32(b+500);mesh.vertices=AvatarBE32(b+504);
                 mesh.indices=AvatarBE32(b+508);
                 if(!mesh.triangles||!mesh.vertexCount||mesh.vertexCount>65535||
-                   mesh.uvCount>8||!mesh.vertexBytes||!mesh.indexBytes||
-                   mesh.indexBytes<std::uint64_t(mesh.triangles)*6u||
-                   !gpu.Read(mesh.vertices,mesh.vertexBytes)||!gpu.Read(mesh.indices,mesh.indexBytes))return false;
+                   mesh.uvCount>8||mesh.vertexStride<28u+4u*mesh.uvCount||
+                   mesh.vertexStride>256||mesh.indexStride!=2)return false;
+                const auto vertexBytes=std::uint64_t(mesh.vertexCount)*mesh.vertexStride;
+                const auto indexBytes=std::uint64_t(mesh.triangles)*3u*mesh.indexStride;
+                if(vertexBytes>vb||indexBytes>ib)return false;
+                mesh.vertexBytes=static_cast<std::uint32_t>(vertexBytes);
+                mesh.indexBytes=static_cast<std::uint32_t>(indexBytes);
+                if(!gpu.Read(mesh.vertices,mesh.vertexBytes)||!gpu.Read(mesh.indices,mesh.indexBytes))return false;
                 // A batch must point inside its owning model's global buffers.
                 const auto vbase=AvatarBE32(m+36),ibase=AvatarBE32(m+40);
                 if(mesh.vertices<vbase||mesh.indices<ibase||
                    std::uint64_t(mesh.vertices)+mesh.vertexBytes>std::uint64_t(vbase)+vb||
                    std::uint64_t(mesh.indices)+mesh.indexBytes>std::uint64_t(ibase)+ib)return false;
+                const auto* indices=gpu.Read(mesh.indices,mesh.indexBytes);
+                for(std::size_t k=0;k<mesh.indexBytes;k+=2)
+                    if(((unsigned(indices[k])<<8)|indices[k+1])>=mesh.vertexCount)return false;
                 result.meshes.push_back(mesh);
             }
         }

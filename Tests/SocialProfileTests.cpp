@@ -5,6 +5,7 @@
 #include "AvatarPreview.h"
 #include "AvatarManifest.h"
 #include "AvatarAssetGeometry.h"
+#include "AvatarGeometryRender.h"
 #include "ProfilePrivileges.h"
 #include <iostream>
 using namespace InfinitySocial;
@@ -424,10 +425,15 @@ int main() {
     PutBE32(model+44,cb+208);PutBE32(model+48,cb+720);
     auto* batch=acpu.data()+208;
     PutBE32(batch+484,1);PutBE32(batch+488,3);PutBE32(batch+492,1);
-    PutBE32(batch+496,96);PutBE32(batch+500,6);
+    PutBE32(batch+496,32);PutBE32(batch+500,2);
     PutBE32(batch+504,gb);PutBE32(batch+508,gb+96);
     auto* texture=acpu.data()+720;
     PutBE32(texture+4,4);PutBE32(texture+8,4);PutBE32(texture+12,64);PutBE32(texture+36,gb+128);
+    // A nondegenerate triangular fixture, IEEE754 big endian, indices 0,1,2.
+    PutBE32(agpu.data(),0xbf800000u);PutBE32(agpu.data()+4,0xbf800000u);
+    PutBE32(agpu.data()+32,0x3f800000u);PutBE32(agpu.data()+36,0xbf800000u);
+    PutBE32(agpu.data()+68,0x3f800000u);
+    agpu[99]=1;agpu[101]=2;
     const AvatarMemoryView cpuView{acpu.data(),cb,acpu.size()},gpuView{agpu.data(),gb,agpu.size()};
     AvatarGeometry geometry;
     CHECK(ParseAvatarGeometry(cpuView,gpuView,geometry));
@@ -441,6 +447,16 @@ int main() {
     PutBE32(acpu.data()+4,0);PutBE32(texture+36,gb+500);
     CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry));
     PutBE32(texture+36,gb+128);CHECK(ParseAvatarGeometry(cpuView,gpuView,geometry));
+    std::vector<unsigned char> render;
+    CHECK(RenderAvatarGeometry(cpuView,gpuView,64,96,0,render));
+    CHECK(ValidAvatarFrame(64,96,render));
+    CHECK(RenderAvatarGeometry(cpuView,gpuView,64,96,0.5f,render));
+    agpu[101]=3;CHECK(!ParseAvatarGeometry(cpuView,gpuView,geometry));
+    CHECK(!RenderAvatarGeometry(cpuView,gpuView,64,96,0,render)&&render.empty());
+    agpu[101]=2;PutBE32(agpu.data(),0x7fc00000u);
+    CHECK(!RenderAvatarGeometry(cpuView,gpuView,64,96,0,render));
+    PutBE32(agpu.data(),0xbf800000u);
+    CHECK(!RenderAvatarGeometry(cpuView,gpuView,257,96,0,render));
     std::cout << "social profile checks passed\n";
     return 0;
 }

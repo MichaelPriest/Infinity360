@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.72 — Rasterização diagnóstica e correção do ABI de malhas
+
+- Corrige stride de vértice/índice nos batches, calcula tamanho total e valida índices contra contagem de vértices.
+- Rasterizador CPU portátil: posições originais big-endian, projeção ortográfica, rotação, iluminação neutra, Z-buffer e RGBA compatível com HomeCanvas; orçamento de trabalho limitado.
+- Fixture triangular sintético para testar desenho e rejeição de dados inválidos. Sem assets reais, texturas, skinning ou inicialização XAM ainda; sem XEX/release.
+
 ## V0.2.71 — Leitor de geometria e planejamento de buffers oficiais
 
 - Leitor portátil do grafo XAM: esqueleto, modelos, batches de triângulos, buffers de vértices/índices e texturas; validação de endereços e contagens em regiões CPU/GPU delimitadas.
