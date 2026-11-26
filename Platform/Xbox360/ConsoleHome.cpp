@@ -3788,7 +3788,7 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     c.Text(219,165,game.name,31,White,398);
     c.Text(219,211,game.device,18,Muted,398);
     c.Text(219,241,m.package?(m.volumeType==0?"STFS / GOD / XBLA":"SVOD"):"XEX",21,Lime,398);
-    if(m.discCount)c.Text(219,273,c.Tr("Disco")+" "+number(m.discNumber)+"/"+number(m.discCount),19,Muted,398);
+    if(m.discCount)c.Text(219,273,std::string(c.Tr("Disco"))+" "+number(m.discNumber)+"/"+number(m.discCount),19,Muted,398);
     c.Text(219,301,contains(pinned_,game.executable)?c.Tr("FIXADO"):Starred(game)?c.Tr("Favorito"):"",17,Lime,398);
     panel(c,218,336,395,39,0xff102923u,true);
     c.Text(232,343,c.Tr(m.package?"A Solicitar montagem":"A Jogar"),21,Lime,365);

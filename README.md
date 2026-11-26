@@ -314,3 +314,5 @@ R3 na Store abre fontes independentes: Todos, Catálogo local/Homebrew, XboxUnit
 ### V0.2.40 — Catálogo oficial Nexus e build solicitada
 
 Sete itens iniciais: os seis homebrews revisados e o ZIP oficial Nexus Dashboard v1.0, 15.616.416 bytes, SHA-256 idêntico no manifesto update.json e no asset oficial da Release. Download sob demanda; instalação manual recomendada, não é a API Andromeda. Fontes Series360 e X-Store mantidas como referência e provedor configurável; endpoints de catálogos originais ainda não validados. Testes do filtro por origem adicionados. Build XSDK V0.2.40 solicitada, resultado deve ser consultado em Actions; homologação Xenia/console e downloads pendente. Capturas do renderer solicitadas separadamente.
+
+**Correção V0.2.40:** erro C++ de concatenação em detalhes modernos corrigido; compilação e capturas solicitadas novamente. A publicação depende dos gates.

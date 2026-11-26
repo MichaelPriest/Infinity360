@@ -197,3 +197,5 @@ Consulte as Releases por commit para identificar as revisões efetivamente compi
 ### Correção V0.2.33 (rebuild)
 
 - Cancelamento de edição do guia rápido restaura a seleção original. Rebuild solicitada; gate CTest preservado.
+
+- V0.2.40 retry: corrected const char* concatenation in modern game details (failed XSDK, portable and screenshot compilers). Mandatory gates retained.
