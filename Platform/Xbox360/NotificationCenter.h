@@ -10,7 +10,7 @@
 // are added by callers. Legacy rows are imported as already read.
 class NotificationCenter {
 public:
-    enum Filter { All, Unread, Attention, FilterCount };
+    enum Filter { All, Unread, Attention, Social, FilterCount };
     enum Level { Info, Success, Warning };
     struct Item {
         std::string text;
@@ -31,7 +31,7 @@ public:
         const auto has=[&](const char* key){return message.find(key)!=std::string::npos;};
         if(has("Falha")||has("falhou")||has("recusad")||has("interrompid")||has("cancelad"))item.level=Warning;
         else if(has("verificad")||has("instalad")||has("concluido")||has("importad")||has("sincronizado")||has("salvo")||has("copiado")||has("recuperada"))item.level=Success;
-        item.area=has("FTP")?"Rede":has("lancamento")?"Jogos":
+        item.area=(message.compare(0,12,"Sessao Xbox:")==0||message.compare(0,12,"Perfil Xbox:")==0)?"Social":has("FTP")?"Rede":has("lancamento")?"Jogos":
             has("Store")||has("loja")||has("Download")||has("Catalogo")?"Loja":
             has("Backup")||has("Recuperacao")||has("recuperada")||has("TU ")||has("XboxUnity")||has("conteudo")?"Conteudo":
             has("DVD")||has("GOD")?"Discos":
@@ -81,7 +81,7 @@ public:
         std::vector<size_t> result;
         for(size_t i=items_.size();i>0;--i){
             const auto& item=items_[i-1];
-            if(filter==All||(filter==Unread&&!item.read)||(filter==Attention&&item.level==Warning))result.push_back(i-1);
+            if(filter==All||(filter==Unread&&!item.read)||(filter==Attention&&item.level==Warning)||(filter==Social&&item.area=="Social"))result.push_back(i-1);
         }
         return result;
     }

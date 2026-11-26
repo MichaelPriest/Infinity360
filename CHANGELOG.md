@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.56 — Central social e consistência de identidade
+
+- Detecção de troca de conta no mesmo controle e confirmação de aumentos de Gamerscore/conquistas em duas amostras; baseline silencioso e descarte após mudanças de perfil/estado ou dados ausentes.
+- XUID somente em RAM para comparação, inclusive ao delegar UI; nenhum identificador persistido.
+- Filtro Social na central de notificações; orienta acesso a mensagens/voz pelo botão Xbox, sem prometer integração direta. Testes preparados, sem XEX/release.
+
 ## V0.2.55 — Conquistas nativas por jogo instalado
 
 - Central alterna GPD offline e títulos instalados com Title ID conhecido, sem atribuir inventário ao histórico Xbox.

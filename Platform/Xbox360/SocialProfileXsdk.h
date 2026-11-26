@@ -81,13 +81,14 @@ inline Snapshot ReadXsdkProfiles(bool readPicture=false,int preferred=-1) {
         if (XamUserGetSigninInfo(i, 0, &second) != 0 ||
             second.signin_state != state || second.xuid != first.xuid ||
             XamUserGetSigninState(i) != state) continue;
-        // Identity is compared in memory only; never retained, logged or displayed.
+        // Identity retained only in RAM for safe comparison, never logged or displayed.
         std::size_t length = 0;
         while (length < sizeof(second.name) && second.name[length] != '\0') ++length;
         result.slots[i] = FromXam(state, std::string(second.name, length));
         result.slots[i].gamerscoreKnown = scoreKnown;
         if (scoreKnown) result.slots[i].gamerscore = score;
         identities[i]=second.xuid;
+        result.slots[i].identity=second.xuid;
     }
     // One selected user's picture per refresh, only with explicit opt-in.
     // ABI is experimental: do not call when the export is missing.

@@ -23,7 +23,7 @@ inline std::string OpenNativeSocialUI(NativeAction action,const Header& expected
     const auto user=static_cast<std::uint32_t>(expected.controller);
     USER_SIGNIN_INFO first{},second{};
     const auto state=expected.state==SignIn::Online?2u:1u;
-    if(XamUserGetSigninInfo(user,0,&first)!=0||first.xuid==0||first.signin_state!=state||
+    if(XamUserGetSigninInfo(user,0,&first)!=0||first.xuid==0||first.xuid!=expected.identity||first.signin_state!=state||
        XamUserGetSigninInfo(user,0,&second)!=0||first.xuid!=second.xuid||
        second.signin_state!=state||XamUserGetSigninState(user)!=state)
         return "O perfil mudou; selecione novamente.";

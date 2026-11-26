@@ -555,6 +555,7 @@ bool ConsoleHome::Tick() {
         SetSocialSnapshot(InfinitySocial::ReadXsdkProfiles(!TransferRunning()&&InfinitySocial::GamerpicEnabled(dir_),before.controller),before.controller);
         socialChanged=!InfinitySocial::SameHeader(before,social_);
         if(const char* event=socialEvents_.Observe(social_)){RecordEvent(event);socialChanged=true;}
+        if(const char* event=socialCounters_.Observe(social_)){RecordEvent(event);socialChanged=true;}
     }
 #endif
     bool thermalChanged=false;
@@ -3045,7 +3046,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     const auto rows=notifications_.Visible(eventFilter_);
-    static const char* filters[]={"Todas","Nao lidas","Atencao"};
+    static const char* filters[]={"Todas","Nao lidas","Atencao","Social"};
     c.Text(45,349,std::string(c.Tr("Notificacoes"))+" | "+number(notifications_.UnreadCount())+" "+c.Tr("nao lidas"),26,White,1170);
     for(unsigned i=0;i<NotificationCenter::FilterCount;++i){
         const int x=48+static_cast<int>(i)*210;
@@ -3454,7 +3455,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
         social_.controller>=0?"Controle "+number(static_cast<size_t>(social_.controller+1)):"Controle: indisponível",
         (social_.gamerscoreKnown?"G "+number(social_.gamerscore):"G indisponível")+std::string(" | ")+
         (social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponíveis"),
-        "Cartão do jogador","Mensagens / voz: pendentes","Amigos Xbox"
+        "Cartão do jogador","Mensagens / voz: botão Xbox","Amigos Xbox"
     };
     const int icons[]={1,9,27,19,8};
     for(int row=0;row<5;++row){

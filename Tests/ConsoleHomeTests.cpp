@@ -1274,6 +1274,9 @@ int main(int argc,char** argv) {
     }
     {
         NotificationCenter center;
+        {NotificationCenter social;assert(social.Append("2026-01-01 00:00Z | Sessao Xbox: conta ativa alterada"));
+         assert(social.Append("Perfil Xbox: aumento de conquistas reportado"));assert(social.Append("Copia agendada"));
+         assert(social.Visible(NotificationCenter::Social).size()==2);}
         const auto path=(root/"notification-test.log").string();
         {std::ofstream out(path);out<<"2026-11-25 21:00Z | FTP iniciado\n";}
         assert(center.Load(path)&&center.UnreadCount()==0);

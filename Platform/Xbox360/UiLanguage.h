@@ -46,6 +46,7 @@ inline const char* Translate(unsigned language,const char* key){
         {"Todas","All","Todas"},
         {"Nao lidas","Unread","Sin leer"},
         {"Atencao","Attention","Atención"},
+        {"Social","Social","Social"},
         {"Lida","Read","Leída"},
         {"Nova","New","Nueva"},
         {"Rede","Network","Red"},

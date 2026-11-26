@@ -39,6 +39,7 @@ struct Slot {
     std::vector<unsigned char> gamerpic;
     bool achievementsKnown=false;
     unsigned achievements=0;
+    std::uint64_t identity=0; // RAM only; never serialize or render.
 };
 struct Snapshot {
     std::array<Slot,4> slots{};
@@ -81,13 +82,14 @@ struct Header {
     std::vector<unsigned char> gamerpic;
     bool achievementsKnown=false;
     unsigned achievements=0;
+    std::uint64_t identity=0; // RAM only; never serialize or render.
 };
 
 // Native system UI delegation is not a verified Xbox Live service.
 enum class NativeAction { None, GamerCard, Friends, Achievements };
 inline bool CanRequestNative(NativeAction action,const Header& h,std::uint32_t title=0) {
     if(h.origin!=Origin::Console || h.guest || h.controller<0 || h.controller>=4 ||
-       !ValidGamertag(h.displayName))return false;
+       !ValidGamertag(h.displayName)||h.identity==0)return false;
     if(action==NativeAction::GamerCard)return h.state==SignIn::Local || h.state==SignIn::Online;
     if(action==NativeAction::Friends)return h.state==SignIn::Online;
     if(action==NativeAction::Achievements)return title!=0&&(h.state==SignIn::Local||h.state==SignIn::Online);
@@ -100,41 +102,76 @@ inline bool SameHeader(const Header& a, const Header& b) {
            a.state == b.state && a.displayName == b.displayName &&
            a.avatarAsset == b.avatarAsset && a.guest == b.guest &&
            a.gamerscoreKnown == b.gamerscoreKnown &&
-           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic && a.achievementsKnown==b.achievementsKnown && a.achievements==b.achievements;
+           a.gamerscore == b.gamerscore && a.chat == b.chat && a.gamerpic==b.gamerpic && a.achievementsKnown==b.achievementsKnown && a.achievements==b.achievements && a.identity==b.identity;
 }
 
 // Confirm two consecutive console observations before emitting generic local
 // session events. Unknown/test observations never imply sign-out or sign-in.
-// Store only state and controller, never account names or identifiers.
+// Account identity is compared only in RAM; events never contain identifiers.
 class SessionEvents {
     SignIn stable_=SignIn::Unknown, candidate_=SignIn::Unknown;
     int stableController_=-1, candidateController_=-1;
+    std::uint64_t stableIdentity_=0,candidateIdentity_=0;
 public:
     const char* Observe(const Header& h) {
         const bool signedIn=h.state==SignIn::Local || h.state==SignIn::Online;
         if(h.origin!=Origin::Console ||
            !(signedIn ? h.controller>=0 && h.controller<4 :
                          h.state==SignIn::SignedOut && h.controller==-1)) {
-            candidate_=SignIn::Unknown;candidateController_=-1;
+            candidate_=SignIn::Unknown;candidateController_=-1;candidateIdentity_=0;
             return nullptr;
         }
-        if(candidate_!=h.state || candidateController_!=h.controller) {
-            candidate_=h.state;candidateController_=h.controller;
+        const auto identity=signedIn?h.identity:0;
+        if(candidate_!=h.state || candidateController_!=h.controller || candidateIdentity_!=identity) {
+            candidate_=h.state;candidateController_=h.controller;candidateIdentity_=identity;
             return nullptr;
         }
-        if(stable_==candidate_ && stableController_==candidateController_)return nullptr;
+        if(stable_==candidate_ && stableController_==candidateController_ && stableIdentity_==candidateIdentity_)return nullptr;
         const auto before=stable_;
         const int previousController=stableController_;
-        stable_=candidate_;stableController_=candidateController_;
+        const auto previousIdentity=stableIdentity_;
+        stable_=candidate_;stableController_=candidateController_;stableIdentity_=candidateIdentity_;
         if(before==SignIn::Unknown)return nullptr;
         if(stable_==SignIn::SignedOut)return "Sessao Xbox: nenhum perfil ativo";
         if(before==SignIn::SignedOut)return "Sessao Xbox: perfil ativo detectado";
         if(previousController!=stableController_)return "Sessao Xbox: controle ativo alterado";
+        if(previousIdentity&&stableIdentity_&&previousIdentity!=stableIdentity_)return "Sessao Xbox: conta ativa alterada";
+        if(before==stable_)return nullptr;
         return stable_==SignIn::Online?"Sessao Xbox: estado online detectado":
                                         "Sessao Xbox: estado local detectado";
     }
 };
 
+// Confirm counter changes on two samples. Profile switches, unavailable data
+// and state transitions reset baselines; decreases are silent corrections.
+class CounterEvents {
+    std::uint64_t identity_=0;
+    int controller_=-1;
+    SignIn state_=SignIn::Unknown;
+    struct Counter {
+        unsigned stable=0,candidate=0;
+        bool ready=false,pending=false;
+        bool Observe(bool known,unsigned value){
+            if(!known){*this=Counter{};return false;}
+            if(!pending||candidate!=value){candidate=value;pending=true;return false;}
+            if(!ready){stable=value;ready=true;return false;}
+            const bool increased=value>stable;stable=value;return increased;
+        }
+    } score_,achievements_;
+public:
+    const char* Observe(const Header& h){
+        const bool eligible=h.origin==Origin::Console&&h.identity!=0&&!h.guest&&
+            h.controller>=0&&h.controller<4&&(h.state==SignIn::Local||h.state==SignIn::Online);
+        if(!eligible){*this=CounterEvents{};return nullptr;}
+        if(h.identity!=identity_||h.controller!=controller_||h.state!=state_){
+            *this=CounterEvents{};identity_=h.identity;controller_=h.controller;state_=h.state;
+        }
+        const bool score=score_.Observe(h.gamerscoreKnown,h.gamerscore);
+        const bool earned=achievements_.Observe(h.achievementsKnown,h.achievements);
+        return earned?"Perfil Xbox: aumento de conquistas reportado":
+            score?"Perfil Xbox: aumento de Gamerscore reportado":nullptr;
+    }
+};
 inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     Header result;
     int selected = -1;
@@ -168,6 +205,7 @@ inline Header Resolve(const Snapshot& snapshot, int preferredController) {
     result.origin = slot.origin;
     result.state = slot.state;
     result.guest = slot.guest;
+    if(slot.origin==Origin::Console)result.identity=slot.identity;
     result.displayName = ValidGamertag(slot.gamertag) ? slot.gamertag :
                          (slot.guest ? "Convidado" : "Perfil sem nome");
     if (ValidAvatarAsset(slot.avatarAsset)) result.avatarAsset = slot.avatarAsset;

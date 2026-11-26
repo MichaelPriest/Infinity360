@@ -127,6 +127,7 @@ private:
     void DrawSocialGuide(HomeCanvas& c)const;
     InfinitySocial::Header social_;
     InfinitySocial::SessionEvents socialEvents_;
+    InfinitySocial::CounterEvents socialCounters_;
     uint64_t lastSocialPoll_=0;
     bool socialPolled_=false,signinPending_=false;
     std::vector<std::string> roots_, baseRoots_, history_, favorites_, pinned_, hidden_, launched_, folders_;
