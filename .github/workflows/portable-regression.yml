@@ -1,0 +1,44 @@
+name: INFINITY 360 portable regression
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Source/**'
+      - 'Engine/**'
+      - 'UI/**'
+      - 'Platform/Xbox360/**'
+      - 'IPTV/Cloud360/**'
+      - 'Tests/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/portable-regression.yml'
+permissions:
+  contents: read
+jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies and pinned miniz
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg openssl libssl-dev
+          git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
+          git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
+      - name: Configure and compile host tests only
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
+          cmake --build build --parallel 2
+      - name: Verify required test registration and run suite
+        run: |
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: store_zip"
+          ctest --test-dir build -N | grep -E "Test +#[0-9]+: disc_god"
+          ctest --test-dir build --output-on-failure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-test-logs
+          path: build/Testing/Temporary/
+          if-no-files-found: warn
+          retention-days: 14

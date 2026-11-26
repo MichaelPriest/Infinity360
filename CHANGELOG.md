@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.87 — Estabilização e validação portátil
+
+- Cacheia a contagem de referências FPS ao atualizar os detalhes do jogo, evitando leitura do XML em cada quadro.
+- Adiciona CI portátil independente para alterações de código, sem gerar XEX ou publicar releases. Mantém a validação obrigatória na distribuição unificada.
+
 ## V0.2.86 — Índice local de capas PS1
 
 - Leitor limitado do formato NEXUS_PS1_COVERS_V1, validação de nomes PNG, deduplicação e busca exata por nome de arquivo.

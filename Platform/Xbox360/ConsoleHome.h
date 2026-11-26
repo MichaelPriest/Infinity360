@@ -480,6 +480,7 @@ private:
     void DrawArtEditor(HomeCanvas& c) const;
     std::vector<XboxContentPackage> contentItems_;
     std::vector<TrainerEntry> trainers_;
+    size_t fpsReferenceCount_=0;
     bool trainerConfirm_;
     void DrawTrainers(HomeCanvas& c) const;
     void OpenContent();

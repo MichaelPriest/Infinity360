@@ -813,6 +813,7 @@ void ConsoleHome::OpenContent() {
     contentInfo_.discCount=detailMetadata_.discCount;
     contentItems_=ContentCatalog(ContentCatalog::DefaultRoots(dir_)).ScanExtras(contentInfo_.titleId);
     trainers_=TrainerCatalog::Scan(dir_,contentInfo_.titleId);
+    fpsReferenceCount_=InfinityFps::CountFor(dir_,contentInfo_.titleId);
     stagedItems_=ContentBackup::Staged(fileWorkspace_,dir_,contentInfo_.titleId);
     backups_=ContentBackup::List(fileWorkspace_,dir_,contentInfo_.titleId);
     archivedItems_=ContentBackup::Archived(fileWorkspace_,dir_,contentInfo_.titleId);
@@ -2629,7 +2630,7 @@ void ConsoleHome::DrawTrainers(HomeCanvas& c) const {
         c.Text(810,y+3,status,18,match==TrainerEntry::HeaderMatches?Lime:Muted,398);
         c.Text(810,y+30,tuText,17,Muted,398);
     }
-    const auto patches=InfinityFps::CountFor(dir_,contentInfo_.titleId);
+    const auto patches=fpsReferenceCount_;
     c.Text(48,555,patches?number(patches)+" referencias FPS no catalogo local; aplicacao nao integrada.":"Use apenas offline. TU ativo e funcionamento nao verificados.",19,Muted,1180);
     c.Text(48,600,trainerConfirm_?"A Confirmar saida para trainer | B Cancelar":
         "A Abrir utilitario independente | Y Atualizar | B Voltar",18,Lime,1175);
