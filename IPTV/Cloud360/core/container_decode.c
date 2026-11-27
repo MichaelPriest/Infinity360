@@ -52,7 +52,7 @@ static int deny_open(AVFormatContext* s, AVIOContext** pb,const char* url,int fl
 }
 static AVCodecContext* open_codec(AVStream* stream,enum AVCodecID expected){
     if(stream->codecpar->codec_id!=expected)return NULL;
-    if(expected==AV_CODEC_ID_H264&&(stream->codecpar->width>1280||stream->codecpar->height>720))return NULL;
+    if(stream->codecpar->codec_type==AVMEDIA_TYPE_VIDEO&&(stream->codecpar->width>1280||stream->codecpar->height>720))return NULL;
     const AVCodec* codec=avcodec_find_decoder(expected);
     if(!codec)return NULL;
     AVCodecContext* ctx=avcodec_alloc_context3(codec);
@@ -142,9 +142,11 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
     s->vi=av_find_best_stream(s->fmt,AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0);
     s->ai=av_find_best_stream(s->fmt,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
     if(s->vi<0||s->ai<0)goto fail;
-    s->video=open_codec(s->fmt->streams[s->vi],AV_CODEC_ID_H264);
+    const enum AVCodecID video_id=s->fmt->streams[s->vi]->codecpar->codec_id;
     const enum AVCodecID audio_id=s->fmt->streams[s->ai]->codecpar->codec_id;
-    if(audio_id!=AV_CODEC_ID_AAC&&audio_id!=AV_CODEC_ID_MP3&&audio_id!=AV_CODEC_ID_AC3)goto fail;
+    if(video_id!=AV_CODEC_ID_H264&&video_id!=AV_CODEC_ID_MPEG2VIDEO)goto fail;
+    if(audio_id!=AV_CODEC_ID_AAC&&audio_id!=AV_CODEC_ID_MP2&&audio_id!=AV_CODEC_ID_MP3&&audio_id!=AV_CODEC_ID_AC3&&audio_id!=AV_CODEC_ID_EAC3)goto fail;
+    s->video=open_codec(s->fmt->streams[s->vi],video_id);
     s->audio=open_codec(s->fmt->streams[s->ai],audio_id);
     if(!s->video||!s->audio)goto fail;
     s->pkt=av_packet_alloc();s->frame=av_frame_alloc();if(!s->pkt||!s->frame)goto fail;

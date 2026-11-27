@@ -52,16 +52,18 @@ inline bool SupportedCodecs(const std::string& value){
     std::istringstream in(Lower(value.substr(1,value.size()-2)));
     std::string codec;bool video=false,audio=false;
     while(std::getline(in,codec,',')){
-        if(codec=="avc1"||codec=="avc3"||codec.compare(0,5,"avc1.")==0||codec.compare(0,5,"avc3.")==0){
+        if(codec=="avc1"||codec=="avc3"||codec.compare(0,5,"avc1.")==0||codec.compare(0,5,"avc3.")==0||
+           codec=="mp4v.60"||codec=="mp4v.61"||codec=="mp4v.62"||codec=="mp4v.63"||codec=="mp4v.64"||codec=="mp4v.65"){
             if(video)return false;video=true;
-        }else if(codec=="mp4a"||codec=="mp4a.40.2"||codec=="mp4a.40.5"||codec=="mp4a.40.29"){
+        }else if(codec=="mp4a"||codec=="mp4a.40.2"||codec=="mp4a.40.5"||codec=="mp4a.40.29"||
+                 codec=="mp4a.69"||codec=="mp4a.6b"||codec=="mp4a.40.34"||codec=="ac-3"||codec=="ec-3"){
             if(audio)return false;audio=true;
         }else return false;
     }
     return video&&audio;
 }
 // Unknown codec/resolution metadata is inconclusive, not verified. The decoder
-// still independently enforces H.264/AAC, actual frame size and timestamps.
+// still independently enforces the supported codec IDs, actual frame size and timestamps.
 inline bool ParseVariant(const std::string& attrs,Variant& variant){
     variant=Variant{};
     std::string field;bool quoted=false,codecs=false,resolution=false;

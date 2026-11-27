@@ -14,6 +14,10 @@
 
 Esta ordem substitui a classificação histórica abaixo. Preservar funcionalidades essenciais de boot, lançamento, armazenamento e recuperação; corrigir regressões críticas quando encontradas. Não disparar build XEX/release sem autorização.
 
+### V0.3.39 — Codecs adicionais
+
+Player MP4/TS/HLS admite H.264/MPEG-2 Video e AAC/MP2/MP3/AC-3/E-AC-3, com saída estéreo e limite de 1280×720; novos fixtures reais no host. Configuração FFmpeg PPC preparada, ainda sem compilação XEX. HEVC, 1080p, deinterlacing e homologação física pendentes.
+
 ### V0.3.38 — Pré-leitura cooperativa
 
 curl_multi é avançado no loop A/V e até um segmento HLS conhecido recebe pré-leitura limitada a 128 KiB, sem segundo buffer de segmento completo. Testes portáteis solicitados. Bufferização em worker independente, latência real, ABR contínuo e homologação Xbox permanecem pendentes.

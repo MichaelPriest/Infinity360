@@ -15,6 +15,10 @@ int main(){
       "#EXT-X-STREAM-INF:BANDWIDTH=1800000,AUDIO=\"external\"\nexternal.m3u8\n"
       "#EXT-X-STREAM-INF:BANDWIDTH=900000,RESOLUTION=640x360,CODECS=\"avc1.42001e,mp4a.40.2\"\nlow.m3u8\n";
     List l;if(!Parse(root+"master.m3u8",master,l)||l.variants.size()!=5||Choose(l,4000000)!=root+"missing.m3u8"||Choose(l,1000000)!=root+"low.m3u8")return 1;
+    if(!SupportedCodecs("\"avc1.42001e,ac-3\"")||!SupportedCodecs("\"avc1.42001e,ec-3\"")||
+       !SupportedCodecs("\"mp4v.61,mp4a.69\"")||!SupportedCodecs("\"avc1.42001e,mp4a.6B\"")||
+       SupportedCodecs("\"hvc1.1.6.L93.B0,ec-3\"")||SupportedCodecs("\"avc1.42001e,ac-3,ec-3\"")||
+       SupportedCodecs("\"mp4v.20.9,mp4a.40.2\""))return 15;
     unsigned cap=DefaultBitrate;
     if(!BitrateCap("1000000",cap)||cap!=1000000||BitrateCap("99999",cap)||BitrateCap("4000001",cap)||BitrateCap("1.5",cap)||cap!=1000000)return 2;
     if(Parse(root+"master.m3u8","#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=123,RESOLUTION=640xBAD\na.m3u8\n",l))return 3;

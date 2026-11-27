@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.39 — Compatibilidade adicional de codecs IPTV
+
+- Player integrado admite MPEG-2 Video além de H.264, MP2 e E-AC-3 além de AAC/MP3/AC-3. Configuração PPC inclui os novos decoders; parser HLS aceita declarações MPEG-2, MPEG Audio, AC-3 e E-AC-3 reconhecidas, mantendo rejeição de variantes HEVC e limites de 720p.
+- Cinco fixtures adicionais de decodificação real MP2/E-AC-3/MPEG-2 e combinação MPEG-2+MP2, incluindo fila A/V de 12 segundos. Não inclui deinterlacing, saída surround, 1080p, HEVC ou garantia de desempenho no console. Cross-build não executado. Sem XEX/release.
+
 ## V0.3.38 — Pré-leitura cooperativa IPTV
 
 - Transporte curl_multi avança sem espera explícita no loop de reprodução; leitor HLS pode adiantar um único segmento conhecido, reutilizando o mesmo handle e buffer de até 128 KiB. Não aloca outro segmento completo, não abre novas playlists especulativamente e não cria threads. Falha especulativa retorna ao fluxo normal; não publica bytes duplicados.
