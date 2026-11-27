@@ -504,5 +504,26 @@
         "caption": "SMB — configuração IPv4"
       }
     ]
+  },
+  {
+    "title": "Transparência — quatro modos",
+    "images": [
+      {
+        "stem": "110-vidro-leve",
+        "caption": "Vidro leve"
+      },
+      {
+        "stem": "111-vidro-equilibrado",
+        "caption": "Vidro equilibrado"
+      },
+      {
+        "stem": "112-vidro-denso",
+        "caption": "Vidro denso"
+      },
+      {
+        "stem": "113-vidro-opaco",
+        "caption": "Modo opaco opcional"
+      }
+    ]
   }
 ]

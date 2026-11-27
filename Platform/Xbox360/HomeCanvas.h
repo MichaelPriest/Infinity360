@@ -27,6 +27,9 @@ public:
     void Glass(int x,int y,int w,int h,bool focused=false);
     void Surface(int x,int y,int w,int h,unsigned color=0xff172c28u,int radius=8,unsigned opacity=198);
     void GlassOutline(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius);
+    // Group frames are deliberately less dense than individual cards.
+    void GroupGlass(int x,int y,int w,int h);
+    void GlassBand(int y,int height,unsigned opacity=100);
     void Footer();
     void NoticeSurface(int x,int y,int w,int h);
     void Stroke(int x0,int y0,int x1,int y1,unsigned color,int width=3);

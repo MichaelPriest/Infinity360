@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.34 — Refinamento da composição translúcida
+
+- Painéis de agrupamento mais leves para evitar escurecimento cumulativo nos cards internos de configurações, biblioteca, conteúdo, arquivos, notificações, Lua, loja e IPTV. Cabeçalho, navegação e rodapé respeitam a preferência de vidro e a paleta; divisores não usam mais cinza sólido.
+- Otimiza contorno arredondado para não percorrer o interior; testes de contribuição do fundo em agrupamentos e barras. Quatro capturas dos níveis de transparência solicitadas, 113 no total. Sem XEX/release.
+
 ## V0.3.33 — Vidro real, sem camada cinza
 
 - Remove o preenchimento cinza sob cards e superfícies: apenas um contorno arredondado discreto, preenchimento translúcido tingido pelo tema, reflexos suaves e foco mais leve. Ajusta o escurecimento dos modais e fundos, mantendo o modo opaco opcional e as preferências existentes.

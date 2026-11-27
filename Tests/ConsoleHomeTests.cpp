@@ -251,6 +251,18 @@ static int captureScreens(const char* atlas,const char* destination) {
         net.Press(ConsoleHome::Back);net.Press(ConsoleHome::PageUp);net.Press(ConsoleHome::Guide);ok=save("108-smb-moderno",net)&&ok;
         net.Press(ConsoleHome::Guide);ok=save("109-smb-ip-moderno",net)&&ok;
     }
+    {
+        const auto glassRoot=root/"GlassPreview";fs::create_directories(glassRoot);
+        std::ofstream(glassRoot/"aurorax-profile.txt")<<"J\t1\nM\t1\n";
+        ConsoleHome glass(glassRoot.string()+"/",roots);glass.Load();assert(glass.ApprovedHeader());
+        glass.Press(ConsoleHome::GlobalGuide);
+        for(int i=0;i<6;++i)glass.Press(ConsoleHome::Down);
+        glass.Press(ConsoleHome::Accept);
+        glass.Press(ConsoleHome::Down);glass.Press(ConsoleHome::Down); // glass mode
+        glass.Press(ConsoleHome::Left); // balanced default -> light
+        const char* names[]={"110-vidro-leve","111-vidro-equilibrado","112-vidro-denso","113-vidro-opaco"};
+        for(const char* name:names){ok=save(name,glass)&&ok;glass.Press(ConsoleHome::Right);}
+    }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
         ConsoleHome themed(dir,roots);themed.Load();
@@ -1718,6 +1730,13 @@ int main(int argc,char** argv) {
         const unsigned light=canvas.Pixels()[80*1280+120];
         a.glass=AppearanceSettings::OpaqueGlass;canvas.SetAppearance(a,"");canvas.Box(0,0,1280,720,0xffeeeeeeu);canvas.Surface(40,40,160,80,0xff172c28u);
         assert(canvas.Pixels()[80*1280+120]==0xff172c28u&&light!=0xff172c28u&&canvas.Pixels()[0]==0xffeeeeeeu);
+        // Group surfaces retain more of the underlying background than standard cards.
+        a.glass=AppearanceSettings::BalancedGlass;canvas.SetAppearance(a,"");
+        canvas.Box(0,0,1280,720,0xffe02010u);canvas.GroupGlass(40,40,160,80);const unsigned group=canvas.Pixels()[80*1280+120];
+        canvas.Box(0,0,1280,720,0xffe02010u);canvas.SeriesTile(40,40,160,80,false);const unsigned card=canvas.Pixels()[80*1280+120];
+        assert(((group>>16)&255)>((card>>16)&255));
+        canvas.Box(0,0,1280,720,0xffe02010u);canvas.GlassBand(0,78);const unsigned band=canvas.Pixels()[30*1280+120];
+        assert(((band>>16)&255)>((card>>16)&255));
         // Actual panel interiors must retain different background colors in transparent modes.
         for(unsigned theme=0;theme<HomeCanvas::ThemeCount;++theme){
             canvas.SetTheme(theme);a.glass=AppearanceSettings::BalancedGlass;canvas.SetAppearance(a,"");

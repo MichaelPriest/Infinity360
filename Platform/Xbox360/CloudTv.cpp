@@ -484,7 +484,7 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
     const size_t total=picking?sources_.size():rows_.size();
     InfinityIcons::Draw(c,3,46,91,32,Ink);c.TextFit(91,76,"Cloud360 IPTV",38,Ink,695);
     c.TextFit(830,94,countText(total)+" "+c.Tr(picking?"listas":"itens"),20,Lime,400);
-    tile(c,45,141,264,447,false);
+    c.GroupGlass(45,141,264,447);
     const int icons[]={2,3,52,53,54,54,21,48};
     for(int i=0;i<TvTabCount;++i){
         const int y=151+i*53;tile(c,54,y,246,47,i==tab_);

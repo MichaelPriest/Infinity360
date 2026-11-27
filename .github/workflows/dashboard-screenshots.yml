@@ -37,7 +37,7 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 109, len(images)
+          assert len(images) == 113, len(images)
           assert all((frames / name).is_file() for name in ('79-scripts-legendas.ppm', '80-grade-legendas.ppm', '81-lista-legendas.ppm'))
           assert (frames / '78-perfis-home.ppm').is_file()
           assert (frames / '77-permissoes-xbox.ppm').is_file()

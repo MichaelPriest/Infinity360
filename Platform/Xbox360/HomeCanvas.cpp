@@ -398,10 +398,11 @@ void HomeCanvas::GlassOutline(int x,int y,int w,int h,unsigned color,unsigned op
     for(int j=std::max(0,-y);j<h&&y+j<Height;++j){
         const int outer=inset(j,h,radius);
         const int inner=j==0||j==h-1?w:1+inset(j-1,h-2,std::max(0,radius-1));
-        for(int i=std::max(outer,-x);i<w-outer&&x+i<Width;++i){
-            if(i>=inner&&i<w-inner)continue;
-            auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,std::min(255u,opacity));
-        }
+        const int left=std::max(outer,-x),right=std::min(w-outer,int(Width)-x);
+        const auto paint=[&](int from,int to){for(int i=from;i<to;++i){auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,std::min(255u,opacity));}};
+        // Skip the interior altogether, including on large group frames.
+        const int split=std::min(right,inner);
+        paint(left,split);paint(std::max(left,std::max(split,w-inner)),right);
     }
 }
 void HomeCanvas::Surface(int x,int y,int w,int h,unsigned color,int radius,unsigned opacity){
@@ -411,7 +412,17 @@ void HomeCanvas::Surface(int x,int y,int w,int h,unsigned color,int radius,unsig
     Translucent(x+1,y+1,w-2,h-2,color,alpha,std::max(0,radius-1));
     GlassOutline(x,y,w,h,0xff709b82u,75,radius);
 }
-void HomeCanvas::Footer(){Translucent(0,663,1280,57,0xff0b110eu,appearance_.Opacity(210));Box(28,663,1224,1,0xff414743u);}
+void HomeCanvas::GroupGlass(int x,int y,int w,int h){
+    if(w<12||h<12)return;
+    // Avoid double darkening when a card is placed inside a category or list.
+    Translucent(x+1,y+1,w-2,h-2,0xff081b13u,appearance_.Opacity(72),10);
+    GlassOutline(x,y,w,h,0xff709b82u,48,11);
+}
+void HomeCanvas::GlassBand(int y,int height,unsigned opacity){
+    // Theme-aware top/navigation/footer bands, without grey or fixed opacity.
+    Translucent(0,y,Width,height,0xff081b13u,appearance_.Opacity(opacity));
+}
+void HomeCanvas::Footer(){GlassBand(663,57,120);Translucent(28,663,1224,1,0xff709b82u,75);}
 void HomeCanvas::NoticeSurface(int x,int y,int w,int h){Translucent(x,y,w,h,0xff102923u,std::max(128u,appearance_.Opacity(242)),6);GlassOutline(x,y,w,h,0xff709b82u,100,6);}
 void HomeCanvas::SeriesBackground(){
     if(appearance_.background!=AppearanceSettings::Gradient)return;
