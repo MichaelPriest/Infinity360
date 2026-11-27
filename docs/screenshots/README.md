@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**88 capturas nativas** — commit [07b9370f36b7](https://github.com/MichaelPriest/Infinity360/commit/07b9370f36b7d1387f309964ff2ac976e03c9eca).
+**92 capturas nativas** — commit [ad3334a9fb3a](https://github.com/MichaelPriest/Infinity360/commit/ad3334a9fb3a1796ad2aa44def48c18c4907b4b5).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -144,6 +144,15 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Editor de configurações — Vermelho** | **Editor de configurações — Ciano** |
 | ![Editor de configurações — Grafite](88-config-tema-6.png) |  |
 | **Editor de configurações — Grafite** |  |
+
+### Sistema — painéis modernos
+
+| Tela | Tela |
+| --- | --- |
+| ![Armazenamento — dispositivos e espaço livre](89-armazenamento-moderno.png) | ![Rede — conexão, FTP e atalhos](90-rede-moderna.png) |
+| **Armazenamento — dispositivos e espaço livre** | **Rede — conexão, FTP e atalhos** |
+| ![Scripts Lua — categorias e scripts locais](91-lua-moderno.png) | ![Perfis — avatar e controles conectados](92-perfis-moderno.png) |
+| **Scripts Lua — categorias e scripts locais** | **Perfis — avatar e controles conectados** |
 
 
 <!-- NATIVE-GALLERY-END -->
