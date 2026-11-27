@@ -1340,6 +1340,58 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
     }
     return a;
 }
+bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
+    switch(command){
+    case TvRemote::Key::Left:key=Left;break;
+    case TvRemote::Key::Right:key=Right;break;
+    case TvRemote::Key::Up:key=Up;break;
+    case TvRemote::Key::Down:key=Down;break;
+    case TvRemote::Key::Accept:key=Accept;break;
+    case TvRemote::Key::Back:key=Back;break;
+    case TvRemote::Key::Guide:key=GlobalGuide;break;
+    case TvRemote::Key::Favorite:key=Favorite;break;
+    case TvRemote::Key::Refresh:key=Refresh;break;
+    case TvRemote::Key::PageUp:key=PageUp;break;
+    case TvRemote::Key::PageDown:key=PageDown;break;
+    case TvRemote::Key::Channels:key=Guide;break;
+    default:return false;
+    }return true;
+}
+bool ConsoleHome::RemoteAllowed(Key key)const{
+    const bool direction=key==Left||key==Right||key==Up||key==Down;
+    const bool paging=key==PageUp||key==PageDown;
+    // Remote never confirms editors, native social calls, destructive actions,
+    // file operations, power, installs, downloads or pending launch tickets.
+    if(TransferRunning()||ftp_.Running()||peerProbe_.Running()||contextOpen_||
+       libraryPathsPage_||packagePathsPage_||homeEditing_||importPreview_||appearanceEditor_||
+       searchActive_||collectionPicker_||fileAction_||pasteConfirm_||scanPathConfirm_||deleteConfirm_||
+       updateActive_||discSetActive_||discConfirm_||powerPage_||saveCenter_||achievementsPage_||
+       artEditing_||contentActive_||contentInstallActive_||unityActive_||luaPage_||
+       storeManage_||storeProviders_||storeConfirm_||peerEditing_||peerOptions_||smbEditing_||
+       coverBatchConfirm_||nativeBatch_||sessionExitConfirm_||trainerConfirm_)return false;
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    if(smbUi_!=SmbClosed||smbConfirm_)return false;
+#endif
+    if(quickGuideOpen_){
+        if(quickGuideEditing_||communicationGuideOpen_||friendGuideOpen_||avatarGuideOpen_)return key==GlobalGuide;
+        return direction||key==Back||key==GlobalGuide;
+    }
+    if(key==GlobalGuide)return true;
+    if(approvedGroup_>=0)return key==Up||key==Down||key==Back||key==Accept;
+    if(weatherPanel_)return key==Back||key==Refresh;
+    if(storeActive_)return direction||key==Back||(!storeDetails_&&key==Accept);
+    if(page_==Home)return direction||key==Accept||key==Refresh||paging;
+    if(section_==Iptv)return tv_.RemoteAllowed(static_cast<MenuKey>(key));
+    if(section_==System){
+        if(page_==Listing)return direction||paging||key==Back||key==Refresh||(key==Accept&&systemTab_<8&&systemTab_!=6);
+        // Read-only system panels: no settings, plugin toggles, FTP or power.
+        return key==Back||key==Refresh;
+    }
+    if(section_==Files)return direction||key==Back||(page_==Listing&&key==Accept&&Count()&&files_[row_].directory);
+    if(section_==Library||section_==Recent||section_==Favorites||section_==Apps||section_==Emulators)
+        return direction||key==Back||key==Accept||key==Refresh||(key==Favorite&&(section_==Library||section_==Recent||section_==Favorites));
+    return false;
+}
 std::string ConsoleHome::Press(Key key) {
     if(key==GlobalGuide){contextOpen_=false;contextActions_.clear();ToggleGlobalGuide();return "";}
     if(key==Context){

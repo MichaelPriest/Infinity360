@@ -62,6 +62,8 @@ inline unsigned RemoteButtons(TvRemote::Key key){
     case TvRemote::Key::Quieter:return INPUT_GAMEPAD_LEFT_SHOULDER;
     case TvRemote::Key::Louder:return INPUT_GAMEPAD_RIGHT_SHOULDER;
     case TvRemote::Key::Channels:return INPUT_GAMEPAD_START;
+    case TvRemote::Key::Guide:return INPUT_GAMEPAD_LEFT_THUMB;
+    case TvRemote::Key::Favorite:return INPUT_GAMEPAD_A;
     default:return 0;
     }
 }

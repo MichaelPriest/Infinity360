@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.59 — Controle remoto da dashboard e IPTV
+
+- Android Remote 0.2.0 Alpha: comandos de navegacao geral, Guide, favoritos, atualizar, LB/RB e teste autenticado. Servidor compartilhado com IPTV, opcional na dashboard via enable-dashboard-remote.txt (ENABLE-DASHBOARD-REMOTE). Acoes restritas por tela e prioridade do controle fisico; lancamento XEX/GOD exige confirmacao fisica. Bloqueia editores, instalacoes, operacoes de arquivo e desligamento pelo remoto. Sem XEX/release; APK de teste via workflow Android, homologacao pendente.
+
 ## V0.3.58 — INFINITY 360 Remote para Android
 
 - Projeto Android nativo em `Android/`, controle Cloud360 via protocolo HTTP LAN da V0.3.57. Interface escura, comandos, verificação de disponibilidade, geração de chave aleatória e cópia de configuração para pareamento manual. Não guarda chave em disco; aceita apenas IPv4 privado e não segue redirecionamentos. Workflow separado gera APK debug para testes; nenhuma build XEX ou release. SDK Android e console ainda não homologados.

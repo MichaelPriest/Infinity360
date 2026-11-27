@@ -25,6 +25,11 @@ public:
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
     bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
+    bool RemoteAllowed(MenuKey key)const{
+        if(view_==Settings||view_==ClearHistory)return false;
+        if(key==MenuFavorite&&tab_==TvSources)return false;
+        return key==MenuLeft||key==MenuRight||key==MenuUp||key==MenuDown||key==MenuAccept||key==MenuBack||key==MenuFavorite||key==MenuRefresh||key==MenuPageUp||key==MenuPageDown||key==MenuGuide;
+    }
     bool CanSettings()const{return view_==Browse;}
     bool CanClearHistory()const{return view_==Browse&&tab_==TvHistory&&!history_.empty();}
 private:

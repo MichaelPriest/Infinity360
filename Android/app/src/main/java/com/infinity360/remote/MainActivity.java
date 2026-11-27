@@ -41,12 +41,18 @@ public final class MainActivity extends Activity {
             return insets;
         });
         TextView brand=text("∞  INFINITY 360",29,ACCENT);brand.setTypeface(null,Typeface.BOLD);content.addView(brand);
-        content.addView(text("REMOTE  •  CLOUD360 IPTV",13,MUTED));
+        content.addView(text("REMOTE  •  DASHBOARD & IPTV",13,MUTED));
         label("IP do Xbox 360");consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         consoleIp.setText(getPreferences(MODE_PRIVATE).getString("console_ip",""));
         label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
-        content.addView(button("Verificar conexão",PANEL,()->send(null)),new LinearLayout.LayoutParams(-1,dp(54)));
-        status=text("Inicie a reprodução IPTV no Xbox.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);content.addView(status);
+        content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,dp(54)));
+        status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);content.addView(status);
+        label("Navegação geral");
+        row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
+        row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
+        row(new String[]{"LB","↓","RB"},new String[]{"pageup","down","pagedown"});
+        row(new String[]{"Voltar","Favorito"},new String[]{"back","favorite"});
+        label("Controles IPTV");
         row(new String[]{"Canais","↑","Qualidade"},new String[]{"channels","up","quality"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
@@ -56,7 +62,7 @@ public final class MainActivity extends Activity {
         phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
-        TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados IPTV do Xbox. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
+        TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
     }
     private void copyConfig(){
         String phone=phoneIp.getText().toString().trim(),secret=key.getText().toString().trim();
@@ -72,7 +78,7 @@ public final class MainActivity extends Activity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave e o IP autorizado.";}catch(Exception e){message="Console indisponível. Confira a rede e a reprodução."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }

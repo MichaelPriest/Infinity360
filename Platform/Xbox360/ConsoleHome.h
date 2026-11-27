@@ -2,6 +2,7 @@
 #include "GameScanner.h"
 #include "HomeCanvas.h"
 #include "CloudTv.h"
+#include "TvRemoteProtocol.h"
 #include "Modules/Emulators/Ps1CoverIndex.h"
 #include "CollectionStore.h"
 #include "ContentCatalog.h"
@@ -58,6 +59,8 @@ public:
                Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, TvGroups=MenuGroups, TvClearHistory=MenuClearHistory, TvSettings=MenuSettings, GlobalGuide=100, Context=101 };
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
+    bool RemoteAllowed(Key key)const;
+    static bool RemoteKey(TvRemote::Key command,Key& key);
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
     unsigned Language()const{return language_;}

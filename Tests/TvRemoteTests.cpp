@@ -11,5 +11,9 @@ int main(){
     if(Parse(request("launch",key,host),host,key).key!=Key::None)return 6;
     if(Parse(request("mute",key,host)+"body",host,key).key!=Key::None)return 7;
     if(Parse(request("mute",key,host),host,key).key!=Key::Mute)return 8;
+    if(Parse(request("status",key,host),host,key).key!=Key::Status)return 9;
+    if(Parse(request("guide",key,host),host,key).key!=Key::Guide)return 10;
+    if(Parse(request("favorite",key,host),host,key).key!=Key::Favorite)return 11;
+    if(Parse(request("power",key,host),host,key).key!=Key::None)return 12;
     return 0;
 }

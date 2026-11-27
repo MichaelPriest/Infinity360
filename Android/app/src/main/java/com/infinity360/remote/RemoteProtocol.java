@@ -27,7 +27,7 @@ final class RemoteProtocol {
     static int request(String ip,String key,String command)throws Exception{
         if(!privateIp(ip))throw new IllegalArgumentException("IPv4 privado obrigatório");
         boolean probe=command==null;
-        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels")))throw new IllegalArgumentException("Comando ou chave inválida");
+        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels|guide|favorite|refresh|pageup|pagedown|status")))throw new IllegalArgumentException("Comando ou chave inválida");
         HttpURLConnection c=(HttpURLConnection)new URL("http://"+ip+":"+PORT+(probe?"/":"/cmd/"+command)).openConnection(Proxy.NO_PROXY);
         try{
             c.setInstanceFollowRedirects(false);c.setConnectTimeout(2500);c.setReadTimeout(3500);c.setUseCaches(false);c.setRequestProperty("Connection","close");
