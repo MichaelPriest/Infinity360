@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.92 — MP4 remoto sequencial
+
+- Demux MOV/MP4 por AVIO não-seekable, com entrada limitada e H.264/AAC até 720p; permite MP4 fast-start em fontes autorizadas no player XSDK.
+- Sem seek remoto, HTTP Range, DRM ou suporte garantido a MP4 com índice no final. Preserva HLS e TS.
+- Fixture original fast-start e teste de equivalência de frames/amostras, falhas de leitura e limites. CI da V0.2.91 aprovado; nova revisão aguarda CI.
+
 ## V0.2.91 — Recuperação HLS no player
 
 - Habilita buffer atômico de 2 MiB no player XSDK; segmentos maiores reabrem em streaming antes de qualquer entrega ao decoder, sem duplicação.

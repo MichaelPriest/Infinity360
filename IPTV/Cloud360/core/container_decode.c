@@ -101,7 +101,7 @@ void cloud_container_close(CloudContainerSession* s){
     if(s->input.file)fclose(s->input.file);
     free(s);
 }
-static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended){
+static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended,int mp4){
     if(!read&&(!path||strstr(path,"://")))return NULL;
     CloudContainerSession* s=calloc(1,sizeof *s);if(!s)return NULL;
     const int64_t max_bytes=extended?EXTENDED_BYTES:MAX_BYTES;
@@ -120,9 +120,9 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
     s->fmt=avformat_alloc_context();if(!s->fmt)goto fail;
     s->fmt->pb=s->io;s->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;s->fmt->io_open=deny_open;
     s->fmt->probesize=256*1024;s->fmt->max_analyze_duration=2000000;s->fmt->max_streams=8;
-    av_dict_set(&options,"format_whitelist",read?"mpegts":"mov,mp4,m4a,3gp,3g2,mj2,mpegts",0);
+    av_dict_set(&options,"format_whitelist",read?(mp4?"mov,mp4,m4a,3gp,3g2,mj2":"mpegts"):"mov,mp4,m4a,3gp,3g2,mj2,mpegts",0);
     av_dict_set(&options,"protocol_whitelist","file",0);
-    const AVInputFormat* forced=read?av_find_input_format("mpegts"):NULL;
+    const AVInputFormat* forced=read?av_find_input_format(mp4?"mov":"mpegts"):NULL;
     if((read&&!forced)||avformat_open_input(&s->fmt,NULL,forced,&options)<0||avformat_find_stream_info(s->fmt,NULL)<0||s->input.failed)goto fail;
     s->vi=av_find_best_stream(s->fmt,AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0);
     s->ai=av_find_best_stream(s->fmt,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
@@ -137,8 +137,9 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
 fail:
     av_free(buffer);av_dict_free(&options);cloud_container_close(s);return NULL;
 }
-CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended);}
-CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1):NULL;}
+CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended,0);}
+CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,0):NULL;}
+CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,1):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
 int64_t cloud_container_duration(const CloudContainerSession* s){
     if(!s||s->input.read||!s->fmt||!s->fmt->iformat||

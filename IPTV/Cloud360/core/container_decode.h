@@ -19,6 +19,8 @@ typedef struct CloudContainerSession CloudContainerSession;
 /* Non-seekable MPEG-TS: caller owns reader/user until close. Return bytes,
  * 0 for clean EOF, negative for permanent error/cancel (not temporary EAGAIN). */
 typedef int (*CloudContainerRead)(void* user,uint8_t* buffer,unsigned capacity);
+/* Sequential MP4 (fast-start or compatible fragmented MP4), no random access. */
+CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user);
 CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user);
 CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended);
 /* Local indexed MP4 only. Time is relative to the container start in us.

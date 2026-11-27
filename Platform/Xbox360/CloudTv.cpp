@@ -63,7 +63,7 @@ std::string movieTarget(const std::string& playlist,const std::string& uri,const
     if(url.Parse(uri)) {
 #ifdef INFINITY_MENU_FFMPEG
         const auto target=url.target.substr(0,url.target.find('?'));
-        if(uri.find('#')==std::string::npos&&(tvEndsWith(target,".ts")||tvEndsWith(target,".m3u8")))return uri;
+        if(uri.find('#')==std::string::npos&&(tvEndsWith(target,".ts")||tvEndsWith(target,".m3u8")||tvEndsWith(target,".mp4")))return uri;
 #endif
         return url.NeedsConverter() ? "" : uri;
     }

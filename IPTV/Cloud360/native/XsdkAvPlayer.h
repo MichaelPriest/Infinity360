@@ -32,7 +32,7 @@ inline bool Supports(const std::string& path){
     if(url.Parse(path)){
 #ifdef INFINITY_AV_NETWORK
         const auto target=url.target.substr(0,url.target.find('?'));
-        return path.find('#')==std::string::npos&&(Suffix(target,".ts")||Suffix(target,".m3u8"));
+        return path.find('#')==std::string::npos&&(Suffix(target,".ts")||Suffix(target,".m3u8")||Suffix(target,".mp4"));
 #else
         return false;
 #endif
@@ -88,8 +88,10 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
             selectedBitrate=hls.SelectedBitrate();
             session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);},&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
-            if(!remote.Open(path,root,true))return "Fonte MPEG-TS nao autorizada.";
-            session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);},&remote,CloudAvStreamQueue::Capture,&timeline);
+            const bool mp4=CloudHls::Extension(path,".mp4");
+            if(!remote.Open(path,root,!mp4,false,mp4))return "Fonte de video remoto nao autorizada.";
+            auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
+            session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
         }
     }else
 #endif

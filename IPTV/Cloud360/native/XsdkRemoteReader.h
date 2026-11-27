@@ -33,12 +33,12 @@ public:
         if(multi_)curl_multi_cleanup(multi_);
         if(global_)curl_global_cleanup();
     }
-    bool Open(const std::string& address,const std::string& root,bool transportStream=false,bool playlist=false){
+    bool Open(const std::string& address,const std::string& root,bool transportStream=false,bool playlist=false,bool mp4=false){
         MediaUrl url;
         if(!url.Parse(address)||address.find('#')!=std::string::npos)return false;
         if(url.NeedsConverter()){
             const auto path=StoreHostPolicy::lower(url.target.substr(0,url.target.find('?')));
-            if(!(transportStream&&path.size()>=3&&path.substr(path.size()-3)==".ts")&&!(playlist&&path.size()>=5&&path.substr(path.size()-5)==".m3u8"))return false;
+            if(!(transportStream&&path.size()>=3&&path.substr(path.size()-3)==".ts")&&!(playlist&&path.size()>=5&&path.substr(path.size()-5)==".m3u8")&&!(mp4&&path.size()>=4&&path.substr(path.size()-4)==".mp4"))return false;
         }
         if(!InfinityIptv::NetworkAllowed(address,root))return false;
         if(url.secure){

@@ -43,6 +43,7 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fixtures/generated/test.ts
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=5" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 12 -c:v libx264 -g 10 -keyint_min 10 -sc_threshold 0 -pix_fmt yuv420p -preset ultrafast -threads 1 -c:a aac fixtures/generated/long.mp4
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/long.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fixtures/generated/long.ts
+          ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/long.mp4 -c copy -movflags +faststart fixtures/generated/fast.mp4
       - name: Build and run actual libavcodec decoder tests on host
         run: |
           cmake -S IPTV/Cloud360 -B /tmp/cloud360-decode -DCLOUD360_WITH_HOST_FFMPEG=ON
