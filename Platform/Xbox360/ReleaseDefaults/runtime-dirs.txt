@@ -22,3 +22,4 @@ Cinema
 Scripts
 Scripts/Filters
 Scripts/Sorts
+Scripts/Subtitles

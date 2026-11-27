@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.13 — Legendas Lua na biblioteca
+
+- A lista e a grade exibem uma legenda por jogo na biblioteca, nos recentes e nos favoritos. Quatro scripts mostram Title ID, versão, dispositivo ou tipo de conteúdo. Em Sistema > Plugins > R3, abra Legendas com LB, aplique com A e remova com X.
+- A dashboard calcula as legendas por página usando a seleção e a ordem exibidas. A API v3 fornece o dispositivo de origem, o Title ID hexadecimal e a versão formatada. A seleção do script dura a sessão.
+
 ## V0.3.12 — Ordenação Lua
 
 - Scripts/Sorts recebe permutação completa dos índices da biblioteca, preserva ordem retornada e combina com filtros nativos e Lua. Fixados mantém ordem manual. Novos itens sem posição entram no fim em ordem nativa; RS restaura ordenação nativa, X limpa no gerenciador.

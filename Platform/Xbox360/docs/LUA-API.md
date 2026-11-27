@@ -1,13 +1,13 @@
-# API Lua — INFINITY 360 v2
+# API Lua — INFINITY 360 v3
 
 Em Sistema > Plugins > R3, execute um arquivo .lua local em MenuPreview/Scripts.
 A execução é manual e isolada; não expõe rede, disco arbitrário, código nativo ou alterações de jogos.
 O interpretador é Lua 5.4.9, com limite de 64 KiB de fonte, 2 MiB de memória Lua e aproximadamente 100 mil instruções.
 
 - `infinity.game_count`: quantidade de entradas da biblioteca, incluindo XEX e pacotes.
-- `infinity.game(i)`: índice de 1 a game_count, retorna name, device, favorite, package, hidden, pinned e index. Tabela copiada.
-- `infinity.metadata(i)`: lê cabeçalho do item, retorna title_id, media_id, version, base_version, disc_number, disc_count, content_type, volume_type (inteiros). Campos não aplicáveis podem ser zero; cabeçalho ausente retorna nil e motivo. Cache de até 128 índices distintos por execução.
-- `infinity.api_version`: 2. Retorne texto ou número para mostrar o resultado.
+- `infinity.game(i)`: índice de 1 a game_count, retorna name, device, storage, favorite, package, hidden, pinned e index. Para pacotes, device contém a classificação do pacote. O campo storage identifica a unidade do arquivo (por exemplo, Usb0:) e usa Local para caminhos sem unidade. Tabela copiada.
+- `infinity.metadata(i)`: lê cabeçalho do item, retorna title_id, media_id, version, base_version, disc_number, disc_count, content_type, volume_type (inteiros), title_id_hex (oito dígitos hexadecimais) e version_text (major.minor.build.qfe do cabeçalho). Campos não aplicáveis podem ser zero; cabeçalho ausente retorna nil e motivo. Cache de até 128 índices distintos por execução.
+- `infinity.api_version` vale 3. Retorne texto ou número para mostrar o resultado.
 
 ```lua
 local g = infinity.game(1)
@@ -22,7 +22,7 @@ Não copie scripts de terceiros para o pacote distribuído sem verificar a licen
 
 ## Filtros da biblioteca (V0.3.11)
 
-Copie um filtro para `MenuPreview/Scripts/Filters`. Em Sistema > Plugins > R3, LB/RB alterna Utilitários/Filtros. A aplica e abre a biblioteca. X limpa o filtro ativo. Retorne uma tabela densa de índices únicos válidos, a partir de 1. O resultado é uma seleção, não uma ordenação. Uma tabela vazia é um filtro válido. Erros preservam o filtro anterior. O snapshot por caminho permanece durante a sessão, inclusive após nova varredura; reexecute para incluir jogos novos ou refletir mudanças de favoritos. Categorias, ocultos e busca continuam sendo respeitados.
+Copie um filtro para `MenuPreview/Scripts/Filters`. Em Sistema > Plugins > R3, selecione Filtros com RB. A aplica e abre a biblioteca. X limpa o filtro ativo. Retorne uma tabela densa de índices únicos válidos, a partir de 1. O resultado é uma seleção, não uma ordenação. Uma tabela vazia é um filtro válido. Erros preservam o filtro anterior. O snapshot por caminho permanece durante a sessão, inclusive após nova varredura; reexecute para incluir jogos novos ou refletir mudanças de favoritos. Categorias, ocultos e busca continuam sendo respeitados.
 
 ```lua
 local result = {}
@@ -37,7 +37,7 @@ Não é a API de filtros do Aurora. Os limites de memória e instruções contin
 
 ## Ordenações da biblioteca (V0.3.12)
 
-Coloque fontes em `MenuPreview/Scripts/Sorts`. LB/RB navega pelas três categorias. Retorne uma permutação completa de 1 a `infinity.game_count` (todos os índices exatamente uma vez). A ordem retornada é preservada. `table.sort`, `table.insert` e as demais operações da biblioteca `table` estão disponíveis. Filtros e categorias continuam ativos, a aba Fixados mantém a ordem manual. Novos jogos sem posição entram no fim em ordem nativa; reexecute para atualizar. X na categoria Sorts limpa a ordenação, RS na biblioteca restaura ordenação nativa. A seleção dura a sessão.
+Coloque fontes em `MenuPreview/Scripts/Sorts`. LB/RB muda a categoria. Retorne uma permutação completa de 1 a `infinity.game_count` (todos os índices exatamente uma vez). A ordem retornada é preservada. `table.sort`, `table.insert` e as demais operações da biblioteca `table` estão disponíveis. Filtros e categorias continuam ativos, a aba Fixados mantém a ordem manual. Novos jogos sem posição entram no fim em ordem nativa; reexecute para atualizar. X na categoria Sorts limpa a ordenação, RS na biblioteca restaura ordenação nativa. A seleção dura a sessão.
 
 ```lua
 local order = {}
@@ -47,3 +47,27 @@ return order
 ```
 
 Não é a API Sorts do Aurora. Limites existentes continuam valendo.
+
+## Legendas por jogo
+
+Em **Sistema > Plugins > R3**, pressione **LB** para abrir **Legendas**. Use **A** para testar e aplicar o script e **X** nessa categoria para remover a legenda. A lista e a grade usam a seleção durante a sessão, inclusive em Recentes e Fixados e favoritos. Para trocar o texto, edite o arquivo em `MenuPreview/Scripts/Subtitles/` e aplique-o novamente.
+
+| Script incluído | Exemplo na tela |
+| --- | --- |
+| `Title-ID.lua` | `Title ID 4D5307E6` |
+| `Versao.lua` | `v2.0.256.2` |
+| `Dispositivo.lua` | `Usb0:` |
+| `Tipo.lua` | `XEX`, `Pacote GOD` ou `Pacote XBLA` |
+
+O arquivo retorna uma função que recebe o índice do jogo no catálogo. Ela pode retornar uma linha de até 96 bytes, uma string vazia ou `nil`. Os dois últimos resultados mantêm a apresentação padrão daquele jogo. A legenda abaixo combina a unidade e o Title ID quando o cabeçalho está disponível.
+
+```lua
+return function(i)
+    local game = infinity.game(i)
+    local metadata = infinity.metadata(i)
+    if metadata then return game.storage .. " | " .. metadata.title_id_hex end
+    return game.storage
+end
+```
+
+A dashboard chama a função para os jogos da página visível, na ordem exibida. Cada página compartilha os limites de memória, instruções e metadados da API. Mudar de página ou atualizar a biblioteca recalcula as legendas. Ao aplicar um script, um erro na primeira página preserva a seleção anterior. Se outra página falhar, ela usa a apresentação padrão e a dashboard mostra o erro.

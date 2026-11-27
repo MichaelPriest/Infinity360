@@ -68,6 +68,18 @@
         "caption": "Biblioteca — foco nos filtros de categorias"
       },
       {
+        "stem": "79-scripts-legendas",
+        "caption": "Scripts Lua — seleção de legendas em Sistema > Plugins > R3"
+      },
+      {
+        "stem": "80-grade-legendas",
+        "caption": "Biblioteca em grade com o Title ID sob cada jogo de teste"
+      },
+      {
+        "stem": "81-lista-legendas",
+        "caption": "Biblioteca em lista com o mesmo script de Title ID"
+      },
+      {
         "stem": "03-detalhes",
         "caption": "Detalhes do jogo — acesso pela biblioteca em lista"
       },

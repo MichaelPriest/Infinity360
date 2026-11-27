@@ -16,8 +16,15 @@ O pacote unificado inclui infinity360-iptv-network.txt com OPEN. Em Cloud360 > F
 
 ## Biblioteca e scripts
 
-Sistema > Discos > START abre Pastas de varredura XEX. X habilita/desabilita; esquerda/direita ajustam profundidade individual de 0 (somente pasta) a 16; Y varre novamente; A abre Arquivos, onde Esquerda na pasta registra/remove caminhos personalizados. LB/RB alterna entre XEX e pacotes GOD/XBLA. No gerenciador de arquivos, Esquerda abre a confirmação: A alterna raiz XEX e X alterna raiz de pacotes. A raiz de pacotes deve conter diretórios TitleID/Tipo (por exemplo, 4D5307E6/00007000). Pacotes importados pela dashboard mantêm sua busca própria; apenas a indexação é alterada. Sistema > Plugins > R3 abre Scripts Lua; copie fontes .lua para MenuPreview/Scripts. A executa manualmente e Y atualiza. API v2: infinity.game_count e infinity.game(i) (índices a partir de 1; retorna name, device, favorite, package, hidden, pinned e index ou nil). infinity.api_version = 2. infinity.metadata(i) retorna title_id, media_id, version, base_version, disc_number, disc_count, content_type e volume_type quando o cabeçalho é conhecido, ou nil e um motivo. Até 128 índices distintos por execução, com cache. Retorne texto para exibir resultado. As tabelas são cópias e não alteram a biblioteca. Sem execucao automatica, acesso direto a disco, rede, memoria ou API Aurora/Freestyle. Runtime depende da compilacao com INFINITY_ENABLE_LUA.
+Sistema > Discos > START abre Pastas de varredura XEX. X habilita/desabilita; esquerda/direita ajustam profundidade individual de 0 (somente pasta) a 16; Y varre novamente; A abre Arquivos, onde Esquerda na pasta registra/remove caminhos personalizados. LB/RB alterna entre XEX e pacotes GOD/XBLA. No gerenciador de arquivos, Esquerda abre a confirmação: A alterna raiz XEX e X alterna raiz de pacotes. A raiz de pacotes deve conter diretórios TitleID/Tipo (por exemplo, 4D5307E6/00007000). Pacotes importados pela dashboard mantêm sua busca própria; apenas a indexação é alterada.
 
-Filtros Lua: MenuPreview/Scripts/Filters. Em Scripts, LB/RB alterna Utilitários/Filtros; A aplica o filtro e abre a biblioteca; X limpa. O filtro retorna uma tabela densa de índices únicos de infinity.game(i). A seleção dura a sessão e não altera jogos, favoritos ou coleções; reexecute após alterações no catálogo. Veja docs/LUA-API.md no repositório.
+Em **Sistema > Plugins > R3**, use LB/RB para alternar entre Utilitários, Filtros, Ordenação e Legendas. Y atualiza os arquivos disponíveis. A seleção de filtros, ordenação e legendas dura a sessão.
 
-Ordenações Lua: MenuPreview/Scripts/Sorts. LB/RB muda categoria; A aplica, X limpa a ordenação na categoria Sorts. Retorne todos os índices uma única vez na ordem desejada. RS na biblioteca volta à ordenação nativa (exceto Fixados, que mantém ordem manual).
+| Categoria | Pasta em MenuPreview | Controle |
+| --- | --- | --- |
+| Utilitários | `Scripts/` | A executa o arquivo Lua e exibe o resultado |
+| Filtros | `Scripts/Filters/` | A aplica os índices selecionados pelo script. X limpa o filtro |
+| Ordenação | `Scripts/Sorts/` | A aplica a sequência completa de índices. X limpa a ordenação |
+| Legendas | `Scripts/Subtitles/` | A aplica a legenda sob os jogos. X restaura a apresentação padrão |
+
+Os arquivos de legenda incluídos mostram Title ID, versão, dispositivo ou tipo de conteúdo. Você pode editá-los e reaplicá-los. Na biblioteca, RS restaura a ordenação nativa e a aba Fixados mantém a ordem manual. Consulte os exemplos e os limites da API v3 em `Platform/Xbox360/docs/LUA-API.md` no repositório.

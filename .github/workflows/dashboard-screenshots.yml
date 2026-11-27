@@ -24,7 +24,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/infinity-render-logs"
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/configure.log"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_ENABLE_LUA=ON 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/configure.log"
           cmake --build build --target console_home_tests social_profile_tests -j2 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/compile.log"
           ctest --test-dir build -R '^(console_home|social_profile)$' --output-on-failure 2>&1 | tee "$RUNNER_TEMP/infinity-render-logs/tests.log"
       - name: Capture and encode PNG screenshots
@@ -37,7 +37,8 @@ jobs:
           output = pathlib.Path("docs/screenshots")
           output.mkdir(parents=True, exist_ok=True)
           images = sorted(frames.glob("*.ppm"))
-          assert len(images) == 78, len(images)
+          assert len(images) == 81, len(images)
+          assert all((frames / name).is_file() for name in ('79-scripts-legendas.ppm', '80-grade-legendas.ppm', '81-lista-legendas.ppm'))
           assert (frames / '78-perfis-home.ppm').is_file()
           assert (frames / '77-permissoes-xbox.ppm').is_file()
           assert (frames / '76-comunicacao-xbox.ppm').is_file()

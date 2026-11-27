@@ -328,6 +328,8 @@ size_t ConsoleHome::Count() const {
     return visible_.size();
 }
 void ConsoleHome::Rebuild() {
+    luaSubtitleFirst_=-1;
+    luaSubtitleLines_.clear();
     visible_.clear();
     if (section_==Recent || section_==Favorites) {
         const std::vector<std::string> paths = section_==Recent ? history_ : HomeShortcuts();
@@ -457,16 +459,122 @@ void ConsoleHome::ChangeLibraryDepth(int delta){
     if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar profundidade.";return;}
     scanDepths_=next;notice_="Profundidade "+number(value)+" salva. Y atualiza biblioteca.";
 }
+std::string ConsoleHome::LuaDirectory()const{
+    static const char* const folders[LuaCategoryCount]={"","Filters","Sorts","Subtitles"};
+    const auto root=FileWorkspace::Join(dir_,"Scripts");
+    return luaCategory_==LuaUtilities?root:FileWorkspace::Join(root,folders[luaCategory_]);
+}
 void ConsoleHome::RefreshLuaScripts(){
     luaScripts_.clear();std::vector<FolderEntry> items;
-    const auto root=FileWorkspace::Join(dir_,"Scripts");
-    if(ReadFolder(luaCategory_?FileWorkspace::Join(root,luaCategory_==1?"Filters":"Sorts"):root,items)){
+    if(ReadFolder(LuaDirectory(),items)){
         for(const auto& item:items){
             if(luaScripts_.size()>=128)break;
             if(!item.directory&&item.name.size()<=128&&item.name.find_first_of("/\\:")==std::string::npos&&tvEndsWith(item.name,".lua"))luaScripts_.push_back(item.name);
         }
     }
     std::sort(luaScripts_.begin(),luaScripts_.end());clampRow(luaRow_,luaScripts_.size());
+}
+InfinityLua::Library ConsoleHome::LuaLibrary()const{
+    return {games_.size(),this,[](const void* ctx,size_t i)->InfinityLua::GameView{
+        const auto& home=*static_cast<const ConsoleHome*>(ctx);
+        const auto& g=home.games_[i];
+        return {&g.name,&g.device,home.Starred(g),isContentPackage(g),contains(home.hidden_,g.executable),
+                contains(home.pinned_,g.executable),InfinityLua::StorageLabel(g.executable)};
+    },[](const void* ctx,size_t i)->InfinityLua::MetadataView{
+        const auto& g=static_cast<const ConsoleHome*>(ctx)->games_[i];
+        const auto m=ContentCatalog::DescribeTitle(g.executable,isContentPackage(g));
+        return {m.known,m.titleId,m.mediaId,m.version,m.baseVersion,m.discNumber,m.discCount,m.contentType,m.volumeType};
+    }};
+}
+InfinityLua::SubtitleResult ConsoleHome::FormatLuaPage(const std::string& code,int first,int rows)const{
+    static_assert(GameGrid::Page<=InfinityLua::MaxSubtitleRows,"The Lua page must fit the cover grid");
+    std::vector<size_t> indices;
+    for(int i=first;i<first+rows && static_cast<size_t>(i)<visible_.size();++i)
+        indices.push_back(static_cast<size_t>(visible_[i]-games_.data()));
+    return InfinityLua::SubtitlePage(code,LuaLibrary(),indices);
+}
+bool ConsoleHome::RefreshLuaSubtitlePage(){
+    if(luaActiveSubtitle_.empty() || page_!=Listing || (section_!=Library && section_!=Recent && section_!=Favorites) ||
+       searchActive_ || collectionPicker_ || quickGuideOpen_ || TransferRunning() || ftp_.Running())return false;
+    const int rows=GridListing()?GameGrid::Page:7;
+    const int first=row_/rows*rows;
+    if(first==luaSubtitleFirst_)return false;
+    auto result=FormatLuaPage(luaSubtitleCode_,first,rows);
+    luaSubtitleFirst_=first;
+    luaSubtitleLines_=std::move(result.lines);
+    if(!result.error.empty())notice_=result.error;
+    return true;
+}
+const std::string* ConsoleHome::LuaSubtitleAt(int row)const{
+    if(luaSubtitleFirst_<0 || row<luaSubtitleFirst_)return nullptr;
+    const auto slot=static_cast<size_t>(row-luaSubtitleFirst_);
+    if(slot>=luaSubtitleLines_.size() || luaSubtitleLines_[slot].empty())return nullptr;
+    return &luaSubtitleLines_[slot];
+}
+void ConsoleHome::PressLuaScripts(Key key){
+    if(key==Back){luaPage_=false;notice_.clear();return;}
+    if(key==Up || key==Down){
+        luaRow_=std::max(0,luaRow_+(key==Down?1:-1));
+        clampRow(luaRow_,luaScripts_.size());
+        return;
+    }
+    if(key==PageUp || key==PageDown){
+        luaCategory_=(luaCategory_+(key==PageDown?1:LuaCategoryCount-1))%LuaCategoryCount;
+        luaRow_=0;
+        RefreshLuaScripts();
+        notice_.clear();
+        return;
+    }
+    if(key==Refresh){RefreshLuaScripts();return;}
+    if(key==Favorite){
+        if(luaCategory_==LuaSubtitles){
+            luaActiveSubtitle_.clear();luaSubtitleCode_.clear();luaSubtitleLines_.clear();luaSubtitleFirst_=-1;
+            notice_="Legendas Lua removidas.";
+        }else if(luaCategory_==LuaSorts){
+            luaActiveSort_.clear();luaSortRanks_.clear();notice_="Ordenacao Lua removida.";
+        }else{
+            luaActiveFilter_.clear();luaFilterPaths_.clear();notice_="Filtro Lua removido.";
+        }
+        return;
+    }
+    if(key!=Accept || luaScripts_.empty())return;
+    if(TransferRunning() || ftp_.Running()){notice_="Encerre a transferencia e o FTP para executar scripts.";return;}
+    const std::string name=luaScripts_[luaRow_];
+    const auto path=FileWorkspace::Join(LuaDirectory(),name);
+    if(luaCategory_==LuaUtilities){notice_=InfinityLua::RunFile(path,LuaLibrary());return;}
+    if(luaCategory_==LuaSubtitles){
+        std::string code;
+        notice_=InfinityLua::ReadSource(path,code);
+        if(!notice_.empty())return;
+        // Validate the actual first page after scanning, filtering and sorting.
+        Enter(Library);
+        auto result=FormatLuaPage(code,0,GridListing()?GameGrid::Page:7);
+        if(!result.error.empty()){
+            section_=System;page_=Details;systemTab_=4;Rebuild();
+            notice_=result.error;
+            return;
+        }
+        luaActiveSubtitle_=name;
+        luaSubtitleCode_=std::move(code);
+        luaSubtitleLines_=std::move(result.lines);
+        luaSubtitleFirst_=0;
+        luaPage_=false;
+        notice_="Legenda aplicada: "+name;
+        return;
+    }
+    const bool ordered=luaCategory_==LuaSorts;
+    const auto result=InfinityLua::FilterFile(path,LuaLibrary(),ordered);
+    if(!result.ok){notice_=result.message;return;}
+    if(ordered){
+        std::map<std::string,size_t> ranks;
+        for(size_t i=0;i<result.indices.size();++i)ranks.emplace(games_[result.indices[i]].executable,i);
+        luaSortRanks_.swap(ranks);luaActiveSort_=name;
+    }else{
+        std::set<std::string> selected;
+        for(const auto i:result.indices)selected.insert(games_[i].executable);
+        luaFilterPaths_.swap(selected);luaActiveFilter_=name;
+    }
+    luaPage_=false;Enter(Library);notice_=result.message;
 }
 void ConsoleHome::Reload() {
     notice_.clear();
@@ -649,7 +757,8 @@ bool ConsoleHome::Tick() {
         }
     }
     const bool heroChanged=ApprovedCarouselTick(TransferRate::Now());
-    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged||thermalChanged||heroChanged;
+    const bool subtitleChanged=RefreshLuaSubtitlePage();
+    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged||thermalChanged||heroChanged||subtitleChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -1081,43 +1190,9 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
         return "";
     }
-    if(luaPage_){
-        if(key==Back){luaPage_=false;notice_.clear();return "";}
-        if(key==Up||key==Down){luaRow_=std::max(0,luaRow_+(key==Down?1:-1));clampRow(luaRow_,luaScripts_.size());}
-        if(key==PageUp||key==PageDown){luaCategory_=(luaCategory_+(key==PageDown?1:2))%3;luaRow_=0;RefreshLuaScripts();notice_.clear();return "";}
-        if(key==Favorite){if(luaCategory_==2){luaActiveSort_.clear();luaSortRanks_.clear();notice_="Ordenacao Lua removida.";}else{luaActiveFilter_.clear();luaFilterPaths_.clear();notice_="Filtro Lua removido.";}return "";}
-        if(key==Refresh)RefreshLuaScripts();
-        if(key==Accept&&!TransferRunning()&&!ftp_.Running()&&!luaScripts_.empty()){
-            InfinityLua::Library library{games_.size(),this,[](const void* ctx,size_t i)->InfinityLua::GameView{
-                const auto& home=*static_cast<const ConsoleHome*>(ctx);
-                const auto& g=home.games_[i];
-                return {&g.name,&g.device,contains(home.favorites_,g.executable),isContentPackage(g),contains(home.hidden_,g.executable),contains(home.pinned_,g.executable)};
-            },[](const void* ctx,size_t i)->InfinityLua::MetadataView{
-                const auto& g=static_cast<const ConsoleHome*>(ctx)->games_[i];
-                const auto m=ContentCatalog::DescribeTitle(g.executable,isContentPackage(g));
-                return {m.known,m.titleId,m.mediaId,m.version,m.baseVersion,m.discNumber,m.discCount,m.contentType,m.volumeType};
-            }};
-            const auto root=FileWorkspace::Join(dir_,"Scripts");
-            if(luaCategory_){
-                const bool ordered=luaCategory_==2;
-                const auto result=InfinityLua::FilterFile(FileWorkspace::Join(FileWorkspace::Join(root,ordered?"Sorts":"Filters"),luaScripts_[luaRow_]),library,ordered);
-                if(!result.ok){notice_=result.message;return "";}
-                if(ordered){
-                    std::map<std::string,size_t> ranks;
-                    for(size_t i=0;i<result.indices.size();++i)ranks.emplace(games_[result.indices[i]].executable,i);
-                    luaSortRanks_.swap(ranks);luaActiveSort_=luaScripts_[luaRow_];
-                }else{
-                    std::set<std::string> selected;
-                    for(const auto i:result.indices)selected.insert(games_[i].executable);
-                    luaFilterPaths_.swap(selected);luaActiveFilter_=luaScripts_[luaRow_];
-                }
-                luaPage_=false;Enter(Library);notice_=result.message;
-            }else notice_=InfinityLua::RunFile(FileWorkspace::Join(root,luaScripts_[luaRow_]),library);
-        }
-        return "";
-    }
+    if(luaPage_){PressLuaScripts(key);return "";}
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=0;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=LuaUtilities;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
         const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
         const int count=actions[3]<0?3:4;
@@ -1989,6 +2064,7 @@ std::string ConsoleHome::Press(Key key) {
         notice_.clear();
         if (page_==Details) {
             page_=Listing;
+            luaSubtitleFirst_=-1;
             if(section_==Recent) { Rebuild(); row_=0; }
             else if(section_==Library && subtab_==6)Rebuild();
         }
@@ -3151,16 +3227,18 @@ void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,605,packagePathsPage_?"LB/RB XEX | A Pastas | X Alternar | Y Varrer | B Voltar":"LB/RB Pacotes | A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer",18,Lime,1170);
 }
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
-    c.Text(45,93,luaCategory_==2?"Scripts Lua | Ordenacao":luaCategory_==1?"Scripts Lua | Filtros":"Scripts Lua | Utilitarios",36,White,1180);
-    c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execucao manual isolada":"Runtime Lua nao incluido nesta build",21,Muted,1160);
+    static const char* const titles[LuaCategoryCount]={"Utilitários","Filtros","Ordenação","Legendas"};
+    c.Text(45,93,std::string("Scripts Lua | ")+titles[luaCategory_],36,White,1180);
+    c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execução manual":"Runtime Lua indisponível",21,Muted,1160);
     const int first=(luaRow_/7)*7;
     for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
         const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
         c.TextFit(62,y+8,luaScripts_[i],22,White,1145);
     }
-    if(luaScripts_.empty())c.Text(48,245,luaCategory_==2?"Copie ordenacoes .lua para MenuPreview/Scripts/Sorts.":luaCategory_==1?"Copie filtros .lua para MenuPreview/Scripts/Filters.":"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
-    c.TextFit(48,580,luaCategory_==2?(luaActiveSort_.empty()?"Sem ordenacao Lua ativa.":"Ordenacao ativa: "+luaActiveSort_):(luaActiveFilter_.empty()?"Sem filtro Lua ativo.":"Filtro ativo: "+luaActiveFilter_),17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,luaCategory_?"A Aplicar | X Limpar | LB/RB Categoria | Y Atualizar | B Voltar":"A Executar | X Limpar filtro | LB/RB Categoria | Y Atualizar | B Voltar",18,Lime,1170);
+    if(luaScripts_.empty())c.TextFit(48,245,"Copie arquivos .lua para "+LuaDirectory(),22,Muted,1170);
+    const std::string& active=luaCategory_==LuaSubtitles?luaActiveSubtitle_:luaCategory_==LuaSorts?luaActiveSort_:luaActiveFilter_;
+    const char* setting=luaCategory_==LuaSubtitles?"Legenda":luaCategory_==LuaSorts?"Ordenação":"Filtro";
+    c.TextFit(48,580,std::string(setting)+" | "+(active.empty()?"Padrão":active),17,Muted,1180);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
@@ -3418,8 +3496,17 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(contentActive_) {DrawContent(c);return;}
     const int sectionIcons[]={23,3,2,1,InfinityIcons::Folder,10,20,21};
     InfinityIcons::Draw(c,sectionIcons[section_],46,91,32,White);
-    c.TextFit(91,78,c.Tr(labels[section_]),40,White,section_==Library&&(!luaActiveFilter_.empty()||!luaActiveSort_.empty())?480:1140);
-    if(section_==Library&&(!luaActiveFilter_.empty()||!luaActiveSort_.empty()))c.TextFit(570,94,(luaActiveFilter_.empty()?std::string(""):"Filtro: "+luaActiveFilter_)+(luaActiveSort_.empty()?std::string(""):" | Ordem: "+luaActiveSort_),19,Lime,650);
+    c.TextFit(91,78,c.Tr(labels[section_]),40,White,section_==Library?450:1140);
+    if(section_==Library){
+        std::string active;
+        auto append=[&](const char* label,const std::string& file){
+            if(file.empty())return;
+            if(!active.empty())active+=" | ";
+            active+=label+file;
+        };
+        append("Filtro: ",luaActiveFilter_);append("Ordem: ",luaActiveSort_);append("Legenda: ",luaActiveSubtitle_);
+        c.TextFit(551,94,active,18,Lime,681);
+    }
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
@@ -3638,7 +3725,11 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             if(!coverFile.empty() && c.LocalArt(coverFile,true,55,y+2,30,45))nameX=99;
         }
         if(nameX==62){InfinityIcons::Draw(c,section_==Files?14:1,57,y+10,26,Muted);nameX=96;}
-        c.TextFit(nameX,y+6,name,23,White,872-nameX);
+        const auto* subtitle=LuaSubtitleAt(i);
+        if(subtitle){
+            c.TextFit(nameX,y,name,20,White,872-nameX);
+            c.TextFit(nameX,y+25,*subtitle,15,Muted,872-nameX);
+        }else c.TextFit(nameX,y+6,name,23,White,872-nameX);
         c.TextFit(886,y+9,detail,19,Muted,336);
     }
 }
@@ -3994,7 +4085,16 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
-    if(libraryPathsPage_||luaPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
+    if(luaPage_){
+        using namespace InfinityButtons;
+        Hint(c,A,45,674,22,luaCategory_==LuaUtilities?"Executar":"Aplicar",150,White);
+        Hint(c,X,245,674,22,luaCategory_==LuaUtilities?"Limpar filtro":"Limpar",175,White);
+        InfinityButtons::Draw(c,LB,475,674,22);Hint(c,RB,512,674,22,"Categoria",150,White);
+        Hint(c,Y,730,674,22,"Atualizar",160,White);
+        Hint(c,B,955,674,22,"Voltar",160,White);
+        return;
+    }
+    if(libraryPathsPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     if(contentActive_||artEditing_||discSetActive_||updateActive_||fileAction_||collectionPicker_||searchActive_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
@@ -4522,7 +4622,9 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
             else{InfinityIcons::Draw(c,1,x+(cw-48)/2,y+46,48,Muted);c.CenterText(x+4,y+100,cw-8,"Sem capa",14,Muted);}
             if(Starred(game))InfinityIcons::Draw(c,21,x+9,y+9,19,Lime);
             if(contains(pinned_,game.executable))c.TextFit(x+cw-62,y+7,c.Tr("FIXADO"),12,Lime,54);
-            c.TextFit(x+10,y+ch-32,game.name,17,White,cw-20);
+            const auto* subtitle=LuaSubtitleAt(index);
+            c.TextFit(x+10,y+ch-(subtitle?48:32),game.name,17,White,cw-20);
+            if(subtitle)c.TextFit(x+10,y+ch-25,*subtitle,14,Muted,cw-20);
             if(active)c.SeriesFocus(x,y,cw,ch);
         }
         c.Text(1060,597,number(first/GameGrid::Page+1)+"/"+number((count+GameGrid::Page-1)/GameGrid::Page),17,Lime,170);

@@ -49,6 +49,8 @@
 #include <utility>
 #include <set>
 
+namespace InfinityLua { struct Library; struct SubtitleResult; }
+
 class ConsoleHome {
 public:
     enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
@@ -330,7 +332,17 @@ private:
     void DrawLibraryPaths(HomeCanvas& c)const;
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();
-    unsigned luaCategory_=0; // 0 utilities, 1 filters, 2 sorts
+    void PressLuaScripts(Key key);
+    std::string LuaDirectory()const;
+    InfinityLua::Library LuaLibrary()const;
+    InfinityLua::SubtitleResult FormatLuaPage(const std::string& code,int first,int rows)const;
+    bool RefreshLuaSubtitlePage();
+    const std::string* LuaSubtitleAt(int row)const;
+    enum LuaCategory { LuaUtilities, LuaFilters, LuaSorts, LuaSubtitles, LuaCategoryCount };
+    unsigned luaCategory_=LuaUtilities;
+    std::string luaActiveSubtitle_,luaSubtitleCode_;
+    std::vector<std::string> luaSubtitleLines_;
+    int luaSubtitleFirst_=-1;
     std::string luaActiveSort_;
     std::map<std::string,size_t> luaSortRanks_;
     std::string luaActiveFilter_;

@@ -30,9 +30,19 @@ public:
         : ConsoleHome(dir,roots,DashboardLayout::Classic){}
 };
 
+#ifdef INFINITY_WITH_LUA
+static void openLuaScriptsFromHome(LegacyFixtureHome& home){
+    // Normalize the classic Home focus, then follow System > Plugins > R3.
+    for(auto key:{ConsoleHome::Up,ConsoleHome::Up,ConsoleHome::Up,ConsoleHome::Left,
+                  ConsoleHome::Right,ConsoleHome::Down,ConsoleHome::Right,ConsoleHome::Accept,
+                  ConsoleHome::Right,ConsoleHome::Right,ConsoleHome::Right,ConsoleHome::Right,
+                  ConsoleHome::Accept,ConsoleHome::Search})home.Press(key);
+}
+#endif
+
 static int captureScreens(const char* atlas,const char* destination) {
     namespace fs=std::filesystem;
-    fs::path output(destination);
+    const auto output=fs::absolute(destination);
     fs::create_directories(output);
     const fs::path root=fs::temp_directory_path()/("infinity-capture-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(root/"Games");
@@ -104,6 +114,29 @@ static int captureScreens(const char* atlas,const char* destination) {
         return !!out;
     };
     bool ok=true;
+#ifdef INFINITY_WITH_LUA
+    const auto luaDir=root/"Legendas";
+    const auto scripts=luaDir/"Scripts"/"Subtitles";
+    fs::create_directories(scripts);
+    const auto defaults=fs::path(atlas).parent_path().parent_path()/"ReleaseDefaults"/"Scripts"/"Subtitles";
+    fs::copy(defaults,scripts,fs::copy_options::recursive);
+    const auto previousDirectory=fs::current_path();
+    fs::current_path(root);
+    for(const bool grid:{true,false}){
+        std::ofstream(luaDir/"aurorax-profile.txt")<<"G\t"<<(grid?2:1)<<"\n";
+        LegacyFixtureHome captions(luaDir.string()+"/",{"Games"});
+        captions.Load();
+        openLuaScriptsFromHome(captions);
+        captions.Press(ConsoleHome::PageUp);
+        captions.Press(ConsoleHome::Down);
+        captions.Press(ConsoleHome::Down);
+        if(grid)ok=save("79-scripts-legendas",captions)&&ok;
+        captions.Press(ConsoleHome::Accept);
+        captions.Tick();
+        ok=save(grid?"80-grade-legendas":"81-lista-legendas",captions)&&ok;
+    }
+    fs::current_path(previousDirectory);
+#endif
     ConsoleHome approved(dir,roots);approved.Load();assert(approved.ApprovedHeader());
     ok=save("01-inicio",approved)&&ok;
     {ConsoleHome groups(dir,roots);groups.Load();for(int i=0;i<5;++i)groups.Press(ConsoleHome::Right);groups.Press(ConsoleHome::Accept);ok=save("72-home-grupos",groups)&&ok;groups.Press(ConsoleHome::Back);assert(groups.ApprovedHeader());}
@@ -1285,9 +1318,76 @@ int main(int argc,char** argv) {
         LegacyFixtureHome sortHome(luaRoot.string()+"/",{(luaRoot/"Games").string()});sortHome.Load();
         sortHome.Press(ConsoleHome::Right);sortHome.Press(ConsoleHome::Down);sortHome.Press(ConsoleHome::Right);sortHome.Press(ConsoleHome::Accept);
         for(int i=0;i<4;++i)sortHome.Press(ConsoleHome::Right);
-        sortHome.Press(ConsoleHome::Accept);sortHome.Press(ConsoleHome::Search);sortHome.Press(ConsoleHome::PageUp);sortHome.Press(ConsoleHome::Accept);
+        sortHome.Press(ConsoleHome::Accept);sortHome.Press(ConsoleHome::Search);sortHome.Press(ConsoleHome::PageDown);sortHome.Press(ConsoleHome::PageDown);sortHome.Press(ConsoleHome::Accept);
         sortHome.Press(ConsoleHome::Accept);
         assert(sortHome.Press(ConsoleHome::Accept)==(luaRoot/"Games"/"Beta"/"default.xex").string());
+    }
+    for(const bool grid:{false,true}){
+        const auto dir=root/(grid?"LuaSubtitleGrid":"LuaSubtitleList");
+        const auto games=dir/"Games",scripts=dir/"Scripts";
+        for(int i=0;i<15;++i){
+            const auto game=games/(std::string(i<10?"Game0":"Game")+std::to_string(i));
+            fs::create_directories(game);
+            std::ofstream(game/"default.xex")<<"fixture";
+        }
+        for(const char* category:{"Filters","Sorts","Subtitles"})fs::create_directories(scripts/category);
+        std::ofstream(dir/"aurorax-profile.txt")<<"G\t"<<(grid?2:1)<<"\n";
+        std::ofstream(scripts/"Filters"/"Filter.lua")<<"local r={} for i=1,infinity.game_count-1 do r[i]=i end return r";
+        std::ofstream(scripts/"Sorts"/"Reverse.lua")<<"local r={} for i=1,infinity.game_count do r[i]=infinity.game_count-i+1 end return r";
+        const auto caption=scripts/"Subtitles"/"A.lua";
+        std::ofstream(caption)<<"return function(i) local n=infinity.game(i).name "
+            "if n=='Game13' or n=='Game06' or n=='Game01' then return 'USB - '..n end end";
+        std::ofstream(scripts/"Subtitles"/"Z.lua")<<"return function() return {} end";
+        LegacyFixtureHome home(dir.string()+"/",{games.string()});
+        home.Load();
+        auto openLibrary=[&](){
+            // Leave the scripts manager and enter the library from the System tile.
+            for(auto key:{ConsoleHome::Back,ConsoleHome::Back,ConsoleHome::Back,ConsoleHome::Up,
+                          ConsoleHome::Left,ConsoleHome::Accept})home.Press(key);
+            home.Tick();
+        };
+        auto nextPage=[&](){for(int i=0;i<(grid?2:7);++i)home.Press(ConsoleHome::Down);home.Tick();};
+        auto textBand=[&](int slot){
+            home.Draw(canvas,"12:00",1795570920);
+            const int x=grid?55+slot*200:96,y=grid?388:265+slot*55;
+            std::vector<unsigned> pixels;
+            for(int dy=0;dy<17;++dy){
+                const auto* start=canvas.Pixels()+(y+dy)*HomeCanvas::Width+x;
+                pixels.insert(pixels.end(),start,start+166);
+            }
+            return pixels;
+        };
+        for(int category:{1,2}){
+            openLuaScriptsFromHome(home);
+            for(int i=0;i<category;++i)home.Press(ConsoleHome::PageDown);
+            home.Press(ConsoleHome::Accept);
+            if(category==1)home.Press(ConsoleHome::Back);
+        }
+        const auto nativeFirst=textBand(0),nativeSecond=textBand(1);
+        nextPage();
+        const auto nativeNext=textBand(0);
+        home.Press(ConsoleHome::Back);
+        openLuaScriptsFromHome(home);
+        home.Press(ConsoleHome::PageUp);home.Press(ConsoleHome::Accept);
+        const auto labeledFirst=textBand(0);
+        assert(labeledFirst!=nativeFirst && textBand(1)==nativeSecond);
+        std::ofstream(caption)<<"return function() return nil end";
+        nextPage();
+        assert(textBand(0)!=nativeNext);
+        home.Press(ConsoleHome::Refresh);home.Tick();
+        assert(textBand(0)!=nativeNext);
+        home.Press(ConsoleHome::Back);
+        openLuaScriptsFromHome(home);
+        home.Press(ConsoleHome::PageUp);home.Press(ConsoleHome::Down);home.Press(ConsoleHome::Accept);
+        openLibrary();
+        assert(textBand(0)==labeledFirst);
+        home.Press(ConsoleHome::Back);
+        openLuaScriptsFromHome(home);
+        home.Press(ConsoleHome::PageUp);home.Press(ConsoleHome::Favorite);
+        openLibrary();
+        assert(textBand(0)==nativeFirst);
+        home.Press(ConsoleHome::Accept);
+        assert(home.Press(ConsoleHome::Accept)==(games/"Game13"/"default.xex").string());
     }
 #endif
     // Native explorer context actions: confirmed deletion, cancel and cut/paste.
