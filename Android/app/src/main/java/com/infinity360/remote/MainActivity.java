@@ -22,7 +22,8 @@ public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
     private TextView status,monitor,catalogResult,downloads,storeResult;
-    private LinearLayout downloadCards;
+    private LinearLayout downloadCards,deviceCards;
+    private TextView deviceStatus;
     private EditText storeQuery;
     private LinearLayout storeCards;
     private int storeNext=-1;
@@ -93,6 +94,9 @@ public final class MainActivity extends Activity {
         content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
         content=screen(root,4);
         label("INFINITY Store");
+        deviceStatus=text("Destino: consulte os dispositivos do Xbox.",14,MUTED);content.addView(deviceStatus);
+        content.addView(button("Consultar HDD / USB",PANEL,()->loadDevices()),new LinearLayout.LayoutParams(-1,dp(54)));
+        deviceCards=new LinearLayout(this);deviceCards.setOrientation(LinearLayout.VERTICAL);content.addView(deviceCards);
         storeQuery=field("Buscar nome ou categoria (game, xbla, homebrew...)",InputType.TYPE_CLASS_TEXT);
         content.addView(button("Consultar loja",ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,dp(54)));
         storeResult=text("Catálogo autorizado do console. Nenhum pacote é baixado no celular.",14,MUTED);content.addView(storeResult);
@@ -218,6 +222,42 @@ public final class MainActivity extends Activity {
             runOnUiThread(()->{if(isDestroyed())return;busy=false;if(image!=null&&target.isAttachedToWindow()){target.setImageBitmap(image);target.setVisibility(View.VISIBLE);}status.setText(message);});
         });
     }
+    private void loadDevices(){
+        if(busy)return;
+        final String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira IP e chave.");return;}
+        busy=true;status.setText("Consultando armazenamento...");
+        worker.execute(()->{
+            org.json.JSONArray rows=new org.json.JSONArray();String selected="";boolean ok=false;
+            try{
+                org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.devices(ip,secret));
+                if(obj.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
+                rows=obj.getJSONArray("items");if(rows.length()>5)throw new java.io.IOException("Resposta inválida");
+                selected=obj.getString("selected");ok=true;
+            }catch(Exception e){}
+            final org.json.JSONArray data=rows;final String current=selected;final boolean success=ok;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;deviceCards.removeAllViews();
+                deviceStatus.setText(success?"Destino selecionado: "+current:"Armazenamento indisponível.");
+                if(success)for(int i=0;i<data.length();i++){
+                    org.json.JSONObject item=data.optJSONObject(i);if(item==null)continue;
+                    final String id=item.optString("id"),label=item.optString("label");
+                    if(!id.matches("local|hdd|usb[012]"))continue;
+                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+                    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);deviceCards.addView(card,lp);
+                    card.addView(text(label+(id.equals(current)?" • Selecionado":""),16,TEXT));
+                    if(item.optBoolean("available")){
+                        long free=item.optLong("free",0),capacity=item.optLong("capacity",0);
+                        card.addView(text(android.text.format.Formatter.formatFileSize(this,Math.max(0,free))+" livres / "+android.text.format.Formatter.formatFileSize(this,Math.max(0,capacity)),14,MUTED));
+                        if(!id.equals(current))card.addView(button("Selecionar destino",ACCENT,()->{
+                            if(!ip.equals(consoleIp.getText().toString().trim())||!secret.equals(key.getText().toString().trim())){status.setText("Conexão alterada. Consulte novamente.");return;}
+                            confirmQueueCommand("storedevice/"+id,"Selecionar "+label+"?","A fila atual permanece no dispositivo anterior. Consulte novamente a loja e os downloads.");
+                        }));
+                    }else card.addView(text("Indisponível ou não preparado",13,MUTED));
+                }
+                status.setText(success?"Dispositivos recebidos.":"Falha na consulta.");
+            });
+        });
+    }
     private void loadStore(boolean reset){
         if(busy)return;
         String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
@@ -284,6 +324,10 @@ public final class MainActivity extends Activity {
             card.addView(text(name,16,TEXT));
             long total=row.optLong("total"),done=row.optLong("received");
             ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(100);progress.setProgress(total>0?(int)Math.min(100,100.0*Math.max(0,done)/total):0);card.addView(progress);
+            card.addView(button("Priorizar download",ACCENT,()->{
+                if(!ip.equals(consoleIp.getText().toString().trim())||!secret.equals(key.getText().toString().trim())){status.setText("Conexão alterada. Consulte novamente.");return;}
+                confirmQueueCommand("storepriority/"+id,"Priorizar "+name+"?","O item irá para o início da fila. O downloader deve estar parado.");
+            }));
             card.addView(button("Remover da fila (preservar parcial)",PANEL,()->{
                 if(!ip.equals(consoleIp.getText().toString().trim())||!secret.equals(key.getText().toString().trim())){status.setText("Conexão alterada. Consulte novamente.");return;}
                 confirmQueueCommand("storeremove/"+id,"Remover "+name+" da fila?","Arquivos parciais serão preservados. O comando só funciona quando o downloader está parado.");
@@ -400,7 +444,7 @@ public final class MainActivity extends Activity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":command.startsWith("storepriority/")?"Prioridade atualizada. Consulte a fila.":command.startsWith("storedevice/")?"Destino alterado. Consulte os dispositivos e a loja.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);if(command!=null&&command.startsWith("storedevice/")&&msg.startsWith("Destino alterado.")){storeCards.removeAllViews();downloadCards.removeAllViews();deviceCards.removeAllViews();storeNext=-1;storeResult.setText("Consulte o catálogo do novo destino.");downloads.setText("Consulte a fila do novo destino.");deviceStatus.setText("Consulte o destino atualizado.");}});});
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }

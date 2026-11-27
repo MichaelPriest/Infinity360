@@ -1193,6 +1193,10 @@ bool ConsoleHome::StartNativeStore(const StoreItem& item){
     if(TransferRunning()||!TranslationMatches(item)){notice_="Copia ativa ou traducao incompativel.";return false;}
     if(store_.Staged(item)){notice_="Arquivo local ja existe; RB gerencia pacote na ficha.";return false;}
     if(store_.PackagePresent(item)){notice_="Pacote anterior presente; RB gerenciar > arquivar pacote.";return false;}
+    const auto volume=StorageInfo::Read(StoreStorage::Personal(dir_,item.storage));
+    const auto progress=store_.Progress(item);
+    const auto remaining=item.bytes-(progress.state==StoreProgress::NativePaused?std::min(item.bytes,progress.received):0ULL);
+    if(!volume.available||remaining>volume.writableBytes){notice_="Destino sem espaco livre confirmado.";return false;}
     nativeStoreItem_=item;nativeStorePending_=true;notice_="Preparando download HTTPS nativo.";return true;
 #else
     (void)item;notice_="Provider HTTPS indisponivel.";return false;
@@ -1375,12 +1379,23 @@ bool ConsoleHome::RemoteStoreEnabled()const{
 bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
 #if defined(INFINITY_XSDK_HTTPS)
     if(request.key!=TvRemote::Key::StoreDownload&&request.key!=TvRemote::Key::StoreQueue&&
-       request.key!=TvRemote::Key::StoreStart&&request.key!=TvRemote::Key::StoreRemove)return false;
+       request.key!=TvRemote::Key::StoreStart&&request.key!=TvRemote::Key::StoreRemove&&
+       request.key!=TvRemote::Key::StoreDevice&&request.key!=TvRemote::Key::StorePriority)return false;
     if(!RemoteStoreEnabled())return false;
     const bool downloadsPanel=section_==System&&page_==Details&&systemTab_==3&&storeDownloads_;
     if(!RemoteAllowed(GlobalGuide)||(!IdleEligible()&&!storeActive_&&!downloadsPanel)||quickGuideOpen_||
        nativeStorePending_||nativeBatch_||updatePending_||storeInstallPending_||providerPending_||
        !store_.NativeQueueValid())return false;
+    if(request.key==TvRemote::Key::StoreDevice){
+        const auto id=request.query=="local"?std::string{}:request.query;
+        if(!StoreStorage::Valid(id)||!fileWorkspace_.CanWrite(StoreStorage::Personal(dir_,id)))return false;
+        const auto volume=StorageInfo::Read(StoreStorage::Personal(dir_,id));
+        if(!volume.available)return false;
+        if(id!=store_.Storage()&&!store_.SelectStorage(id))return false;
+        storeDetails_=false;storeRow_=0;RebuildStore();if(storeDownloads_)RebuildStoreDownloads();
+        notice_="Destino Store: "+StoreStorage::Label(id)+"; fila independente.";
+        return true;
+    }
     if(request.key==TvRemote::Key::StoreStart){
         nativeBatch_=true;
         if(!NextNativeStore()){nativeBatch_=false;return false;}
@@ -1393,6 +1408,11 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
     }
     if(!found)return false;
     const StoreItem item=*found;
+    if(request.key==TvRemote::Key::StorePriority){
+        if(!store_.NativeQueued(item)||!store_.PrioritizeNative(item))return false;
+        if(storeDownloads_)RebuildStoreDownloads();
+        notice_="Prioridade da fila atualizada pelo celular.";return true;
+    }
     if(request.key==TvRemote::Key::StoreRemove){
         if(!store_.NativeQueued(item)||!store_.RemoveNative(item))return false;
         if(storeDownloads_)RebuildStoreDownloads();
@@ -1401,6 +1421,10 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
     if(item.url.empty()||!StoreHostPolicy::Allowed(item.url,dir_)||!TranslationMatches(item)||
        store_.Staged(item)||store_.PackagePresent(item)||item.storage!=store_.Storage())return false;
     const bool start=request.key==TvRemote::Key::StoreDownload;
+    const auto volume=StorageInfo::Read(StoreStorage::Personal(dir_,item.storage));
+    const auto progress=store_.Progress(item);
+    const auto remaining=item.bytes-(progress.state==StoreProgress::NativePaused?std::min(item.bytes,progress.received):0ULL);
+    if(!volume.available||remaining>volume.writableBytes){notice_="Destino sem espaco livre confirmado.";return false;}
     if(start&&!StartNativeStore(item))return false;
     if(!store_.QueueNative(item)){if(start)nativeStorePending_=false;return false;}
     if(storeDownloads_)RebuildStoreDownloads();
@@ -1411,6 +1435,20 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
 #endif
 }
 std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
+    if(request.key==TvRemote::Key::StoreDevices){
+        std::string out="{\"schema\":1,\"selected\":"+TvRemote::Quote(store_.Storage().empty()?"local":store_.Storage())+",\"items\":[";
+        const std::string ids[]={"","hdd","usb0","usb1","usb2"};
+        for(size_t i=0;i<5;++i){
+            const auto folder=StoreStorage::Personal(dir_,ids[i]);
+            const auto volume=StorageInfo::Read(folder);
+            const bool usable=volume.available&&!folder.empty()&&fileWorkspace_.CanWrite(folder);
+            if(i)out+=",";
+            out+="{\"id\":"+TvRemote::Quote(ids[i].empty()?"local":ids[i])+",\"label\":"+TvRemote::Quote(StoreStorage::Label(ids[i]))+
+                ",\"available\":"+(usable?"true":"false")+",\"capacity\":"+(volume.available?std::to_string(volume.capacity):"null")+
+                ",\"free\":"+(volume.available?std::to_string(volume.writableBytes):"null")+"}";
+        }
+        return out+"]}";
+    }
     if(request.key==TvRemote::Key::Store){
         return TvRemote::CatalogPage(store_.Items().size(),request.offset,[&](size_t i)->std::string{
             const auto& item=store_.Items()[i];

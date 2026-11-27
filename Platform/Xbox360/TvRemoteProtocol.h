@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 namespace TvRemote {
-enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune,Logo,Cover,Downloads,Store,StoreQueue,StoreDownload,StoreStart,StorePause,StoreRemove };
+enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune,Logo,Cover,Downloads,Store,StoreQueue,StoreDownload,StoreStart,StorePause,StoreRemove,StoreDevices,StoreDevice,StorePriority };
 inline bool ValidSecret(const std::string& s){
     if(s.size()!=32)return false;
     for(char c:s)if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;
@@ -63,6 +63,13 @@ inline Request Parse(const std::string& request,const std::string& host,const st
     if(command=="downloads")return {false,Key::Downloads};
     if(command=="storestart")return {false,Key::StoreStart};
     if(command=="storepause")return {false,Key::StorePause};
+    if(command=="storedevices")return {false,Key::StoreDevices};
+    if(command.compare(0,12,"storedevice/")==0){
+        const auto id=command.substr(12);
+        if(id=="local"||id=="hdd"||id=="usb0"||id=="usb1"||id=="usb2")return {false,Key::StoreDevice,0,id};
+        return {};
+    }
+    if(command.compare(0,14,"storepriority/")==0){const auto id=command.substr(14);return ValidChannelId(id)?Request{false,Key::StorePriority,0,id}:Request{};}
     if(command.compare(0,12,"storeremove/")==0){const auto id=command.substr(12);return ValidChannelId(id)?Request{false,Key::StoreRemove,0,id}:Request{};}
     if(command.compare(0,11,"storequeue/")==0||command.compare(0,14,"storedownload/")==0){
         const bool now=command.compare(0,14,"storedownload/")==0;

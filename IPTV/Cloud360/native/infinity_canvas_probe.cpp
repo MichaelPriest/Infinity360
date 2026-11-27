@@ -293,7 +293,7 @@ int main(){
             ConsoleHome::Key remoteKey=ConsoleHome::Back;
             const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);},[&](){return menu.RemoteSnapshot();},[&](const TvRemote::Request& request){return menu.RemoteCatalog(request);},{},[&](const TvRemote::Request& request){return !systemUiOpen&&!buttons&&!idleScreen.Active()&&pendingLaunch.empty()&&menu.RemoteStoreAction(request);});
             if(command==TvRemote::Key::StoreDownload||command==TvRemote::Key::StoreStart){remoteStoreJob=true;dirty=true;}
-            else if(command==TvRemote::Key::StoreQueue||command==TvRemote::Key::StoreRemove){dirty=true;}
+            else if(command==TvRemote::Key::StoreQueue||command==TvRemote::Key::StoreRemove||command==TvRemote::Key::StoreDevice||command==TvRemote::Key::StorePriority){dirty=true;}
             else if(command!=TvRemote::Key::None){
                 if(remoteKey==ConsoleHome::GlobalGuide)edge|=INPUT_GAMEPAD_LEFT_THUMB;
                 else if(static_cast<unsigned>(remoteKey)<11)edge|=keys[static_cast<unsigned>(remoteKey)];

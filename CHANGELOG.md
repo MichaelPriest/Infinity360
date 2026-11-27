@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.68 — Destino e prioridade da loja remota
+
+- Android Remote 0.11.0 Alpha: consulta de armazenamento local/HDD/USB 0–2, capacidade e espaco gravavel; troca autenticada do destino preparado com fila independente, invalidacao dos cards antigos, prioridade de item existente. Preflight de espaco para pedidos remotos e inicio nativo, considerando parcial reconhecido. Nao cria pastas nem formata dispositivos; nao reserva espaco futuro. Sem XEX/release; APK e homologacao pendentes.
+
 ## V0.3.67 — Controle remoto da fila de downloads
 
 - Android Remote 0.10.0 Alpha: iniciar/retomar fila nativa, solicitar pausa no callback de progresso, remover item da fila sem apagar parcial, cards com barras de progresso. Mantém autorização local da loja, IP/chave, TLS/SHA-256 e confirmação no app. Fila para em falha ou pausa; consulta manual. Sem XEX/release; APK e testes de console pendentes.
