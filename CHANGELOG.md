@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.66 — Loja Android e downloads diretos no Xbox
+
+- Android Remote 0.9.0 Alpha: aba Loja com busca, paginação, categoria, versão, tamanho e estado da fila. Botões Baixar no Xbox e Adicionar à fila, com confirmação no app. Usa catálogo e downloader HTTPS nativo, valida ID, host local autorizado, tamanho e destino existente; preserva TLS/SHA-256 e retomada. Habilitação explícita enable-remote-store.txt (ENABLE-REMOTE-STORE), além do HTTPS Store e controle dashboard. Solicitações de escrita só na Home livre ou loja, sem instalações automáticas. Consulta de progresso durante callbacks do downloader, sem garantia de atualização durante bloqueios. Sem XEX/release; APK e homologação pendentes.
+
 ## V0.3.65 — Descoberta autenticada e consulta de downloads
 
 - Android Remote 0.8.0 Alpha: descoberta UDP 32162 por broadcast da interface IPv4 selecionada, desafio aleatorio e resposta HMAC-SHA256 com chave ja pareada; somente IP do celular autorizado recebe resposta. Sem envio da chave no discovery; HTTP de controle continua sem criptografia. Consulta autenticada da fila nativa carregada e dos primeiros 8 registros, incluindo bytes recebidos/total e transferencia local. Consulta somente leitura; sem prometer progresso em tempo real. Testes de protocolo ampliados. APK e XSDK pendentes; sem XEX/release.

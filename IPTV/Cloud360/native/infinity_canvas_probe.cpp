@@ -33,6 +33,7 @@
 #ifdef INFINITY_MENU_FFMPEG
 #include "XsdkAvPlayer.h"
 #include "TvRemoteServer.h"
+#include "TvRemoteCatalog.h"
 #endif
 #include <cerrno>
 #include <filesystem>
@@ -284,13 +285,16 @@ int main(){
         uint16_t edge=buttons&~previous;previous=buttons;
         const bool systemUiOpen=xsdk_system_ui_open();
         if(systemUiOpen)edge=0;
+        bool remoteStoreJob=false;
 #ifdef INFINITY_MENU_FFMPEG
         if(dashboardRemoteEnabled){
             const auto now=TransferRate::Now();
-            if(dashboardRemote.Address().empty()&&(!remoteRetry||now>=remoteRetry)){dashboardRemote.Start(dir);remoteRetry=now+5000;}
+            if(dashboardRemote.Address().empty()&&(!remoteRetry||now>=remoteRetry)){if(dashboardRemote.Start(dir))menu.LoadRemoteStore();remoteRetry=now+5000;}
             ConsoleHome::Key remoteKey=ConsoleHome::Back;
-            const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);},[&](){return menu.RemoteSnapshot();},[&](const TvRemote::Request& request){return menu.RemoteCatalog(request);});
-            if(command!=TvRemote::Key::None){
+            const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);},[&](){return menu.RemoteSnapshot();},[&](const TvRemote::Request& request){return menu.RemoteCatalog(request);},{},[&](const TvRemote::Request& request){return !systemUiOpen&&!buttons&&!idleScreen.Active()&&pendingLaunch.empty()&&menu.RemoteStoreAction(request);});
+            if(command==TvRemote::Key::StoreDownload){remoteStoreJob=true;dirty=true;}
+            else if(command==TvRemote::Key::StoreQueue){dirty=true;}
+            else if(command!=TvRemote::Key::None){
                 if(remoteKey==ConsoleHome::GlobalGuide)edge|=INPUT_GAMEPAD_LEFT_THUMB;
                 else if(static_cast<unsigned>(remoteKey)<11)edge|=keys[static_cast<unsigned>(remoteKey)];
             }
@@ -351,9 +355,9 @@ int main(){
                 }
                 }
             }
-        }else for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
+        }else for(unsigned i=0;i<=sizeof keys/sizeof keys[0];++i)if(i==sizeof keys/sizeof keys[0]?remoteStoreJob:!remoteStoreJob&&(edge&keys[i])){
             launchNotice.clear();
-            const std::string launch=menu.Press(i==11?ConsoleHome::Context:static_cast<ConsoleHome::Key>(i));
+            const std::string launch=remoteStoreJob?std::string{}:menu.Press(i==11?ConsoleHome::Context:static_cast<ConsoleHome::Key>(i));
             if(!launch.empty()){
                 const std::string path=XexLaunchCheck::Path(launch);
                 pendingPackage=false;
@@ -684,6 +688,13 @@ int main(){
                     if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     rate.Sample(done,total,TransferRate::Now());
+#ifdef INFINITY_MENU_FFMPEG
+                    if(dashboardRemoteEnabled)dashboardRemote.Poll([](TvRemote::Key){return false;},{},[&](const TvRemote::Request& request){
+                        if(request.key!=TvRemote::Key::Downloads)return std::string("{}");
+                        auto body=menu.RemoteCatalog(request);if(body.empty()||body.back()!='}')return std::string("{}");
+                        body.pop_back();return body+",\"active_name\":"+TvRemote::Quote(pending.name)+",\"active_done\":"+std::to_string(done)+",\"active_total\":"+std::to_string(total)+"}";
+                    });
+#endif
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;

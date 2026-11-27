@@ -21,15 +21,19 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
-    private TextView status,monitor,catalogResult,downloads;
+    private TextView status,monitor,catalogResult,downloads,storeResult;
+    private EditText storeQuery;
+    private LinearLayout storeCards;
+    private int storeNext=-1;
+    private String storeActiveQuery="";
     private LinearLayout catalogCards;
     private EditText catalogQuery;
     private boolean tvCatalog=false;
     private int catalogNext=-1;
     private String activeQuery="";
     private LinearLayout content;
-    private final LinearLayout[] screens=new LinearLayout[4];
-    private final Button[] tabs=new Button[4];
+    private final LinearLayout[] screens=new LinearLayout[5];
+    private final Button[] tabs=new Button[5];
     private ScrollView scroll;
     private int activeScreen=0;
     private void showScreen(int index){
@@ -58,8 +62,8 @@ public final class MainActivity extends Activity {
         });
         TextView brand=text("∞  INFINITY 360",29,ACCENT);brand.setTypeface(null,Typeface.BOLD);content.addView(brand);
         content.addView(text("REMOTE  •  DASHBOARD & IPTV",13,MUTED));
-        LinearLayout nav=new LinearLayout(this);String[] names={"Controle","Catálogo","Sistema","Conexão"};
-        for(int i=0;i<4;i++){final int index=i;tabs[i]=button(names[i],PANEL,()->showScreen(index));tabs[i].setTextSize(12);tabs[i].setPadding(dp(2),0,dp(2),0);
+        LinearLayout nav=new LinearLayout(this);String[] names={"Controle","Catálogo","Sistema","Conexão","Loja"};
+        for(int i=0;i<5;i++){final int index=i;tabs[i]=button(names[i],PANEL,()->showScreen(index));tabs[i].setTextSize(12);tabs[i].setPadding(dp(2),0,dp(2),0);
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(52),1);lp.setMargins(dp(2),dp(8),dp(2),dp(8));nav.addView(tabs[i],lp);}
         root.addView(nav);
         status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
@@ -83,6 +87,14 @@ public final class MainActivity extends Activity {
         catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));catalogResult.setBackground(shape(PANEL));content.addView(catalogResult);
         catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
         content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content=screen(root,4);
+        label("INFINITY Store");
+        storeQuery=field("Buscar nome ou categoria (game, xbla, homebrew...)",InputType.TYPE_CLASS_TEXT);
+        content.addView(button("Consultar loja",ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,dp(54)));
+        storeResult=text("Catálogo autorizado do console. Nenhum pacote é baixado no celular.",14,MUTED);content.addView(storeResult);
+        storeCards=new LinearLayout(this);storeCards.setOrientation(LinearLayout.VERTICAL);content.addView(storeCards);
+        content.addView(button("Próxima página",PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Acompanhar downloads",PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,dp(54)));
         content=screen(root,0);
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
@@ -202,6 +214,54 @@ public final class MainActivity extends Activity {
             runOnUiThread(()->{if(isDestroyed())return;busy=false;if(image!=null&&target.isAttachedToWindow()){target.setImageBitmap(image);target.setVisibility(View.VISIBLE);}status.setText(message);});
         });
     }
+    private void loadStore(boolean reset){
+        if(busy)return;
+        String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira IP e chave.");return;}
+        if(!reset&&storeNext<0){status.setText("Fim do catálogo. Faça nova busca.");return;}
+        final int offset=reset?0:storeNext;
+        final String query=reset?storeQuery.getText().toString().trim():storeActiveQuery;
+        if(query.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>64){status.setText("Busca limitada a 64 bytes.");return;}
+        busy=true;status.setText("Consultando INFINITY Store...");
+        worker.execute(()->{
+            org.json.JSONArray rows=new org.json.JSONArray();int next=-1;boolean ok=false;
+            try{
+                org.json.JSONObject page=new org.json.JSONObject(RemoteProtocol.store(ip,secret,offset,query));
+                if(page.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
+                rows=page.getJSONArray("items");if(rows.length()>16)throw new java.io.IOException("Página inválida");
+                if(!page.isNull("next")){next=page.getInt("next");if(next<=offset||next>999999)throw new java.io.IOException("Cursor inválido");}
+                ok=true;
+            }catch(Exception e){}
+            final org.json.JSONArray data=rows;final int cursor=next;final boolean success=ok;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;storeCards.removeAllViews();storeNext=success?cursor:-1;storeActiveQuery=query;
+                storeResult.setText(success?data.length()+" itens nesta página":"Loja indisponível. Confira a conexão e a versão.");
+                if(success)for(int i=0;i<data.length();i++){
+                    org.json.JSONObject item=data.optJSONObject(i);if(item==null)continue;
+                    final String id=item.optString("id"),name=item.optString("name");
+                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+                    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);storeCards.addView(card,lp);
+                    TextView title=text(name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
+                    card.addView(text(item.optString("category")+" • "+item.optString("version")+" • "+android.text.format.Formatter.formatFileSize(this,Math.max(0,item.optLong("bytes"))),14,MUTED));
+                    if(item.optBoolean("queued"))card.addView(text("Na fila nativa",14,ACCENT));
+                    if(item.optBoolean("package")&&id.matches("[1-9][0-9]{0,19}")){
+                        card.addView(button("Baixar no Xbox",ACCENT,()->confirmStore(ip,secret,id,name,true)));
+                        if(!item.optBoolean("queued"))card.addView(button("Adicionar à fila",PANEL,()->confirmStore(ip,secret,id,name,false)));
+                    }else card.addView(text("Apenas referência ou pacote incompatível",13,MUTED));
+                }
+                status.setText(success?"Catálogo recebido.":"Falha na consulta.");
+            });
+        });
+    }
+    private void confirmStore(String ip,String secret,String id,String name,boolean now){
+        if(busy)return;
+        if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
+        new AlertDialog.Builder(this).setTitle(now?"Baixar diretamente no Xbox?":"Adicionar à fila do Xbox?")
+            .setMessage(name+"\nO destino é o armazenamento selecionado na loja do console. Nenhuma instalação automática será realizada.")
+            .setNegativeButton("Cancelar",null).setPositiveButton(now?"Baixar":"Adicionar",(d,w)->{
+                if(consoleIp.getText().toString().trim().equals(ip)&&key.getText().toString().trim().equals(secret))
+                    send((now?"storedownload/":"storequeue/")+id);
+            }).show();
+    }
     private void refreshDownloads(){
         if(busy)return;
         String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
@@ -214,6 +274,7 @@ public final class MainActivity extends Activity {
                 if(obj.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
                 StringBuilder out=new StringBuilder("Transferência local: "+(obj.getBoolean("local_paused")?"Pausada":obj.getBoolean("local_active")?"Ativa":"Sem atividade"));
                 out.append("\n").append(size(obj,"local_done")).append(" / ").append(size(obj,"local_total"));
+                if(obj.has("active_name"))out.append("\n\nDownload em andamento: ").append(obj.optString("active_name")).append("\n").append(size(obj,"active_done")).append(" / ").append(size(obj,"active_total"));
                 out.append("\n\nFila nativa da loja (registro local): ").append(obj.getBoolean("queue_valid")?obj.getLong("queue_total"):"Indisponível");
                 org.json.JSONArray rows=obj.getJSONArray("items");
                 if(rows.length()>8)throw new java.io.IOException("Fila inválida");
@@ -310,7 +371,7 @@ public final class MainActivity extends Activity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }

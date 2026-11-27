@@ -39,7 +39,7 @@ public:
 #endif
     }
     std::string Address()const{return listener_>=0?"http://"+host_:"";}
-    Key Poll(const std::function<bool(Key)>& permit={},const std::function<std::string()>& snapshot={},const std::function<std::string(const Request&)>& catalog={},const std::function<bool(const Request&)>& tune={}){
+    Key Poll(const std::function<bool(Key)>& permit={},const std::function<std::string()>& snapshot={},const std::function<std::string(const Request&)>& catalog={},const std::function<bool(const Request&)>& tune={},const std::function<bool(const Request&)>& storeAction={}){
 #if defined(__XSDK__) || defined(__linux__)
         if(listener_<0)return Key::None;
         const auto now=Now();
@@ -61,8 +61,9 @@ public:
             if(request_.size()>2048){CloseClient();return Key::None;}
             if(request_.find("\r\n\r\n")==std::string::npos)return Key::None;
             const auto parsed=Parse(request_,host_,secret_);
-            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo||parsed.key==Key::Cover||parsed.key==Key::Downloads;
-            const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(listing?bool(catalog):parsed.key==Key::Snapshot?bool(snapshot):parsed.key==Key::Tune?bool(tune)&&tune(parsed):!permit||permit(parsed.key)));
+            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo||parsed.key==Key::Cover||parsed.key==Key::Downloads||parsed.key==Key::Store;
+            const bool storeWrite=parsed.key==Key::StoreQueue||parsed.key==Key::StoreDownload;
+            const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(listing?bool(catalog):parsed.key==Key::Snapshot?bool(snapshot):parsed.key==Key::Tune?bool(tune)&&tune(parsed):storeWrite?bool(storeAction)&&storeAction(parsed):!permit||permit(parsed.key)));
             if(allowed){if(parsed.key!=Key::Status&&parsed.key!=Key::Snapshot&&!listing)result=parsed.key;lastCommand_=now;}
             const bool json=allowed&&(parsed.key==Key::Snapshot||listing);
             std::string body=parsed.page?Page():json?(listing?catalog(parsed):snapshot()):allowed?"OK":"Recusado";

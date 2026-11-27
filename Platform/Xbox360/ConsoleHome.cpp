@@ -18,6 +18,7 @@
 #include "DiscIdentity.h"
 #include "ArtImport.h"
 #include "StoreStorage.h"
+#include "StoreHostPolicy.h"
 #include "XsdkPaths.h"
 #include "SavedFile.h"
 #include "PluginRegistry.h"
@@ -1358,7 +1359,48 @@ bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
     default:return false;
     }return true;
 }
+namespace {
+std::string remoteStoreId(const StoreItem& item){
+    return TvRemote::GameArtId(item.id+"\t"+item.sha256+"\t"+item.provider+"\t"+item.storage);
+}
+}
+bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
+#if defined(INFINITY_XSDK_HTTPS)
+    if(request.key!=TvRemote::Key::StoreDownload&&request.key!=TvRemote::Key::StoreQueue)return false;
+    if(TvPreferences::Read(dir_+"enable-remote-store.txt")!="ENABLE-REMOTE-STORE"||
+       TvPreferences::Read(dir_+"enable-https-store.txt")!="ENABLE-HTTPS-STORE")return false;
+    if(!RemoteAllowed(Left)||(!IdleEligible()&&!storeActive_)||quickGuideOpen_||nativeStorePending_||nativeBatch_||
+       updatePending_||storeInstallPending_||providerPending_||!store_.NativeQueueValid())return false;
+    const StoreItem* found=nullptr;
+    for(const auto& item:store_.Items())if(remoteStoreId(item)==request.query){
+        if(found)return false;
+        found=&item;
+    }
+    if(!found)return false;
+    const StoreItem item=*found;
+    if(item.url.empty()||!StoreHostPolicy::Allowed(item.url,dir_)||!TranslationMatches(item)||
+       store_.Staged(item)||store_.PackagePresent(item)||item.storage!=store_.Storage())return false;
+    const bool start=request.key==TvRemote::Key::StoreDownload;
+    if(start&&!StartNativeStore(item))return false;
+    if(!store_.QueueNative(item)){if(start)nativeStorePending_=false;return false;}
+    if(storeDownloads_)RebuildStoreDownloads();
+    if(!start)notice_="Download adicionado a fila pelo celular.";
+    return true;
+#else
+    (void)request;return false;
+#endif
+}
 std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
+    if(request.key==TvRemote::Key::Store){
+        return TvRemote::CatalogPage(store_.Items().size(),request.offset,[&](size_t i)->std::string{
+            const auto& item=store_.Items()[i];
+            if(!TvRemote::Matches(item.name,request.query)&&!TvRemote::Matches(item.category,request.query))return "";
+            return "{\"id\":\""+remoteStoreId(item)+"\",\"name\":"+TvRemote::Quote(item.name)+
+                ",\"category\":"+TvRemote::Quote(item.category,24)+",\"version\":"+TvRemote::Quote(item.version,24)+
+                ",\"bytes\":"+std::to_string(item.bytes)+",\"queued\":"+(store_.NativeQueued(item)?"true":"false")+
+                ",\"package\":"+(!item.url.empty()&&item.bytes&&item.bytes<=512ULL*1024*1024?"true":"false")+"}";
+        });
+    }
     if(request.key==TvRemote::Key::Downloads){
         // Consult only the native queue already loaded by the dashboard.
         // No refresh, network I/O, mutations or entire-catalog state-file scan.

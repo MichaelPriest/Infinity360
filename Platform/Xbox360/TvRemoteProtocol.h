@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 namespace TvRemote {
-enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune,Logo,Cover,Downloads };
+enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune,Logo,Cover,Downloads,Store,StoreQueue,StoreDownload };
 inline bool ValidSecret(const std::string& s){
     if(s.size()!=32)return false;
     for(char c:s)if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;
@@ -24,8 +24,9 @@ inline bool ValidChannelId(const std::string& id){
 }
 inline Request CatalogRequest(const std::string& command){
     const bool games=command.compare(0,6,"games/")==0,tv=command.compare(0,3,"tv/")==0;
-    if(!games&&!tv)return {};
-    const size_t start=games?6:3,sep=command.find('/',start);
+    const bool store=command.compare(0,6,"store/")==0;
+    if(!games&&!tv&&!store)return {};
+    const size_t start=tv?3:6,sep=command.find('/',start);
     if(sep==std::string::npos||sep==start||sep-start>6)return {};
     unsigned offset=0;
     for(size_t i=start;i<sep;++i){char c=command[i];if(c<'0'||c>'9')return {};offset=offset*10+unsigned(c-'0');}
@@ -33,7 +34,7 @@ inline Request CatalogRequest(const std::string& command){
     std::string query;
     auto digit=[](char c)->int{return c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:-1;};
     for(size_t i=0;i<encoded.size();i+=2){const int a=digit(encoded[i]),b=digit(encoded[i+1]);if(a<0||b<0)return {};const unsigned char ch=a*16+b;if(ch<32||ch==127)return {};query+=char(ch);}
-    return {false,games?Key::Games:Key::TvCatalog,offset,query};
+    return {false,games?Key::Games:store?Key::Store:Key::TvCatalog,offset,query};
 }
 inline Request Parse(const std::string& request,const std::string& host,const std::string& secret){
     if(request.size()>2048||!ValidSecret(secret))return {};
@@ -60,6 +61,11 @@ inline Request Parse(const std::string& request,const std::string& host,const st
     if(line.size()<=prefix.size()+suffix.size()||line.compare(0,prefix.size(),prefix)||line.compare(line.size()-suffix.size(),suffix.size(),suffix)||!SameSecret(token,secret))return {};
     const auto command=line.substr(prefix.size(),line.size()-prefix.size()-suffix.size());
     if(command=="downloads")return {false,Key::Downloads};
+    if(command.compare(0,11,"storequeue/")==0||command.compare(0,14,"storedownload/")==0){
+        const bool now=command.compare(0,14,"storedownload/")==0;
+        const auto id=command.substr(now?14:11);
+        return ValidChannelId(id)?Request{false,now?Key::StoreDownload:Key::StoreQueue,0,id}:Request{};
+    }
     if(command.compare(0,6,"cover/")==0){const auto id=command.substr(6);return ValidChannelId(id)?Request{false,Key::Cover,0,id}:Request{};}
     if(command.compare(0,5,"logo/")==0){const auto id=command.substr(5);return ValidChannelId(id)?Request{false,Key::Logo,0,id}:Request{};}
     if(command.compare(0,5,"tune/")==0){const auto id=command.substr(5);return ValidChannelId(id)?Request{false,Key::Tune,0,id}:Request{};}

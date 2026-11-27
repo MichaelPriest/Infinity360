@@ -47,5 +47,10 @@ int main(){
     if(!DiscoveryReply("INFINITY360-DISCOVER/1 invalid",ip,key).empty())return 36;
     if(DiscoveryMac(key,msg)==DiscoveryMac(key,msg+"x"))return 37;
     if(DiscoveryMac("wrong",msg)!="")return 38;
+    if(Parse(request("store/0/67616d65",key,host),host,key).key!=Key::Store)return 39;
+    if(Parse(request("storedownload/1",key,host),host,key).key!=Key::StoreDownload)return 40;
+    if(Parse(request("storequeue/1",key,host),host,key).key!=Key::StoreQueue)return 41;
+    if(Parse(request("storedownload/../x",key,host),host,key).key!=Key::None)return 42;
+    if(Parse(request("storequeue/1","wrong",host),host,key).key!=Key::None)return 43;
     return 0;
 }
