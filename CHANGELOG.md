@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.42 — Cobertura de recuperacao HLS e telemetria
+
+- Acrescenta cenarios deterministicos de recuperacao gradual e bloqueio pelo teto de bitrate, com verificacao de que nenhuma variante superior e aberta antes da reconexao. HUD remoto mostra ocupacao da fila A/V em KiB (nao representa buffer de rede). Mantem limite de memoria e politica de reconexao. Testes ainda nao executados nesta etapa; sem XEX/release.
+
 ## V0.3.41 — Recuperacao gradual HLS
 
 - Live HLS pode solicitar a proxima variante elegivel apos oito amostras diretas com margem de 60% sobre o bitrate alvo e pelo menos 30 segundos desde a ativacao. Respeita o teto do usuario e reinicia o decoder sem misturar variantes. Mantem o orcamento total de duas reconexoes; nao altera VOD nem a fila de 32 MiB. Validacao de compilacao e teste fisico pendentes. Sem XEX/release.

@@ -70,5 +70,38 @@ int main(){
     for(;;){int n=running.Read(b,sizeof b);if(n<0)break;if(!n)return 11;for(int i=0;i<n;++i)if(b[i]!='h')return 12;total+=n;if(total>188*400*4)return 13;}
     if(total!=188*400*4||running.LastFailure()!=Failure::LowerQuality||running.SuggestedBitrate()!=400000||lowReads||highReads!=4)return 14;
     if(std::string(FailureLabel(Failure::HigherQuality)).empty()||RecoverLive(Failure::HigherQuality))return 18;
+
+    // Start at a restricted bitrate, then simulate eight reliable direct samples
+    // with enough elapsed playback time. No higher-variant bytes may leak.
+    auto recovery=[&](unsigned ceiling,bool expectUpgrade){
+        uint64_t clock=0;unsigned reads=0,higher=0;
+        unsigned sequence=1;
+        const std::string m="#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000\nmid.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=400000\nlow.m3u8\n";
+        VodReader<Reader> stream([&](const std::string& url,bool playlist)->std::unique_ptr<Reader>{
+            if(url==root+"master.m3u8")return std::make_unique<Reader>(Reader{m});
+            if(url==root+"mid.m3u8"){++higher;return {};}
+            if(url==root+"low.m3u8"){
+                std::string s="#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:"+std::to_string(sequence)+"\n";
+                for(unsigned i=sequence;i<sequence+3;++i)s+="#EXTINF:4,\ns"+std::to_string(i)+".ts\n";
+                ++sequence;return std::make_unique<Reader>(Reader{s});
+            }
+            if(!playlist){++reads;clock+=100;return std::make_unique<Reader>(Reader{std::string(188*400,'l')});}
+            return {};
+        },[&](unsigned){clock+=4000;return true;});
+        if(!stream.EnableBufferedSegments()||!stream.EnableStartupAdaptation([&](){return clock;})||
+           !stream.Start(root+"master.m3u8",400000,true))return false;
+        stream.ArmRuntimeAdaptation(ceiling);
+        unsigned char block[188*400];unsigned count=0;
+        for(unsigned i=0;i<20;++i){
+            const int got=stream.Read(block,sizeof block);
+            if(got<0)return expectUpgrade&&stream.LastFailure()==Failure::HigherQuality&&
+                stream.SuggestedBitrate()==800000&&count>=9&&clock>=30000&&!higher;
+            if(got!=sizeof block||block[0]!='l'||block[got-1]!='l'||higher)return false;
+            ++count;
+        }
+        return !expectUpgrade&&!stream.SuggestedBitrate();
+    };
+    if(!recovery(800000,true))return 19;
+    if(!recovery(400000,false))return 20;
     return 0;
 }
