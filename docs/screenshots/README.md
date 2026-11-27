@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**109 capturas nativas** — commit [9dd4463abc01](https://github.com/MichaelPriest/Infinity360/commit/9dd4463abc01a7b1ae4335c9e7e99c89e993820f).
+**113 capturas nativas** — commit [93aaca887327](https://github.com/MichaelPriest/Infinity360/commit/93aaca8873276f899bf0bc2962535d86fc5b96df).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -193,6 +193,15 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **UDP — indicadores do teste local** | **UDP — modo e duração** |
 | ![SMB — servidor e negociação](108-smb-moderno.png) | ![SMB — configuração IPv4](109-smb-ip-moderno.png) |
 | **SMB — servidor e negociação** | **SMB — configuração IPv4** |
+
+### Transparência — quatro modos
+
+| Tela | Tela |
+| --- | --- |
+| ![Vidro leve](110-vidro-leve.png) | ![Vidro equilibrado](111-vidro-equilibrado.png) |
+| **Vidro leve** | **Vidro equilibrado** |
+| ![Vidro denso](112-vidro-denso.png) | ![Modo opaco opcional](113-vidro-opaco.png) |
+| **Vidro denso** | **Modo opaco opcional** |
 
 
 <!-- NATIVE-GALLERY-END -->
