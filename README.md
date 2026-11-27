@@ -80,7 +80,19 @@ Projeto nativo: [Android/](Android/README.md). Interface Android SDK Material, t
 
 <!-- ANDROID-GALLERY-BEGIN -->
 
-Capturas nativas do APK em preparação pelo [workflow Android Screenshots](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-screenshots.yml). A galeria será publicada somente após a execução bem-sucedida no emulador Android.
+**Capturas reais do APK no emulador Android** — [commit f138ba305399](https://github.com/MichaelPriest/Infinity360/commit/f138ba3053994203a1bfee35c09a63483c35df37).
+Console desconectado; sem dados ou credenciais reais. Não representa homologação física.
+
+| Tela | Tela |
+| --- | --- |
+| **Início** | **Controle** |
+| <img src="docs/android-screenshots/01-home.png" alt="Início" width="240"> | <img src="docs/android-screenshots/02-controle.png" alt="Controle" width="240"> |
+| **Catálogo** | **Loja** |
+| <img src="docs/android-screenshots/03-catalogo.png" alt="Catálogo" width="240"> | <img src="docs/android-screenshots/04-loja.png" alt="Loja" width="240"> |
+| **Sistema e downloads** | **Conexão** |
+| <img src="docs/android-screenshots/05-sistema.png" alt="Sistema e downloads" width="240"> | <img src="docs/android-screenshots/06-conexao.png" alt="Conexão" width="240"> |
+| **Gerenciador FTP** |  |
+| <img src="docs/android-screenshots/07-ftp.png" alt="Gerenciador FTP" width="240"> |  |
 
 <!-- ANDROID-GALLERY-END -->
 
