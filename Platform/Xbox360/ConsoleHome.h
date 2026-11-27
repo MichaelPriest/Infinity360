@@ -55,7 +55,7 @@ namespace InfinityLua { struct Library; struct SubtitleResult; }
 class ConsoleHome {
 public:
     enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
-               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, TvGroups=MenuGroups, TvClearHistory=MenuClearHistory, GlobalGuide=100, Context=101 };
+               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, TvGroups=MenuGroups, TvClearHistory=MenuClearHistory, TvSettings=MenuSettings, GlobalGuide=100, Context=101 };
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
     unsigned SafeArea()const{return safeArea_;}

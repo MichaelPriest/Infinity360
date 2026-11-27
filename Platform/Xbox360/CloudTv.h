@@ -2,9 +2,10 @@
 #include "TvCatalog.h"
 #include "TvGuide.h"
 #include "HomeCanvas.h"
+#include "TvPreferences.h"
 
 enum MenuKey { MenuLeft, MenuRight, MenuUp, MenuDown, MenuAccept, MenuBack, MenuFavorite,
-               MenuRefresh, MenuPageUp, MenuPageDown, MenuGuide, MenuSearch, MenuGroups, MenuClearHistory };
+               MenuRefresh, MenuPageUp, MenuPageDown, MenuGuide, MenuSearch, MenuGroups, MenuClearHistory, MenuSettings };
 class CloudTv {
 public:
     explicit CloudTv(const std::string& dir);
@@ -24,15 +25,18 @@ public:
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
     bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
+    bool CanSettings()const{return view_==Browse;}
     bool CanClearHistory()const{return view_==Browse&&tab_==TvHistory&&!history_.empty();}
 private:
-    enum View { Browse, Guide, Details, Episodes, Search, Groups, ClearHistory };
+    enum View { Browse, Guide, Details, Episodes, Search, Groups, ClearHistory, Settings };
     std::string dir_,source_,notice_,pending_,show_,query_,edit_;
     std::vector<std::string> sources_;
     std::string groupFilter_;
     struct GroupRow {std::string name;size_t count;};
     std::vector<GroupRow> groups_;
-    size_t groupRow_=0;
+    size_t groupRow_=0,settingsRow_=0;
+    void DrawSettings(HomeCanvas& c)const;
+    void SettingsKey(MenuKey key);
     void OpenGroups();
     void DrawGroups(HomeCanvas& c)const;
     bool SaveHistory()const;

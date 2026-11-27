@@ -1315,6 +1315,7 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
     }else if(page_!=Home&&section_==Iptv){
         if(tv_.CanSearch()){add("Buscar canais, filmes e series",Search);add("Filtrar por grupo",TvGroups);}
         if(tv_.CanClearHistory())add("Limpar historico IPTV",TvClearHistory);
+        if(tv_.CanSettings())add("Configuracoes IPTV",TvSettings);
     }else if(page_==Home){
         add("Guia rapido",GlobalGuide);add("Atualizar biblioteca",Refresh);
         if(!homeDiscKnown_){add("Personalizar Home",Guide);}

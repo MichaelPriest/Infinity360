@@ -381,8 +381,39 @@ std::vector<unsigned char> CloudTv::PlayingLogo()const{
     if(rgba.empty()&&tvLower(source_)=="playlist.m3u")rgba=read(dir_+"logos"+slash+file);
     return rgba;
 }
+void CloudTv::DrawSettings(HomeCanvas& c)const{
+    const auto audio=TvPreferences::LoadAudio(dir_);
+    const auto cap=TvPreferences::Cap(dir_);
+    const std::string names[]={"Volume inicial","Mudo inicial","Teto HLS","Entrada 1080p experimental"};
+    const std::string values[]={countText(audio.volume)+"%",audio.muted?"Ativado":"Desativado",cap?countText(cap/1000)+" kbps":"Padrao 2000 kbps / verificar arquivo",TvPreferences::FullHd(dir_)?"Ativada":"Desativada"};
+    c.TextFit(45,78,"Configuracoes IPTV",38,Ink,1160);
+    c.TextFit(45,135,"Alteracoes salvas por opcao. Full HD nao garante saida 1080p.",20,Soft,1160);
+    for(size_t i=0;i<4;++i){const int y=180+int(i)*94;tile(c,46,y,1188,80,i==settingsRow_);
+        c.TextFit(68,y+15,names[i],24,Ink,700);c.TextFit(800,y+19,values[i],21,Lime,410);}
+    if(!notice_.empty())c.TextFit(48,580,notice_,18,Lime,1160);
+    c.Footer();InfinityButtons::Strip(c,46,675,"Cima/Baixo Opcao | Esq/Dir Alterar | A Alternar | B Voltar",18,Ink,1180);
+}
+void CloudTv::SettingsKey(MenuKey key){
+    if(key==MenuBack){view_=Browse;return;}
+    if(key==MenuUp||key==MenuDown){moveRow(settingsRow_,4,key);return;}
+    if(key!=MenuLeft&&key!=MenuRight&&key!=MenuAccept)return;
+    const int delta=key==MenuLeft?-1:1;bool saved=false;
+    auto audio=TvPreferences::LoadAudio(dir_);
+    if(settingsRow_==0){audio.volume=std::max(0,std::min(100,audio.volume+delta*10));saved=TvPreferences::SaveAudio(dir_,audio);}
+    else if(settingsRow_==1){audio.muted=!audio.muted;saved=TvPreferences::SaveAudio(dir_,audio);}
+    else if(settingsRow_==2){
+        const unsigned caps[]={100000,250000,500000,800000,1000000,1500000,2000000,3000000,4000000};
+        unsigned cap=TvPreferences::Cap(dir_);if(!cap)cap=2000000;
+        const auto end=caps+sizeof caps/sizeof caps[0];auto it=delta>0?std::upper_bound(caps,end,cap):std::lower_bound(caps,end,cap);
+        if(delta<0&&it!=caps)--it;else if(it==end)--it;
+        saved=TvPreferences::Write(dir_+"infinity360-iptv-bitrate.txt",std::to_string(*it));
+    }else saved=TvPreferences::Write(dir_+"enable-iptv-1080p.txt",TvPreferences::FullHd(dir_)?"DISABLED":"ENABLE-IPTV-1080P");
+    notice_=saved?"Configuracao salva.":"Falha ao salvar configuracao.";
+}
 bool CloudTv::Press(MenuKey key) {
     notice_.clear();
+    if(view_==Settings){SettingsKey(key);return true;}
+    if(key==MenuSettings&&CanSettings()){settingsRow_=0;view_=Settings;return true;}
     if(view_==ClearHistory){
         if(key==MenuAccept){const auto old=history_;history_.clear();if(!SaveHistory()){history_=old;notice_="Falha ao limpar historico no dispositivo.";}else notice_="Historico limpo.";view_=Browse;row_=0;Filter();}
         else if(key==MenuBack)view_=Browse;
@@ -603,6 +634,7 @@ void CloudTv::DrawEpisodes(HomeCanvas& c) const {
 void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     if(view_==Search) {DrawSearch(c);return;}
     if(view_==Groups){DrawGroups(c);return;}
+    if(view_==Settings){DrawSettings(c);return;}
     if(view_==ClearHistory){
         c.GroupGlass(160,224,960,230);c.TextFit(190,255,"Limpar historico IPTV?",32,Ink,900);
         c.TextFit(190,315,"Remove apenas os registros recentes. Favoritos e listas sao preservados.",20,Soft,900);
@@ -625,7 +657,7 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     InfinityButtons::Hint(c,InfinityButtons::Y,567,675,22,c.Tr("Atualizar"),125,Ink);
     if(view_!=Details && view_!=Episodes)InfinityButtons::Hint(c,InfinityButtons::Start,764,675,22,c.Tr("Guia"),105,Ink);
     if(view_!=Details){InfinityButtons::Draw(c,InfinityButtons::LB,908,675,22);InfinityButtons::Hint(c,InfinityButtons::RB,943,675,22,c.Tr("Página"),80,Ink);}
-    if(view_==Browse && tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::Back,1092,675,22,c.Tr("Opcoes"),120,Ink);
+    if(view_==Browse)InfinityButtons::Hint(c,InfinityButtons::Back,1092,675,22,c.Tr("Opcoes"),120,Ink);
 }
 void CloudTv::SearchKey(MenuKey key) {
     if(key==MenuBack) {view_=Browse;return;}

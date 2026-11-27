@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.55 — Configuracoes IPTV persistentes
+
+- Opcoes BACK > Configuracoes IPTV: volume inicial, mudo, teto HLS e entrada Full HD experimental, gravados por opcao com arquivo temporario e backup FATX. Player FFmpeg restaura volume/mudo entre sessoes e grava alteracoes ao sair; teto e marcador Full HD recuperam backup. Seletor de canais desativado para HLS VOD. Mantem modo de rede e lista ativa existentes. Testes e XSDK pendentes; sem XEX/release.
+
 ## V0.3.54 — Grupos e gerenciamento de fontes IPTV
 
 - Menu BACK/Opcoes oferece filtro exato de grupo combinado com busca e categoria, contagem de itens e ate 512 grupos por categoria; layouts moderno e classico exibem o filtro. Filtro reinicia ao trocar categoria/lista e e preservado ao atualizar a mesma lista. Fontes exibem estado XMLTV e contagem da lista ativa. Historico pode ser limpo por confirmacao, com reversao em caso de falha na gravacao. Favoritos e listas preservados. Testes de integracao e XSDK pendentes; sem XEX/release.

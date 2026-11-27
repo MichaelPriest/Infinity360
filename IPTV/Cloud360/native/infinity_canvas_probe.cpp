@@ -360,7 +360,8 @@ int main(){
                 auto drawGuide=[&](HomeCanvas& frame,int row){menu.DrawPlaybackGuide(frame,row);};
 #ifdef INFINITY_MENU_FFMPEG
                 std::string result;
-                CloudPlaybackControls::AudioPreference channelAudio;
+                const auto initialAudio=TvPreferences::LoadAudio(dir);
+                CloudPlaybackControls::AudioPreference channelAudio{initialAudio.volume,initialAudio.muted};
                 do{
                     std::string next;
                     std::function<bool(int)> zap;
@@ -369,6 +370,8 @@ int main(){
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
+                if(channelAudio.volume!=initialAudio.volume||channelAudio.muted!=initialAudio.muted)
+                    TvPreferences::SaveAudio(dir,{channelAudio.volume,channelAudio.muted});
 #else
                 const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #endif

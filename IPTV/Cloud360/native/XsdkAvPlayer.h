@@ -2,6 +2,7 @@
 #include "HomeCanvas.h"
 #include "PlaybackHud.h"
 #include "TvGuide.h"
+#include "TvPreferences.h"
 #include <ctime>
 #include "MediaUrl.h"
 #include "XsdkPaths.h"
@@ -95,7 +96,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(!Enabled(root))return "Habilite enable-iptv-playback.txt.";
         if(CloudHls::Extension(path,".m3u8")){
             unsigned cap=CloudHls::DefaultBitrate;
-            std::ifstream quality((root+"infinity360-iptv-bitrate.txt").c_str(),std::ios::binary);
+            std::ifstream quality(savedFile(root+"infinity360-iptv-bitrate.txt").c_str(),std::ios::binary);
             if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
                 if(!value.empty()&&value.back()=='\r')value.pop_back();
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
@@ -103,7 +104,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
             if(manualCap)cap=std::min(cap,manualCap);
             // Keep automatic HLS selection at 720p unless explicitly enabled.
-            std::ifstream fullHd((root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
+            std::ifstream fullHd(savedFile(root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
             if(fullHd){std::string marker;std::getline(fullHd,marker);if(!marker.empty()&&marker.back()=='\r')marker.pop_back();
                 if(marker=="ENABLE-IPTV-1080P"&&fullHd.peek()==std::char_traits<char>::eof())hls.EnableFullHd();}
             hls.EnableBufferedSegments(true);
@@ -163,7 +164,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     std::string qualityHint;
-    const bool canZap=bool(zap)&&remoteSource&&duration<=0;
+    bool canZap=bool(zap)&&remoteSource&&duration<=0;
+#ifdef INFINITY_AV_NETWORK
+    if(CloudHls::Extension(path,".m3u8")&&!hls.Live())canZap=false;
+#endif
 #ifdef INFINITY_AV_NETWORK
     if(qualityAvailable)qualityHint=" | Y Qualidade";
 #endif
