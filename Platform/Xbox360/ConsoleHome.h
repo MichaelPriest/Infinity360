@@ -330,6 +330,8 @@ private:
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();
     void ToggleLibraryRoot();
+    std::vector<GameScanner::Depth> scanDepths_;
+    void ChangeLibraryDepth(int delta);
     std::string copyDir_, copyName_, renameName_;
     void StartFileEdit(bool rename);
     void ConfirmFileEdit();

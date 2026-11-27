@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.8 — Profundidade de busca e indicadores Lua
+
+- Profundidade XEX individual de 0 a 16 níveis, persistida em infinity360-scan-depths.txt, com testes de varredura real e limites.
+- API Lua v1 adiciona hidden e pinned, sem alterações de dados. Sem nova solicitação XEX.
+
 ## V0.3.7 — Correção visual e API Lua de jogos
 
 - Corrige posição das funções de desenho das telas de caminhos e scripts após auxiliares gráficos, causa da falha no CI V0.3.6.

@@ -251,7 +251,7 @@ void ConsoleHome::Load() {
 }
 void ConsoleHome::ScanLibrary() {
     artFolders_.clear();artDirty_=true;
-    games_=GameScanner(roots_).Scan();
+    games_=GameScanner(roots_).Scan(scanDepths_);
     auto packageRoots=ContentCatalog::DefaultRoots(dir_);
     const auto managed=PackageImport::Roots(dir_);packageRoots.insert(packageRoots.end(),managed.begin(),managed.end());
     const std::vector<XboxContentPackage> packages=ContentCatalog(packageRoots).Scan();
@@ -372,6 +372,7 @@ void ConsoleHome::LoadScanPaths() {
     roots_=GameScanner::LoadRoots(savedFile(dir_+"aurorax-scanpaths-ui.txt"),roots_);
     roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
     configuredRoots_=roots_;
+    scanDepths_=GameScanner::LoadDepths(savedFile(dir_+"infinity360-scan-depths.txt"));
     disabledRoots_=GameScanner::LoadRoots(savedFile(dir_+"infinity360-scanpaths-disabled.txt"),{});
     roots_.erase(std::remove_if(roots_.begin(),roots_.end(),[&](const std::string& path){return std::any_of(disabledRoots_.begin(),disabledRoots_.end(),[&](const std::string& d){return GameScanner::SameRoot(path,d);});}),roots_.end());
 }
@@ -421,6 +422,24 @@ void ConsoleHome::ToggleLibraryRoot(){
     if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar caminhos.";return;}
     LoadScanPaths();clampRow(libraryPathRow_,configuredRoots_.size());
     notice_=enable?"Caminho habilitado. Y atualiza biblioteca.":"Caminho desativado. Y atualiza biblioteca.";
+}
+void ConsoleHome::ChangeLibraryDepth(int delta){
+    if(configuredRoots_.empty()||TransferRunning())return;
+    const auto& path=configuredRoots_[libraryPathRow_];
+    const auto current=GameScanner::DepthFor(scanDepths_,path);
+    const auto value=static_cast<unsigned>(std::max(0,std::min(int(GameScanner::MaxDepth),int(current)+delta)));
+    if(value==current)return;
+    auto next=scanDepths_;
+    next.erase(std::remove_if(next.begin(),next.end(),[&](const GameScanner::Depth& d){
+        return GameScanner::SameRoot(path,d.path)||std::none_of(configuredRoots_.begin(),configuredRoots_.end(),[&](const std::string& r){return GameScanner::SameRoot(r,d.path);});
+    }),next.end());
+    if(value!=GameScanner::MaxDepth)next.push_back({path,value});
+    const auto file=dir_+"infinity360-scan-depths.txt";
+    std::ofstream out((file+".tmp").c_str(),std::ios::binary|std::ios::trunc);
+    for(const auto& d:next)out<<d.levels<<"\t"<<d.path<<"\n";
+    out.close();
+    if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar profundidade.";return;}
+    scanDepths_=next;notice_="Profundidade "+number(value)+" salva. Y atualiza biblioteca.";
 }
 void ConsoleHome::RefreshLuaScripts(){
     luaScripts_.clear();std::vector<FolderEntry> items;
@@ -1039,6 +1058,7 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
         if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,configuredRoots_.size());}
         if(key==Favorite)ToggleLibraryRoot();
+        if(key==Left||key==Right)ChangeLibraryDepth(key==Right?1:-1);
         if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,configuredRoots_.size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
         if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra uma pasta; Esquerda cadastra/remove da biblioteca.";}
         return "";
@@ -1051,7 +1071,7 @@ std::string ConsoleHome::Press(Key key) {
             InfinityLua::Library library{games_.size(),this,[](const void* ctx,size_t i)->InfinityLua::GameView{
                 const auto& home=*static_cast<const ConsoleHome*>(ctx);
                 const auto& g=home.games_[i];
-                return {&g.name,&g.device,contains(home.favorites_,g.executable),isContentPackage(g)};
+                return {&g.name,&g.device,contains(home.favorites_,g.executable),isContentPackage(g),contains(home.hidden_,g.executable),contains(home.pinned_,g.executable)};
             }};
             notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),library);
         }
@@ -3083,10 +3103,10 @@ void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
         const auto& path=configuredRoots_[i];const int y=190+(i-first)*54;
         const bool enabled=std::any_of(roots_.begin(),roots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
         panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
-        c.TextFit(62,y+8,path,21,White,925);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
+        c.TextFit(62,y+8,path,21,White,735);c.Text(810,y+9,"Nivel "+number(GameScanner::DepthFor(scanDepths_,path)),19,White,170);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
     }
     c.Text(48,580,"Pacotes GOD/XBLA mantem a busca propria. A abre o gerenciador para adicionar/remover.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,"A Pastas | X Ativar/desativar | Y Varrer | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,605,"A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     c.Text(45,93,"Scripts Lua",36,White,1180);

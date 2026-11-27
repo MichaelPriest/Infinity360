@@ -159,12 +159,36 @@ std::vector<std::string> GameScanner::LoadRoots(
     return roots;
 }
 
-std::vector<Game> GameScanner::Scan() const {
+std::vector<GameScanner::Depth> GameScanner::LoadDepths(const std::string& file){
+    std::vector<Depth> result;
+    std::ifstream in(file.c_str(),std::ios::binary);
+    char bytes[8193];in.read(bytes,sizeof bytes);
+    if(in.bad()||in.gcount()>=static_cast<std::streamsize>(sizeof bytes))return {};
+    const std::string data(bytes,static_cast<size_t>(in.gcount()));
+    size_t pos=0;
+    while(pos<data.size()&&result.size()<32){
+        auto end=data.find('\n',pos);if(end==std::string::npos)end=data.size();
+        std::string line=data.substr(pos,end-pos);pos=end+1;
+        if(!line.empty()&&line.back()=='\r')line.pop_back();
+        auto tab=line.find('\t');if(tab==std::string::npos||tab==0||tab>2)continue;
+        unsigned levels=0;bool valid=true;
+        for(size_t i=0;i<tab;++i){if(line[i]<'0'||line[i]>'9'){valid=false;break;}levels=levels*10+unsigned(line[i]-'0');}
+        if(!valid||levels>MaxDepth||line.size()-tab-1>255||line.find('\t',tab+1)!=std::string::npos)continue;
+        const auto path=ValidRoot(line.substr(tab+1));if(path.empty())continue;
+        bool duplicate=false;for(const auto& d:result)if(SameRoot(d.path,path)){duplicate=true;break;}
+        if(!duplicate)result.push_back({path,levels});
+    }
+    return result;
+}
+unsigned GameScanner::DepthFor(const std::vector<Depth>& depths,const std::string& root){
+    for(const auto& d:depths)if(SameRoot(d.path,root))return std::min(d.levels,MaxDepth);
+    return MaxDepth;
+}
+std::vector<Game> GameScanner::Scan(const std::vector<Depth>& depths) const {
     // Bound work even when removable media contains deeply nested folders.
     // A per-root visited set allows an explicitly configured nested root to
     // receive its own depth budget; executable keys deduplicate across roots.
     struct Pending { std::string path; unsigned depth; };
-    const unsigned MaxDepth=16;
     const size_t MaxDirectories=32768, MaxGames=16384;
     std::vector<Game> games;
     std::set<std::string> seenGames;
@@ -172,6 +196,7 @@ std::vector<Game> GameScanner::Scan() const {
     for(size_t r=0;r<roots_.size() && scanned<MaxDirectories && games.size()<MaxGames;++r) {
         const std::string root=ValidRoot(roots_[r]);
         if(root.empty())continue;
+        const unsigned maxDepth=DepthFor(depths,root);
         std::vector<Pending> pending;
         Pending first={root,0};pending.push_back(first);
         std::set<std::string> visited;
@@ -200,7 +225,7 @@ std::vector<Game> GameScanner::Scan() const {
                     std::string reserved=entry.name;
                     for(char& ch:reserved)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
                     if(reserved.compare(0,7,"axcopy-")==0)continue;
-                    if(current.depth<MaxDepth && pending.size()+scanned<MaxDirectories) {
+                    if(current.depth<maxDepth && pending.size()+scanned<MaxDirectories) {
                         Pending child={path,current.depth+1};pending.push_back(child);
                     }
                     continue;

@@ -12,7 +12,7 @@ extern "C" {
 #endif
 namespace InfinityLua {
 // Borrowed synchronous view: no executable paths or writable console handles.
-struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false;};
+struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false,hidden=false,pinned=false;};
 struct Library{size_t count=0;const void* context=nullptr;GameView (*get)(const void*,size_t)=nullptr;};
 inline bool Available(){
 #ifdef INFINITY_WITH_LUA
@@ -46,10 +46,12 @@ inline int GameAt(lua_State* L){
     const auto index=luaL_checkinteger(L,1);
     if(index<=0||static_cast<unsigned long long>(index)>library.count||!library.get){lua_pushnil(L);return 1;}
     const GameView g=library.get(library.context,static_cast<size_t>(index-1));
-    lua_createtable(L,0,5);
+    lua_createtable(L,0,7);
     Field(L,"name",g.name);Field(L,"device",g.device);
     lua_pushboolean(L,g.favorite);lua_setfield(L,-2,"favorite");
     lua_pushboolean(L,g.package);lua_setfield(L,-2,"package");
+    lua_pushboolean(L,g.hidden);lua_setfield(L,-2,"hidden");
+    lua_pushboolean(L,g.pinned);lua_setfield(L,-2,"pinned");
     lua_pushinteger(L,index);lua_setfield(L,-2,"index");
     return 1;
 }

@@ -1,4 +1,4 @@
-# Status V0.3.7
+# Status V0.3.8
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -53,3 +53,5 @@ V0.3.5: diagnóstico de abertura remota e opções TLS somente em HTTPS. V0.3.4 
 V0.3.6: caminhos XEX editáveis e scripts Lua manuais (runtime opcional). Native XSDK e console ainda não homologados; nenhuma nova build XEX solicitada.
 
 V0.3.7: correção das telas e API Lua de leitura do catálogo; CI pendente. Sem nova build XEX.
+
+V0.3.8: profundidade por pasta XEX e flags de ocultos/fixados na API Lua. CI pendente. Pacotes e compatibilidade Aurora continuam separados.

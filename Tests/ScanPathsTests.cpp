@@ -83,6 +83,15 @@ int main() {
     assert(entries.size()==2);
     assert(entries[0].name=="Forza Horizon");
     assert(entries[1].name=="Halo 3");
+    const auto depthFile=root/"depths.txt";
+    {std::ofstream out(depthFile);out<<"0\t"<<roots[0]<<"\r\n1\t"<<roots[1]<<"\n99\t"<<roots[1]<<"\n";}
+    const auto depths=GameScanner::LoadDepths(depthFile.string());
+    assert(depths.size()==2&&GameScanner::DepthFor(depths,roots[0])==0&&GameScanner::DepthFor(depths,roots[1])==1);
+    const auto shallow=GameScanner(roots).Scan(depths);
+    assert(shallow.size()==1&&shallow[0].name=="Forza Horizon");
+    assert(GameScanner::DepthFor({},roots[0])==16);
+    {std::ofstream out(depthFile);out<<std::string(8193,'x');}
+    assert(GameScanner::LoadDepths(depthFile.string()).empty());
 
     // Empty config is a non-destructive fallback to built-in directories.
     fs::remove(config);
