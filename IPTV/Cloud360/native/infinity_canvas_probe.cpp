@@ -292,8 +292,8 @@ int main(){
             if(dashboardRemote.Address().empty()&&(!remoteRetry||now>=remoteRetry)){if(dashboardRemote.Start(dir))menu.LoadRemoteStore();remoteRetry=now+5000;}
             ConsoleHome::Key remoteKey=ConsoleHome::Back;
             const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);},[&](){return menu.RemoteSnapshot();},[&](const TvRemote::Request& request){return menu.RemoteCatalog(request);},{},[&](const TvRemote::Request& request){return !systemUiOpen&&!buttons&&!idleScreen.Active()&&pendingLaunch.empty()&&menu.RemoteStoreAction(request);});
-            if(command==TvRemote::Key::StoreDownload){remoteStoreJob=true;dirty=true;}
-            else if(command==TvRemote::Key::StoreQueue){dirty=true;}
+            if(command==TvRemote::Key::StoreDownload||command==TvRemote::Key::StoreStart){remoteStoreJob=true;dirty=true;}
+            else if(command==TvRemote::Key::StoreQueue||command==TvRemote::Key::StoreRemove){dirty=true;}
             else if(command!=TvRemote::Key::None){
                 if(remoteKey==ConsoleHome::GlobalGuide)edge|=INPUT_GAMEPAD_LEFT_THUMB;
                 else if(static_cast<unsigned>(remoteKey)<11)edge|=keys[static_cast<unsigned>(remoteKey)];
@@ -301,7 +301,7 @@ int main(){
         }
 #endif
         const bool wasIdle=idleScreen.Active();
-        const bool activity=buttons||edge||input.gamepad.left_trigger>30||input.gamepad.right_trigger>30||input.gamepad.thumb_rx>16000||input.gamepad.thumb_rx< -16000||input.gamepad.thumb_ry>16000||input.gamepad.thumb_ry< -16000;
+        const bool activity=remoteStoreJob||buttons||edge||input.gamepad.left_trigger>30||input.gamepad.right_trigger>30||input.gamepad.thumb_rx>16000||input.gamepad.thumb_rx< -16000||input.gamepad.thumb_ry>16000||input.gamepad.thumb_ry< -16000;
         if(idleScreen.Update(IdleScreen::Now(),menu.IdleMinutes(),continuous&&pendingLaunch.empty()&&menu.IdleEligible(),activity))dirty=true;
         if(wasIdle&&activity)edge=0;
         const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
@@ -689,11 +689,14 @@ int main(){
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     rate.Sample(done,total,TransferRate::Now());
 #ifdef INFINITY_MENU_FFMPEG
-                    if(dashboardRemoteEnabled)dashboardRemote.Poll([](TvRemote::Key){return false;},{},[&](const TvRemote::Request& request){
-                        if(request.key!=TvRemote::Key::Downloads)return std::string("{}");
-                        auto body=menu.RemoteCatalog(request);if(body.empty()||body.back()!='}')return std::string("{}");
-                        body.pop_back();return body+",\"active_name\":"+TvRemote::Quote(pending.name)+",\"active_done\":"+std::to_string(done)+",\"active_total\":"+std::to_string(total)+"}";
-                    });
+                    if(dashboardRemoteEnabled){
+                        const auto command=dashboardRemote.Poll([](TvRemote::Key){return false;},{},[&](const TvRemote::Request& request){
+                            if(request.key!=TvRemote::Key::Downloads)return std::string("{}");
+                            auto body=menu.RemoteCatalog(request);if(body.empty()||body.back()!='}')return std::string("{}");
+                            body.pop_back();return body+",\"active_name\":"+TvRemote::Quote(pending.name)+",\"active_done\":"+std::to_string(done)+",\"active_total\":"+std::to_string(total)+"}";
+                        },{},[&](const TvRemote::Request& request){return request.key==TvRemote::Key::StorePause&&menu.RemoteStoreEnabled()&&done<total;});
+                        if(command==TvRemote::Key::StorePause)return false;
+                    }
 #endif
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;

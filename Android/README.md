@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.9.0 Alpha
+# INFINITY 360 Remote — Android 0.10.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -49,3 +49,7 @@ Após configurar o arquivo de pareamento no console, selecione o IP local do cel
 ## Loja remota
 
 No console, habilite o controle geral e `enable-https-store.txt` com `ENABLE-HTTPS-STORE`. Para permitir pedidos remotos, crie `enable-remote-store.txt` com `ENABLE-REMOTE-STORE`. Reinicie a dashboard, configure os hosts e catálogos autorizados da loja e selecione o armazenamento. Na aba Loja do aplicativo, consulte o catálogo, pesquise nome/categoria e confirme Baixar no Xbox ou Adicionar à fila. O primeiro inicia o downloader nativo diretamente quando a Home está livre ou a loja aceita navegação; o segundo grava o pedido na fila existente. A fila pode ser iniciada pelo console. Sem instalação automática, sem URLs recebidas do celular, sem alteração de hosts ou destino. Consulte Sistema > downloads; durante o download, o progresso é consultável nos callbacks disponíveis. Remova o marcador de controle da loja e backup para revogar. A comunicação HTTP LAN não é criptografada. Homologação pendente.
+
+## Gerenciar a fila pelo celular
+
+Em Sistema, use Consultar fila de downloads, Iniciar / retomar fila ou Pausar download atual. A pausa é aceita durante callbacks antes de completar o pacote; pode não responder em chamadas bloqueantes. O downloader preserva o parcial quando possível. Remover da fila não apaga arquivos parciais. A retomada usa a fila existente, não reinstala conteúdo. Início e remoção exigem Home livre, loja ou painel de downloads sem operações conflitantes. As ações exigem os marcadores da loja remota e HTTPS. Consulte novamente para confirmar o resultado. Sem instalação automática.

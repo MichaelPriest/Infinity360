@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.67 — Controle remoto da fila de downloads
+
+- Android Remote 0.10.0 Alpha: iniciar/retomar fila nativa, solicitar pausa no callback de progresso, remover item da fila sem apagar parcial, cards com barras de progresso. Mantém autorização local da loja, IP/chave, TLS/SHA-256 e confirmação no app. Fila para em falha ou pausa; consulta manual. Sem XEX/release; APK e testes de console pendentes.
+
 ## V0.3.66 — Loja Android e downloads diretos no Xbox
 
 - Android Remote 0.9.0 Alpha: aba Loja com busca, paginação, categoria, versão, tamanho e estado da fila. Botões Baixar no Xbox e Adicionar à fila, com confirmação no app. Usa catálogo e downloader HTTPS nativo, valida ID, host local autorizado, tamanho e destino existente; preserva TLS/SHA-256 e retomada. Habilitação explícita enable-remote-store.txt (ENABLE-REMOTE-STORE), além do HTTPS Store e controle dashboard. Solicitações de escrita só na Home livre ou loja, sem instalações automáticas. Consulta de progresso durante callbacks do downloader, sem garantia de atualização durante bloqueios. Sem XEX/release; APK e homologação pendentes.

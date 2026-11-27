@@ -52,5 +52,11 @@ int main(){
     if(Parse(request("storequeue/1",key,host),host,key).key!=Key::StoreQueue)return 41;
     if(Parse(request("storedownload/../x",key,host),host,key).key!=Key::None)return 42;
     if(Parse(request("storequeue/1","wrong",host),host,key).key!=Key::None)return 43;
+    if(Parse(request("storestart",key,host),host,key).key!=Key::StoreStart)return 44;
+    if(Parse(request("storepause",key,host),host,key).key!=Key::StorePause)return 45;
+    if(Parse(request("storeremove/1",key,host),host,key).key!=Key::StoreRemove)return 46;
+    if(Parse(request("storeremove/0",key,host),host,key).key!=Key::None)return 47;
+    if(Parse(request("storepause","wrong",host),host,key).key!=Key::None)return 48;
+    if(Parse(request("storestart/1",key,host),host,key).key!=Key::None)return 49;
     return 0;
 }

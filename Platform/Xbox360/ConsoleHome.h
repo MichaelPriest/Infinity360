@@ -64,6 +64,7 @@ public:
     std::string RemoteCatalog(const TvRemote::Request& request)const;
     void LoadRemoteStore(){store_.Load();RebuildStore();}
     bool RemoteStoreAction(const TvRemote::Request& request);
+    bool RemoteStoreEnabled()const;
     static bool RemoteKey(TvRemote::Key command,Key& key);
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}

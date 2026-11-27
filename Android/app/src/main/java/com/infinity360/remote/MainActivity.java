@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
     private TextView status,monitor,catalogResult,downloads,storeResult;
+    private LinearLayout downloadCards;
     private EditText storeQuery;
     private LinearLayout storeCards;
     private int storeNext=-1;
@@ -79,6 +80,9 @@ public final class MainActivity extends Activity {
         label("Downloads e transferências");
         downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));downloads.setBackground(shape(PANEL));content.addView(downloads);
         content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Iniciar / retomar fila",ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Pausar download atual",PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,dp(54)));
+        downloadCards=new LinearLayout(this);downloadCards.setOrientation(LinearLayout.VERTICAL);content.addView(downloadCards);
         content=screen(root,1);
         label("Biblioteca e catálogo IPTV");
         catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
@@ -262,13 +266,37 @@ public final class MainActivity extends Activity {
                     send((now?"storedownload/":"storequeue/")+id);
             }).show();
     }
+    private void confirmQueueCommand(String command,String title,String description){
+        if(busy)return;
+        final String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira IP e chave.");return;}
+        new AlertDialog.Builder(this).setTitle(title).setMessage(description).setNegativeButton("Cancelar",null)
+            .setPositiveButton("Confirmar",(d,w)->{if(ip.equals(consoleIp.getText().toString().trim())&&secret.equals(key.getText().toString().trim()))send(command);}).show();
+    }
+    private void renderDownloadCards(org.json.JSONArray rows,String ip,String secret){
+        downloadCards.removeAllViews();
+        for(int i=0;i<rows.length();i++){
+            org.json.JSONObject row=rows.optJSONObject(i);if(row==null)continue;
+            final String id=row.optString("id"),name=row.optString("name");
+            if(!id.matches("[1-9][0-9]{0,19}"))continue;
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);downloadCards.addView(card,lp);
+            card.addView(text(name,16,TEXT));
+            long total=row.optLong("total"),done=row.optLong("received");
+            ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(100);progress.setProgress(total>0?(int)Math.min(100,100.0*Math.max(0,done)/total):0);card.addView(progress);
+            card.addView(button("Remover da fila (preservar parcial)",PANEL,()->{
+                if(!ip.equals(consoleIp.getText().toString().trim())||!secret.equals(key.getText().toString().trim())){status.setText("Conexão alterada. Consulte novamente.");return;}
+                confirmQueueCommand("storeremove/"+id,"Remover "+name+" da fila?","Arquivos parciais serão preservados. O comando só funciona quando o downloader está parado.");
+            }));
+        }
+    }
     private void refreshDownloads(){
         if(busy)return;
         String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
         if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira o IP e a chave.");return;}
         busy=true;status.setText("Consultando fila...");
         worker.execute(()->{
-            String message;boolean success=false;
+            String message;boolean success=false;org.json.JSONArray items=new org.json.JSONArray();
             try{
                 org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.downloads(ip,secret));
                 if(obj.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
@@ -278,6 +306,7 @@ public final class MainActivity extends Activity {
                 out.append("\n\nFila nativa da loja (registro local): ").append(obj.getBoolean("queue_valid")?obj.getLong("queue_total"):"Indisponível");
                 org.json.JSONArray rows=obj.getJSONArray("items");
                 if(rows.length()>8)throw new java.io.IOException("Fila inválida");
+                items=rows;
                 for(int i=0;i<rows.length();i++){
                     org.json.JSONObject row=rows.getJSONObject(i);String state=row.getString("state");
                     String label=state.equals("native_paused")?"Parcial salvo":state.equals("native_verified")||state.equals("verified")?"Verificado":state.equals("receiving")?"Último progresso":state.equals("failed")?"Falhou":"Sem registro";
@@ -286,8 +315,8 @@ public final class MainActivity extends Activity {
                 out.append("\n\nAté 8 itens da fila carregada. Registros não equivalem a progresso em tempo real.");
                 message=out.toString();success=true;
             }catch(Exception e){message="Fila indisponível. Confira a conexão e a versão do console.";}
-            final String text=message;final boolean ok=success;
-            runOnUiThread(()->{if(isDestroyed())return;busy=false;downloads.setText(text);status.setText(ok?"Consulta recebida.":"Falha na consulta.");});
+            final String text=message;final boolean ok=success;final org.json.JSONArray data=items;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;downloads.setText(text);renderDownloadCards(ok?data:new org.json.JSONArray(),ip,secret);status.setText(ok?"Consulta recebida.":"Falha na consulta.");});
         });
     }
     private void discoverConsole(){
@@ -371,7 +400,7 @@ public final class MainActivity extends Activity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);});});
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }

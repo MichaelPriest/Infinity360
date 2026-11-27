@@ -1364,13 +1364,28 @@ std::string remoteStoreId(const StoreItem& item){
     return TvRemote::GameArtId(item.id+"\t"+item.sha256+"\t"+item.provider+"\t"+item.storage);
 }
 }
+bool ConsoleHome::RemoteStoreEnabled()const{
+#if defined(INFINITY_XSDK_HTTPS)
+    return TvPreferences::Read(dir_+"enable-remote-store.txt")=="ENABLE-REMOTE-STORE"&&
+           TvPreferences::Read(dir_+"enable-https-store.txt")=="ENABLE-HTTPS-STORE";
+#else
+    return false;
+#endif
+}
 bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
 #if defined(INFINITY_XSDK_HTTPS)
-    if(request.key!=TvRemote::Key::StoreDownload&&request.key!=TvRemote::Key::StoreQueue)return false;
-    if(TvPreferences::Read(dir_+"enable-remote-store.txt")!="ENABLE-REMOTE-STORE"||
-       TvPreferences::Read(dir_+"enable-https-store.txt")!="ENABLE-HTTPS-STORE")return false;
-    if(!RemoteAllowed(Left)||(!IdleEligible()&&!storeActive_)||quickGuideOpen_||nativeStorePending_||nativeBatch_||
-       updatePending_||storeInstallPending_||providerPending_||!store_.NativeQueueValid())return false;
+    if(request.key!=TvRemote::Key::StoreDownload&&request.key!=TvRemote::Key::StoreQueue&&
+       request.key!=TvRemote::Key::StoreStart&&request.key!=TvRemote::Key::StoreRemove)return false;
+    if(!RemoteStoreEnabled())return false;
+    const bool downloadsPanel=section_==System&&page_==Details&&systemTab_==3&&storeDownloads_;
+    if(!RemoteAllowed(GlobalGuide)||(!IdleEligible()&&!storeActive_&&!downloadsPanel)||quickGuideOpen_||
+       nativeStorePending_||nativeBatch_||updatePending_||storeInstallPending_||providerPending_||
+       !store_.NativeQueueValid())return false;
+    if(request.key==TvRemote::Key::StoreStart){
+        nativeBatch_=true;
+        if(!NextNativeStore()){nativeBatch_=false;return false;}
+        return true;
+    }
     const StoreItem* found=nullptr;
     for(const auto& item:store_.Items())if(remoteStoreId(item)==request.query){
         if(found)return false;
@@ -1378,6 +1393,11 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
     }
     if(!found)return false;
     const StoreItem item=*found;
+    if(request.key==TvRemote::Key::StoreRemove){
+        if(!store_.NativeQueued(item)||!store_.RemoveNative(item))return false;
+        if(storeDownloads_)RebuildStoreDownloads();
+        notice_="Removido da fila pelo celular; parcial preservado.";return true;
+    }
     if(item.url.empty()||!StoreHostPolicy::Allowed(item.url,dir_)||!TranslationMatches(item)||
        store_.Staged(item)||store_.PackagePresent(item)||item.storage!=store_.Storage())return false;
     const bool start=request.key==TvRemote::Key::StoreDownload;
@@ -1416,7 +1436,7 @@ std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
             if(count>=8)break;
             const auto& item=items[index];const auto progress=store_.Progress(item);
             if(count++)out+=",";
-            out+="{\"name\":"+TvRemote::Quote(item.name)+",\"state\":\""+states[static_cast<unsigned>(progress.state)]+
+            out+="{\"id\":\""+remoteStoreId(item)+"\",\"name\":"+TvRemote::Quote(item.name)+",\"state\":\""+states[static_cast<unsigned>(progress.state)]+
                 "\",\"received\":"+std::to_string(progress.received)+",\"total\":"+std::to_string(item.bytes)+"}";
         }
         return out+"]}";
