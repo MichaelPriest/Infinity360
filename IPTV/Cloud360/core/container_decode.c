@@ -9,14 +9,20 @@
 #include <libavutil/error.h>
 #include <libavutil/dict.h>
 enum { MAX_BYTES=8*1024*1024, MAX_PACKETS=4096, MAX_FRAMES=1200, EXTENDED_BYTES=256*1024*1024, EXTENDED_PACKETS=250000, EXTENDED_FRAMES=180000 };
-typedef struct { FILE* file; int64_t length; int64_t budget; CloudContainerRead read; void* user; int failed; } Input;
+typedef struct { FILE* file; int64_t length; int64_t budget; CloudContainerRead read; CloudContainerSeek seek; int64_t position; void* user; int failed; } Input;
 static int read_input(void* opaque,uint8_t* buf,int n){
     Input* in=opaque;
     if(n<=0||in->budget<=0||in->failed){in->failed=1;return AVERROR(EIO);}
     if(n>in->budget)n=(int)in->budget;
     if(in->read){
+        if(in->seek){
+            if(in->position==in->length)return AVERROR_EOF;
+            if(in->position<0||in->position>in->length){in->failed=1;return AVERROR(EIO);}
+            if(n>in->length-in->position)n=(int)(in->length-in->position);
+        }
         int got=in->read(in->user,buf,(unsigned)n);
-        if(got<0||got>n){in->failed=1;return AVERROR(EIO);}
+        if(got<0||got>n||(in->seek&&!got)){in->failed=1;return AVERROR(EIO);}
+        if(in->seek)in->position+=got;
         in->budget-=got;
         return got?got:AVERROR_EOF;
     }
@@ -27,11 +33,17 @@ static int read_input(void* opaque,uint8_t* buf,int n){
 }
 static int64_t seek_input(void* opaque,int64_t offset,int whence){
     Input* in=opaque;
-    if(whence==AVSEEK_SIZE)return in->length;
     whence&=~AVSEEK_FORCE;
-    int64_t pos=whence==SEEK_SET?0:whence==SEEK_CUR?ftell(in->file):whence==SEEK_END?in->length:-1;
+    if(whence==AVSEEK_SIZE)return in->length;
+    if(in->failed)return AVERROR(EIO);
+    int64_t pos=whence==SEEK_SET?0:whence==SEEK_CUR?(in->seek?in->position:ftell(in->file)):whence==SEEK_END?in->length:-1;
     if(pos<0||offset < -pos||offset > in->length-pos)return AVERROR(EINVAL);
     pos+=offset;
+    if(in->seek){
+        if(pos==in->position)return pos;
+        if(in->seek(in->user,pos)!=pos){in->failed=1;return AVERROR(EIO);}
+        in->position=pos;return pos;
+    }
     return fseek(in->file,(long)pos,SEEK_SET)==0?pos:AVERROR(EIO);
 }
 static int deny_open(AVFormatContext* s, AVIOContext** pb,const char* url,int flags,AVDictionary** opts){
@@ -101,13 +113,15 @@ void cloud_container_close(CloudContainerSession* s){
     if(s->input.file)fclose(s->input.file);
     free(s);
 }
-static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended,int mp4){
+static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended,int mp4,CloudContainerSeek seek,int64_t length){
     if(!read&&(!path||strstr(path,"://")))return NULL;
+    if(seek&&(!read||!mp4||length<=0||length>8LL*1024*1024*1024))return NULL;
     CloudContainerSession* s=calloc(1,sizeof *s);if(!s)return NULL;
     const int64_t max_bytes=extended?EXTENDED_BYTES:MAX_BYTES;
     s->input.budget=max_bytes*4;
     s->max_packets=extended?EXTENDED_PACKETS:MAX_PACKETS;
-    s->input.read=read;s->input.user=reader;
+    s->input.read=read;s->input.user=reader;s->input.seek=seek;
+    if(seek){s->input.length=length;if(seek(reader,0)!=0){cloud_container_close(s);return NULL;}}
     if(!read)s->input.file=fopen(path,"rb");
     AVDictionary* options=NULL;
     uint8_t* buffer=NULL;
@@ -115,7 +129,7 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
        ((s->input.length=ftell(s->input.file))<=0)||s->input.length>max_bytes||
        fseek(s->input.file,0,SEEK_SET)))goto fail;
     buffer=av_malloc(32768);if(!buffer)goto fail;
-    s->io=avio_alloc_context(buffer,32768,0,&s->input,read_input,NULL,read?NULL:seek_input);
+    s->io=avio_alloc_context(buffer,32768,0,&s->input,read_input,NULL,read&&!seek?NULL:seek_input);
     if(!s->io)goto fail;buffer=NULL;
     s->fmt=avformat_alloc_context();if(!s->fmt)goto fail;
     s->fmt->pb=s->io;s->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;s->fmt->io_open=deny_open;
@@ -137,12 +151,13 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
 fail:
     av_free(buffer);av_dict_free(&options);cloud_container_close(s);return NULL;
 }
-CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended,0);}
-CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,0):NULL;}
-CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,1):NULL;}
+CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended,0,NULL,0);}
+CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,0,NULL,0):NULL;}
+CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,1,NULL,0):NULL;}
+CloudContainerSession* cloud_container_open_mp4_seekable(CloudContainerRead read,CloudContainerSeek seek,int64_t length,void* reader,CloudContainerFrame output,void* user){return read&&seek?open_session(NULL,read,reader,output,user,1,1,seek,length):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
 int64_t cloud_container_duration(const CloudContainerSession* s){
-    if(!s||s->input.read||!s->fmt||!s->fmt->iformat||
+    if(!s||(s->input.read&&!s->input.seek)||!s->fmt||!s->fmt->iformat||
        strcmp(s->fmt->iformat->name,"mov,mp4,m4a,3gp,3g2,mj2")||
        s->fmt->start_time==AV_NOPTS_VALUE||s->fmt->duration<=0||
        s->fmt->duration>3600000000LL)return 0;

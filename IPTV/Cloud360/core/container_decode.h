@@ -21,9 +21,12 @@ typedef struct CloudContainerSession CloudContainerSession;
 typedef int (*CloudContainerRead)(void* user,uint8_t* buffer,unsigned capacity);
 /* Sequential MP4 (fast-start or compatible fragmented MP4), no random access. */
 CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user);
+/* Seek callback takes an absolute byte position, returns that exact position or negative. Length must be known and stable. Caller owns reader until close. */
+typedef int64_t (*CloudContainerSeek)(void* user,int64_t position);
+CloudContainerSession* cloud_container_open_mp4_seekable(CloudContainerRead read,CloudContainerSeek seek,int64_t length,void* reader,CloudContainerFrame output,void* user);
 CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user);
 CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended);
-/* Local indexed MP4 only. Time is relative to the container start in us.
+/* Indexed local or seekable callback MP4 only. Time is relative to the container start in us.
  * A successful seek lands at a preceding keyframe; caller must discard
  * previously queued frames. A failed demux seek is terminal. */
 int64_t cloud_container_duration(const CloudContainerSession* session);

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.93 — MP4 com acesso aleatório
+
+- API AVIO seekable por callbacks de leitura e posição absoluta, tamanho conhecido até 8 GiB e orçamento de leitura existente; rejeita EOF prematuro e seek inconsistente.
+- Permite índice MP4 no final e busca por quadro-chave no núcleo; teste portátil com arquivo original e leitor simulado.
+- Transporte HTTP Range e controles remotos ainda não integrados; sem XEX.
+
 ## V0.2.92 — MP4 remoto sequencial
 
 - Demux MOV/MP4 por AVIO não-seekable, com entrada limitada e H.264/AAC até 720p; permite MP4 fast-start em fontes autorizadas no player XSDK.
