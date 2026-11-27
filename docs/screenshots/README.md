@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**81 capturas nativas** — commit [c7912b693a26](https://github.com/MichaelPriest/Infinity360/commit/c7912b693a2616ac8bf8aca055b2523c1d495f79).
+**88 capturas nativas** — commit [668e08ce4fd9](https://github.com/MichaelPriest/Infinity360/commit/668e08ce4fd9689260c3d177763b1653f0418779).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -131,6 +131,19 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Arcade — biblioteca e menu inferior** | **Media Hub — destaque de mídia e menu lateral** |
 | ![Performance — indicadores locais e menu em duas colunas](62-layout-9.png) |  |
 | **Performance — indicadores locais e menu em duas colunas** |  |
+
+### Configurações — editor em todas as paletas
+
+| Tela | Tela |
+| --- | --- |
+| ![Editor de configurações — Verde Infinity](82-config-tema-0.png) | ![Editor de configurações — Azul](83-config-tema-1.png) |
+| **Editor de configurações — Verde Infinity** | **Editor de configurações — Azul** |
+| ![Editor de configurações — Âmbar](84-config-tema-2.png) | ![Editor de configurações — Violeta](85-config-tema-3.png) |
+| **Editor de configurações — Âmbar** | **Editor de configurações — Violeta** |
+| ![Editor de configurações — Vermelho](86-config-tema-4.png) | ![Editor de configurações — Ciano](87-config-tema-5.png) |
+| **Editor de configurações — Vermelho** | **Editor de configurações — Ciano** |
+| ![Editor de configurações — Grafite](88-config-tema-6.png) |  |
+| **Editor de configurações — Grafite** |  |
 
 
 <!-- NATIVE-GALLERY-END -->
