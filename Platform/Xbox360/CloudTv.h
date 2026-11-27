@@ -14,6 +14,9 @@ public:
     std::string TakeMovie();
     bool CanZap()const;
     void RecordPlayed();
+    TvPlaybackInfo PlayingInfo(int64_t now)const;
+    void TogglePlayingFavorite();
+    void FinishPlayback();
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
@@ -41,7 +44,7 @@ private:
     void Filter();
     void CollectEpisodes();
     void OpenItem(size_t index);
-    void Toggle(size_t index);
+    void Toggle(size_t index,bool refresh=true);
     void DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const;
     void DrawList(HomeCanvas& c,int64_t now) const;
     void DrawModernList(HomeCanvas& c,int64_t now) const;

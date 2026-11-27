@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+struct TvPlaybackInfo {
+    std::string channel,programme,next;
+    bool favorite=false;
+};
 struct TvProgramme {
     int64_t start, stop;
     std::string title;

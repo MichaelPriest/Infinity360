@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.52 — EPG e favoritos durante reproducao
+
+- HUD do player FFmpeg live mostra nome do canal, marcador de favorito, programa atual e proximo (XMLTV local, atualizacao por segundo, sem consulta externa). A alterna favorito durante reproducao, exceto quando Guide ou menu de qualidade captura os controles; baixo alterna diagnostico. Lista de favoritos/historico permanece estavel durante zapping e e refiltrada ao sair. Sem programacao exibe fallback, sem inventar horarios. Reutiliza faixa translucida; escrita de favoritos permanece sincrona. Testes e XSDK pendentes; sem XEX/release.
+
 ## V0.3.51 — Historico IPTV e preferencias entre canais
 
 - Aba Historico nos layouts moderno e classico, com ate 64 IDs de itens recentes, deduplicados e ordenados; mostra apenas itens da lista ativa. Grava somente apos apresentar video e enviar audio via FFmpeg, sem persistir URL. Grava arquivo temporario e usa substituicao existente; falha de escrita conserva historico em memoria. Volume e mudo compartilhados entre canais na mesma sessao de zapping; qualidade continua especifica por canal. Player legado, testes, capturas e XSDK pendentes. Sem XEX/release.

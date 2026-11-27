@@ -237,12 +237,37 @@ void CloudTv::CollectEpisodes() {
     }
     std::stable_sort(episodes_.begin(),episodes_.end(),EpisodeOrder(items));
 }
-void CloudTv::Toggle(size_t index) {
+void CloudTv::Toggle(size_t index,bool refresh) {
     if(cloud_favorite_toggle_id(&favorites_,catalog_.Items()[index].id)<0) {notice_="Limite de favoritos atingido.";return;}
     const std::string file=dir_+"favorites.txt";
     if(cloud_favorites_save(&favorites_,(file+".tmp").c_str())!=0 || !replaceSavedFile(file))
         notice_="Favorito desta sessão. Falha ao gravar no dispositivo.";
-    if(tab_==TvFavorites) {view_=Browse;Filter();}
+    if(refresh&&tab_==TvFavorites) {view_=Browse;Filter();}
+}
+TvPlaybackInfo CloudTv::PlayingInfo(int64_t now)const{
+    TvPlaybackInfo info;
+    if(view_!=Details||detail_>=Count())return info;
+    const auto& item=catalog_.Items()[detail_];
+    if(item.category!=TvLive)return info;
+    info.channel=item.name;
+    info.favorite=cloud_favorite_has_id(&favorites_,item.id)!=0;
+    const auto& schedule=guide_.For(item.channel,item.name);
+    const auto* current=TvGuide::Current(schedule,now);
+    const auto* next=TvGuide::Next(schedule,now);
+    info.programme=current?current->title:"Sem programacao atual";
+    if(next)info.next=localTime(next->start)+" "+next->title;
+    return info;
+}
+void CloudTv::TogglePlayingFavorite(){
+    if(view_==Details&&detail_<Count()&&catalog_.Items()[detail_].category==TvLive)Toggle(detail_,false);
+}
+void CloudTv::FinishPlayback(){
+    if(tab_!=TvFavorites&&tab_!=TvHistory)return;
+    Filter();
+    if(view_==Details){
+        const auto it=std::find(rows_.begin(),rows_.end(),detail_);
+        if(it!=rows_.end())row_=static_cast<size_t>(it-rows_.begin());
+    }
 }
 std::string CloudTv::TakeMovie() {std::string path;path.swap(pending_);return path;}
 bool CloudTv::CanZap()const{

@@ -136,6 +136,9 @@ public:
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
     void RecordTvPlayed(){tv_.RecordPlayed();}
+    TvPlaybackInfo PlayingTvInfo(int64_t now)const{return tv_.PlayingInfo(now);}
+    void ToggleTvPlayingFavorite(){tv_.TogglePlayingFavorite();}
+    void FinishTvPlayback(){tv_.FinishPlayback();}
     bool CanZapTv()const{return tv_.CanZap();}
     std::string ZapTv(int direction){return TransferRunning()?std::string{}:tv_.Zap(direction);}
     bool Tick();

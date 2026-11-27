@@ -365,14 +365,14 @@ int main(){
                     std::string next;
                     std::function<bool(int)> zap;
                     if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
-                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();}):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();}):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
 #else
                 const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #endif
-                menu.PlayerMessage(result);dirty=true;
+                menu.FinishTvPlayback();menu.PlayerMessage(result);dirty=true;
                 if(presentFailed){ok=false;break;}
                 INPUT_STATE held{};previous=XamInputGetState(0,0,&held)==ERROR_SUCCESS?held.gamepad.buttons:0;
             }
