@@ -75,6 +75,10 @@ public:
         return S_OK; // renderer may still be loading; Ready() verifies status.
     }
     bool Ready()const{return renderer_&&SameAccount()&&renderer_->GetStatus()==S_OK;}
+    bool Matches(DWORD user,XUID owner,XUSER_SIGNIN_STATE state)const{
+        return renderer_&&user_==user&&owner_==owner&&state_==state&&SameAccount();
+    }
+    void ClearLocal(){ReleaseProfile();}
     IDirect3DDevice9* Device()const{return device_;}
     HRESULT Update(float dt){
         if(!renderer_||!SameAccount())return E_FAIL;

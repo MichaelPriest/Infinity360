@@ -51,18 +51,27 @@ public:
         device_->GetRenderTarget(0,&previousColor);
         device_->GetDepthStencilSurface(&previousDepth);
         if(!previousColor){if(previousDepth)previousDepth->Release();return false;}
-        device_->SetRenderTarget(0,color_);
-        device_->SetDepthStencilSurface(depth_);
-        device_->SetRenderState(D3DRS_COLORWRITEENABLE,D3DCOLORWRITEENABLE_ALL);
+        DWORD previousWrite=0;
+        const bool savedWrite=SUCCEEDED(device_->GetRenderState(D3DRS_COLORWRITEENABLE,&previousWrite));
+        if(!savedWrite||FAILED(device_->SetRenderTarget(0,color_))||
+           FAILED(device_->SetDepthStencilSurface(depth_))||
+           FAILED(device_->SetRenderState(D3DRS_COLORWRITEENABLE,D3DCOLORWRITEENABLE_ALL))){
+            device_->SetRenderTarget(0,previousColor);
+            device_->SetDepthStencilSurface(previousDepth);
+            if(savedWrite)device_->SetRenderState(D3DRS_COLORWRITEENABLE,previousWrite);
+            previousColor->Release();if(previousDepth)previousDepth->Release();
+            return false;
+        }
         const D3DVECTOR4 clear={0,0,0,0};
         const D3DRECT tiles[2]={{0,0,Size,TileHeight},{0,TileHeight,Size,Size}};
         device_->BeginTiling(0,2,tiles,&clear,1,0);
         const bool submitted=renderer.Draw(world,view,projection);
         device_->EndTiling(0,NULL,texture_,NULL,1,0,NULL);
-        device_->SetRenderTarget(0,previousColor);
-        device_->SetDepthStencilSurface(previousDepth);
+        const HRESULT restoreColor=device_->SetRenderTarget(0,previousColor);
+        const HRESULT restoreDepth=device_->SetDepthStencilSurface(previousDepth);
+        const HRESULT restoreWrite=device_->SetRenderState(D3DRS_COLORWRITEENABLE,previousWrite);
         previousColor->Release();if(previousDepth)previousDepth->Release();
-        valid_=submitted&&renderer.Ready();
+        valid_=submitted&&renderer.Ready()&&SUCCEEDED(restoreColor)&&SUCCEEDED(restoreDepth)&&SUCCEEDED(restoreWrite);
         return valid_;
     }
     // Borrowed GPU texture. Host must recheck profile and order sampling

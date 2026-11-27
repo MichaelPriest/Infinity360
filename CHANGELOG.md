@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.88 — Ciclo de vida do avatar XDK
+
+- Controlador opcional de sessão do avatar oficial: troca de conta invalida a textura, atualização limitada por quadro, gesto explícito e fallback sem avatar de outra conta.
+- Pass D3D9 verifica falhas ao configurar alvos e restaura máscara de escrita de cor; não integra o presenter XSDK nem comprova ABI XDK.
+- Status consolidado dos módulos; sem solicitação de XEX.
+
 ## V0.2.87 — Estabilização e validação portátil
 
 - Cacheia a contagem de referências FPS ao atualizar os detalhes do jogo, evitando leitura do XML em cada quadro.
