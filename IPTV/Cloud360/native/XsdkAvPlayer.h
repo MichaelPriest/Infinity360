@@ -151,7 +151,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         guide.Restore(canvas);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
         const auto info=state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(sourceWidth>1280||sourceHeight>720?" | "+std::to_string(sourceWidth)+"x"+std::to_string(sourceHeight)+" > 720p":"")+(duration>0?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):"");
-        const auto bufferInfo=remoteSource?(" | Fila "+std::to_string(timeline.Bytes()/1024)+" KiB"):"";
+        std::string bufferInfo=remoteSource?(" | Fila "+std::to_string(timeline.Bytes()/1024)+" KiB | Alvo "+std::to_string(playbackClock.Ahead()/1000)+" ms"):"";
+#ifdef INFINITY_AV_NETWORK
+        if(remoteSource&&hls.RecentThroughput())bufferInfo+=" | Rede "+std::to_string(hls.RecentThroughput()/1000)+" kbps";
+#endif
         lastHud=hud.Visible(wall(),controls.Paused());
         hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?"X Mudo | LB/RB Volume | B Sair":duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
         guide.Draw(canvas);

@@ -9,18 +9,22 @@ class CloudReadClock {
 public:
     static constexpr int64_t MinAhead=150000,MaxAhead=600000;
     static constexpr int64_t SlowRead=50000,MaxStall=15000000,MaxTotal=900000000;
-    bool Observe(int64_t before,int64_t after){
+    bool Observe(int64_t before,int64_t after,int64_t bufferedUs=0){
         if(before<last_||after<before)return false;
-        last_=after;
         const int64_t duration=after-before;
         if(duration>MaxStall)return false;
         if(duration>SlowRead){
-            if(duration>MaxTotal-offset_)return false;
-            offset_+=duration;++stalls_;
-            ahead_=std::min(MaxAhead,ahead_+50000);fast_=0;
+            // Only explicitly supplied, usable lead may absorb a read delay.
+            const auto absorbed=std::min(duration,std::max<int64_t>(0,bufferedUs));
+            const auto uncovered=duration-absorbed;
+            if(uncovered>MaxTotal-offset_)return false;
+            offset_+=uncovered;++stalls_;
+            const auto increase=std::max<int64_t>(50000,std::min<int64_t>(150000,duration/4));
+            ahead_=std::min(MaxAhead,ahead_+increase);fast_=0;
         }else if(++fast_>=64){
             ahead_=std::max(MinAhead,ahead_-25000);fast_=0;
         }
+        last_=after;
         return true;
     }
     int64_t Elapsed(int64_t wall)const{return std::max<int64_t>(0,wall-offset_);}

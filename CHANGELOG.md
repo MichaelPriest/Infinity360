@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.43 — Buffer adaptativo e diagnostico de rede
+
+- Relogio de leitura aumenta o alvo de pre-leitura conforme a duracao da espera (50–150 ms por evento, teto 600 ms). Observacoes rejeitadas nao avancam o ultimo timestamp. API aceita lead explicitamente utilizavel para compensacao parcial, mas o player continua conservador sem estimativa comprovada de audio de hardware. HUD mostra alvo de pre-leitura e ultima taxa HLS medida quando disponivel. Testes deterministas adicionados; execucao pendente. Sem XEX/release.
+
 ## V0.3.42 — Cobertura de recuperacao HLS e telemetria
 
 - Acrescenta cenarios deterministicos de recuperacao gradual e bloqueio pelo teto de bitrate, com verificacao de que nenhuma variante superior e aberta antes da reconexao. HUD remoto mostra ocupacao da fila A/V em KiB (nao representa buffer de rede). Mantem limite de memoria e politica de reconexao. Testes ainda nao executados nesta etapa; sem XEX/release.
