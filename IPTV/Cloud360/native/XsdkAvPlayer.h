@@ -63,9 +63,10 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
 #ifdef INFINITY_AV_NETWORK
     XsdkMpeg::RemoteReader remote;
     XsdkMpeg::RangeReader ranged;
+    std::string hlsError;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
-        if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4")))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
+        if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4"))){hlsError=r->Error();return std::unique_ptr<XsdkMpeg::RemoteReader>{};}
         return r;
     },[](unsigned ms){
         if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;
@@ -87,7 +88,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
             hls.EnableBufferedSegments(true);
             hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
-            if(!hls.Start(path,cap,true))return "Playlist HLS recusada ou indisponivel.";
+            if(!hls.Start(path,cap,true))return hlsError.empty()?"Playlist HLS recusada ou indisponivel.":hlsError;
             selectedBitrate=hls.SelectedBitrate();
             auto readHls=[](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);};
             session=hls.Fragmented()?cloud_container_open_mp4(readHls,&hls,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(readHls,&hls,CloudAvStreamQueue::Capture,&timeline);
@@ -97,7 +98,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
                 session=cloud_container_open_mp4_seekable(XsdkMpeg::RangeReader::ReadCallback,XsdkMpeg::RangeReader::SeekCallback,ranged.Length(),&ranged,CloudAvStreamQueue::Capture,&timeline);
             }else{
             if(Cancelled())return "Reproducao cancelada.";
-            if(!remote.Open(path,root,!mp4,false,mp4))return "Fonte de video remoto nao autorizada.";
+            if(!remote.Open(path,root,!mp4,false,mp4))return remote.Error();
             auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
             session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
             }

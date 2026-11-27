@@ -468,6 +468,12 @@ int main(int argc,char** argv) {
      assert(InfinityIptv::NetworkAllowed("http://192.168.1.10:8090/live.ts",policyRoot));
      assert(!InfinityIptv::NetworkAllowed("http://192.168.1.11:8090/live.ts",policyRoot));
      assert(InfinityIptv::NetworkAllowed("brazucaplay:opaque",policyRoot));
+     std::ofstream(policy/"infinity360-iptv-network.txt")<<"OPEN\r\n";
+     assert(InfinityIptv::NetworkAllowed("http://other.example:8080/live.ts",policyRoot));
+     assert(InfinityIptv::NetworkAllowed("https://other.example:8443/movie.mp4",policyRoot));
+     assert(!StoreHostPolicy::Allowed("https://other.example/live.m3u8",policyRoot));
+     std::ofstream(policy/"infinity360-iptv-network.txt")<<"RESTRICTED\n";
+     assert(!InfinityIptv::NetworkAllowed("http://other.example:8080/live.ts",policyRoot));
      fs::remove_all(policy); }
     assert(!url.Parse("http://host/path\r\nheader") && !url.Parse("http://user:pass@host/"));
 

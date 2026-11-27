@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.4
+INFINITY 360 V0.3.5
 Requested: 2026-11-26
-Baseline: 80045120c46942d85caded09be5bcbf2877ac37c
-Authorized unified XSDK build with IPTV open mode, FFmpeg and mandatory regression gates.
+Baseline: 8b939abf84225ca3b0b8b1d1fc14247fe65ec23f
+Retry IPTV open mode diagnostics and HTTP configuration; mandatory gates retained.

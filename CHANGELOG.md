@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.5 — Diagnóstico de abertura IPTV remota
+
+- Diferencia bloqueio de rede, URL/formato, certificado, inicialização e opção libcurl recusada; evita opções TLS em HTTP. Propaga motivo de abertura HLS. Testa modo livre e isolamento da Store. Causa específica no console ainda desconhecida.
+
 ## V0.3.4 — Modo livre IPTV
 
 - Preferência exclusiva OPEN/RESTRICTED, alternável com X em Fontes; pacote unificado inicia em OPEN. HTTP/HTTPS e portas alternativas para fontes de mídia compatíveis, sem cadastro manual. TLS e política da Store preservados; redirecionamentos não liberados.
