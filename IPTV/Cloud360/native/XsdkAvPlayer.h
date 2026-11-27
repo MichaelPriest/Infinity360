@@ -3,6 +3,7 @@
 #include "PlaybackHud.h"
 #include "TvGuide.h"
 #include "TvPreferences.h"
+#include "TvRemoteProtocol.h"
 #include <ctime>
 #include "MediaUrl.h"
 #include "XsdkPaths.h"
@@ -48,6 +49,22 @@ inline bool Enabled(const std::string& root){
     std::ifstream file((root+"enable-iptv-playback.txt").c_str());std::string marker;
     return std::getline(file,marker)&&marker=="ENABLE-IPTV-PLAYBACK";
 }
+inline unsigned RemoteButtons(TvRemote::Key key){
+    switch(key){
+    case TvRemote::Key::Up:return INPUT_GAMEPAD_DPAD_UP;
+    case TvRemote::Key::Down:return INPUT_GAMEPAD_DPAD_DOWN;
+    case TvRemote::Key::Left:return INPUT_GAMEPAD_DPAD_LEFT;
+    case TvRemote::Key::Right:return INPUT_GAMEPAD_DPAD_RIGHT;
+    case TvRemote::Key::Accept:return INPUT_GAMEPAD_A;
+    case TvRemote::Key::Back:return INPUT_GAMEPAD_B;
+    case TvRemote::Key::Mute:return INPUT_GAMEPAD_X;
+    case TvRemote::Key::Quality:return INPUT_GAMEPAD_Y;
+    case TvRemote::Key::Quieter:return INPUT_GAMEPAD_LEFT_SHOULDER;
+    case TvRemote::Key::Louder:return INPUT_GAMEPAD_RIGHT_SHOULDER;
+    case TvRemote::Key::Channels:return INPUT_GAMEPAD_START;
+    default:return 0;
+    }
+}
 inline unsigned ControlKeys(unsigned buttons){
     return ((buttons&INPUT_GAMEPAD_A)?CloudPlaybackControls::Pause:0u)|
            ((buttons&INPUT_GAMEPAD_X)?CloudPlaybackControls::Mute:0u)|
@@ -57,7 +74,7 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange,const std::function<void()>& onPlaying,const std::function<TvPlaybackInfo(int64_t)>& tvInfo,const std::function<void()>& favorite,const std::function<std::vector<TvChannelChoice>()>& listChannels,const std::function<bool(size_t)>& chooseChannel,const std::vector<unsigned char>& channelLogo){
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange,const std::function<void()>& onPlaying,const std::function<TvPlaybackInfo(int64_t)>& tvInfo,const std::function<void()>& favorite,const std::function<std::vector<TvChannelChoice>()>& listChannels,const std::function<bool(size_t)>& chooseChannel,const std::vector<unsigned char>& channelLogo,const std::function<TvRemote::Key()>& remoteInput,const std::string& remoteAddress){
     retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;channelChange=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
@@ -199,6 +216,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(mediaInfo.fps_den)detailLine+=" | FPS nominal "+std::to_string((uint64_t(mediaInfo.fps_num)*10/mediaInfo.fps_den)/10)+"."+std::to_string((uint64_t(mediaInfo.fps_num)*10/mediaInfo.fps_den)%10);
             if(mediaInfo.sample_rate)detailLine+=" | Audio "+std::to_string(mediaInfo.sample_rate)+" Hz";
             detailLine+=" | Quadros descartados "+std::to_string(timeline.Dropped())+" | Pausas leitura "+std::to_string(playbackClock.Stalls());
+            if(!remoteAddress.empty())detailLine="Controle: "+remoteAddress+" | "+detailLine;
         }
         if(!showDetails&&!programme.channel.empty()){
             detailLine="Agora: "+programme.programme+(!programme.next.empty()?" | A seguir: "+programme.next:"");
@@ -232,10 +250,15 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     while(ok){
         if(!reportedPlaying&&shown&&submitted){reportedPlaying=true;if(onPlaying)onPlaying();}
         INPUT_STATE state{};
-        const bool inputOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
-        if(inputOk&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
-        const unsigned edges=inputOk?state.gamepad.buttons&~held:0;
-        if(inputOk)held=state.gamepad.buttons;
+        const bool physicalOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
+        const unsigned physical=physicalOk?state.gamepad.buttons:0;
+        const unsigned pulse=remoteSource&&remoteInput?RemoteButtons(remoteInput()):0;
+        const bool inputOk=physicalOk||bool(remoteInput);
+        state.gamepad.buttons=physical|pulse;
+        if(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)){cancelled=true;break;}
+        const unsigned edges=(physical&~held)|pulse;
+        held=physical;
+        // Preserve separate physical edges; remote pulses are released on the next poll.
         const bool guideEdge=(edges&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available();
         const bool wasGuide=guide.Active();if(guideEdge)guide.Toggle();
         bool guideChanged=guideEdge;
@@ -376,7 +399,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={},CloudPlaybackControls::AudioPreference* sharedAudio=nullptr,const std::function<void()>& onPlaying={},const std::function<TvPlaybackInfo(int64_t)>& tvInfo={},const std::function<void()>& favorite={},const std::function<std::vector<TvChannelChoice>()>& listChannels={},const std::function<bool(size_t)>& chooseChannel={},const std::vector<unsigned char>& channelLogo={}){
+                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={},CloudPlaybackControls::AudioPreference* sharedAudio=nullptr,const std::function<void()>& onPlaying={},const std::function<TvPlaybackInfo(int64_t)>& tvInfo={},const std::function<void()>& favorite={},const std::function<std::vector<TvChannelChoice>()>& listChannels={},const std::function<bool(size_t)>& chooseChannel={},const std::vector<unsigned char>& channelLogo={},const std::function<TvRemote::Key()>& remoteInput={},const std::string& remoteAddress={}){
     std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference localAudio;
     auto& audioPreference=sharedAudio?*sharedAudio:localAudio;
     unsigned normalRetries=0,rollbackCap=0,manualCap=0,rollbackManual=0,manualChanges=0;bool upgradeUsed=false;
@@ -385,7 +408,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         bool retry=false,upgrade=false,played=false,manualChange=false,channelChange=false;unsigned previousBitrate=0;
         const unsigned oldManual=manualCap;
         result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference,
-            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange,zap,channelChange,onPlaying,tvInfo,favorite,listChannels,chooseChannel,channelLogo);
+            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange,zap,channelChange,onPlaying,tvInfo,favorite,listChannels,chooseChannel,channelLogo,remoteInput,remoteAddress);
         if(Cancelled()||result=="Reproducao cancelada.")return "Reproducao cancelada.";
         if(channelChange)return result;
         if(rollbackCap&&!played&&!retry){

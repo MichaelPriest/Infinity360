@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.57 — Controle remoto IPTV pelo navegador (experimental)
+
+- Servidor HTTP local durante sessao FFmpeg de rede, porta 32161, opt-in por cloud360-remote.txt (IPv4 privado do celular e chave aleatoria hexadecimal de 32 caracteres, uma linha cada). Controle web responsivo servido pelo console; comandos limitados aos botoes IPTV. Valida IP, Host, chave, tamanho, formato e taxa; sem CORS, arquivos ou comandos genericos. HTTP sem criptografia, apenas LAN confiavel. Endereco no HUD de diagnostico. Poll cooperativo, indisponivel durante chamadas bloqueantes. Teste de protocolo registrado; XSDK e navegador no console pendentes. Sem XEX/release.
+
 ## V0.3.56 — Estabilidade de preferencias e playback IPTV
 
 - Centraliza leitura de teto HLS e marcador Full HD; arquivo ausente usa teto padrao de 2 Mbps, arquivo invalido permanece bloqueado e indicado nas configuracoes. EPG/favoritos desativados em HLS VOD. Cancelamento verificado entre leituras de decoder. Historico e gravado ao sair da reproducao/zapping, evitando I/O no caminho de frames; falha mantem alteracoes em memoria para nova tentativa. Falha de salvamento de audio informada. Novo teste host de preferencias com valores invalidos e backup FATX registrado no CTest. Sem XEX/release; homologacao pendente.

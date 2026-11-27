@@ -32,6 +32,7 @@
 #include "XsdkMpegPlayer.h"
 #ifdef INFINITY_MENU_FFMPEG
 #include "XsdkAvPlayer.h"
+#include "TvRemoteServer.h"
 #endif
 #include <cerrno>
 #include <filesystem>
@@ -360,13 +361,16 @@ int main(){
                 auto drawGuide=[&](HomeCanvas& frame,int row){menu.DrawPlaybackGuide(frame,row);};
 #ifdef INFINITY_MENU_FFMPEG
                 std::string result;
+                TvRemote::Server remoteControl;
+                MediaUrl remoteUrl;
+                if(remoteUrl.Parse(movie)&&XsdkAv::Supports(movie))remoteControl.Start(dir);
                 const auto initialAudio=TvPreferences::LoadAudio(dir);
                 CloudPlaybackControls::AudioPreference channelAudio{initialAudio.volume,initialAudio.muted};
                 do{
                     std::string next;
                     std::function<bool(int)> zap;
                     if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
-                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();},[&](){return menu.TvChannelChoices();},[&](size_t row){next=menu.ChooseTvChannel(row);return !next.empty();},menu.PlayingTvLogo()):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();},[&](){return menu.TvChannelChoices();},[&](size_t row){next=menu.ChooseTvChannel(row);return !next.empty();},menu.PlayingTvLogo(),[&](){return remoteControl.Poll();},remoteControl.Address()):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
