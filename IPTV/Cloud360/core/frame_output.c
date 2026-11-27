@@ -62,7 +62,9 @@ int cloud_frame_stereo(const AVFrame* f,float* dst,size_t samples){
         }
     }
     for(int ch=0;ch<channels;++ch){sl+=wl[ch];sr+=wr[ch];}
-    const float norm=fmaxf(1.0f,fmaxf(sl,sr));
+    // Finite non-negative coefficients; avoid an external libm dependency.
+    const float peak=sl>sr?sl:sr;
+    const float norm=peak>1.0f?peak:1.0f;
     for(int i=0;i<f->nb_samples;++i){
         float a=0,b=0;
         for(int ch=0;ch<channels;++ch){

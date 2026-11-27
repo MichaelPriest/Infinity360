@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.1
+INFINITY 360 V0.3.2
 Requested: 2026-11-26
-Baseline: 2d78fce6ad41ad98377b1a562a9d8e85fcde9e33
-Authorized unified XSDK build with FFmpeg, clean distribution and corresponding LGPL source; required portable, Cloud360 and package integrity gates.
+Baseline: 926bb8bad113f3fb52cc49237106e31452ebca3a
+Authorized retry of unified XSDK build after host linker fix; all regression, Cloud360 and package integrity gates remain required.

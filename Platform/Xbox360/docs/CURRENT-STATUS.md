@@ -1,4 +1,4 @@
-# Status V0.3.1
+# Status V0.3.2
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -41,3 +41,5 @@ V0.2.99: codecs AAC/MP3/AC3 no decoder audiovisual e conversão PCM mono/estére
 V0.3.0: conversão incremental 32/44,1/48 kHz para 48 kHz com fase persistente. Saída mono/estéreo; downmix multicanal pendente. Sem XEX.
 
 V0.3.1: bypass exato 48 kHz, downmix de layouts reconhecidos até 8 canais, gate Cloud360 obrigatório para release e build unificada solicitada. V0.3.0: 31/32 testes FFmpeg aprovados; revisão atual ainda em validação.
+
+V0.3.2: corrige erro de link fmaxf no gate host sem remover testes; build unificada solicitada novamente. Validação pendente.

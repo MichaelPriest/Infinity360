@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.2 — Correção de link do downmix
+
+- Substitui fmaxf por comparação de coeficientes finitos, preservando normalização e evitando dependência libm não vinculada no gate C.
+- Reexecuta build unificada autorizada com todos os gates obrigatórios. Revisão anterior bloqueada no link host; resultado XSDK ainda não confirmado.
+
 ## V0.3.1 — Downmix multicanal e build unificada
 
 - Corrige bypass PCM 48 kHz para manter amostras exatas; adiciona downmix estéreo normalizado para layouts reconhecidos de até 8 canais, sem LFE.
