@@ -108,6 +108,13 @@ void HomeCanvas::VideoRgb(const unsigned char* rgb,unsigned width,unsigned heigh
         frame_[(y+y0)*Width+x+x0]=0xff000000u|(unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2];
     }
 }
+void HomeCanvas::CaptureBottom(unsigned rows,std::vector<unsigned>& pixels)const{
+    rows=std::min(rows,unsigned(Height));pixels.assign(frame_.end()-rows*Width,frame_.end());
+}
+bool HomeCanvas::RestoreBottom(unsigned rows,const std::vector<unsigned>& pixels){
+    if(rows>Height||pixels.size()!=size_t(rows)*Width)return false;
+    std::copy(pixels.begin(),pixels.end(),frame_.end()-rows*Width);return true;
+}
 void HomeCanvas::Box(int x,int y,int w,int h,unsigned color,int radius) {
     color=ThemeColor(color);
     for (int j=std::max(0,-y); j<h && y+j<Height; ++j) {

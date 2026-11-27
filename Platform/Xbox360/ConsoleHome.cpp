@@ -3859,6 +3859,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         }
         return;
     }
+    if(section_==Library&&layout_&&GridListing()){DrawGameGrid(c);return;}
     const bool tabbed=(section_==Apps || section_==Emulators || section_==Library);
     if(tabbed) {
         static const char* const appTabs[]={"Todos","Instalados","Plugins","Homebrew"};
@@ -4952,17 +4953,30 @@ bool ConsoleHome::GridListing()const{
 void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
     const int count=static_cast<int>(Count());
     const int first=row_/GameGrid::Page*GameGrid::Page;
-    const int top=section_==Library?239:202;
-    const int cw=190,ch=174,stepX=200,stepY=182;
+    const bool rail=section_==Library&&layout_!=0;
+    const int top=rail?191:section_==Library?239:202;
+    const int cw=rail?145:190,ch=rail?188:174,stepX=rail?155:200,stepY=rail?198:182;
+    if(rail){
+        const char* tabs[]={"Todos","Xbox 360","XBLA","Original","Pacotes","Colecoes","Nunca jogados","Ocultos","Fixados"};
+        const int icons[]={23,1,35,13,35,24,20,49,34};
+        c.SeriesTile(45,143,240,446,false,190);
+        for(int i=0;i<9;++i){const int y=152+i*47;
+            c.SeriesTile(53,y,224,42,i==subtab_&&gridFilter_,i==subtab_?215:168);
+            InfinityIcons::Draw(c,icons[i],64,y+9,22,i==subtab_?Lime:White);
+            c.TextFit(100,y+9,c.Tr(tabs[i]),18,i==subtab_?Lime:White,166);}
+        const char* sorts[]={"Nome A-Z","Nome Z-A","Dispositivo"};
+        c.TextFit(307,144,number(Count())+" jogos | "+(subtab_==8?"Ordem manual":!luaActiveSort_.empty()?"Ordem Lua":sorts[gameSort_]),21,White,915);
+        if(subtab_==5&&size_t(collectionIndex_)<collections_.Items().size())c.TextFit(307,169,collections_.Items()[collectionIndex_].name,16,Lime,910);
+    }
     if(count){
         for(int index=first;index<std::min(count,first+GameGrid::Page);++index){
             const auto& game=*visible_[index];const int slot=index-first;
-            const int x=45+slot%GameGrid::Columns*stepX,y=top+slot/GameGrid::Columns*stepY;
+            const int x=(rail?307:45)+slot%GameGrid::Columns*stepX,y=top+slot/GameGrid::Columns*stepY;
             const bool active=index==row_&&!gridFilter_;
             panel(c,x,y,cw,ch,Panel,active);
             const auto cover=ArtPath(game,true),back=ArtPath(game,false);
             bool art=false;
-            if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+2,y+2,cw-4,ch-4,true,9);
+            if(appearance_.ShowCover()&&!cover.empty())art=c.LocalArt(cover,true,x+2,y+2,cw-4,ch-4,!rail,9);
             if(!art&&appearance_.ShowBackdrop()&&!back.empty())art=c.LocalArt(back,false,x+2,y+2,cw-4,ch-4,true,9);
             if(art){for(int dy=0;dy<45;++dy)c.Translucent(x+5,y+ch-50+dy,cw-10,1,0xff090f0bu,unsigned(90+dy*3));}
             else{InfinityIcons::Draw(c,1,x+(cw-48)/2,y+46,48,Muted);c.CenterText(x+4,y+100,cw-8,"Sem capa",14,Muted);}
@@ -4976,12 +4990,41 @@ void ConsoleHome::DrawGameGrid(HomeCanvas& c)const{
         c.Text(1060,597,number(first/GameGrid::Page+1)+"/"+number((count+GameGrid::Page-1)/GameGrid::Page),17,Lime,170);
     }
     const char* help=section_==Library?(gridFilter_?"Esq/Dir Categorias | A/baixo Jogos":"Direcoes Capas | Cima na 1a fila: categorias"):"Direcoes Capas | A Detalhes | X Favorito";
-    c.Text(45,597,c.Tr(help),17,Muted,1000);
+    if(!count&&rail){c.SeriesTile(307,191,920,385,false);c.TextFit(330,244,c.Tr("Nenhum item nesta seção."),26,Muted,870);}
+    c.TextFit(45,597,c.Tr(help),17,Muted,1000);
+    if(rail)c.TextFit(45,622,subtab_==8?"START Buscar | LB Ocultar | RB Subir fixado | R3 Descer fixado":subtab_==5?"START Buscar | LB Proxima colecao | RB Gerenciar | R3 Ordenar":"START Buscar | LB Ocultar | RB Colecoes | R3 Ordenar",17,Muted,1180);
 }
 
 void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     const auto& game=*visible_[row_];const auto& m=detailMetadata_;
     const auto cover=ArtPath(game,true),back=ArtPath(game,false);
+    if(layout_){
+        c.SeriesTile(45,145,1190,315,false,190);
+        if(appearance_.ShowBackdrop()&&!back.empty()&&c.LocalArt(back,false,565,148,666,309,true,9))c.Shade(565,149,665,308,0xff0c1711u,225,198);
+        c.SeriesTile(58,158,190,289,false,184);
+        if(!appearance_.ShowCover()||cover.empty()||!c.LocalArt(cover,true,61,160,184,276,false,8)){
+            InfinityIcons::Draw(c,1,119,241,68,Muted);c.CenterText(63,322,180,"Sem capa",17,Muted);}
+        c.TextFit(266,170,game.name,34,White,565);
+        c.TextFit(266,222,game.device+" | "+(m.package?"Pacote Xbox":"XEX"),20,Muted,565);
+        c.TextFit(266,258,m.known?"Title "+hexId(m.titleId)+" | Media "+hexId(m.mediaId):"Identidade indisponivel",19,White,565);
+        if(m.discCount)c.TextFit(266,292,"Disco "+number(m.discNumber)+"/"+number(m.discCount),18,Muted,565);
+        if(m.package)c.TextFit(266,326,"Tamanho declarado: "+StorageInfo::FormatBytes(m.declaredBytes),18,Muted,565);
+        c.TextFit(266,368,contains(pinned_,game.executable)?"FIXADO":Starred(game)?"Favorito":"",18,Lime,565);
+        const char* actions[]={m.package?"Montar pacote":"Jogar","TU / DLC / Saves","Fixar / Desafixar","Capa e fundo","Favorito"};
+        const int keys[]={InfinityButtons::A,InfinityButtons::RB,InfinityButtons::LB,InfinityButtons::Start,InfinityButtons::X};
+        for(int i=0;i<5;++i){const int y=163+i*56;c.SeriesTile(860,y,360,49,i==0);
+            InfinityButtons::Hint(c,keys[i],872,y+12,24,c.Tr(actions[i]),292,White);}
+        const auto stats=LaunchStats(game.executable);
+        c.SeriesTile(45,474,590,114,false);c.TextFit(59,485,"Historico de execucao",21,Lime,560);
+        c.TextFit(59,520,number(stats.attempts)+" tentativas | "+number(stats.failed)+" falhas imediatas",18,White,560);
+        c.TextFit(59,549,stats.attempts?LaunchStatistics::Date(stats.last):"Nenhuma tentativa registrada",17,Muted,560);
+        c.SeriesTile(647,474,588,114,false);c.TextFit(662,485,"Informacoes do titulo",21,Lime,558);
+        c.TextFit(662,520,m.known?"Versao "+hexId(m.version)+" | Base "+hexId(m.baseVersion):"Metadados indisponiveis",18,White,558);
+        if(m.known&&m.titleId&&HasFriendPresence())c.TextFit(662,549,number(FriendsPlaying(m.titleId))+" amigo(s) jogando | ultima consulta",17,Muted,558);
+        else c.TextFit(662,549,m.discCount>1?"R3 Selecionar disco":"Y Atualizar",17,Muted,558);
+        c.TextFit(45,603,game.executable,16,Muted,1180);
+        return;
+    }
     c.SeriesTile(45,145,1190,246,false);
     bool backdrop=false;
     if(appearance_.ShowBackdrop()&&!back.empty())backdrop=c.LocalArt(back,false,637,148,595,240,true,9);

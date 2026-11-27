@@ -1,6 +1,7 @@
 #pragma once
 #include "MpegPlayback.h"
 #include "HomeCanvas.h"
+#include "PlaybackHud.h"
 #include "MediaUrl.h"
 #include "XsdkPaths.h"
 #include "xsdk/audio.h"
@@ -81,25 +82,31 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
     using Clock=std::chrono::steady_clock;
     auto last=Clock::now();double elapsed=0;
     bool paused=false,muted=false;
+    PlaybackHud hud;const auto started=Clock::now();
+    auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-started).count();};hud.Reveal(0);
+    bool lastHud=true;
+    auto overlay=[&](){lastHud=hud.Visible(wall(),paused);hud.Draw(canvas,wall(),paused,"Cloud360 IPTV | MPEG",std::string(paused?"Pausado":"Reproduzindo")+(muted?" | Mudo":""),local?"A Pausa | X Mudo | B Sair":"X Mudo | B Sair");};
     INPUT_STATE initial{};unsigned previous=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     while(!Cancelled()){
-        INPUT_STATE input{};
+        INPUT_STATE input{};bool refresh=false;
         if(XamInputGetState(0,0,&input)==ERROR_SUCCESS){
             const unsigned buttons=input.gamepad.buttons,edge=buttons&~previous;previous=buttons;
-            if(edge&INPUT_GAMEPAD_X){muted=!muted;output.SetMuted(muted);}
-            if(local&&(edge&INPUT_GAMEPAD_A)){paused=!paused;last=Clock::now();}
+            if(edge&INPUT_GAMEPAD_LEFT_THUMB){hud.Toggle(wall());refresh=true;}
+            if(edge&INPUT_GAMEPAD_X){muted=!muted;output.SetMuted(muted);hud.Reveal(wall());refresh=true;}
+            if(local&&(edge&INPUT_GAMEPAD_A)){paused=!paused;last=Clock::now();hud.Reveal(wall());refresh=true;}
         }
+        if(lastHud!=hud.Visible(wall(),paused))refresh=true;
+        if(refresh)overlay();
         if(paused){
-            canvas.Box(40,620,520,58,0xff172c28u,6);
-            canvas.Text(56,633,"Pausado | A Retomar | B Sair",23,0xfff2f7f3u,490);
-            if(!present(true))return "Falha GPU.";
+            if(!present(refresh))return "Falha GPU.";
             last=Clock::now();continue;
         }
         auto now=Clock::now();const double delta=std::chrono::duration<double>(now-last).count();
-        if(delta<0.025){if(!present(false))return "Falha GPU.";continue;}
+        if(delta<0.025){if(!present(refresh))return "Falha GPU.";continue;}
         last=now;elapsed=std::min(0.1,delta);
         const bool running=player.Advance(elapsed);
-        if(!present(output.dirty))return "Falha GPU.";
+        if(output.dirty){hud.Frame(canvas);overlay();}
+        if(!present(output.dirty||refresh))return "Falha GPU.";
         output.dirty=false;
         if(!running)return player.Error().empty()?"Reproducao encerrada.":player.Error();
     }

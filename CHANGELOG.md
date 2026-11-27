@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.26 — Biblioteca, ficha do jogo e player
+
+- Biblioteca moderna com categorias laterais e grade de 12 capas, filtros existentes preservados. Ficha do jogo com arte, metadados, histórico e ações de controle em coluna direita. Layout legado preservado.
+- HUD translúcido compartilhado nos players FFmpeg e MPEG, progresso quando duração conhecida, volume/mudo e comandos reais; oculta após quatro segundos, L3 fixa/oculta controles de reprodução (não o Guide global). Restaura os pixels do vídeo antes de compor o HUD para evitar acúmulo, com buffer de 600 KiB. Teste portátil de composição e temporização.
+- Sem XEX/release; player e guia dentro de jogos ainda dependem de validação e integração no console.
+
 ## V0.3.25 — Aplicação do mockup: mídia e serviços
 
 - Cloud360 IPTV e INFINITY Store com categorias laterais, foco em lista e painel de detalhes persistente. Mantém navegação, fontes autorizadas e contratos de reprodução/download existentes.

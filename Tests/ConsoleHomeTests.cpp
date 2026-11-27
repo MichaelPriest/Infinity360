@@ -1,5 +1,6 @@
 #include "WeatherJson.h"
 #include "ConsoleHome.h"
+#include "PlaybackHud.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
 #include "ApprovedHome.h"
@@ -1587,6 +1588,12 @@ int main(int argc,char** argv) {
         assert(palette.Pixels()[360*1280+640]==0xff00ff00u);
     }
     {
+        HomeCanvas player;const unsigned char rgb[]={220,160,80};player.VideoRgb(rgb,1,1);PlaybackHud hud;hud.Frame(player);hud.Reveal(0);
+        const auto before=player.Pixels()[640*1280+640];
+        assert(hud.Draw(player,1000,false,"Cloud360","Teste","B Sair",42));const auto shaded=player.Pixels()[640*1280+640];
+        assert(shaded!=before);assert(hud.Draw(player,1000,false,"Cloud360","Teste","B Sair",42));assert(player.Pixels()[640*1280+640]==shaded);
+        assert(hud.Draw(player,5000000,false,"Cloud360","Teste","B Sair"));assert(player.Pixels()[640*1280+640]==before);
+        hud.Toggle(5000000);assert(hud.Visible(10000000,false));hud.Toggle(10000000);assert(!hud.Visible(10000000,false));
         unsigned p=0;assert(GameGrid::Parse("2",p)&&GameGrid::Enabled(p,0));
         assert(!GameGrid::Parse("3",p)&&p==2);
         assert(!GameGrid::Enabled(GameGrid::List,1));

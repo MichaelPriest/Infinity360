@@ -1,5 +1,6 @@
 #pragma once
 #include "HomeCanvas.h"
+#include "PlaybackHud.h"
 #include "MediaUrl.h"
 #include "XsdkPaths.h"
 #include "container_decode.h"
@@ -126,15 +127,18 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
+    PlaybackHud hud;hud.Reveal(wall());
+    unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
+    bool lastHud=true;
     auto overlay=[&](){
-        canvas.Box(30,620,1220,72,0xff172c28u,6);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
-        canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(duration?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):""),22,0xfff2f7f3u,1160);
-        canvas.Text(46,657,remoteSource&&!duration?"X Mudo | LB/RB Volume | B Sair":duration?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
+        const auto info=state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(duration>0?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):"");
+        lastHud=hud.Visible(wall(),controls.Paused());
+        hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info,remoteSource&&duration<=0?"X Mudo | LB/RB Volume | B Sair":duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
-        ++shown;overlay();return present(true);
+        hud.Frame(canvas);++shown;overlay();return present(true);
     };
     auto audio=[&](const float* pcm,unsigned count){
         float* out=nullptr;
@@ -148,15 +152,19 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         INPUT_STATE state{};
         const bool inputOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
         if(inputOk&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
+        const unsigned edges=inputOk?state.gamepad.buttons&~held:0;
+        if(inputOk)held=state.gamepad.buttons;
         const bool changed=inputOk&&controls.Update(ControlKeys(state.gamepad.buttons),wall());
-        if(changed){overlay();if(!present(true)){ok=false;break;}}
+        if(edges&INPUT_GAMEPAD_LEFT_THUMB)hud.Toggle(wall());
+        else if(edges&&ControlKeys(edges))hud.Reveal(wall());
+        if(changed||(edges&INPUT_GAMEPAD_LEFT_THUMB)||lastHud!=hud.Visible(wall(),controls.Paused())){overlay();if(!present(true)){ok=false;break;}}
         const int seek=controls.TakeSeek();
         if(seek&&duration&&!controls.Paused()){
             const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));
             // A bounded local keyframe seek, not frame-accurate scrubbing.
             if(audioOpen){xsdk_audio_close();audioOpen=false;}
             if(cloud_container_seek(session,target)<0){ok=false;break;}
-            timeline.Reset();rc=1;
+            timeline.Reset();rc=1;hud.Clear();hud.Reveal(0);
             canvas.Box(0,0,1280,720,0xff000000u);canvas.Text(45,80,"Cloud360 | Buscando quadro-chave",28,0xfff2f7f3u,1180);
             if(!present(true)||!prepare()){ok=false;break;}
             audioOpen=NT_SUCCESS(xsdk_audio_open(16));if(!audioOpen){ok=false;break;}

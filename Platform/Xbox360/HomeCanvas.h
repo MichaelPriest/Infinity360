@@ -21,6 +21,8 @@ public:
     unsigned Language()const{return language_;}
     static const char* ThemeName(unsigned theme);
     void VideoRgb(const unsigned char* pixels,unsigned width,unsigned height,double pixelAspect=1.0);
+    void CaptureBottom(unsigned rows,std::vector<unsigned>& pixels)const;
+    bool RestoreBottom(unsigned rows,const std::vector<unsigned>& pixels);
     void Box(int x, int y, int w, int h, unsigned color, int radius = 0);
     void Glass(int x,int y,int w,int h,bool focused=false);
     void Surface(int x,int y,int w,int h,unsigned color=0xff172c28u,int radius=8,unsigned opacity=198);
