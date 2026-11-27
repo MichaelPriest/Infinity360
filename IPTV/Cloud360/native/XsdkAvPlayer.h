@@ -153,7 +153,8 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
     unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     bool lastHud=true;
-    bool liveAudioFailure=false;
+    bool liveAudioFailure=false,showDetails=false;
+    CloudContainerInfo mediaInfo{};cloud_container_info(session,&mediaInfo);
     auto overlay=[&](){
         guide.Restore(canvas);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
@@ -163,8 +164,16 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(remoteSource&&hls.RecentThroughput())bufferInfo+=" | Rede "+std::to_string(hls.RecentThroughput()/1000)+" kbps";
         if(selectedBitrate)bufferInfo+=manualCap?(" | Manual ate "+std::to_string(manualCap/1000)+" kbps"):" | Auto";
 #endif
-        lastHud=hud.Visible(wall(),controls.Paused());
-        hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
+        std::string detailLine;
+        if(showDetails){
+            detailLine=std::string(mediaInfo.video_codec?mediaInfo.video_codec:"Video ?")+" / "+(mediaInfo.audio_codec?mediaInfo.audio_codec:"Audio ?");
+            if(sourceWidth&&sourceHeight)detailLine+=" | Fonte "+std::to_string(sourceWidth)+"x"+std::to_string(sourceHeight);
+            if(mediaInfo.fps_den)detailLine+=" | FPS nominal "+std::to_string((uint64_t(mediaInfo.fps_num)*10/mediaInfo.fps_den)/10)+"."+std::to_string((uint64_t(mediaInfo.fps_num)*10/mediaInfo.fps_den)%10);
+            if(mediaInfo.sample_rate)detailLine+=" | Audio "+std::to_string(mediaInfo.sample_rate)+" Hz";
+            detailLine+=" | Quadros descartados "+std::to_string(timeline.Dropped())+" | Pausas leitura "+std::to_string(playbackClock.Stalls());
+        }
+        lastHud=hud.Visible(wall(),controls.Paused()||showDetails);
+        hud.Draw(canvas,wall(),controls.Paused()||showDetails,"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine);
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
@@ -197,10 +206,11 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(inputOk&&(guide.Active()||wasGuide||guideEdge))controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
         else if(inputOk){
             changed=controls.Update(ControlKeys(state.gamepad.buttons),wall());
-            if(edges&INPUT_GAMEPAD_START){hud.Toggle(wall());changed=true;}
+            if(remoteSource&&duration<=0&&(edges&INPUT_GAMEPAD_DPAD_DOWN)){showDetails=!showDetails;hud.Reveal(wall());changed=true;}
+            if(edges&INPUT_GAMEPAD_START){showDetails=false;hud.Toggle(wall());changed=true;}
             else if(edges&&ControlKeys(edges))hud.Reveal(wall());
         }
-        if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused())){overlay();if(!present(true)){ok=false;break;}}
+        if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused()||showDetails)){overlay();if(!present(true)){ok=false;break;}}
 #ifdef INFINITY_AV_NETWORK
         if(qualityAvailable&&!guide.Active()&&!wasGuide&&!guideEdge&&(edges&INPUT_GAMEPAD_Y)&&shown&&submitted){
             previousBitrate=selectedBitrate;

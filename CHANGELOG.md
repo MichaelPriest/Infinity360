@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.47 — Informacoes detalhadas da transmissao
+
+- HUD do FFmpeg remoto sem duracao indexada: direcional para baixo alterna detalhes fixados; START fecha detalhes e preserva controle do HUD. Exibe nomes dos codecs, dimensoes da fonte, FPS nominal declarado (quando disponivel), taxa de amostragem, quadros descartados e esperas de leitura. Reutiliza faixa inferior existente sem snapshot adicional; Guide mantém prioridade. Metadados do decoder acessiveis por API com teste de taxa de audio e argumentos nulos. FPS nominal nao e desempenho real. Testes e XSDK pendentes; sem XEX/release.
+
 ## V0.3.46 — Recuperacao de audio e sincronizacao IPTV
 
 - HLS ao vivo apresenta quadros/amostras ja vencidos antes de leituras potencialmente bloqueantes. Fila classifica falha de relogio, audio atrasado, sink de audio e sink de video. Em HLS previamente reproduzido, atraso severo ou falha de audio solicita nova sessao limpa dentro do orcamento ordinario, mantendo volume/mudo e teto de bitrate. HUD informa lead A/V da fila de software, nao latencia do hardware. Testes de classificacao e atraso adicionados; execucao e homologacao XSDK pendentes. Sem XEX/release.

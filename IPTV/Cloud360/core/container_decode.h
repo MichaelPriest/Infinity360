@@ -17,6 +17,13 @@ typedef int (*CloudContainerFrame)(void* user,const AVFrame* frame,int video,int
  * negative on failure. The callback's frame is borrowed until it returns.
  * Close on every exit path; no network or unbounded input. */
 typedef struct CloudContainerSession CloudContainerSession;
+/* Codec names are static library strings. Frame rate is declared by the
+ * stream, not measured playback performance. Zero denotes unavailable. */
+typedef struct {
+    const char *video_codec,*audio_codec;
+    unsigned sample_rate,fps_num,fps_den;
+} CloudContainerInfo;
+int cloud_container_info(const CloudContainerSession* session,CloudContainerInfo* info);
 /* Non-seekable MPEG-TS: caller owns reader/user until close. Return bytes,
  * 0 for clean EOF, negative for permanent error/cancel (not temporary EAGAIN). */
 typedef int (*CloudContainerRead)(void* user,uint8_t* buffer,unsigned capacity);

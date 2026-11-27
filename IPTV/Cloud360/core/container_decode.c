@@ -162,6 +162,17 @@ CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* rea
 CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,1,NULL,0):NULL;}
 CloudContainerSession* cloud_container_open_mp4_seekable(CloudContainerRead read,CloudContainerSeek seek,int64_t length,void* reader,CloudContainerFrame output,void* user){return read&&seek?open_session(NULL,read,reader,output,user,1,1,seek,length):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
+int cloud_container_info(const CloudContainerSession* s,CloudContainerInfo* info){
+    if(!info)return 0;
+    memset(info,0,sizeof *info);
+    if(!s||!s->video||!s->audio||!s->fmt)return 0;
+    info->video_codec=avcodec_get_name(s->video->codec_id);
+    info->audio_codec=avcodec_get_name(s->audio->codec_id);
+    if(s->audio->sample_rate>0)info->sample_rate=(unsigned)s->audio->sample_rate;
+    const AVRational fps=s->fmt->streams[s->vi]->avg_frame_rate;
+    if(fps.num>0&&fps.den>0&&(int64_t)fps.num<=240LL*fps.den){info->fps_num=(unsigned)fps.num;info->fps_den=(unsigned)fps.den;}
+    return 1;
+}
 int64_t cloud_container_duration(const CloudContainerSession* s){
     if(!s||(s->input.read&&!s->input.seek)||!s->fmt||!s->fmt->iformat||
        strcmp(s->fmt->iformat->name,"mov,mp4,m4a,3gp,3g2,mj2")||

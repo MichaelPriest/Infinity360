@@ -13,6 +13,8 @@ int main(int argc,char** argv){
     while(rc>0&&queue.WantsInput(0)&&calls++<4096)rc=cloud_container_step(s,1);
     if(rc==0)queue.EndInput();
     if(rc<0||!queue.Prepare()){cloud_container_close(s);return 1;}
+    CloudContainerInfo info{};
+    if(cloud_container_info(nullptr,&info)||!cloud_container_info(s,&info)||!info.video_codec||!info.audio_codec||info.sample_rate!=sourceRate){cloud_container_close(s);return 1;}
     unsigned shown=0;uint64_t samples=0;
     auto video=[&](const CloudAvStreamQueue::Video& v){++shown;return v.width==128&&v.height==72;};
     auto audio=[&](const float* pcm,unsigned n){samples+=n;return pcm&&n&&n<=256;};
