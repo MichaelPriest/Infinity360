@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.56 — Estabilidade de preferencias e playback IPTV
+
+- Centraliza leitura de teto HLS e marcador Full HD; arquivo ausente usa teto padrao de 2 Mbps, arquivo invalido permanece bloqueado e indicado nas configuracoes. EPG/favoritos desativados em HLS VOD. Cancelamento verificado entre leituras de decoder. Historico e gravado ao sair da reproducao/zapping, evitando I/O no caminho de frames; falha mantem alteracoes em memoria para nova tentativa. Falha de salvamento de audio informada. Novo teste host de preferencias com valores invalidos e backup FATX registrado no CTest. Sem XEX/release; homologacao pendente.
+
 ## V0.3.55 — Configuracoes IPTV persistentes
 
 - Opcoes BACK > Configuracoes IPTV: volume inicial, mudo, teto HLS e entrada Full HD experimental, gravados por opcao com arquivo temporario e backup FATX. Player FFmpeg restaura volume/mudo entre sessoes e grava alteracoes ao sair; teto e marcador Full HD recuperam backup. Seletor de canais desativado para HLS VOD. Mantem modo de rede e lista ativa existentes. Testes e XSDK pendentes; sem XEX/release.

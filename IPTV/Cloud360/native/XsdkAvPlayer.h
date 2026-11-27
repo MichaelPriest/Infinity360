@@ -95,18 +95,13 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(remoteSource){
         if(!Enabled(root))return "Habilite enable-iptv-playback.txt.";
         if(CloudHls::Extension(path,".m3u8")){
-            unsigned cap=CloudHls::DefaultBitrate;
-            std::ifstream quality(savedFile(root+"infinity360-iptv-bitrate.txt").c_str(),std::ios::binary);
-            if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
-                if(!value.empty()&&value.back()=='\r')value.pop_back();
-                if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
+            unsigned cap=TvPreferences::Cap(root);
+            if(!cap)return "Limite HLS invalido (100000 a 4000000 bps).";
             userHlsCap=cap;
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
             if(manualCap)cap=std::min(cap,manualCap);
             // Keep automatic HLS selection at 720p unless explicitly enabled.
-            std::ifstream fullHd(savedFile(root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
-            if(fullHd){std::string marker;std::getline(fullHd,marker);if(!marker.empty()&&marker.back()=='\r')marker.pop_back();
-                if(marker=="ENABLE-IPTV-1080P"&&fullHd.peek()==std::char_traits<char>::eof())hls.EnableFullHd();}
+            if(TvPreferences::FullHd(root))hls.EnableFullHd();
             hls.EnableBufferedSegments(true);
             hls.EnablePrefetch([](XsdkMpeg::RemoteReader& r){return r.Prefetch();});
             if(!manualCap)hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
@@ -164,10 +159,11 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     std::string qualityHint;
-    bool canZap=bool(zap)&&remoteSource&&duration<=0;
+    bool liveMetadata=remoteSource&&duration<=0;
 #ifdef INFINITY_AV_NETWORK
-    if(CloudHls::Extension(path,".m3u8")&&!hls.Live())canZap=false;
+    if(CloudHls::Extension(path,".m3u8")&&!hls.Live())liveMetadata=false;
 #endif
+    const bool canZap=bool(zap)&&liveMetadata;
 #ifdef INFINITY_AV_NETWORK
     if(qualityAvailable)qualityHint=" | Y Qualidade";
 #endif
@@ -181,7 +177,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudContainerInfo mediaInfo{};cloud_container_info(session,&mediaInfo);
     TvPlaybackInfo programme;int64_t epgSecond=-1;
     auto refreshEpg=[&](){
-        if(!tvInfo||!remoteSource||duration>0)return;
+        if(!tvInfo||!liveMetadata)return;
         const auto now=static_cast<int64_t>(std::time(nullptr));
         if(now!=epgSecond){programme=tvInfo(now);epgSecond=now;}
     };
@@ -217,7 +213,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(!channelNotice.empty())detailLine=channelNotice;
         }
         lastHud=hud.Visible(wall(),controls.Paused()||showDetails||qualityMenu.Active()||channelMenu.Active());
-        hud.Draw(canvas,wall(),controls.Paused()||showDetails||qualityMenu.Active()||channelMenu.Active(),programme.channel.empty()?"Cloud360 IPTV | FFmpeg":programme.channel+(programme.favorite?" *":""),info+bufferInfo,channelMenu.Active()?"Cima/Baixo Canal | A Assistir | B Sair":qualityMenu.Active()?"Esq/Dir Selecionar | A Aplicar | Y Voltar | B Sair":remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint+(!programme.channel.empty()&&favorite?" | A Favorito":"")+(canZap?" | Esq/Dir Canal | Cima Ultimo":"")):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine,(!showDetails&&!qualityMenu.Active()&&!channelMenu.Active())?programme.progress:-1,&channelLogo,canZap&&listChannels&&chooseChannel?(channelMenu.Active()?"START Voltar":"START Canais"):"START Controles");
+        hud.Draw(canvas,wall(),controls.Paused()||showDetails||qualityMenu.Active()||channelMenu.Active(),programme.channel.empty()?"Cloud360 IPTV | FFmpeg":programme.channel+(programme.favorite?" *":""),info+bufferInfo,channelMenu.Active()?"Cima/Baixo Canal | A Assistir | B Sair":qualityMenu.Active()?"Esq/Dir Selecionar | A Aplicar | Y Voltar | B Sair":remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint+(!programme.channel.empty()&&favorite?" | A Favorito":"")+(canZap?" | Esq/Dir Canal | Cima Ultimo":"")):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine,(!showDetails&&!qualityMenu.Active()&&!channelMenu.Active())?programme.progress:-1,&channelLogo,canZap&&listChannels&&chooseChannel&&!qualityMenu.Active()?(channelMenu.Active()?"START Voltar":"START Canais"):"START Controles");
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
@@ -336,7 +332,9 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             const auto afterRead=controls.Clock(wall());
             if(remoteSource&&!playbackClock.Observe(beforeRead,afterRead)){ok=false;break;}
             elapsed=playbackClock.Elapsed(afterRead);
+            if(Cancelled()){cancelled=true;break;}
         }
+        if(cancelled)break;
         if(rc==0)timeline.EndInput();
         if(!ok||rc<0){ok=false;break;}
         const auto before=shown;

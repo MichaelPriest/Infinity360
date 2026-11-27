@@ -170,6 +170,7 @@ void CloudTv::Open() {
     Filter();
 }
 void CloudTv::LoadHistory(){
+    if(historyDirty_){if(!SaveHistory())return;historyDirty_=false;}
     history_.clear();
     std::ifstream in(savedFile(dir_+"cloud360-history.txt").c_str());
     char line[32];
@@ -185,7 +186,7 @@ void CloudTv::RecordPlayed(){
     if(!id||(!history_.empty()&&history_.front()==id))return;
     history_.erase(std::remove(history_.begin(),history_.end(),id),history_.end());
     history_.insert(history_.begin(),id);if(history_.size()>64)history_.resize(64);
-    SaveHistory();
+    historyDirty_=true;
 }
 bool CloudTv::SaveHistory()const{
     const std::string file=dir_+"cloud360-history.txt";
@@ -304,6 +305,7 @@ void CloudTv::TogglePlayingFavorite(){
     if(view_==Details&&detail_<Count()&&catalog_.Items()[detail_].category==TvLive)Toggle(detail_,false);
 }
 void CloudTv::FinishPlayback(){
+    if(historyDirty_&&SaveHistory())historyDirty_=false;
     if(tab_!=TvFavorites&&tab_!=TvHistory)return;
     Filter();
     if(view_==Details){
@@ -385,7 +387,7 @@ void CloudTv::DrawSettings(HomeCanvas& c)const{
     const auto audio=TvPreferences::LoadAudio(dir_);
     const auto cap=TvPreferences::Cap(dir_);
     const std::string names[]={"Volume inicial","Mudo inicial","Teto HLS","Entrada 1080p experimental"};
-    const std::string values[]={countText(audio.volume)+"%",audio.muted?"Ativado":"Desativado",cap?countText(cap/1000)+" kbps":"Padrao 2000 kbps / verificar arquivo",TvPreferences::FullHd(dir_)?"Ativada":"Desativada"};
+    const std::string values[]={countText(audio.volume)+"%",audio.muted?"Ativado":"Desativado",cap?countText(cap/1000)+" kbps":"Arquivo invalido - ajuste o teto",TvPreferences::FullHd(dir_)?"Ativada":"Desativada"};
     c.TextFit(45,78,"Configuracoes IPTV",38,Ink,1160);
     c.TextFit(45,135,"Alteracoes salvas por opcao. Full HD nao garante saida 1080p.",20,Soft,1160);
     for(size_t i=0;i<4;++i){const int y=180+int(i)*94;tile(c,46,y,1188,80,i==settingsRow_);
@@ -415,7 +417,7 @@ bool CloudTv::Press(MenuKey key) {
     if(view_==Settings){SettingsKey(key);return true;}
     if(key==MenuSettings&&CanSettings()){settingsRow_=0;view_=Settings;return true;}
     if(view_==ClearHistory){
-        if(key==MenuAccept){const auto old=history_;history_.clear();if(!SaveHistory()){history_=old;notice_="Falha ao limpar historico no dispositivo.";}else notice_="Historico limpo.";view_=Browse;row_=0;Filter();}
+        if(key==MenuAccept){const auto old=history_;history_.clear();if(!SaveHistory()){history_=old;notice_="Falha ao limpar historico no dispositivo.";}else {historyDirty_=false;notice_="Historico limpo.";}view_=Browse;row_=0;Filter();}
         else if(key==MenuBack)view_=Browse;
         return true;
     }

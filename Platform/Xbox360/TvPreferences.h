@@ -26,10 +26,16 @@ inline bool SaveAudio(const std::string& root,const Audio& audio){
     if(audio.volume<0||audio.volume>100)return false;
     return Write(root+"cloud360-audio.txt",std::to_string(audio.volume)+" "+(audio.muted?"1":"0"));
 }
-inline unsigned Cap(const std::string& root){
-    const auto value=Read(root+"infinity360-iptv-bitrate.txt");
+inline constexpr unsigned DefaultCap=2000000;
+inline unsigned ParseCap(const std::string& value){
     unsigned cap=0;for(char c:value){if(c<'0'||c>'9'||cap>400000)return 0;cap=cap*10+unsigned(c-'0');}
     return cap>=100000&&cap<=4000000?cap:0;
+}
+inline unsigned Cap(const std::string& root){
+    const auto file=root+"infinity360-iptv-bitrate.txt";
+    // Missing configuration is normal; malformed existing configuration fails closed.
+    if(!fileExists(savedFile(file)))return DefaultCap;
+    return ParseCap(Read(file));
 }
 inline bool FullHd(const std::string& root){return Read(root+"enable-iptv-1080p.txt")=="ENABLE-IPTV-1080P";}
 }

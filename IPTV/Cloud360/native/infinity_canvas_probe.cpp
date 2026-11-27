@@ -370,8 +370,9 @@ int main(){
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
-                if(channelAudio.volume!=initialAudio.volume||channelAudio.muted!=initialAudio.muted)
-                    TvPreferences::SaveAudio(dir,{channelAudio.volume,channelAudio.muted});
+                if((channelAudio.volume!=initialAudio.volume||channelAudio.muted!=initialAudio.muted)&&
+                    !TvPreferences::SaveAudio(dir,{channelAudio.volume,channelAudio.muted}))
+                    result+=" | Falha ao salvar audio.";
 #else
                 const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #endif

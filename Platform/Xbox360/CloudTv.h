@@ -46,6 +46,7 @@ private:
     TvGuide guide_;
     CloudFavorites favorites_;
     std::vector<uint64_t> history_;
+    bool historyDirty_=false;
     void LoadHistory();
     size_t row_,episodeRow_,season_,detail_;
     size_t lastLive_=static_cast<size_t>(-1),activeLive_=static_cast<size_t>(-1);
