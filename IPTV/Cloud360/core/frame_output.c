@@ -1,6 +1,7 @@
 #include "frame_output.h"
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
+#include <libavutil/channel_layout.h>
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
@@ -40,12 +41,36 @@ int cloud_frame_stereo(const AVFrame* f,float* dst,size_t samples){
     const enum AVSampleFormat packed=av_get_packed_sample_fmt(fmt);
     if(packed!=AV_SAMPLE_FMT_FLT&&packed!=AV_SAMPLE_FMT_S16&&packed!=AV_SAMPLE_FMT_S32)return -1;
     const int channels=f->ch_layout.nb_channels,planar=av_sample_fmt_is_planar(fmt);
-    if(channels<1||channels>2||!f->extended_data[0]||(planar&&!f->extended_data[channels-1]))return -1;
+    if(channels<1||channels>8||!f->extended_data[0])return -1;
+    for(int ch=0;ch<(planar?channels:1);++ch)if(!f->extended_data[ch])return -1;
+    float wl[8]={0},wr[8]={0},sl=0,sr=0;
+    if(channels==1)wl[0]=wr[0]=1;
+    else if(channels==2){wl[0]=1;wr[1]=1;}
+    else{
+        if(!av_channel_layout_check(&f->ch_layout)||f->ch_layout.order==AV_CHANNEL_ORDER_UNSPEC)return -1;
+        for(int ch=0;ch<channels;++ch){
+            switch(av_channel_layout_channel_from_index(&f->ch_layout,ch)){
+                case AV_CHAN_FRONT_LEFT:wl[ch]=1;break;
+                case AV_CHAN_FRONT_RIGHT:wr[ch]=1;break;
+                case AV_CHAN_FRONT_CENTER:wl[ch]=wr[ch]=0.70710678f;break;
+                case AV_CHAN_BACK_LEFT:case AV_CHAN_SIDE_LEFT:wl[ch]=0.70710678f;break;
+                case AV_CHAN_BACK_RIGHT:case AV_CHAN_SIDE_RIGHT:wr[ch]=0.70710678f;break;
+                case AV_CHAN_BACK_CENTER:wl[ch]=wr[ch]=0.5f;break;
+                case AV_CHAN_LOW_FREQUENCY:break; // no bass management in stereo sink
+                default:return -1;
+            }
+        }
+    }
+    for(int ch=0;ch<channels;++ch){sl+=wl[ch];sr+=wr[ch];}
+    const float norm=fmaxf(1.0f,fmaxf(sl,sr));
     for(int i=0;i<f->nb_samples;++i){
-        float a=sample_at(f->extended_data[0],packed,planar?(size_t)i:(size_t)i*channels);
-        float b=sample_at(f->extended_data[planar?channels-1:0],packed,planar?(size_t)i:(size_t)i*channels+channels-1);
-        dst[2*i]=!isfinite(a)?0:a<-1?-1:a>1?1:a;
-        dst[2*i+1]=!isfinite(b)?0:b<-1?-1:b>1?1:b;
+        float a=0,b=0;
+        for(int ch=0;ch<channels;++ch){
+            float v=sample_at(f->extended_data[planar?ch:0],packed,planar?(size_t)i:(size_t)i*channels+ch);
+            if(!isfinite(v))v=0;else if(v>1)v=1;else if(v< -1)v=-1;
+            a+=v*wl[ch];b+=v*wr[ch];
+        }
+        dst[2*i]=a/norm;dst[2*i+1]=b/norm;
     }
     return 0;
 }

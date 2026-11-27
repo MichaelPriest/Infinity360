@@ -12,6 +12,8 @@ public:
         if(!Supported(rate)||in.empty()||in.size()%2||in.size()>16384||
             (rate_&&rate_!=rate))return false;
         rate_=rate;
+        // Exact bypass avoids rounding error for already-native PCM.
+        if(rate==48000){out=in;return true;}
         out.reserve((in.size()/2*48000/rate+2)*2);
         for(size_t i=0;i<in.size();i+=2){
             const float l=in[i],r=in[i+1];

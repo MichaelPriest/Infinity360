@@ -152,8 +152,11 @@ jobs:
           ctest --test-dir build -N | grep -E "Test +#[0-9]+: disc_god"
           ctest --test-dir build --output-on-failure
 
+  cloud360-gate:
+    uses: ./.github/workflows/cloud360-catalog.yml
+
   publish:
-    needs: [ffmpeg-xsdk, portable-gate]
+    needs: [ffmpeg-xsdk, portable-gate, cloud360-gate]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:

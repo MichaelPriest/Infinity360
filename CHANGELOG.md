@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.1 — Downmix multicanal e build unificada
+
+- Corrige bypass PCM 48 kHz para manter amostras exatas; adiciona downmix estéreo normalizado para layouts reconhecidos de até 8 canais, sem LFE.
+- Teste AC3 5.1; gate Cloud360 real obrigatório para publicação da build unificada, além de compilação XSDK, regressão geral e verificações LGPL.
+- Build autorizada; hardware ainda não homologado. V0.3.0 teve 31/32 testes Cloud360 aprovados; teste unitário de frequência falhou.
+
 ## V0.3.0 — Conversão de frequência de áudio
 
 - Fila audiovisual incremental aceita 32/44,1/48 kHz, converte para 48 kHz com interpolação linear causal e fase persistente entre frames, sem biblioteca adicional.

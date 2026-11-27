@@ -1,4 +1,4 @@
-INFINITY 360 V0.2.77
+INFINITY 360 V0.3.1
 Requested: 2026-11-26
-Baseline: 748c18dae8de0314e1bb0a5edb35e431248a14bd
-Authorized standard XSDK package and FFmpeg candidate; public IPTV playlist, clean user package, mandatory portable and license gates.
+Baseline: 2d78fce6ad41ad98377b1a562a9d8e85fcde9e33
+Authorized unified XSDK build with FFmpeg, clean distribution and corresponding LGPL source; required portable, Cloud360 and package integrity gates.
