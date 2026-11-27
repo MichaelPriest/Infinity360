@@ -2,6 +2,8 @@
 #include <cstdio>
 int main(int argc,char** argv){
     if(argc!=2)return 2;
+    static_assert(CloudAvStreamQueue::MaxDuration==21600000000LL,"six hour timeline");
+    static_assert(CloudAvStreamQueue::MaxBytes==32u*1024u*1024u,"unchanged memory ceiling");
     CloudAvStreamQueue queue;
     auto* s=cloud_container_open(argv[1],CloudAvStreamQueue::Capture,&queue,1);
     if(!s)return 1;

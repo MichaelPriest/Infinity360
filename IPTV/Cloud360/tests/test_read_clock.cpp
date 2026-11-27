@@ -11,6 +11,6 @@ int main(){
     for(int i=0;i<64*20;++i){if(!clock.Observe(now,now+1000))return 6;now+=1000;}
     if(clock.Ahead()!=CloudReadClock::MinAhead||clock.Observe(now-1,now)||clock.Observe(now,now+CloudReadClock::MaxStall+1))return 7;
     CloudReadClock limit;now=0;
-    for(int i=0;i<8;++i){if(!limit.Observe(now,now+CloudReadClock::MaxStall))return 8;now+=CloudReadClock::MaxStall;}
+    for(int i=0;i<CloudReadClock::MaxTotal/CloudReadClock::MaxStall;++i){if(!limit.Observe(now,now+CloudReadClock::MaxStall))return 8;now+=CloudReadClock::MaxStall;}
     return limit.Observe(now,now+100000)?9:0;
 }

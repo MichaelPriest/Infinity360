@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.98 — Sessões audiovisuais longas
+
+- Eleva teto lógico de duração de uma para seis horas, leitura estendida até 8 GiB por fonte e 32 GiB de orçamento acumulado, 8 milhões de pacotes e 3 milhões de frames por tipo. Mantém fila de 32 MiB e limites de resolução.
+- Compensação acumulada de stalls até 15 minutos, limite individual de 15 segundos preservado. Testes de limites atualizados.
+- Tamanho real de arquivos locais depende de ftell/fseek da plataforma; sessões extensas não homologadas. ABR dinâmico pendente. Sem XEX.
+
 ## V0.2.97 — Adaptação inicial HLS TS
 
 - Mede a taxa de um segmento antes de entregar bytes, aplica margem de 25% e considera variantes inferiores compatíveis dentro do limite configurado.

@@ -10,7 +10,7 @@ public:
     using Video=CloudAvTimeline::Video;
     using Audio=CloudAvTimeline::Audio;
     static constexpr size_t MaxBytes=32u*1024u*1024u;
-    static constexpr int64_t AudioLead=20000, MaxDuration=3600000000LL;
+    static constexpr int64_t AudioLead=20000, MaxDuration=21600000000LL;
     static int Capture(void* user,const AVFrame* frame,int video,int64_t pts){
         return static_cast<CloudAvStreamQueue*>(user)->Add(frame,video!=0,pts)?0:-1;
     }

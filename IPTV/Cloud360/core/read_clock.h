@@ -8,7 +8,7 @@
 class CloudReadClock {
 public:
     static constexpr int64_t MinAhead=150000,MaxAhead=600000;
-    static constexpr int64_t SlowRead=50000,MaxStall=15000000,MaxTotal=120000000;
+    static constexpr int64_t SlowRead=50000,MaxStall=15000000,MaxTotal=900000000;
     bool Observe(int64_t before,int64_t after){
         if(before<last_||after<before)return false;
         last_=after;

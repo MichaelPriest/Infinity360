@@ -8,7 +8,8 @@
 #include <libavutil/mem.h>
 #include <libavutil/error.h>
 #include <libavutil/dict.h>
-enum { MAX_BYTES=8*1024*1024, MAX_PACKETS=4096, MAX_FRAMES=1200, EXTENDED_BYTES=256*1024*1024, EXTENDED_PACKETS=250000, EXTENDED_FRAMES=180000 };
+enum { MAX_BYTES=8*1024*1024, MAX_PACKETS=4096, MAX_FRAMES=1200, EXTENDED_PACKETS=8000000, EXTENDED_FRAMES=3000000 };
+static const int64_t ExtendedBytes=8LL*1024*1024*1024;
 typedef struct { FILE* file; int64_t length; int64_t budget; CloudContainerRead read; CloudContainerSeek seek; int64_t position; void* user; int failed; } Input;
 static int read_input(void* opaque,uint8_t* buf,int n){
     Input* in=opaque;
@@ -117,7 +118,7 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
     if(!read&&(!path||strstr(path,"://")))return NULL;
     if(seek&&(!read||!mp4||length<=0||length>8LL*1024*1024*1024))return NULL;
     CloudContainerSession* s=calloc(1,sizeof *s);if(!s)return NULL;
-    const int64_t max_bytes=extended?EXTENDED_BYTES:MAX_BYTES;
+    const int64_t max_bytes=extended?ExtendedBytes:MAX_BYTES;
     s->input.budget=max_bytes*4;
     s->max_packets=extended?EXTENDED_PACKETS:MAX_PACKETS;
     s->input.read=read;s->input.user=reader;s->input.seek=seek;
@@ -160,7 +161,7 @@ int64_t cloud_container_duration(const CloudContainerSession* s){
     if(!s||(s->input.read&&!s->input.seek)||!s->fmt||!s->fmt->iformat||
        strcmp(s->fmt->iformat->name,"mov,mp4,m4a,3gp,3g2,mj2")||
        s->fmt->start_time==AV_NOPTS_VALUE||s->fmt->duration<=0||
-       s->fmt->duration>3600000000LL)return 0;
+       s->fmt->duration>21600000000LL)return 0;
     return s->fmt->duration;
 }
 int64_t cloud_container_start(const CloudContainerSession* s){
