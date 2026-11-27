@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**105 capturas nativas** — commit [1bc626906a4d](https://github.com/MichaelPriest/Infinity360/commit/1bc626906a4d2d0e198c4a40f50eadd2be4fd663).
+**109 capturas nativas** — commit [9dd4463abc01](https://github.com/MichaelPriest/Infinity360/commit/9dd4463abc01a7b1ae4335c9e7e99c89e993820f).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -184,6 +184,15 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Editor de capas e fundos** | **Teclado virtual — pesquisa** |
 | ![Gerenciamento de coleções](105-colecoes-moderno.png) |  |
 | **Gerenciamento de coleções** |  |
+
+### Diagnósticos de rede modernos
+
+| Tela | Tela |
+| --- | --- |
+| ![UDP — indicadores do teste local](106-udp-moderno.png) | ![UDP — modo e duração](107-udp-opcoes-moderno.png) |
+| **UDP — indicadores do teste local** | **UDP — modo e duração** |
+| ![SMB — servidor e negociação](108-smb-moderno.png) | ![SMB — configuração IPv4](109-smb-ip-moderno.png) |
+| **SMB — servidor e negociação** | **SMB — configuração IPv4** |
 
 
 <!-- NATIVE-GALLERY-END -->
