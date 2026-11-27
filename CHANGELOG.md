@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.32 — Comunicação e diagnósticos de rede
+
+- Guia social: cards de amigos, presença, validade da consulta, permissões e comunicação com estado do perfil visível. Mantém providers oficiais experimentais e não simula disponibilidade de mensagens/voz.
+- UDP e SMB com origem/destino, indicadores, progresso real do teste, edição de IPv4 e opções; sem confundir negociação SMB com sessão autenticada ou diagnóstico UDP com sala System Link. As telas clássicas são preservadas.
+- Quatro capturas novas solicitadas (109 no total). Sem XEX/release; homologação física pendente.
+
 ## V0.3.31 — Centrais de perfil e ferramentas
 
 - Conquistas e saves com resumo, lista e painel de detalhes, diferenciando GPD offline, perfil reportado e títulos instalados. Instalador DVD/GOD com métodos, origem, destino e confirmações; sem simular provider indisponível.

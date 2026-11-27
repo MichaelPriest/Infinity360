@@ -483,5 +483,26 @@
         "caption": "Gerenciamento de coleções"
       }
     ]
+  },
+  {
+    "title": "Diagnósticos de rede modernos",
+    "images": [
+      {
+        "stem": "106-udp-moderno",
+        "caption": "UDP — indicadores do teste local"
+      },
+      {
+        "stem": "107-udp-opcoes-moderno",
+        "caption": "UDP — modo e duração"
+      },
+      {
+        "stem": "108-smb-moderno",
+        "caption": "SMB — servidor e negociação"
+      },
+      {
+        "stem": "109-smb-ip-moderno",
+        "caption": "SMB — configuração IPv4"
+      }
+    ]
   }
 ]

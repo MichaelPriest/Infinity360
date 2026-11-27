@@ -204,7 +204,11 @@ static int captureScreens(const char* atlas,const char* destination) {
         for(int i=0;i<5;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Accept);
         hub.Press(ConsoleHome::Accept);ok=save("89-armazenamento-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);
-        hub.Press(ConsoleHome::Right);hub.Press(ConsoleHome::Accept);ok=save("90-rede-moderna",hub)&&ok;hub.Press(ConsoleHome::Back);
+        hub.Press(ConsoleHome::Right);hub.Press(ConsoleHome::Accept);ok=save("90-rede-moderna",hub)&&ok;
+        hub.Press(ConsoleHome::PageDown);ok=save("106-udp-moderno",hub)&&ok;
+        hub.Press(ConsoleHome::Context);assert(hub.ContextOpen());hub.Press(ConsoleHome::Accept);ok=save("107-udp-opcoes-moderno",hub)&&ok;
+        hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::PageUp);hub.Press(ConsoleHome::Guide);ok=save("108-smb-moderno",hub)&&ok;
+        hub.Press(ConsoleHome::Guide);ok=save("109-smb-ip-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Search);ok=save("91-lua-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);

@@ -3676,6 +3676,37 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
     if(smbUi_!=SmbClosed){DrawSmbSession(c);return;}
 #endif
+    if(layout_){
+        c.TextFit(45,140,"Rede | SMB2/3 experimental",29,White,1180);
+        c.TextFit(45,178,"Negociacao de protocolo | Sessao nao autenticada",19,Muted,1180);
+        if(smbEditing_){
+            c.SeriesTile(45,219,1189,338,false,200);c.TextFit(66,239,"IPv4 privado do servidor SMB",24,White,1140);
+            for(unsigned i=0;i<4;++i){const int x=76+int(i)*290;c.SeriesTile(x,305,250,108,i==smbOctet_);c.CenterText(x,335,250,number(smbDraft_[i]),38,i==smbOctet_?Lime:White);}
+            InfinityButtons::Strip(c,45,607,"Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar",18,White,1180);return;
+        }
+        LanPeerConfig::Octets configured{};const bool known=LanPeerConfig::Read(dir_+"infinity360-smb-peer.txt",configured);
+        const auto& result=smbProbe_.Info();const bool negotiated=smbProbe_.Status()==SmbProbe::Negotiated;
+        c.SeriesTile(45,219,575,338,false,200);InfinityIcons::Draw(c,7,65,238,44,White);
+        c.TextFit(125,238,"Servidor SMB | TCP 445",24,White,470);
+        c.TextFit(65,300,known?LanPeerConfig::Format(configured):"Nao configurado",32,White,535);
+        c.TextFit(65,356,smbProbe_.Label(),22,negotiated?Lime:Muted,535);
+        c.TextFit(65,425,"START: configurar endereco IP",18,Muted,535);
+        c.TextFit(65,470,"A: testar negociacao | X: cancelar",18,Muted,535);
+        c.SeriesTile(635,219,599,338,false,200);
+        c.TextFit(655,237,"Resultado da consulta",24,White,559);
+        c.TextFit(655,288,std::string("Dialeto: ")+SmbProbe::Dialect(result.dialect),21,White,559);
+        c.TextFit(655,332,negotiated?(result.signingRequired?"Assinatura exigida":"Assinatura suportada"):"Assinatura: sem resultado",19,Muted,559);
+        c.TextFit(655,376,negotiated?"Token de seguranca: "+number(result.securityTokenBytes)+" bytes":"Token de seguranca: indisponivel",18,Muted,559);
+        if(negotiated&&result.preauthSha512)c.TextFit(655,418,"SHA-512 selecionado",18,Lime,559);
+        if(smbProbe_.Status()==SmbProbe::Rejected)c.TextFit(655,418,"Status NT: "+number(result.status),18,Muted,559);
+        c.TextFit(655,478,"Sem SMB1 ou acesso anonimo.",18,Muted,559);
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+        InfinityButtons::Strip(c,45,607,"A Testar | X Cancelar | START IP | BACK Sessao | B Voltar",18,White,1180);
+#else
+        InfinityButtons::Strip(c,45,607,"A Testar | X Cancelar | START IP | B Voltar",18,White,1180);
+#endif
+        return;
+    }
     c.Text(45,349,std::string(c.Tr("Rede | SMB2/3 experimental")),27,White,1170);
     if(smbEditing_){
         c.Text(48,392,std::string(c.Tr("IPv4 privado do servidor SMB")),23,White,1170);
@@ -3706,6 +3737,41 @@ void ConsoleHome::DrawSmb(HomeCanvas& c)const{
 void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     if(smbPage_){DrawSmb(c);return;}
     if(networkPeer_){
+        if(layout_){
+            c.TextFit(45,140,"Diagnostico UDP entre consoles",29,White,1180);
+            c.TextFit(45,178,"Rede local | Protocolo de teste, nao uma sala de jogo",19,Muted,1180);
+            if(peerEditing_){
+                c.SeriesTile(45,219,1189,338,false,200);
+                c.TextFit(66,239,"IPv4 privado do outro console",24,White,1140);
+                for(unsigned i=0;i<4;++i){const int x=76+int(i)*290;c.SeriesTile(x,305,250,108,i==peerOctet_);c.CenterText(x,335,250,number(peerDraft_[i]),38,i==peerOctet_?Lime:White);}
+                c.TextFit(66,476,"Escolha o campo e altere o numero com o direcional.",19,Muted,1140);
+                InfinityButtons::Strip(c,45,607,"Esq/Dir Campo | Cima/Baixo Valor | A Salvar | B Cancelar",18,White,1180);return;
+            }
+            const unsigned durations[]={15,30,60};
+            if(peerOptions_){
+                c.SeriesTile(45,219,1189,338,false,200);
+                c.SeriesTile(65,245,1149,91,true);
+                c.TextFit(82,255,"Modo de diagnostico",18,Muted,1100);
+                c.TextFit(82,283,c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))),26,White,1100);
+                c.SeriesTile(65,348,1149,90,false);
+                c.TextFit(82,358,"Duracao do teste",18,Muted,1100);c.TextFit(82,386,number(durations[peerDuration_])+" segundos",26,White,1100);
+                c.TextFit(82,475,"Anfitriao responde | Cliente envia | Bidirecional envia e responde",19,Muted,1100);
+                InfinityButtons::Strip(c,45,607,"Esq/Dir Modo | Cima/Baixo Duracao | A Aplicar | B Voltar",18,White,1180);return;
+            }
+            c.SeriesTile(45,219,1189,79,false,200);
+            c.TextFit(61,230,"Local: "+(network_.ipv4.empty()?"Indisponivel":network_.ipv4)+" | Par: "+(peerProbe_.Peer().empty()?"Nao configurado":peerProbe_.Peer())+" | UDP 32160",21,White,1155);
+            c.TextFit(61,266,peerProbe_.Label(),17,Lime,1155);
+            const std::string values[]={number(peerProbe_.Sent()),number(peerProbe_.Received()),peerProbe_.Received()?number(peerProbe_.Rtt())+" ms":"--",peerProbe_.Received()>1?number(peerProbe_.Jitter())+" ms":"--"};
+            const char* labels[]={"Enviados","Respostas","RTT atual","Variacao"};
+            for(int i=0;i<4;++i){int x=45+i*299;c.SeriesTile(x,313,287,96,false,195);c.TextFit(x+12,324,labels[i],18,Muted,260);c.TextFit(x+12,354,values[i],30,White,260);}
+            c.SeriesTile(45,422,1189,135,false,195);
+            c.TextFit(62,434,c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_)))+std::string(" | ")+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s",22,White,1150);
+            const unsigned elapsed=std::min<unsigned>(durations[peerDuration_],peerProbe_.Elapsed());
+            c.Box(62,469,1150,8,0xff28413au,4);if(elapsed)c.Box(62,469,int(1150*elapsed/durations[peerDuration_]),8,Lime,4);
+            c.TextFit(62,492,peerProbe_.Received()?"RTT min/media/max: "+number(peerProbe_.MinRtt())+"/"+number(peerProbe_.MeanRtt())+"/"+number(peerProbe_.MaxRtt())+" ms":"Sem amostra de RTT | Pedidos: "+number(peerProbe_.Requests())+" | Respostas enviadas: "+number(peerProbe_.Replies()),17,Muted,1150);
+            if(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished)c.TextFit(62,521,"Sem resposta: "+number(peerProbe_.LossPercent())+"%",17,Muted,1150);
+            InfinityButtons::Strip(c,45,607,"A Iniciar | X Parar | START IP | BACK Opcoes | LB/RB Pagina",18,White,1180);return;
+        }
         c.Text(45,349,c.Tr("Rede 2/2 | Diagnostico UDP entre consoles"),27,White,1170);
         if(peerOptions_){
             const unsigned durations[]={15,30,60};
@@ -4093,7 +4159,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.TextFit(390,565,"LB/RB: categorias | Cima/baixo: opcoes | A: abrir",16,Lime,815);
             c.TextFit(45,612,"CPU "+headerThermal_.CompactCelsius(0)+" | GPU "+headerThermal_.CompactCelsius(1)+" | Plugins: consultar painel",17,Muted,1180);
             return;
-        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||systemTab_==2||systemTab_==5||systemTab_==6||(systemTab_==7&&!powerPage_&&(saveCenter_||achievementsPage_||!localMilestones_))))){
+        }else if(!(layout_&&(systemTab_==0||(systemTab_==1)||systemTab_==2||systemTab_==5||systemTab_==6||(systemTab_==7&&!powerPage_&&(saveCenter_||achievementsPage_||!localMilestones_))))){
             // A single selected category replaces eight unrelated shortcuts on details pages.
             c.SeriesTile(42,166,1196,166,false);
             InfinityIcons::Draw(c,marks[systemTab_],65,193,68,Lime);
@@ -4385,6 +4451,7 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
     const auto rows=known?FilterFriends(all,friendFilter_):std::vector<std::size_t>{};
     const auto online=known?FilterFriends(all,FriendFilter::Online).size():0;
     c.TextFit(606,159,known?number(all.size())+" registros | "+number(online)+" online/jogando":"Lista ainda nao consultada",17,Muted,413);
+    if(known)c.TextFit(606,139,friendFreshness_.Fresh(TransferRate::Now())?"Consulta recente":"Consulta anterior | Y Atualizar",12,Muted,413);
     const char* filters[]={"Todos","Online","Pedidos"};
     for(int i=0;i<3;++i){
         const bool selected=i==static_cast<int>(friendFilter_);
@@ -4399,12 +4466,14 @@ void ConsoleHome::DrawFriendGuide(HomeCanvas& c)const{
         const auto& f=all[rows[i]];const int y=236+int(i-first)*60;
         c.SeriesTile(601,y,428,56,i==selected,220);
         const bool active=f.state==FriendState::Online||f.state==FriendState::Playing;
-        c.Box(614,y+19,12,12,active?Lime:Muted,6);
-        c.TextFit(642,y+4,f.name,20,White,370);
+        c.Box(610,y+8,42,40,0xff25332d,8);InfinityIcons::Draw(c,InfinityIcons::Avatar,618,y+13,26,White);
+        c.Box(642,y+36,10,10,active?Lime:Muted,5);
+        c.TextFit(666,y+4,f.name,20,White,346);
         const std::string state=std::string(FriendStateLabel(f.state))+(f.title?" | Title "+hexId(f.title):"");
-        c.TextFit(642,y+30,state,14,Muted,370);
+        c.TextFit(666,y+30,state,14,Muted,346);
     }
     c.TextFit(607,548,friendAutoEnabled_?"Auto: 30 s enquanto aberto | consulta experimental":"Consulta manual experimental | X gerencia pedidos",13,Muted,413);
+    if(!rows.empty())c.TextFit(947,139,number(selected+1)+"/"+number(rows.size()),12,Muted,72);
     c.TextFit(607,570,"LB/RB Filtro | Y Consultar | X Lista oficial",15,White,413);
     c.TextFit(607,594,"A Cartao | Dir Mensagem | B Voltar",15,White,413);
 }
@@ -4450,7 +4519,8 @@ void ConsoleHome::DrawPrivilegeGuide(HomeCanvas& c)const{
         const auto value=fresh?values[i]:AccessScope::Unknown;
         c.SeriesTile(601,y,428,71,false,220);
         c.TextFit(618,y+8,names[i],19,White,387);
-        c.TextFit(618,y+36,AccessLabel(value),17,value==AccessScope::Granted?Lime:Muted,387);
+        InfinityIcons::Draw(c,value==AccessScope::Granted?InfinityIcons::Check:InfinityIcons::Shield,976,y+20,30,value==AccessScope::Granted?Lime:Muted);
+        c.TextFit(618,y+36,AccessLabel(value),17,value==AccessScope::Granted?Lime:Muted,342);
     }
     c.TextFit(608,467,"Consulta nao altera privacidade ou controle familiar.",14,Muted,412);
     c.TextFit(608,492,"Permissao nao confirma disponibilidade de voz ou LIVE.",14,Muted,412);
@@ -4464,7 +4534,9 @@ void ConsoleHome::DrawCommunicationGuide(HomeCanvas& c)const{
     approvedIcon(c,19,606,110,30,White);
     c.TextFit(644,105,"Comunicacao Xbox",28,White,385);
     const bool eligible=CanRequestNative(NativeAction::Party,social_);
-    c.TextFit(606,155,eligible?"Perfil online | servico nao confirmado":"Requer perfil online do console",16,Muted,412);
+    c.SeriesTile(601,146,428,40,false,220);
+    c.Box(612,161,10,10,eligible?Lime:Muted,5);
+    c.TextFit(633,156,eligible?"Perfil online | servico nao confirmado":"Requer perfil online do console",15,Muted,390);
     const char* labels[]={"Xbox Party","Chat rapido","Amigos e convites","Mensagens"};
     const char* details[]={"Criar, entrar e gerenciar pelo painel oficial","Conversas pela interface do Xbox",
         "Convidar pela lista oficial quando disponivel","Caixa de entrada oficial"};
@@ -4472,8 +4544,9 @@ void ConsoleHome::DrawCommunicationGuide(HomeCanvas& c)const{
     for(int i=0;i<CommunicationCount;++i){
         const int y=192+i*76;
         c.SeriesTile(601,y,428,67,i==communicationRow_,220);
-        approvedIcon(c,icons[i],615,y+17,27,White);
-        c.TextFit(660,y+7,labels[i],21,White,356);
+        approvedIcon(c,icons[i],615,y+17,27,i==communicationRow_?Lime:White);
+        c.TextFit(660,y+7,labels[i],21,White,312);
+        c.TextFit(978,y+8,">",19,Muted,36);
         c.TextFit(660,y+34,details[i],13,Muted,356);
     }
     c.TextFit(607,508,"Voz e convites dependem do sistema e servico Xbox.",13,Muted,412);
@@ -4541,7 +4614,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c,bool playback)const{
         const int y=315+row*30;
         const auto kind=GuideSocialAction(row);
         const bool selected=!playback&&socialGuideFocus_&&socialGuideRow_==row;
-        if(selected)c.SeriesTile(601,y-1,428,29,true,225);
+        c.SeriesTile(601,y-1,428,29,selected,selected?225:145);
         approvedIcon(c,icons[row],611,y+3,21,White);
         c.TextFit(649,y,labels[row],16,White,365);
         const bool avatar=kind==NativeAction::AvatarEditor;
@@ -4822,7 +4895,8 @@ void ConsoleHome::PressSmbSession(Key key){
     }
 }
 void ConsoleHome::DrawSmbSession(HomeCanvas& c)const{
-    c.Text(45,349,std::string(c.Tr("SMB 3.1.1 | Sessao experimental")),27,White,1170);
+    if(layout_)c.SeriesTile(45,169,1189,435,false,195);
+    c.Text(45,layout_?183:349,std::string(c.Tr("SMB 3.1.1 | Sessao experimental")),27,White,1170);
     if(smbUi_==SmbCredentials){
         const char* labels[]={"Compartilhamento","Usuario","Dominio (opcional)","Senha"};
         for(unsigned i=0;i<4;++i){
