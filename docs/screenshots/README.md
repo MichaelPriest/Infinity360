@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**78 capturas nativas** — commit [7d5692d44bf2](https://github.com/MichaelPriest/Infinity360/commit/7d5692d44bf20214213082256ff553586594026d).
+**81 capturas nativas** — commit [4b1d4d2121c3](https://github.com/MichaelPriest/Infinity360/commit/4b1d4d2121c38bf61cb4da2fd46616da5d77aa2f).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -31,18 +31,20 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | --- | --- |
 | ![Biblioteca — visualização em lista](02-biblioteca.png) | ![Biblioteca — visualização em grade](63-biblioteca-grade.png) |
 | **Biblioteca — visualização em lista** | **Biblioteca — visualização em grade** |
-| ![Biblioteca — foco nos filtros de categorias](64-biblioteca-filtros.png) | ![Detalhes do jogo — acesso pela biblioteca em lista](03-detalhes.png) |
-| **Biblioteca — foco nos filtros de categorias** | **Detalhes do jogo — acesso pela biblioteca em lista** |
-| ![Detalhes do jogo — acesso pela biblioteca em grade](65-detalhes-moderno.png) | ![Conteúdo instalado — Title Updates (TU)](10-conteudo-tu.png) |
-| **Detalhes do jogo — acesso pela biblioteca em grade** | **Conteúdo instalado — Title Updates (TU)** |
-| ![Conteúdo instalado — DLC](11-dlc.png) | ![Conteúdo instalado — Saves](12-saves.png) |
-| **Conteúdo instalado — DLC** | **Conteúdo instalado — Saves** |
-| ![Conteúdo instalado — Trainers locais](13-trainers.png) | ![Conteúdo instalado — TU baixadas](14-tu-baixadas.png) |
-| **Conteúdo instalado — Trainers locais** | **Conteúdo instalado — TU baixadas** |
-| ![Conteúdo instalado — backups](15-backups.png) | ![Conteúdo instalado — TU arquivadas](16-tu-arquivadas.png) |
-| **Conteúdo instalado — backups** | **Conteúdo instalado — TU arquivadas** |
-| ![Conteúdo instalado — TU retiradas](26-tu-retiradas.png) |  |
-| **Conteúdo instalado — TU retiradas** |  |
+| ![Biblioteca — foco nos filtros de categorias](64-biblioteca-filtros.png) | ![Scripts Lua — seleção de legendas em Sistema > Plugins > R3](79-scripts-legendas.png) |
+| **Biblioteca — foco nos filtros de categorias** | **Scripts Lua — seleção de legendas em Sistema > Plugins > R3** |
+| ![Biblioteca em grade com o Title ID sob cada jogo de teste](80-grade-legendas.png) | ![Biblioteca em lista com o mesmo script de Title ID](81-lista-legendas.png) |
+| **Biblioteca em grade com o Title ID sob cada jogo de teste** | **Biblioteca em lista com o mesmo script de Title ID** |
+| ![Detalhes do jogo — acesso pela biblioteca em lista](03-detalhes.png) | ![Detalhes do jogo — acesso pela biblioteca em grade](65-detalhes-moderno.png) |
+| **Detalhes do jogo — acesso pela biblioteca em lista** | **Detalhes do jogo — acesso pela biblioteca em grade** |
+| ![Conteúdo instalado — Title Updates (TU)](10-conteudo-tu.png) | ![Conteúdo instalado — DLC](11-dlc.png) |
+| **Conteúdo instalado — Title Updates (TU)** | **Conteúdo instalado — DLC** |
+| ![Conteúdo instalado — Saves](12-saves.png) | ![Conteúdo instalado — Trainers locais](13-trainers.png) |
+| **Conteúdo instalado — Saves** | **Conteúdo instalado — Trainers locais** |
+| ![Conteúdo instalado — TU baixadas](14-tu-baixadas.png) | ![Conteúdo instalado — backups](15-backups.png) |
+| **Conteúdo instalado — TU baixadas** | **Conteúdo instalado — backups** |
+| ![Conteúdo instalado — TU arquivadas](16-tu-arquivadas.png) | ![Conteúdo instalado — TU retiradas](26-tu-retiradas.png) |
+| **Conteúdo instalado — TU arquivadas** | **Conteúdo instalado — TU retiradas** |
 
 ### Aplicativos, loja e mídia
 
