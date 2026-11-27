@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.99 — Áudio MP3 e AC3 em vídeo
+
+- Amplia allowlist de áudio do decoder audiovisual para AAC, MP3 e AC3; conversão estéreo de FLT/S16/S32 em formatos planares ou intercalados.
+- Mantém limite mono/estéreo e 48 kHz no presenter; sem resampling ou downmix multicanal. Seleção de variantes HLS permanece conservadora.
+- Testes FFmpeg com fixtures TS H.264/MP3 e H.264/AC3. CI V0.2.98 aprovado; nova revisão aguarda CI. Sem XEX.
+
 ## V0.2.98 — Sessões audiovisuais longas
 
 - Eleva teto lógico de duração de uma para seis horas, leitura estendida até 8 GiB por fonte e 32 GiB de orçamento acumulado, 8 milhões de pacotes e 3 milhões de frames por tipo. Mantém fila de 32 MiB e limites de resolução.

@@ -2,6 +2,8 @@
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 #include <math.h>
+#include <stdint.h>
+#include <string.h>
 static unsigned char clip(int n){return n<0?0:n>255?255:(unsigned char)n;}
 int cloud_frame_rgb(const AVFrame* f,unsigned char* dst,size_t bytes){
     if(!f||!dst||f->width<1||f->height<1||f->width>1280||f->height>720||
@@ -25,14 +27,23 @@ int cloud_frame_rgb(const AVFrame* f,unsigned char* dst,size_t bytes){
     }
     return 0;
 }
+static float sample_at(const uint8_t* p,int format,size_t i){
+    if(format==AV_SAMPLE_FMT_FLT){float v;memcpy(&v,p+i*sizeof v,sizeof v);return v;}
+    if(format==AV_SAMPLE_FMT_S16){int16_t v;memcpy(&v,p+i*sizeof v,sizeof v);return (float)v/32768.0f;}
+    if(format==AV_SAMPLE_FMT_S32){int32_t v;memcpy(&v,p+i*sizeof v,sizeof v);return (float)((double)v/2147483648.0);}
+    return 0;
+}
 int cloud_frame_stereo(const AVFrame* f,float* dst,size_t samples){
-    if(!f||!dst||f->format!=AV_SAMPLE_FMT_FLTP||f->nb_samples<1||f->nb_samples>8192||
+    if(!f||!dst||f->nb_samples<1||f->nb_samples>8192||
        samples<(size_t)f->nb_samples*2||!f->extended_data)return -1;
-    int channels=f->ch_layout.nb_channels;
-    if(channels<1||channels>2||!f->extended_data[0]||!f->extended_data[channels-1])return -1;
-    const float* l=(const float*)f->extended_data[0],*r=(const float*)f->extended_data[channels-1];
+    const enum AVSampleFormat fmt=(enum AVSampleFormat)f->format;
+    const enum AVSampleFormat packed=av_get_packed_sample_fmt(fmt);
+    if(packed!=AV_SAMPLE_FMT_FLT&&packed!=AV_SAMPLE_FMT_S16&&packed!=AV_SAMPLE_FMT_S32)return -1;
+    const int channels=f->ch_layout.nb_channels,planar=av_sample_fmt_is_planar(fmt);
+    if(channels<1||channels>2||!f->extended_data[0]||(planar&&!f->extended_data[channels-1]))return -1;
     for(int i=0;i<f->nb_samples;++i){
-        float a=l[i],b=r[i];
+        float a=sample_at(f->extended_data[0],packed,planar?(size_t)i:(size_t)i*channels);
+        float b=sample_at(f->extended_data[planar?channels-1:0],packed,planar?(size_t)i:(size_t)i*channels+channels-1);
         dst[2*i]=!isfinite(a)?0:a<-1?-1:a>1?1:a;
         dst[2*i+1]=!isfinite(b)?0:b<-1?-1:b>1?1:b;
     }

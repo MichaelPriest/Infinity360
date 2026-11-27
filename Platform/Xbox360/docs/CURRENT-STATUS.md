@@ -1,4 +1,4 @@
-# Status V0.2.98
+# Status V0.2.99
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -35,3 +35,5 @@ V0.2.96: HLS fMP4 live experimental com mapa fixo e janela por sequência; troca
 V0.2.97: adaptação de qualidade inicial HLS TS por amostra de throughput, integrada ao caminho XSDK. ABR durante reprodução e fMP4 permanecem pendentes. CI V0.2.96 aprovado.
 
 V0.2.98: teto lógico de seis horas e orçamentos estendidos de decodificação, com fila inalterada de 32 MiB. Não garante reprodução de seis horas em hardware; testes de longa duração real e ABR dinâmico ainda pendentes. CI específico V0.2.97 aprovado.
+
+V0.2.99: codecs AAC/MP3/AC3 no decoder audiovisual e conversão PCM mono/estéreo; 48 kHz obrigatório no presenter, sem downmix multicanal. CI anterior aprovado. Sem XEX.

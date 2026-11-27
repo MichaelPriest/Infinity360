@@ -143,7 +143,9 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
     s->ai=av_find_best_stream(s->fmt,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
     if(s->vi<0||s->ai<0)goto fail;
     s->video=open_codec(s->fmt->streams[s->vi],AV_CODEC_ID_H264);
-    s->audio=open_codec(s->fmt->streams[s->ai],AV_CODEC_ID_AAC);
+    const enum AVCodecID audio_id=s->fmt->streams[s->ai]->codecpar->codec_id;
+    if(audio_id!=AV_CODEC_ID_AAC&&audio_id!=AV_CODEC_ID_MP3&&audio_id!=AV_CODEC_ID_AC3)goto fail;
+    s->audio=open_codec(s->fmt->streams[s->ai],audio_id);
     if(!s->video||!s->audio)goto fail;
     s->pkt=av_packet_alloc();s->frame=av_frame_alloc();if(!s->pkt||!s->frame)goto fail;
     s->vs=(Sink){output,user,s->fmt->streams[s->vi]->time_base,extended?EXTENDED_FRAMES:MAX_FRAMES};
