@@ -1,7 +1,9 @@
 package com.infinity360.remote;
 
-import android.app.Activity;
-import android.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -17,7 +19,7 @@ import android.widget.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public final class MainActivity extends Activity {
+public final class MainActivity extends AppCompatActivity {
     private static final int PANEL=NativeUi.NORMAL, ACCENT=NativeUi.EMPHASIS, TEXT=NativeUi.NORMAL, MUTED=NativeUi.SECONDARY;
     private EditText consoleIp,phoneIp,key;
     private TextView status,monitor,catalogResult,downloads,storeResult;
@@ -34,7 +36,7 @@ public final class MainActivity extends Activity {
     private String activeQuery="";
     private LinearLayout content;
     private final LinearLayout[] screens=new LinearLayout[5];
-    private Spinner navigation;
+    private BottomNavigationView navigation;
     private ScrollView scroll;
     private int activeScreen=0;
     private boolean foreground=false,autoDownloads=false;
@@ -53,7 +55,7 @@ public final class MainActivity extends Activity {
     private void showScreen(int index){
         activeScreen=index;
         for(int i=0;i<screens.length;i++)if(screens[i]!=null)screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);
-        if(navigation!=null&&navigation.getSelectedItemPosition()!=index)navigation.setSelection(index);
+        RemoteNavigation.select(navigation,index);
         if(scroll!=null)scroll.smoothScrollTo(0,0);
         updateDownloadPolling();
     }
@@ -70,87 +72,85 @@ public final class MainActivity extends Activity {
         super.onCreate(saved);
         LinearLayout outer=new LinearLayout(this);outer.setOrientation(LinearLayout.VERTICAL);
         setContentView(outer);NativeUi.insets(outer);
-        NativeUi.brand(this,outer,"Remote");
-        LinearLayout nav=new LinearLayout(this);nav.setOrientation(LinearLayout.VERTICAL);nav.setPadding(dp(16),dp(4),dp(16),dp(4));
-        nav.addView(text("Seção",13,MUTED));
-        navigation=new Spinner(this,Spinner.MODE_DROPDOWN);navigation.setContentDescription("Seção do controle remoto");
-        String[] names={"Controle","Catálogo","Sistema","Conexão","Loja"};
-        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,names);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        navigation.setAdapter(adapter);navigation.setMinimumHeight(dp(48));nav.addView(navigation,new LinearLayout.LayoutParams(-1,-2));outer.addView(nav);
+        NativeUi.brand(this,outer,getString(R.string.remote_title));
+        navigation=RemoteNavigation.create(this);
         scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        outer.addView(navigation,new LinearLayout.LayoutParams(-1,-2));
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(16),dp(8),dp(16),dp(24));scroll.addView(content);
         final LinearLayout root=content;
-        status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
+        status=text(getString(R.string.connect_hint),14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
         content=screen(root,3);
-        label("IP do Xbox 360");consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+        label(getString(R.string.xbox_ip));consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         consoleIp.setText(getPreferences(MODE_PRIVATE).getString("console_ip",""));
-        label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
-        content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
+        label(getString(R.string.pair_key));key=field(getString(R.string.hex_key),InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
+        content.addView(button(getString(R.string.verify_connection),PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,2);
-        label("Arquivos e FTP");
-        content.addView(button("Gerenciador FTP",ACCENT,()->{
+        label(getString(R.string.files_ftp));
+        content.addView(button(getString(R.string.ftp_title),ACCENT,()->{
             if(busy)return;
             android.content.Intent intent=new android.content.Intent(this,FtpActivity.class);
             intent.putExtra("console_ip",consoleIp.getText().toString().trim());startActivity(intent);
         }),new LinearLayout.LayoutParams(-1,-2));
-        label("Monitoramento do console");
-        monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(monitor);
-        content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,-2));
-        label("Downloads e transferências");
-        downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(downloads);
-        content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,-2));
-        Switch auto=new Switch(this);auto.setText("Atualizar downloads a cada 5 segundos");auto.setChecked(false);
+        label(getString(R.string.monitor));
+        monitor=text(getString(R.string.no_readings),15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(monitor);
+        content.addView(button(getString(R.string.query_metrics),PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,-2));
+        label(getString(R.string.downloads));
+        downloads=text(getString(R.string.no_query),14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(downloads);
+        content.addView(button(getString(R.string.query_queue),PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,-2));
+        MaterialSwitch auto=new MaterialSwitch(this);auto.setText(getString(R.string.auto_refresh));auto.setChecked(false);
         auto.setOnCheckedChangeListener((view,enabled)->{autoDownloads=enabled;updateDownloadPolling();});
         content.addView(auto);
-        content.addView(button("Iniciar / retomar fila",ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Pausar download atual",PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.start_queue),ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.pause_download),PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,-2));
         downloadCards=new LinearLayout(this);downloadCards.setOrientation(LinearLayout.VERTICAL);content.addView(downloadCards);
         content=screen(root,1);
-        label("Biblioteca e catálogo IPTV");
-        catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
-        content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Consultar canais ao vivo",PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,-2));
-        catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(catalogResult);
+        label(getString(R.string.library));
+        catalogQuery=field(getString(R.string.search_catalog),InputType.TYPE_CLASS_TEXT);
+        content.addView(button(getString(R.string.query_games),PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.query_channels),PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,-2));
+        catalogResult=text(getString(R.string.no_query),15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(catalogResult);
         catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
-        content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.next_page),PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,4);
         label("INFINITY Store");
         deviceStatus=text("Destino: consulte os dispositivos do Xbox.",14,MUTED);content.addView(deviceStatus);
-        content.addView(button("Consultar HDD / USB",PANEL,()->loadDevices()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.query_disks),PANEL,()->loadDevices()),new LinearLayout.LayoutParams(-1,-2));
         deviceCards=new LinearLayout(this);deviceCards.setOrientation(LinearLayout.VERTICAL);content.addView(deviceCards);
         storeQuery=field("Buscar nome ou categoria (game, xbla, homebrew...)",InputType.TYPE_CLASS_TEXT);
-        content.addView(button("Consultar loja",ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.query_store),ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,-2));
         storeResult=text("Catálogo autorizado do console. Nenhum pacote é baixado no celular.",14,MUTED);content.addView(storeResult);
         storeCards=new LinearLayout(this);storeCards.setOrientation(LinearLayout.VERTICAL);content.addView(storeCards);
-        content.addView(button("Próxima página",PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Acompanhar downloads",PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.next_page),PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.follow_downloads),PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,0);
-        label("Navegação geral");
+        label(getString(R.string.general_nav));
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"LB","↓","RB"},new String[]{"pageup","down","pagedown"});
         row(new String[]{"Voltar","Favorito"},new String[]{"back","favorite"});
-        label("Controles IPTV");
+        label(getString(R.string.iptv_controls));
         row(new String[]{"Canais","↑","Qualidade"},new String[]{"channels","up","quality"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
         row(new String[]{"Mudo"},new String[]{"mute"});
-        Button exit=button("Encerrar reprodução",PANEL,()->new AlertDialog.Builder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton("Cancelar",null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
+        Button exit=button("Encerrar reprodução",PANEL,()->new MaterialAlertDialogBuilder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
         content=screens[3];
-        label("Configuração manual de pareamento");
-        phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
-        content.addView(button("Identificar IP do celular",PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Encontrar Xbox pareado na rede",ACCENT,()->discoverConsole()),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Exportar arquivo de pareamento",PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
+        label(getString(R.string.preferences_title));
+        content.addView(button(getString(R.string.language),PANEL,()->{
+            if(busy)return;
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.language)
+                .setMessage(R.string.language_note).setItems(new String[]{getString(R.string.system_default),"Português","English","Español"},(d,w)->RemoteNavigation.locale(w)).show();
+        }),new LinearLayout.LayoutParams(-1,-2));
+        label(getString(R.string.manual_pair));
+        phoneIp=field(getString(R.string.phone_ip),InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+        content.addView(button(getString(R.string.find_phone),PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.find_xbox),ACCENT,()->discoverConsole()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.export_pair),PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.new_key),PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.copy_config),PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
         content=root;showScreen(consoleIp.getText().toString().isEmpty()?3:0);
-        navigation.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-            @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){if(position!=activeScreen)showScreen(position);}
-            @Override public void onNothingSelected(AdapterView<?> parent){}
-        });
+        navigation.setOnItemSelectedListener(item->{int index=RemoteNavigation.index(item.getItemId());if(index<0)return false;if(index!=activeScreen)showScreen(index);return true;});
     }
     private String size(org.json.JSONObject data,String name)throws org.json.JSONException{
         if(data.isNull(name))return "Indisponível";
@@ -222,7 +222,7 @@ public final class MainActivity extends Activity {
                 }
                 if(id.matches("[1-9][0-9]{0,19}"))card.addView(button("Assistir no Xbox",ACCENT,()->{
                     if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
-                    new AlertDialog.Builder(this).setTitle("Trocar canal?").setMessage(name).setNegativeButton("Cancelar",null).setPositiveButton("Assistir",(d,w)->send("tune/"+id)).show();
+                    new MaterialAlertDialogBuilder(this).setTitle("Trocar canal?").setMessage(name).setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Assistir",(d,w)->send("tune/"+id)).show();
                 }));
             }
         }
@@ -331,9 +331,9 @@ public final class MainActivity extends Activity {
     private void confirmStore(String ip,String secret,String id,String name,boolean now){
         if(busy)return;
         if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
-        new AlertDialog.Builder(this).setTitle(now?"Baixar diretamente no Xbox?":"Adicionar à fila do Xbox?")
+        new MaterialAlertDialogBuilder(this).setTitle(now?"Baixar diretamente no Xbox?":"Adicionar à fila do Xbox?")
             .setMessage(name+"\nO destino é o armazenamento selecionado na loja do console. Nenhuma instalação automática será realizada.")
-            .setNegativeButton("Cancelar",null).setPositiveButton(now?"Baixar":"Adicionar",(d,w)->{
+            .setNegativeButton(getString(R.string.cancel),null).setPositiveButton(now?"Baixar":"Adicionar",(d,w)->{
                 if(consoleIp.getText().toString().trim().equals(ip)&&key.getText().toString().trim().equals(secret))
                     send((now?"storedownload/":"storequeue/")+id);
             }).show();
@@ -342,7 +342,7 @@ public final class MainActivity extends Activity {
         if(busy)return;
         final String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
         if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira IP e chave.");return;}
-        new AlertDialog.Builder(this).setTitle(title).setMessage(description).setNegativeButton("Cancelar",null)
+        new MaterialAlertDialogBuilder(this).setTitle(title).setMessage(description).setNegativeButton(getString(R.string.cancel),null)
             .setPositiveButton("Confirmar",(d,w)->{if(ip.equals(consoleIp.getText().toString().trim())&&secret.equals(key.getText().toString().trim()))send(command);}).show();
     }
     private void renderDownloadCards(org.json.JSONArray rows,String ip,String secret){
@@ -417,9 +417,9 @@ public final class MainActivity extends Activity {
                 if(isDestroyed())return;busy=false;
                 if(!phoneIp.getText().toString().trim().equals(local)||!key.getText().toString().trim().equals(secret)){status.setText("Pareamento alterado. Busque novamente.");return;}
                 if(choices.length==0){status.setText(success?"Nenhum Xbox pareado respondeu. Confira a rede e habilitação do controle remoto.":"Busca indisponível nesta interface.");return;}
-                new AlertDialog.Builder(this).setTitle("Xbox autenticado encontrado").setItems(choices,(d,w)->{
+                new MaterialAlertDialogBuilder(this).setTitle("Xbox autenticado encontrado").setItems(choices,(d,w)->{
                     consoleIp.setText(choices[w]);getPreferences(MODE_PRIVATE).edit().putString("console_ip",choices[w]).apply();status.setText("Endereço selecionado. Verifique a conexão.");
-                }).setNegativeButton("Cancelar",null).show();
+                }).setNegativeButton(getString(R.string.cancel),null).show();
             });
         });
     }
@@ -449,13 +449,13 @@ public final class MainActivity extends Activity {
         if(addresses.isEmpty()){status.setText("Nenhum IPv4 privado disponível. Confira o Wi-Fi.");return;}
         if(addresses.size()==1){phoneIp.setText(addresses.get(0));status.setText("IP identificado. Confira se corresponde à rede do Xbox.");return;}
         String[] options=addresses.toArray(new String[0]);
-        new AlertDialog.Builder(this).setTitle("Selecione o IP da rede do Xbox").setItems(options,(d,w)->phoneIp.setText(options[w])).show();
+        new MaterialAlertDialogBuilder(this).setTitle("Selecione o IP da rede do Xbox").setItems(options,(d,w)->phoneIp.setText(options[w])).show();
     }
     private void exportPairing(){
         if(!RemoteProtocol.privateIp(phoneIp.getText().toString().trim())||!RemoteProtocol.validKey(key.getText().toString().trim())){status.setText("Informe o IP do celular e gere a chave.");return;}
-        new AlertDialog.Builder(this).setTitle("Exportar chave de pareamento?")
+        new MaterialAlertDialogBuilder(this).setTitle("Exportar chave de pareamento?")
             .setMessage("O arquivo contém a chave em texto simples. Salve em armazenamento confiável e remova a cópia após transferir ao Xbox.")
-            .setNegativeButton("Cancelar",null).setPositiveButton("Exportar",(d,w)->{
+            .setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Exportar",(d,w)->{
                 android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
                 intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);intent.setType("text/plain");intent.putExtra(android.content.Intent.EXTRA_TITLE,"cloud360-remote.txt");
                 try{startActivityForResult(intent,EXPORT_PAIRING);}catch(Exception e){status.setText("Seletor de arquivos indisponível.");}

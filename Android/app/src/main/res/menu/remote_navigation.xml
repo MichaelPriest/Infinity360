@@ -1,0 +1,7 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_control" android:icon="@drawable/nav_control" android:title="@string/nav_control"/>
+    <item android:id="@+id/nav_catalog" android:icon="@drawable/nav_catalog" android:title="@string/nav_catalog"/>
+    <item android:id="@+id/nav_system" android:icon="@drawable/nav_system" android:title="@string/nav_system"/>
+    <item android:id="@+id/nav_connection" android:icon="@drawable/nav_connection" android:title="@string/nav_connection"/>
+    <item android:id="@+id/nav_store" android:icon="@drawable/nav_store" android:title="@string/nav_store"/>
+</menu>

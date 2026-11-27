@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## Android Remote V0.19.0 Alpha — Material 3 e navegação
+
+- Kotlin 2.0.21, Java 17, AndroidX AppCompat e Material Components 1.12.0; barra inferior com cinco destinos e ícones, controles e diálogos Material 3.
+- Recursos Android PT/EN/ES para navegação, preferências e principais ações; mensagens técnicas ainda parcialmente em português. Tema DayNight e logo oficial preservados. APK independente; dashboard V0.3.76 inalterada.
+
 ## Android Remote V0.18.0 Alpha — Interface SDK nativa
 
 - Tema Material diurno/noturno, controles, campos, diálogos e navegação padrão. Logo oficial PNG nos cabeçalhos Remote/FTP.

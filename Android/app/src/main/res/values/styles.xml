@@ -1,1 +1,1 @@
-<resources><style name="InfinityRemoteTheme" parent="@android:style/Theme.Material.Light.NoActionBar"/></resources>
+<resources><style name="InfinityRemoteTheme" parent="Theme.Material3.DayNight.NoActionBar"><item name="colorPrimary">#326B39</item><item name="colorOnPrimary">#FFFFFF</item><item name="colorSecondaryContainer">#D4E8CF</item><item name="colorOnSecondaryContainer">#18361B</item></style></resources>

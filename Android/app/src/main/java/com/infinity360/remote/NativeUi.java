@@ -7,6 +7,8 @@ import android.util.TypedValue;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.*;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 
 final class NativeUi {
     static final int NORMAL=0,SECONDARY=1,EMPHASIS=2;
@@ -14,9 +16,9 @@ final class NativeUi {
     static int dp(Context c,float n){return Math.round(n*c.getResources().getDisplayMetrics().density);}
     static TextView text(Context c,String value,int sp,int role){
         TextView t=new TextView(c);
-        t.setTextAppearance(android.R.style.TextAppearance_Material_Body1);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
         TypedValue attr=new TypedValue();
-        int color=role==SECONDARY?android.R.attr.textColorSecondary:role==EMPHASIS?android.R.attr.colorAccent:android.R.attr.textColorPrimary;
+        int color=role==SECONDARY?android.R.attr.textColorSecondary:role==EMPHASIS?com.google.android.material.R.attr.colorPrimary:android.R.attr.textColorPrimary;
         if(c.getTheme().resolveAttribute(color,attr,true)){
             if(attr.resourceId!=0)t.setTextColor(c.getColorStateList(attr.resourceId));
             else if(attr.type>=TypedValue.TYPE_FIRST_COLOR_INT&&attr.type<=TypedValue.TYPE_LAST_COLOR_INT)t.setTextColor(attr.data);
@@ -24,10 +26,10 @@ final class NativeUi {
         t.setText(value);t.setTextSize(sp);return t;
     }
     static Button button(Context c,String value,Runnable action){
-        Button b=new Button(c);b.setText(value);b.setAllCaps(false);b.setMinHeight(dp(c,48));b.setOnClickListener(v->action.run());return b;
+        Button b=new MaterialButton(c);b.setText(value);b.setAllCaps(false);b.setMinHeight(dp(c,48));b.setOnClickListener(v->action.run());return b;
     }
     static EditText field(Context c,String hint,int type){
-        EditText e=new EditText(c);e.setSingleLine(true);e.setInputType(type);e.setHint(hint);e.setSaveEnabled(false);e.setMinHeight(dp(c,48));return e;
+        EditText e=new TextInputEditText(c);e.setSingleLine(true);e.setInputType(type);e.setHint(hint);e.setSaveEnabled(false);e.setMinHeight(dp(c,48));return e;
     }
     static void brand(Context c,LinearLayout parent,String subtitle){
         ImageView logo=new ImageView(c);logo.setImageResource(R.drawable.infinity_official_logo);
