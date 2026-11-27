@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.77 — Arte HD em toda a dashboard
+
+- Capas frente/verso 480×720 e fundos/papel de parede 1280×720, compatíveis com arquivos RGBA legados. Importação PNG/JPEG passa a gerar HD, com interpolação de alpha premultiplicado; cache de arte limitado a 16 MiB.
+- Renderização mais suave de capas, fundos, logotipos IPTV, Gamerpic e avatar. Miniaturas Android mantêm o contrato de rede e aceitam capas HD. Ferramentas PC para arte e Aurora atualizadas.
+- Saída XSDK permanece 720p; não equivale a Full HD nativo nem aumenta a resolução real de fontes pequenas. Testes portáteis e galeria solicitados; sem nova XEX/release.
+
 ## Android Remote V0.22.0 Alpha — Remote integrado
 
 - Cabeçalho compacto, título da seção, estado da última verificação e indicador de atividade sempre visíveis.

@@ -1103,6 +1103,16 @@ int main(int argc,char** argv) {
     assert(!canvas.LocalArt((artFolder/"cover.rgba").string(),true,0,0,30,45));
     assert(!canvas.LocalArt((artFolder/"background.rgba").string(),false,1200,0,100,100));
 
+    // HD and legacy files share the same slots. Reject arbitrary dimensions.
+    writeArt(artFolder/"cover.rgba",480*720,200,10);
+    writeArt(artFolder/"background.rgba",1280*720,10,200);
+    canvas.ClearLocalArt();
+    assert(canvas.LocalArt((artFolder/"cover.rgba").string(),true,0,0,480,720));
+    assert(canvas.Pixels()[350*1280+200]==0xffc80a00u);
+    assert(canvas.LocalArt((artFolder/"background.rgba").string(),false,0,0,1280,720));
+    assert(canvas.Pixels()[350*1280+200]==0xff0ac800u);
+    writeArt(artFolder/"background.rgba",640*360,10,200);
+    canvas.ClearLocalArt();
     // Controller artwork editor: preview, independent variants, cancellation,
     // persistence across restart, and non-destructive reset.
     writeArt(artFolder/"cover.rgba",160*240,200,10);

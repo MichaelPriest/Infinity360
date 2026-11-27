@@ -52,7 +52,7 @@ public:
     void ControllerButton(int kind,int x,int y,int height);
     void RasterIcon(int kind,int x,int y,int size,unsigned tint);
     bool Logo(const std::string& file, int x, int y, int w, int h);
-    // Fixed-size local RGBA files, cached including failed reads until refresh.
+    // HD and legacy raw RGBA artwork, cached with a bounded memory budget.
     bool LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop=false,int radius=0);
     void ClearLocalArt() { localArt_.clear(); }
     void Text(int x, int y, const std::string& text, int size, unsigned color, int maxWidth);
@@ -60,6 +60,7 @@ private:
     struct ArtEntry {
         std::string file;
         bool cover;
+        unsigned width=0,height=0;
         std::vector<unsigned char> rgba;
     };
     std::vector<ArtEntry> localArt_;

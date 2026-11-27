@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <fstream>
 #include <vector>
+#include "HdArtwork.h"
 namespace TvRemote {
 inline std::string LowerAscii(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Matches(const std::string& text,const std::string& query){return query.empty()||LowerAscii(text).find(LowerAscii(query))!=std::string::npos;}
@@ -27,13 +28,12 @@ inline std::string GameArtId(const std::string& path){
 }
 inline std::string CoverThumbnail(const std::string& path){
     if(path.empty())return "{\"available\":false}";
-    std::vector<unsigned char> data(160u*240u*4u);
-    std::ifstream in(path.c_str(),std::ios::binary);
-    if(!in.read(reinterpret_cast<char*>(data.data()),data.size())||in.peek()!=std::char_traits<char>::eof())return "{\"available\":false}";
+    std::vector<unsigned char> data;HdArtwork::Size size{};
+    if(!HdArtwork::Read(path,true,data,size))return "{\"available\":false}";
     const char* hex="0123456789abcdef";
     std::string out="{\"available\":true,\"w\":20,\"h\":30,\"rgba\":\"";
     for(unsigned y=0;y<30;++y)for(unsigned x=0;x<20;++x){
-        const size_t offset=((y*8+4)*160+x*8+4)*4;
+        const size_t offset=((y*size.height/30+size.height/60)*size.width+x*size.width/20+size.width/40)*4;
         for(unsigned k=0;k<4;++k){const auto value=data[offset+k];out+=hex[value>>4];out+=hex[value&15];}
     }
     return out+"\"}";

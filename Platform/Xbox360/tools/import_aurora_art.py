@@ -46,9 +46,9 @@ def decode_asset(path, kind):
     bands = image.split()
     return Image.merge("RGBA", tuple(bands[ch] for ch in channels))
 
-def convert(path, kind, front_right=False):
+def convert(path, kind, front_right=False, hd=False):
     image = decode_asset(path, kind)
-    size = KINDS[kind][2]
+    size = ((480, 720) if kind == 'cover' else (1280, 720)) if hd else KINDS[kind][2]
     if kind == "cover":
         # Box art sometimes contains a full case wrap. Crop the front only
         # if explicitly selected; otherwise preserve the complete image.
@@ -91,6 +91,7 @@ def main():
     p.add_argument("aurorax", type=Path, help="Separate AuroraX folder")
     p.add_argument("--apply", action="store_true", help="Write converted artwork")
     p.add_argument("--front-right", action="store_true", help="Crop right side of wide cover wraps")
+    p.add_argument("--hd", action="store_true", help="Export HD artwork for INFINITY 360")
     p.add_argument("--alternate", action="store_true", help="Use alternate artwork slots")
     args = p.parse_args()
     source, dest = args.aurora.resolve(), args.aurorax.resolve()
@@ -111,7 +112,7 @@ def main():
                 row["status"] = "linked-destination-rejected"
             else:
                 try:
-                    pixels = convert(matches[0], kind, args.front_right)
+                    pixels = convert(matches[0], kind, args.front_right, args.hd)
                     if args.apply:
                         target.parent.mkdir(parents=True, exist_ok=True)
                         with target.open("xb") as out:

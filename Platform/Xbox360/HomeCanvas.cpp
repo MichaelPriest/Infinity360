@@ -3,9 +3,11 @@
 #include "InfinityIconPixels.h"
 #include "ControllerButtonPixels.h"
 #include "GlyphWidths.h"
+#include "HdArtwork.h"
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
+#include <utility>
 
 namespace {
 const int ArtWidth = 1024, ArtHeight = 512;
@@ -133,12 +135,14 @@ void HomeCanvas::SetAppearance(const AppearanceSettings& appearance,const std::s
     if(appearance_.background!=AppearanceSettings::Wallpaper||wallpaperTried_)return;
     wallpaperTried_=true;
     if(path.empty())return;
-    FILE* file=std::fopen(path.c_str(),"rb");
-    if(!file)return;
-    std::vector<unsigned char> data(640*360*4);
-    const bool ok=std::fread(data.data(),1,data.size(),file)==data.size()&&std::fgetc(file)==EOF&&!std::ferror(file);
-    std::fclose(file);
-    if(ok)wallpaper_.swap(data);
+    HdArtwork::Size size{};std::vector<unsigned char> data;
+    if(!HdArtwork::Read(path,false,data,size))return;
+    if(size.width==Width){wallpaper_.swap(data);return;}
+    // Resample old wallpaper once, not on every frame. Alpha is ignored.
+    for(std::size_t i=3;i<data.size();i+=4)data[i]=255;
+    wallpaper_.resize(Width*Height*4);
+    for(unsigned y=0;y<Height;++y)for(unsigned x=0;x<Width;++x)
+        HdArtwork::Write(wallpaper_.data()+4*(y*Width+x),HdArtwork::Sample(data.data(),size.width,size.width,size.height,x,y,Width,Height));
 }
 void HomeCanvas::Background() {
     if(appearance_.background==AppearanceSettings::Solid){
@@ -146,15 +150,10 @@ void HomeCanvas::Background() {
     }
     if(appearance_.background==AppearanceSettings::Wallpaper&&!wallpaper_.empty()){
         const unsigned light=100-AppearanceSettings::Darkness(appearance_.dim);
-        // Fixed 640x360 RGBA, nearest 2x upscaling. Alpha ignored by design.
-        for(int y=0;y<360;++y){
-            auto* row=&frame_[y*2*Width];
-            for(int x=0;x<640;++x){
-                const auto* p=&wallpaper_[(y*640+x)*4];
-                const unsigned color=0xff000000u|((unsigned(p[0])*light/100)<<16)|((unsigned(p[1])*light/100)<<8)|(unsigned(p[2])*light/100);
-                row[x*2]=row[x*2+1]=color;
-            }
-            std::copy(row,row+Width,row+Width);
+        // HD wallpaper has one source pixel per framebuffer pixel.
+        for(std::size_t i=0;i<frame_.size();++i){
+            const auto* p=wallpaper_.data()+4*i;
+            frame_[i]=0xff000000u|((unsigned(p[0])*light/100)<<16)|((unsigned(p[1])*light/100)<<8)|(unsigned(p[2])*light/100);
         }
         return;
     }
@@ -222,9 +221,9 @@ bool HomeCanvas::Logo(const std::string& file,int x,int y,int w,int h) {
     const bool good=std::fread(&rgba[0],1,rgba.size(),f)==rgba.size() && std::fgetc(f)==EOF;
     std::fclose(f);if(!good) return false;
     for(int j=0;j<h;++j) for(int i=0;i<w;++i) {
-        const unsigned char* p=&rgba[4*((j*72/h)*128+i*128/w)];
+        const unsigned p=HdArtwork::Sample(rgba.data(),128,128,72,i,j,w,h);
         unsigned& dest=frame_[(y+j)*Width+x+i];
-        if(p[3]) dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+        if(p>>24)dest=blend(p,dest,p>>24);
     }
     return true;
 }
@@ -237,11 +236,8 @@ bool HomeCanvas::ProfilePicture(const std::vector<unsigned char>& rgba,int x,int
     for(int j=0;j<size;++j)for(int i=0;i<size;++i){
         const int dx=2*i+1-size,dy=2*j+1-size;
         if(dx*dx+dy*dy>size*size)continue;
-        const auto* p=&rgba[4*((j*64/size)*64+i*64/size)];
-        if(p[3]){
-            auto& dest=frame_[(y+j)*Width+x+i];
-            dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
-        }
+        const unsigned p=HdArtwork::Sample(rgba.data(),64,64,64,i,j,size,size);
+        if(p>>24){auto& dest=frame_[(y+j)*Width+x+i];dest=blend(p,dest,p>>24);}
     }
     return true;
 }
@@ -255,37 +251,33 @@ bool HomeCanvas::AvatarFrame(const std::vector<unsigned char>& rgba,unsigned sw,
     else dw=std::max(1,h*int(sw)/int(sh));
     x+=(w-dw)/2;y+=(h-dh)/2;
     for(int j=0;j<dh;++j)for(int i=0;i<dw;++i){
-        const auto* p=&rgba[4*((j*sh/dh)*sw+i*sw/dw)];
-        if(p[3]){auto& dest=frame_[(y+j)*Width+x+i];
-            dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);}
+        const unsigned p=HdArtwork::Sample(rgba.data(),sw,sw,sh,i,j,dw,dh);
+        if(p>>24){auto& dest=frame_[(y+j)*Width+x+i];dest=blend(p,dest,p>>24);}
     }
     return true;
 }
 bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,int h,bool crop,int radius) {
     if(file.empty() || w<=0 || h<=0 || x<0 || y<0 || x>=Width || y>=Height ||
        w>Width-x || h>Height-y) return false;
-    const int sw=cover?160:640, sh=cover?240:360;
     size_t slot=0;
     for(;slot<localArt_.size();++slot)
         if(localArt_[slot].file==file && localArt_[slot].cover==cover) break;
     if(slot==localArt_.size()) {
-        // FIFO cap: a full home screen requires at most 12 entries.
-        // Missing and malformed files are cached too, avoiding per-frame disk I/O.
-        if(localArt_.size()>=16) {localArt_.erase(localArt_.begin());--slot;}
-        localArt_.push_back(ArtEntry());
-        ArtEntry& entry=localArt_.back();
-        entry.file=file;entry.cover=cover;
-        FILE* f=std::fopen(file.c_str(),"rb");
-        if(f) {
-            entry.rgba.resize(static_cast<size_t>(sw)*sh*4);
-            const bool ok=std::fread(&entry.rgba[0],1,entry.rgba.size(),f)==entry.rgba.size()
-                && std::fgetc(f)==EOF && !std::ferror(f);
-            std::fclose(f);
-            if(!ok) std::vector<unsigned char>().swap(entry.rgba);
+        // Bound the combined decoded art to 16 MiB; at most 16 entries,
+        // including negative lookups. Keep the last requested image even on a full cache.
+        ArtEntry entry;entry.file=file;entry.cover=cover;
+        HdArtwork::Size size{};
+        if(HdArtwork::Read(file,cover,entry.rgba,size)){entry.width=size.width;entry.height=size.height;}
+        std::size_t used=entry.rgba.size();
+        for(const auto& old:localArt_)used+=old.rgba.size();
+        while(!localArt_.empty()&&(localArt_.size()>=16||used>16u*1024u*1024u)){
+            used-=localArt_.front().rgba.size();localArt_.erase(localArt_.begin());
         }
+        slot=localArt_.size();localArt_.push_back(std::move(entry));
     }
-    const std::vector<unsigned char>& data=localArt_[slot].rgba;
+    const auto& entry=localArt_[slot];const auto& data=entry.rgba;
     if(data.empty())return false;
+    const int sw=entry.width,sh=entry.height;
     int cw=sw,ch=sh,sx=0,sy=0;
     if(crop){
         if(sw*h>w*sh){cw=std::max(1,sh*w/h);sx=(sw-cw)/2;}
@@ -296,9 +288,9 @@ bool HomeCanvas::LocalArt(const std::string& file,bool cover,int x,int y,int w,i
         int cut=0,edge=std::min(j,h-1-j);
         if(edge<radius){const int dy=radius-edge-1;while(cut<radius&&(radius-cut-1)*(radius-cut-1)+dy*dy>radius*radius)++cut;}
         for(int i=cut;i<w-cut;++i){
-            const unsigned char* p=&data[4*((sy+j*ch/h)*sw+sx+i*cw/w)];
+            const unsigned p=HdArtwork::Sample(data.data()+4*(sy*sw+sx),sw,cw,ch,i,j,w,h);
             unsigned& dest=frame_[(y+j)*Width+x+i];
-            if(p[3])dest=blend((unsigned(p[0])<<16)|(unsigned(p[1])<<8)|p[2],dest,p[3]);
+            if(p>>24)dest=blend(p,dest,p>>24);
         }
     }
     return true;

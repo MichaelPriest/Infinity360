@@ -1,4 +1,5 @@
 #include "ArtImport.h"
+#include "HdArtwork.h"
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
@@ -25,14 +26,15 @@ bool Convert(const std::string& encoded,bool cover,std::vector<unsigned char>& r
     auto* image=stbi_load_from_memory(bytes,static_cast<int>(encoded.size()),&w,&h,&c,4);
     if(!image)return false;
     if(w!=ew||h!=eh){stbi_image_free(image);return false;}
-    const int dw=cover?160:640,dh=cover?240:360;
+    const auto size=cover?HdArtwork::HdCover:HdArtwork::HdBackdrop;
+    const int dw=size.width,dh=size.height;
     int cw=w,ch=h;
     if(w*dh>h*dw)cw=std::max(1,h*dw/dh);else ch=std::max(1,w*dh/dw);
     const int left=(w-cw)/2,top=(h-ch)/2;
     rgba.resize(dw*dh*4);
     for(int y=0;y<dh;++y)for(int x=0;x<dw;++x){
-        const auto* p=image+4*((top+y*ch/dh)*w+left+x*cw/dw);
-        std::copy(p,p+4,rgba.begin()+4*(y*dw+x));
+        const unsigned p=HdArtwork::Sample(image+4*(top*w+left),w,cw,ch,x,y,dw,dh);
+        HdArtwork::Write(rgba.data()+4*(y*dw+x),p);
     }
     stbi_image_free(image);return true;
 }
@@ -83,7 +85,8 @@ std::string artPath(const std::string& root,unsigned title,bool cover,bool archi
 bool validArt(const FileWorkspace& ws,const std::string& path,bool cover){
     if(!ws.CanReadPersonalFile(path))return false;
     std::ifstream in(path.c_str(),std::ios::binary|std::ios::ate);
-    return in&&in.tellg()==static_cast<std::streamoff>(cover?160*240*4:640*360*4);
+    if(!in||in.tellg()<=0)return false;
+    HdArtwork::Size size{};return HdArtwork::Resolve(static_cast<std::size_t>(in.tellg()),cover,size);
 }
 }
 bool HasArchived(const FileWorkspace& ws,const std::string& root,unsigned title,bool cover){

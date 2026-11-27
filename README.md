@@ -2,15 +2,17 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.76 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.77 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
-Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
+Interface nativa HD 1280×720, com suporte a capas 480×720 e fundos 1280×720, inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
 [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Changelog](CHANGELOG.md) · [Roadmap](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md)
 
 **Prioridade atual: integração Xbox/Android, loja, FTP e Cloud360 IPTV.** [Ordem de desenvolvimento](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md).
+
+[Arte HD e formatos de imagem](Platform/Xbox360/docs/HD-ARTWORK.md)
 
 ## Interface nativa
 
