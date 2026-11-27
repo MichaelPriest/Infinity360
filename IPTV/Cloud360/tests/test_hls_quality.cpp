@@ -27,5 +27,19 @@ int main(){
         return {};
     });
     if(!reader.Start(root+"master.m3u8",DefaultBitrate)||reader.SelectedBitrate()!=900000||hits[root+"missing.m3u8"]!=1||hits[root+"external.m3u8"]||hits[root+"full.m3u8"]||hits[root+"hevc.m3u8"])return 4;
-    unsigned char b[188];return reader.Read(b,sizeof b)==188&&reader.Read(b,sizeof b)==0?0:5;
+    unsigned char b[188];if(reader.Read(b,sizeof b)!=188||reader.Read(b,sizeof b)!=0)return 5;
+    const std::string adaptiveMaster="#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1800000\nhigh.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=400000\nlow.m3u8\n";
+    uint64_t now=0;unsigned high=0,low=0;
+    VodReader<Reader> adaptive([&](const std::string& url,bool playlist)->std::unique_ptr<Reader>{
+        if(url==root+"master.m3u8")return std::make_unique<Reader>(Reader{adaptiveMaster});
+        if(playlist)return std::make_unique<Reader>(Reader{"#EXTM3U\n#EXTINF:2,\n"+std::string(url==root+"high.m3u8"?"high":"low")+".ts\n#EXT-X-ENDLIST\n"});
+        now+=1000;
+        if(url==root+"high.ts"){++high;return std::make_unique<Reader>(Reader{std::string(188*400,'h')});}
+        ++low;return std::make_unique<Reader>(Reader{std::string(188*400,'l')});
+    });
+    if(!adaptive.EnableBufferedSegments()||!adaptive.EnableStartupAdaptation([&](){return now;})||
+       !adaptive.Start(root+"master.m3u8",DefaultBitrate)||adaptive.SelectedBitrate()!=400000||high!=1||low!=1)return 6;
+    size_t total=0;
+    for(;;){int n=adaptive.Read(b,sizeof b);if(n<0)return 7;if(!n)break;for(int i=0;i<n;++i)if(b[i]!='l')return 8;total+=n;}
+    return total==188*400&&low==1&&adaptive.StartupThroughput()==601600?0:9;
 }

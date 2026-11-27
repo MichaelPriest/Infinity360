@@ -170,6 +170,9 @@ template<class Reader> class VodReader {
 public:
     using Open=std::function<std::unique_ptr<Reader>(const std::string&,bool)>;
     using Wait=std::function<bool(unsigned)>; // milliseconds; false cancels
+    using Clock=std::function<uint64_t()>; // monotonic milliseconds
+    bool EnableStartupAdaptation(Clock clock){if(started_||!clock)return false;clock_=std::move(clock);return true;}
+    unsigned StartupThroughput()const{return throughput_;}
     explicit VodReader(Open open,Wait wait={}):open_(std::move(open)),wait_(std::move(wait)){}
     bool Start(const std::string& url,unsigned cap,bool allowLive=false){
         if(started_)return false;started_=true;allowLive_=allowLive;
@@ -186,6 +189,25 @@ public:
                 List media;
                 if(!Fetch(v.url,media)||!media.variants.empty()||media.segments.empty()||
                     (!media.ended&&(!allowLive_||!wait_))||(!media.init.empty()&&!buffered_))continue;
+                if(clock_&&buffered_&&media.init.empty()){
+                    // Sample the first intended TS segment before publishing any bytes.
+                    // Never use sequence numbers to align distinct renditions mid-playback.
+                    const size_t index=!media.ended&&media.segments.size()>3?media.segments.size()-3:0;
+                    const auto before=clock_();
+                    const bool sampled=BufferSegment(media.segments[index]);
+                    const auto after=clock_();
+                    const bool oversized=streamingSegment_;streamingSegment_=false;
+                    if(!sampled&&!oversized){segment_.clear();continue;}
+                    if(sampled&&after>before&&after-before<=120000&&segment_.size()>=16384){
+                        const uint64_t rate=uint64_t(segment_.size())*8000/(after-before);
+                        throughput_=static_cast<unsigned>(std::min<uint64_t>(rate,100000000));
+                        const unsigned safe=static_cast<unsigned>(uint64_t(throughput_)*75/100);
+                        bool lower=false;
+                        for(const auto& alt:candidates)
+                            if(alt.compatible&&alt.bandwidth<v.bandwidth&&alt.bandwidth<=safe){lower=true;break;}
+                        if(v.bandwidth>safe&&lower&&attempts<3){cap=std::min(cap,safe);segment_.clear();continue;}
+                    }
+                }
                 playlist_=v.url;list=std::move(media);selectedBitrate_=v.bandwidth;selected=true;break;
             }
             if(!selected)return false;
@@ -324,7 +346,7 @@ private:
         return Parse(url,text,list,allowLive_);
     }
     int Fail(){failed_=true;reader_.reset();return -1;}
-    Open open_;Wait wait_;std::unique_ptr<Reader> reader_;
+    Open open_;Wait wait_;Clock clock_;unsigned throughput_=0;std::unique_ptr<Reader> reader_;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;

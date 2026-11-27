@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.97 — Adaptação inicial HLS TS
+
+- Mede a taxa de um segmento antes de entregar bytes, aplica margem de 25% e considera variantes inferiores compatíveis dentro do limite configurado.
+- Reutiliza segmento selecionado, descarta amostra de variante rejeitada; segmentos grandes mantêm streaming. Somente TS master, sem troca durante reprodução nem adaptação fMP4.
+- Teste determinístico de redução de bitrate sem duplicação. CI V0.2.96 aprovado; nova revisão aguarda CI. Sem XEX.
+
 ## V0.2.96 — HLS fMP4 ao vivo experimental
 
 - Permite janelas live fMP4 com inicialização fixa, buffer atômico e atualização por sequência. Bloqueia troca de mapa e mudança de formato durante a sessão.
