@@ -277,7 +277,8 @@ private:
     uint64_t homeDiscAt_=0;
     XboxExecutionInfo homeDiscIdentity_{};
     std::string homeDiscName_,homeDiscCover_;
-    bool settingsReturnSystem_=false;
+    bool settingsReturnSystem_=false,settingsChild_=false;
+    void ReturnToSettings();
     NetworkSnapshot network_;
     LanPeerProbe peerProbe_;
     bool networkPeer_=false,peerEditing_=false,peerOptions_=false;

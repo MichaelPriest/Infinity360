@@ -935,7 +935,7 @@ void ConsoleHome::RefreshNetwork() {
     network_=NetworkInfo::Read();
 }
 void ConsoleHome::Enter(Section s) {
-    section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;gridFilter_=false;
+    section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;gridFilter_=false;settingsChild_=false;
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
     if(s==System){RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();}
@@ -2111,7 +2111,7 @@ std::string ConsoleHome::Press(Key key) {
     if(section_==System&&systemTab_==7&&page_==Details&&powerPage_){
         if(key==Back){
             if(powerConfirm_.armed)powerConfirm_.Cancel();
-            else powerPage_=false;
+            else {powerPage_=false;if(settingsChild_)ReturnToSettings();}
             notice_.clear();return "";
         }
         if(key==Left||key==Right){
@@ -2170,6 +2170,7 @@ std::string ConsoleHome::Press(Key key) {
             peerProbe_.Stop();
         }
         notice_.clear();
+        if(settingsChild_&&section_==System&&page_==Details){ReturnToSettings();return "";}
         if (page_==Details) {
             page_=Listing;
             luaSubtitleFirst_=-1;
@@ -2357,7 +2358,7 @@ std::string ConsoleHome::Press(Key key) {
         if(page_==Details&&systemTab_==4&&key==Guide){localPlugins_=!localPlugins_;if(localPlugins_)RefreshLocalPlugins();return "";}
         if(page_==Details&&systemTab_==4&&localPlugins_){
             if(key==Up||key==Down){localPluginRow_=std::max(0,localPluginRow_+(key==Down?1:-1));clampRow(localPluginRow_,localPluginItems_.size());}
-            if(key==Favorite)ToggleLocalPlugin();return "";
+            if(key==Favorite||key==Accept)ToggleLocalPlugin();return "";
         }
         if(page_==Details && systemTab_==4 && (key==PageUp||key==PageDown)){
             const size_t count=residentConfigs_.size();
@@ -2729,7 +2730,7 @@ void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
         c.TextFit(801,y+10,state,17,PluginAllowed(item)?Lime:Muted,402);
     }
     c.Text(48,585,"Preferencia local; nao altera launch.ini, nao carrega modulos residentes.",18,Muted,1170);
-    InfinityButtons::Strip(c,48,610,"X Alternar | START DashLaunch | R3 Scripts Lua | Y Atualizar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,610,"A/X Alternar | START DashLaunch | R3 Scripts Lua | Y Atualizar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     if(layout_==DashboardLayout::TopIcons){
@@ -3338,6 +3339,29 @@ void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
     if(saveCenter_){DrawSaveCenter(c);return;}
     if(powerPage_){DrawPower(c);return;}
     if(localMilestones_){DrawLocalMilestones(c);return;}
+    if(layout_){
+        using namespace InfinitySocial;
+        c.TextFit(45,139,"Perfis do console",25,White,1170);
+        c.SeriesTile(45,183,520,385,false,200);
+        bool art=false;
+        if(profileArt_==ProfileArt::Avatar&&avatarPreview_.KnownFor(social_))art=c.AvatarFrame(avatarPreview_.Pixels(),avatarPreview_.Width(),avatarPreview_.Height(),65,200,170,260);
+        if(!art&&profileArt_!=ProfileArt::Hidden)art=c.ProfilePicture(profileArt_==ProfileArt::Avatar&&ValidGamerpic(social_.avatarPortrait)?social_.avatarPortrait:social_.gamerpic,84,234,132);
+        if(!art)InfinityIcons::Draw(c,InfinityIcons::Avatar,90,240,120,Muted);
+        c.TextFit(245,217,social_.controller>=0?social_.displayName:"Perfil Xbox",28,White,300);
+        c.TextFit(245,258,social_.origin==Origin::Test?"Perfil de teste":social_.state==SignIn::Online?"Sessao online":social_.state==SignIn::Local?"Sessao local":"Sem perfil consultado",18,Muted,300);
+        c.TextFit(245,305,social_.gamerscoreKnown?"G "+number(social_.gamerscore):"Gamerscore indisponivel",19,Lime,300);
+        c.TextFit(245,341,social_.achievementsKnown?number(social_.achievements)+" conquistas":"Conquistas indisponiveis",18,Muted,300);
+        c.TextFit(65,497,"L3: Guia de perfil e comunicacao",18,Lime,480);
+        c.SeriesTile(580,183,654,385,false,200);
+        c.TextFit(596,195,"Controles e perfis conectados",23,White,620);
+        for(int i=0;i<4;++i){int y=237+i*65;c.SeriesTile(592,y,630,58,false);
+            InfinityIcons::Draw(c,1,604,y+13,30,White);
+            c.TextFit(648,y+4,"Controle "+number(i+1)+" | "+(status_.users[i].empty()?c.Tr("Sem perfil"):status_.users[i]),20,White,560);
+            c.TextFit(648,y+31,c.Tr(ConsoleStatus::StateLabel(status_.profileProvider,status_.signin[i])),16,Muted,560);}
+        c.TextFit(596,516,"Idioma: "+status_.language+" | "+ClockWeather::Zone(clockSettings_.offset),17,Muted,620);
+        InfinityButtons::Strip(c,45,584,"A Energia | X Protetor | START Capas em lote | R3 Atualizar",17,White,1170);
+        InfinityButtons::Strip(c,45,610,"Esq/Dir Tema | LB/RB Idioma | Cima/Baixo Marcos | L3 Guia",17,White,1170);return;
+    }
     c.Text(45,349,c.Tr("Console | Perfis conectados"),27,White,1170);
     c.Text(48,389,std::string(c.Tr("Hora local: "))+ClockLabel(std::time(nullptr))+" | "+ClockWeather::Zone(clockSettings_.offset)+std::string(c.Tr(" | Idioma: "))+status_.language,21,Muted,1170);
     for(int i=0;i<4;++i){
@@ -3407,6 +3431,23 @@ void ConsoleHome::DrawLuaRepository(HomeCanvas& c)const{
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     if(luaRepoPage_){DrawLuaRepository(c);return;}
     static const char* const titles[LuaCategoryCount]={"Utilitários","Filtros","Ordenação","Legendas"};
+    if(layout_){
+        c.TextFit(45,85,"Plugins e scripts Lua",36,White,1180);
+        c.TextFit(45,134,InfinityLua::Available()?"Lua 5.4 | START Repositorio":"Runtime Lua indisponivel",19,Muted,1180);
+        c.SeriesTile(45,177,277,401,false,190);
+        for(int i=0;i<LuaCategoryCount;++i){int y=190+i*70;c.SeriesTile(55,y,257,62,i==luaCategory_);
+            InfinityIcons::Draw(c,42,67,y+15,29,i==luaCategory_?Lime:White);
+            c.TextFit(108,y+19,titles[i],22,White,190);}
+        c.TextFit(60,492,"LB/RB Categorias",17,Muted,245);
+        c.TextFit(60,528,"START Repositorio",17,Lime,245);
+        c.SeriesTile(335,177,899,401,false,190);
+        const int first=(luaRow_/7)*7;
+        for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){const int y=187+(i-first)*54;c.SeriesTile(346,y,877,49,i==luaRow_);
+            InfinityIcons::Draw(c,42,357,y+12,24,i==luaRow_?Lime:White);c.TextFit(394,y+11,luaScripts_[i],21,White,810);}
+        if(luaScripts_.empty())c.TextFit(355,237,"Copie arquivos .lua para "+LuaDirectory(),20,Muted,845);
+        const std::string& active=luaCategory_==LuaSubtitles?luaActiveSubtitle_:luaCategory_==LuaSorts?luaActiveSort_:luaActiveFilter_;
+        c.TextFit(45,603,luaCategory_==LuaUtilities?"A Executar utilitario selecionado":std::string("Ativo: ")+(active.empty()?"Padrao":active)+(luaCategory_==LuaSorts?(luaSortDescending_?" | Decrescente":" | Crescente"):""),18,Lime,1170);return;
+    }
     c.Text(45,93,std::string("Scripts Lua | ")+titles[luaCategory_],36,White,1180);
     c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | START Repositorio":"Runtime Lua indisponível",21,Muted,1160);
     if(luaCategory_==LuaSorts)c.TextFit(610,150,luaSortDescending_?"Esq/Dir: Decrescente":"Esq/Dir: Crescente",20,Lime,610);
@@ -3421,6 +3462,30 @@ void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     c.TextFit(48,580,std::string(setting)+" | "+(active.empty()?"Padrão":active),17,Muted,1180);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
+    if(layout_){
+        c.TextFit(45,139,"Dispositivos e espaco disponivel",25,White,1170);
+        const size_t pages=std::max<size_t>(1,(storageVolumes_.size()+3)/4);
+        for(size_t i=0;i<4&&storagePage_*4+i<storageVolumes_.size();++i){
+            const size_t index=storagePage_*4+i;const auto& v=storageVolumes_[index];const int y=183+int(i)*100;
+            c.SeriesTile(45,y,815,92,false,198);
+            InfinityIcons::Draw(c,14,61,y+19,42,v.available?Lime:Muted);
+            c.TextFit(118,y+9,index==0?c.Tr("Pasta INFINITY 360"):v.path,23,White,714);
+            if(v.available){
+                const unsigned percent=v.UsedPercent();
+                c.TextFit(118,y+37,StorageInfo::FormatBytes(v.freeBytes)+" livres / "+StorageInfo::FormatBytes(v.capacity)+" total",17,Muted,575);
+                c.TextFit(724,y+37,number(percent)+"%",18,White,110);
+                c.Box(118,y+66,711,8,0xff28413au,4);if(percent)c.Box(118,y+66,int(711*percent/100),8,Lime,4);
+            }else c.TextFit(118,y+40,"Indisponivel ou capacidade nao informada",18,Muted,710);
+        }
+        c.SeriesTile(875,183,359,392,false,200);c.TextFit(893,199,"Acoes de armazenamento",23,White,327);
+        c.SeriesTile(891,247,327,64,false);
+        InfinityButtons::Hint(c,InfinityButtons::Start,905,265,22,"Pastas da biblioteca",252,White);
+        c.SeriesTile(891,322,327,64,false);InfinityButtons::Hint(c,InfinityButtons::Y,905,340,22,"Atualizar dispositivos",262,White);
+        c.SeriesTile(891,397,327,64,false);InfinityButtons::Strip(c,905,415,"LB/RB Pagina",19,White,300);
+        c.TextFit(893,482,"Capacidade consultada no dispositivo.",17,Muted,327);
+        c.TextFit(893,517,"Pagina "+number(storagePage_+1)+"/"+number(pages),20,Lime,327);
+        c.TextFit(45,607,"Gerencie as pastas de jogos com START. B volta.",18,Muted,1170);return;
+    }
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
     for(size_t i=0;i<4 && storagePage_*4+i<storageVolumes_.size();++i) {
         const size_t index=storagePage_*4+i;
@@ -3504,6 +3569,26 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.Text(48,540,std::string(c.Tr(LanPeerProbe::ModeLabel(static_cast<LanPeerProbe::Mode>(peerMode_))))+" | "+number(peerProbe_.Elapsed())+"/"+number(durations[peerDuration_])+" s"+(peerProbe_.Sent()&&peerProbe_.Outcome()==LanPeerProbe::Finished?std::string(c.Tr(" | Sem resposta: "))+number(peerProbe_.LossPercent())+"%":""),18,Muted,1170);
         c.Text(48,560,std::string(c.Tr("Inicie nos dois consoles. Nao confirma System Link de jogos.")),18,Muted,1170);
         InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina")),18,Lime,1170);return;
+    }
+    if(layout_){
+        c.TextFit(45,139,"Rede local e servicos",25,White,1170);
+        c.SeriesTile(45,183,548,377,false,200);
+        InfinityIcons::Draw(c,7,67,205,64,network_.ipv4.empty()?Muted:Lime);
+        c.TextFit(148,215,network_.ipv4.empty()?"Sem IPv4":network_.ipv4,31,White,420);
+        c.TextFit(65,295,c.Tr(NetworkInfo::StateLabel(network_.state)),21,Muted,510);
+        c.TextFit(65,348,network_.ethernetKnown?(network_.ethernetActive?"Ethernet: ativo":"Ethernet: sem link"):"Ethernet: leitura indisponivel",21,White,510);
+        if(network_.linkMbps)c.TextFit(65,385,number(network_.linkMbps)+" Mbps | "+network_.duplex,18,Muted,510);
+        c.TextFit(65,466,"Internet e Xbox Live: nao testados",19,Muted,510);
+        c.SeriesTile(608,183,626,377,false,200);
+        const int yy[]={197,293,389};
+        const char* labels[]={"Servidor FTP","Diagnostico UDP / System Link","SMB experimental"};
+        const std::string details[]={ftp_.Running()?(ftp_.Connected()?"Cliente conectado":"Aguardando cliente"):"Desligado","Teste entre consoles; nao cria sala de jogo","Consulta servidor e compartilhamentos"};
+        const int icons[]={7,1,14};
+        for(int i=0;i<3;++i){c.SeriesTile(621,yy[i],600,87,false);InfinityIcons::Draw(c,icons[i],635,yy[i]+13,32,i==0&&ftp_.Running()?Lime:White);
+            c.TextFit(683,yy[i]+7,labels[i],23,White,520);c.TextFit(683,yy[i]+38,details[i],17,Muted,520);
+            InfinityButtons::Strip(c,683,yy[i]+60,i==0?(ftp_.Running()?"A/X Parar":"A Leitura | X Upload (ALLO)"):i==1?"LB/RB Abrir":"START Abrir",15,Lime,520);}
+        c.TextFit(625,505,ftp_.Running()?"Porta "+number(ftp_.Port())+(ftp_.UploadEnabled()?" | Leitura/upload":" | Somente leitura"):"FTP exige ativacao manual.",17,Muted,575);
+        InfinityButtons::Strip(c,45,607,"A FTP | X Upload | LB/RB UDP | START SMB | Y Atualizar | B Voltar",18,White,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
     c.Surface(42,391,589,190,Panel,10);
@@ -3782,7 +3867,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.TextFit(390,565,"LB/RB: categorias | Cima/baixo: opcoes | A: abrir",16,Lime,815);
             c.TextFit(45,612,"CPU "+headerThermal_.CompactCelsius(0)+" | GPU "+headerThermal_.CompactCelsius(1)+" | Plugins: consultar painel",17,Muted,1180);
             return;
-        }else{
+        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||(systemTab_==7&&!localMilestones_&&!saveCenter_&&!achievementsPage_&&!powerPage_)))){
             // A single selected category replaces eight unrelated shortcuts on details pages.
             c.SeriesTile(42,166,1196,166,false);
             InfinityIcons::Draw(c,marks[systemTab_],65,193,68,Lime);
@@ -4750,7 +4835,12 @@ void ConsoleHome::OpenSettings(bool returnHome){
     layoutDraft_=layout_;gridDraft_=gridPreference_;languageDraft_=language_;
     idleDraft_=idleMinutes_;safeAreaDraft_=safeArea_;
     settingsCategory_=appearanceRow_=0;settingsReturnHome_=returnHome;
-    layoutPreview_=false;appearanceEditor_=true;settingsReturnSystem_=false;wallpaperDirty_=true;notice_.clear();
+    layoutPreview_=false;appearanceEditor_=true;settingsReturnSystem_=false;settingsChild_=false;wallpaperDirty_=true;notice_.clear();
+}
+void ConsoleHome::ReturnToSettings(){
+    const auto category=settingsCategory_,row=appearanceRow_;
+    const bool home=settingsReturnHome_,system=settingsReturnSystem_;
+    OpenSettings(home);settingsReturnSystem_=system;settingsCategory_=category;appearanceRow_=row;
 }
 bool ConsoleHome::SettingsDirty()const{
     return appearanceDraft_.Encode()!=appearance_.Encode()||clockDraft_.Encode()!=clockSettings_.Encode()||
@@ -4799,7 +4889,7 @@ void ConsoleHome::PressAppearance(Key key){
                 if(key!=Accept)return;
                 if(SettingsDirty()){notice_="Salve com Y antes de abrir outro painel.";return;}
                 if(id==StPaths){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;return;}
-                appearanceEditor_=false;
+                appearanceEditor_=false;settingsChild_=true;
                 if(id==StPower){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();return;}
                 page_=Listing;systemTab_=id==StStorage?0:id==StNetwork?1:4;
                 Press(Accept);return;

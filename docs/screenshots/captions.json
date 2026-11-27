@@ -395,5 +395,26 @@
         "caption": "Editor de configurações — Grafite"
       }
     ]
+  },
+  {
+    "title": "Sistema — painéis modernos",
+    "images": [
+      {
+        "stem": "89-armazenamento-moderno",
+        "caption": "Armazenamento — dispositivos e espaço livre"
+      },
+      {
+        "stem": "90-rede-moderna",
+        "caption": "Rede — conexão, FTP e atalhos"
+      },
+      {
+        "stem": "91-lua-moderno",
+        "caption": "Scripts Lua — categorias e scripts locais"
+      },
+      {
+        "stem": "92-perfis-moderno",
+        "caption": "Perfis — avatar e controles conectados"
+      }
+    ]
   }
 ]

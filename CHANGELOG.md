@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.27 — Sistema e navegação contextual
+
+- Painéis modernos de armazenamento, rede, scripts Lua e perfis com cards, ações explícitas e leitura real de capacidade, conexão, estado do FTP e dados de perfil disponíveis. Sem simulação de conexão, avatar ou status de plugins.
+- Configurações: retorno ao mesmo grupo após abrir armazenamento, rede, extensões ou energia; A também alterna a preferência de plugins locais. Mantém o comportamento legado e as confirmações críticas.
+- Quatro capturas adicionais do renderizador portátil (92 no total); sem XEX/release. Avatar 3D, ícone embutido do DVD e overlay em jogos continuam sujeitos à integração nativa.
+
 ## V0.3.26 — Biblioteca, ficha do jogo e player
 
 - Biblioteca moderna com categorias laterais e grade de 12 capas, filtros existentes preservados. Ficha do jogo com arte, metadados, histórico e ações de controle em coluna direita. Layout legado preservado.

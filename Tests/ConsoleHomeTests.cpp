@@ -199,6 +199,17 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Favorite);system.Press(ConsoleHome::Accept);assert(system.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Favorite);ok=save("53-aparencia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
+    {
+        ConsoleHome hub(dir,roots);hub.Load();
+        for(int i=0;i<5;++i)hub.Press(ConsoleHome::Right);
+        hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Accept);
+        hub.Press(ConsoleHome::Accept);ok=save("89-armazenamento-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);
+        hub.Press(ConsoleHome::Right);hub.Press(ConsoleHome::Accept);ok=save("90-rede-moderna",hub)&&ok;hub.Press(ConsoleHome::Back);
+        for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
+        hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Search);ok=save("91-lua-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
+        for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
+        hub.Press(ConsoleHome::Accept);ok=save("92-perfis-moderno",hub)&&ok;
+    }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
         ConsoleHome themed(dir,roots);themed.Load();
