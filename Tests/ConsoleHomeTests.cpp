@@ -628,6 +628,7 @@ int main(int argc,char** argv) {
 
     std::ofstream(root/"playlist.m3u")<<"#EXTM3U\n#EXTINF:-1 group-title=\"TV ao vivo\",Teste local\nclip.wmv\n";
     CloudTv source(dir);source.Open();assert(source.Count()==1);
+    source.Press(MenuLeft); // Historico
     source.Press(MenuLeft); // Fontes, selecionar Cinema na subpasta
     source.Press(MenuAccept);
     assert(source.Count()==1655);CloudTv again(dir);again.Open();assert(again.Count()==1655);

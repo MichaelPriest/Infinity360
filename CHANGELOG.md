@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.75 — Preparação de release unificada Xbox/Android
+
+- Corrige navegação do teste IPTV após inclusão da aba Histórico; não remove testes nem relaxa os gates.
+- Instala ferramentas Android SDK no runner, valida assinatura debug e SHA-256 do APK; release unificada depende dos builds Xbox/Android e das regressões portáteis e Cloud360.
+- Solicitação explícita de nova galeria nativa de 113 telas e atualização do README. Builds e publicação dependem do resultado do CI; homologação física pendente.
+
 ## V0.3.74 — Retomada FTP e renomeacao exclusiva
 
 - Android Remote 0.17.0 Alpha: retomada de download individual na mesma sessao da tela usando REST, cache parcial e XSTAMP (tamanho, mtime e identificador da raiz, sem hash do conteudo); renomear arquivos/pastas via RNFR/RNTO no modo upload, usando movimento exclusivo e validacao da raiz. Sem sobrescrita, sem retomada de upload. Testes de transporte ampliados; APK e XSDK pendentes. Sem XEX/release.

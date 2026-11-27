@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.5
-Requested: 2026-11-26
-Baseline: 8b939abf84225ca3b0b8b1d1fc14247fe65ec23f
-Retry IPTV open mode diagnostics and HTTP configuration; mandatory gates retained.
+INFINITY 360 V0.3.75 Alpha
+Requested: 2026-11-27
+Baseline: 4cb5a3a4dbd7aaa4111479d74105d833dcf372ec
+Authorized unified Xbox360 FFmpeg and Android APK prerelease; mandatory gates retained.

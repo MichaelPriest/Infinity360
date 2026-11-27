@@ -112,3 +112,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-27 V0.3.39 codec compatibility; 113 portable captures; no XEX.
 
 2026-11-27 V0.3.40 bounded 1080p input downscale and HLS opt-in; 113 portable captures; no XEX.
+
+2026-11-27 V0.3.75 regenerate all 113 native captures, including IPTV, network/FTP and downloads; explicitly authorized unified build.

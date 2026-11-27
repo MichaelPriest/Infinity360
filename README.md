@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.74 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.75 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -10,7 +10,7 @@ Interface nativa em 720p inspirada no Xbox Series, com navegação por controle,
 
 [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Changelog](CHANGELOG.md) · [Roadmap](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md)
 
-**Prioridade atual: Cloud360 IPTV e FFmpeg.** [Ordem de desenvolvimento](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md).
+**Prioridade atual: integração Xbox/Android, loja, FTP e Cloud360 IPTV.** [Ordem de desenvolvimento](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md).
 
 ## Interface nativa
 
@@ -37,9 +37,10 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Perfil Xbox | Seleção, Gamerpic, retrato e imagem estática de corpo inteiro do avatar (atualização opcional), diagnóstico de componentes e memória de assets, Gamerscore e conquistas por título via XAM experimental |
 | Social | Cartão próprio/de amigos, lista de amigos/presença e amigos por título, jogadores recentes, edição de perfil, composição oficial de mensagens, central de comunicação/Party, consulta de permissões, chat e editor de avatar via XAM experimental; painel de avatar e leitor de geometria oficial e rasterização diagnóstica CPU e adaptador XAvatar/D3D9 e pass para textura opcionais (não integrados ao presenter XSDK), preferência visual Avatar/Gamerpic/Oculto |
 | Conteúdo | TU, DLC, saves, backups; Homes modernas detectam DVD legível, executa XEX e abre instalação HDD/USB (GOD ou extração) |
-| Store e downloads | Catálogo homebrew, fila persistente, fontes configuráveis e importação local de metadados Andromeda |
+| Store e downloads | Catálogo autorizado, fila persistente por dispositivo, fontes configuráveis, download HTTPS com verificação SHA-256; consulta, seleção de destino, prioridade, pausa/retomada e solicitação de download pelo Android |
 | Cloud360 IPTV | FFmpeg integrado ao pacote principal (MP4/TS/HLS e fMP4 restrito; H.264/MPEG-2, AAC/MP2/MP3/AC-3/E-AC-3); recuperação limitada de live HLS e redução adaptativa de bitrate com reinicialização do decoder, preservando volume e mudo; pré-leitura cooperativa limitada; entrada experimental até 1080p reduzida a 720p, seleção HLS Full HD opt-in; homologação física pendente |
-| Sistema | Hub com cinco categorias, arquivos e notificações com painéis de detalhe, telemetria ampliada, FTP, rede, SMB experimental, armazenamento e sensores |
+| Sistema | Hub com cinco categorias, arquivos, notificações, telemetria, FTP bidirecional em workspace preparado, rede, SMB experimental, armazenamento e sensores |
+| Android Remote | Controle geral e IPTV, descoberta de console pareado, catálogo e capas locais, loja, downloads, FTP de arquivos e pastas, retomada individual de recebimento e renomeação |
 | Personalização | Configurações em oito categorias, valores diretos, ajuda contextual e prévia em sete paletas, navegação LB/RB, prévia e edição com salvar/cancelar; sete temas, três idiomas, quatro níveis de vidro (leve, equilibrado, denso e opaco), transparência real sobre o fundo, grupos com vidro leve sem acumular opacidade, barras integradas ao tema e animações temporizadas opcionais |
 
 Implementação no código não equivale a homologação física.
@@ -69,12 +70,12 @@ O projeto não distribui jogos comerciais, ROMs, chaves, firmware proprietário 
 
 ### Controle remoto IPTV experimental
 
-Na pasta de dados IPTV, crie `cloud360-remote.txt` com duas linhas: IPv4 privado do celular autorizado e uma chave hexadecimal aleatoria de 32 caracteres (128 bits). Gere a chave em um computador confiavel, por exemplo com `python -c "import secrets; print(secrets.token_hex(16))"`. Inicie uma midia FFmpeg de rede; no celular autorizado, abra `http://IP_DO_XBOX:32161` e informe a chave. O endereco aparece nos detalhes tecnicos do HUD. Nao encaminhe a porta no roteador; HTTP sem criptografia, use somente LAN confiavel. Remova o arquivo (inclusive .bak, se existir) para desativar. O servidor fecha ao sair da sessao, nao transmite video e nao controla a dashboard fora do player. Homologacao XSDK pendente.
+Na pasta de dados IPTV, crie `cloud360-remote.txt` com duas linhas: IPv4 privado do celular autorizado e uma chave hexadecimal aleatoria de 32 caracteres (128 bits). Gere a chave em um computador confiavel, por exemplo com `python -c "import secrets; print(secrets.token_hex(16))"`. Inicie uma midia FFmpeg de rede; no celular autorizado, abra `http://IP_DO_XBOX:32161` e informe a chave. O endereco aparece nos detalhes tecnicos do HUD. Nao encaminhe a porta no roteador; HTTP sem criptografia, use somente LAN confiavel. Remova o arquivo (inclusive .bak, se existir) para desativar. Não transmite vídeo. Para controle da dashboard fora do player, habilite explicitamente `enable-dashboard-remote.txt` com `ENABLE-DASHBOARD-REMOTE`. Homologacao XSDK pendente.
 
 ### Aplicativo Android INFINITY 360 Remote
 
-Projeto nativo: [Android/](Android/README.md). APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla o player IPTV por rede local, não reproduz conteúdo no telefone.
+Projeto nativo: [Android/](Android/README.md). APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla a dashboard e o player IPTV por rede local, consulta biblioteca e loja, solicita downloads no Xbox e transfere arquivos por FTP; não reproduz conteúdo no telefone. A release unificada inclui o APK de teste somente após compilação e validação bem-sucedidas.
 
 ### FTP Android
 
-O Remote inclui gerenciador FTP bidirecional em Sistema. [Configuração e limites](Android/README.md#ftp-bidirecional). O servidor do Xbox permanece manual, restrito a UserFiles.
+O Remote inclui gerenciador FTP bidirecional em Sistema. [Configuração e limites](Android/README.md#ftp-bidirecional). O servidor do Xbox permanece manual, restrito a `UserFiles` ou `Infinity360Files` de HDD/USB previamente preparado. Upload padrão de 32 MiB, opcional de até 512 MiB. Suporte a lotes e pastas, renomeação e retomada de download individual durante a sessão. FTP e HTTP de controle não são criptografados; use apenas LAN confiável.

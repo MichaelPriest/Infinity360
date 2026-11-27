@@ -155,8 +155,11 @@ jobs:
   cloud360-gate:
     uses: ./.github/workflows/cloud360-catalog.yml
 
+  android-apk:
+    uses: ./.github/workflows/android-remote.yml
+
   publish:
-    needs: [ffmpeg-xsdk, portable-gate, cloud360-gate]
+    needs: [ffmpeg-xsdk, portable-gate, cloud360-gate, android-apk]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -167,7 +170,11 @@ jobs:
         with:
           name: Infinity360-${{ needs.ffmpeg-xsdk.outputs.version }}-distribution
           path: release
-      - name: Publish unified installation and matching LGPL materials
+      - uses: actions/download-artifact@v4
+        with:
+          name: infinity360-remote-debug
+          path: release
+      - name: Publish unified installation, APK and matching LGPL materials
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -176,6 +183,8 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum -c "Infinity360-$VERSION-Xbox360.zip.sha256"
+          sha256sum -c Infinity360-Remote-debug.apk.sha256
+          unzip -t Infinity360-Remote-debug.apk
           python3 - <<'PY'
           import os, zipfile
           v=os.environ["VERSION"]
@@ -190,4 +199,4 @@ jobs:
           PY
           tag="unified-v${VERSION}-${GITHUB_SHA:0:12}"
           if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
-          gh release create "$tag" "Infinity360-$VERSION-Xbox360.zip" "Infinity360-$VERSION-Xbox360.zip.sha256" "Infinity360-IPTV-FFmpeg-$VERSION-candidate.zip" --target "$GITHUB_SHA" --title "INFINITY 360 V$VERSION — FFmpeg integrado" --prerelease --latest=false --notes "Instalação: ZIP Xbox360, extrair em pasta separada e executar default.xex. O ZIP candidate contém materiais LGPL correspondentes e diagnósticos, não é necessário para instalar. Hardware ainda não homologado. Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh release create "$tag" "Infinity360-$VERSION-Xbox360.zip" "Infinity360-$VERSION-Xbox360.zip.sha256" "Infinity360-IPTV-FFmpeg-$VERSION-candidate.zip" Infinity360-Remote-debug.apk Infinity360-Remote-debug.apk.sha256 --target "$GITHUB_SHA" --title "INFINITY 360 V$VERSION — FFmpeg integrado" --prerelease --latest=false --notes "Instalação: ZIP Xbox360, extrair em pasta separada e executar default.xex. O ZIP candidate contém materiais LGPL correspondentes e diagnósticos, não é necessário para instalar. APK Android de teste (assinatura debug), inclui controle remoto, loja, downloads e FTP. Hardware ainda não homologado. Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -84,3 +84,7 @@ Use Enviar pasta inteira e selecione uma pasta Android pelo seletor do sistema. 
 ## Retomar e renomear FTP
 
 Marque exatamente um item e use Renomear item selecionado (modo upload). Sem sobrescrita. Para download individual interrompido, Retomar último download reaproveita o cache na mesma sessão da tela se XSTAMP confirmar tamanho, data de modificação e raiz. O marcador não é hash de conteúdo; não retome arquivos alterados. Descartar download parcial remove o cache. Retomada de lotes e upload não implementadas. APK e homologação pendentes.
+
+## Release unificada
+
+O workflow de distribuição Xbox inclui o job Android e só publica a prerelease se os builds e gates passarem. O APK `Infinity360-Remote-debug.apk` é assinado para teste, com checksum SHA-256; não é uma distribuição de produção. A galeria da dashboard é produzida pelo renderizador nativo C++ e não demonstra homologação física.

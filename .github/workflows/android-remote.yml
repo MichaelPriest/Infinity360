@@ -1,5 +1,6 @@
 name: Android Remote
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [main]
@@ -26,13 +27,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
       - name: Android SDK
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Assemble debug APK
         working-directory: Android
         run: gradle --no-daemon :app:assembleDebug
+      - name: Validate APK and record SHA-256
+        run: |
+          set -euo pipefail
+          test -s Android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -t Android/app/build/outputs/apk/debug/app-debug.apk
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify Android/app/build/outputs/apk/debug/app-debug.apk
+          cp Android/app/build/outputs/apk/debug/app-debug.apk Infinity360-Remote-debug.apk
+          sha256sum Infinity360-Remote-debug.apk > Infinity360-Remote-debug.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: infinity360-remote-debug
-          path: Android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            Infinity360-Remote-debug.apk
+            Infinity360-Remote-debug.apk.sha256
           if-no-files-found: error
