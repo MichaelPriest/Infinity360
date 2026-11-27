@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.45 — Qualidade manual no IPTV
+
+- Y alterna Auto e tetos de bitrate das variantes HLS ao vivo compativeis, dentro do teto configurado. A troca recria a sessao, preserva volume e mudo, e reverte ao modo anterior se a nova sessao nao iniciar. Manual desativa adaptacao automatica, mas pode selecionar variante inferior disponivel; nao garante resolucao. Ate quatro trocas manuais por reproducao, com reversao; Guide, VOD e playlists sem variantes preservados. Testes de ordenacao e limites adicionados; execucao e XSDK pendentes. Sem XEX/release.
+
 ## V0.3.44 — Recuperacao protegida de qualidade
 
 - Aumento oportunista de qualidade tem orcamento proprio de uma troca e uma reversao se a nova sessao nao iniciar audio/video; duas reconexoes ordinarias permanecem disponiveis. Desativa adaptacao ao esgotar reconexoes ordinarias para evitar encerrar uma transmissao por troca que nao pode ser executada. Limite total de cinco tentativas; cancelamento preservado. Teste isolado do relogio V0.3.43 passou em C++17 no host a partir de copia textual; suite integral e XSDK nao verificados. Sem XEX/release.

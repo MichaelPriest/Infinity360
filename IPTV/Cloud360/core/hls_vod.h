@@ -265,6 +265,18 @@ public:
     bool Live()const{return valid_&&!list_.ended;}
     Failure LastFailure()const{return failure_;}
     unsigned SelectedBitrate()const{return selectedBitrate_;}
+    // Zero denotes Auto. Manual choices are ceilings, not guaranteed renditions.
+    std::vector<unsigned> QualityCaps(unsigned ceiling)const{
+        std::vector<unsigned> caps;
+        if(!Live()||!selectedBitrate_)return caps;
+        for(const auto& v:variants_)if(v.compatible&&v.bandwidth>=MinBitrate&&v.bandwidth<=ceiling)caps.push_back(v.bandwidth);
+        std::sort(caps.begin(),caps.end());caps.erase(std::unique(caps.begin(),caps.end()),caps.end());
+        if(caps.size()<2)caps.clear();return caps;
+    }
+    unsigned NextQualityCap(unsigned current,unsigned ceiling)const{
+        const auto caps=QualityCaps(ceiling);const auto next=std::upper_bound(caps.begin(),caps.end(),current);
+        return next==caps.end()?0:*next;
+    }
     // Optional atomic delivery for short TS segments; larger segments are rejected in this mode.
     bool EnableBufferedSegments(bool allowLargeStreaming=false){if(started_)return false;buffered_=true;largeStreaming_=allowLargeStreaming;return true;}
     unsigned RecoveredSegments()const{return recovered_;}

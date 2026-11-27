@@ -90,6 +90,9 @@ int main(){
         },[&](unsigned){clock+=4000;return true;});
         if(!stream.EnableBufferedSegments()||!stream.EnableStartupAdaptation([&](){return clock;})||
            !stream.Start(root+"master.m3u8",400000,true))return false;
+        const auto caps=stream.QualityCaps(ceiling);
+        if(expectUpgrade){if(caps.size()!=2||stream.NextQualityCap(0,ceiling)!=400000||stream.NextQualityCap(400000,ceiling)!=800000||stream.NextQualityCap(800000,ceiling)!=0)return false;}
+        else if(!caps.empty()||stream.NextQualityCap(0,ceiling)!=0)return false;
         stream.ArmRuntimeAdaptation(ceiling);
         unsigned char block[188*400];unsigned count=0;
         for(unsigned i=0;i<20;++i){

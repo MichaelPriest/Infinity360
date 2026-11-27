@@ -54,8 +54,8 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played){
-    retryLive=false;upgrade=false;previousBitrate=0;played=false;
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange){
+    retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
     CloudAvStreamQueue timeline;
@@ -90,13 +90,14 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
             userHlsCap=cap;
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
+            if(manualCap)cap=std::min(cap,manualCap);
             // Keep automatic HLS selection at 720p unless explicitly enabled.
             std::ifstream fullHd((root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
             if(fullHd){std::string marker;std::getline(fullHd,marker);if(!marker.empty()&&marker.back()=='\r')marker.pop_back();
                 if(marker=="ENABLE-IPTV-1080P"&&fullHd.peek()==std::char_traits<char>::eof())hls.EnableFullHd();}
             hls.EnableBufferedSegments(true);
             hls.EnablePrefetch([](XsdkMpeg::RemoteReader& r){return r.Prefetch();});
-            hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
+            if(!manualCap)hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
             if(!hls.Start(path,cap,true))return hlsError.empty()?"Playlist HLS recusada ou indisponivel.":hlsError;
             selectedBitrate=hls.SelectedBitrate();
             auto readHls=[](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);};
@@ -140,10 +141,15 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     controls.RestoreAudio(audioPreference);
 #ifdef INFINITY_AV_NETWORK
-    if(allowSwitch)hls.ArmRuntimeAdaptation(allowUpgrade?userHlsCap:selectedBitrate);
+    if(allowSwitch&&!manualCap)hls.ArmRuntimeAdaptation(allowUpgrade?userHlsCap:selectedBitrate);
+    const bool qualityAvailable=allowManual&&!hls.QualityCaps(userHlsCap).empty();
 #endif
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
+    std::string qualityHint;
+#ifdef INFINITY_AV_NETWORK
+    if(qualityAvailable)qualityHint=" | Y Qualidade";
+#endif
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
     unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     bool lastHud=true;
@@ -154,9 +160,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         std::string bufferInfo=remoteSource?(" | Fila "+std::to_string(timeline.Bytes()/1024)+" KiB | Alvo "+std::to_string(playbackClock.Ahead()/1000)+" ms"):"";
 #ifdef INFINITY_AV_NETWORK
         if(remoteSource&&hls.RecentThroughput())bufferInfo+=" | Rede "+std::to_string(hls.RecentThroughput()/1000)+" kbps";
+        if(selectedBitrate)bufferInfo+=manualCap?(" | Manual ate "+std::to_string(manualCap/1000)+" kbps"):" | Auto";
 #endif
         lastHud=hud.Visible(wall(),controls.Paused());
-        hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?"X Mudo | LB/RB Volume | B Sair":duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
+        hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
@@ -193,6 +200,13 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             else if(edges&&ControlKeys(edges))hud.Reveal(wall());
         }
         if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused())){overlay();if(!present(true)){ok=false;break;}}
+#ifdef INFINITY_AV_NETWORK
+        if(qualityAvailable&&!guide.Active()&&!wasGuide&&!guideEdge&&(edges&INPUT_GAMEPAD_Y)&&shown&&submitted){
+            previousBitrate=selectedBitrate;
+            manualCap=hls.NextQualityCap(manualCap,userHlsCap);
+            adaptiveCap=0;manualChange=true;retryLive=true;break;
+        }
+#endif
         const int seek=controls.TakeSeek();
         if(seek&&duration>0&&!controls.Paused()){
             const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));
@@ -236,6 +250,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
     xsdk_log_write("Cloud360 read stalls=%u compensated_ms=%u ahead_ms=%u",playbackClock.Stalls(),static_cast<unsigned>(playbackClock.Stalled()/1000),static_cast<unsigned>(playbackClock.Ahead()/1000));
     if(cancelled||Cancelled())return "Reproducao cancelada.";
+    if(manualChange)return manualCap?("Qualidade manual ate "+std::to_string(manualCap/1000)+" kbps"):"Qualidade automatica";
 #ifdef INFINITY_AV_NETWORK
     xsdk_log_write("Cloud360 prefetched HLS segments=%u remote_peak=%u",hls.PrefetchedSegments(),static_cast<unsigned>(remote.Peak()));
     if(hls.LastFailure()!=CloudHls::Failure::None){
@@ -253,31 +268,33 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
                         const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
     std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference audioPreference;
-    unsigned normalRetries=0,rollbackCap=0;bool upgradeUsed=false;
-    // Two ordinary retries plus one opportunistic upgrade and one rollback.
-    for(unsigned attempt=0;attempt<5;++attempt){
-        bool retry=false,upgrade=false,played=false;unsigned previousBitrate=0;
+    unsigned normalRetries=0,rollbackCap=0,manualCap=0,rollbackManual=0,manualChanges=0;bool upgradeUsed=false;
+    // Two ordinary retries, one upgrade/rollback, and four user changes with rollback.
+    for(unsigned attempt=0;attempt<13;++attempt){
+        bool retry=false,upgrade=false,played=false,manualChange=false;unsigned previousBitrate=0;
+        const unsigned oldManual=manualCap;
         result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference,
-            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played);
+            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange);
         if(Cancelled()||result=="Reproducao cancelada.")return "Reproducao cancelada.";
         if(rollbackCap&&!played&&!retry){
-            adaptiveCap=rollbackCap;rollbackCap=0;retry=true;
+            adaptiveCap=rollbackCap;manualCap=rollbackManual;rollbackCap=0;retry=true;
             result="Qualidade superior indisponivel; retornando a anterior.";
         }else{
             rollbackCap=0;
             if(!retry)return result;
-            if(upgrade&&!upgradeUsed){upgradeUsed=true;rollbackCap=previousBitrate;}
+            if(manualChange&&manualChanges<4){++manualChanges;rollbackCap=previousBitrate;rollbackManual=oldManual;}
+            else if(upgrade&&!upgradeUsed){upgradeUsed=true;rollbackCap=previousBitrate;rollbackManual=oldManual;}
             else if(normalRetries<2){++normalRetries;}
             else return result;
         }
-        if(attempt==4)return result;
+        if(attempt==12)return result;
         canvas.Background();canvas.SeriesTile(160,240,960,220,false,220);
         canvas.TextFit(190,265,"Cloud360 | Reconectando transmissao ao vivo",30,0xfff2f7f3u,900);
         canvas.TextFit(190,320,result,22,0xffb7c9c1u,900);
-        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/4"+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
+        canvas.TextFit(190,379,"Sessao "+std::to_string(attempt+2)+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
         if(!present(true))return "Falha ao apresentar reconexao IPTV.";
         const auto start=std::chrono::steady_clock::now();
-        while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(500*(attempt+1))){
+        while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(manualChange?250:500*std::min(attempt+1,3u))){
             if(Cancelled())return "Reproducao cancelada.";
             if(!present(false))return "Falha ao apresentar reconexao IPTV.";
         }
