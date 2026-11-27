@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.9 — Caminhos de pacotes
+
+- Gerenciador de pastas alterna XEX/pacotes com LB/RB. Raízes GOD/XBLA configuráveis e desativáveis independentemente, com estrutura TitleID/Tipo validada pelo leitor de pacotes existente. Pacotes importados continuam indexados separadamente.
+- Arquivos: esquerda, A para XEX ou X para pacote. Testes de persistência e isolamento das configurações. Sem nova solicitação XEX.
+
 ## V0.3.8 — Profundidade de busca e indicadores Lua
 
 - Profundidade XEX individual de 0 a 16 níveis, persistida em infinity360-scan-depths.txt, com testes de varredura real e limites.

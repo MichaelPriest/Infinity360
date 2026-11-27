@@ -321,10 +321,11 @@ private:
     std::vector<std::string> copyNames_;
     std::string actionDir_, actionName_;
     void DrawFileActions(HomeCanvas& c) const;
-    void ToggleScanPath();
+    void ToggleScanPath(bool packages=false);
     void LoadScanPaths();
     std::vector<std::string> configuredRoots_,disabledRoots_,luaScripts_;
-    bool libraryPathsPage_=false,luaPage_=false;
+    bool libraryPathsPage_=false,luaPage_=false,packagePathsPage_=false;
+    std::vector<std::string> packageRoots_,configuredPackageRoots_,disabledPackageRoots_;
     int libraryPathRow_=0,luaRow_=0;
     void DrawLibraryPaths(HomeCanvas& c)const;
     void DrawLuaScripts(HomeCanvas& c)const;

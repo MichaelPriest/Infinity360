@@ -1261,6 +1261,12 @@ int main(int argc,char** argv) {
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Accept); // remove
     assert(fs::file_size(scanUiConfig)==0);
     assert(fs::exists(scanUiExe));
+    const auto packageConfig=scanUiRoot/"infinity360-package-paths.txt";
+    scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Favorite);
+    assert(fs::exists(packageConfig)&&fs::file_size(packageConfig)>0);
+    assert(fs::file_size(scanUiConfig)==0);
+    scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Favorite);
+    assert(fs::file_size(packageConfig)==0&&fs::exists(scanUiExe));
     // Native explorer context actions: confirmed deletion, cancel and cut/paste.
     const fs::path actionRoot=root/"FileActionsFixture";
     fs::create_directories(actionRoot/"UserFiles"/"Dest");

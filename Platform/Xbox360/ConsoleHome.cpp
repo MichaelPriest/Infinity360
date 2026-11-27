@@ -252,8 +252,9 @@ void ConsoleHome::Load() {
 void ConsoleHome::ScanLibrary() {
     artFolders_.clear();artDirty_=true;
     games_=GameScanner(roots_).Scan(scanDepths_);
-    auto packageRoots=ContentCatalog::DefaultRoots(dir_);
-    const auto managed=PackageImport::Roots(dir_);packageRoots.insert(packageRoots.end(),managed.begin(),managed.end());
+    auto packageRoots=packageRoots_;
+    const auto managed=PackageImport::Roots(dir_);
+    for(const auto& path:managed)if(std::none_of(packageRoots.begin(),packageRoots.end(),[&](const std::string& r){return GameScanner::SameRoot(r,path);}))packageRoots.push_back(path);
     const std::vector<XboxContentPackage> packages=ContentCatalog(packageRoots).Scan();
     for(size_t i=0;i<packages.size();++i) {
         const XboxContentPackage& pkg=packages[i];
@@ -372,28 +373,33 @@ void ConsoleHome::LoadScanPaths() {
     roots_=GameScanner::LoadRoots(savedFile(dir_+"aurorax-scanpaths-ui.txt"),roots_);
     roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
     configuredRoots_=roots_;
+    packageRoots_=GameScanner::LoadRoots(savedFile(dir_+"infinity360-package-paths.txt"),ContentCatalog::DefaultRoots(dir_));
+    configuredPackageRoots_=packageRoots_;
+    disabledPackageRoots_=GameScanner::LoadRoots(savedFile(dir_+"infinity360-package-paths-disabled.txt"),{});
+    packageRoots_.erase(std::remove_if(packageRoots_.begin(),packageRoots_.end(),[&](const std::string& path){return std::any_of(disabledPackageRoots_.begin(),disabledPackageRoots_.end(),[&](const std::string& d){return GameScanner::SameRoot(path,d);});}),packageRoots_.end());
     scanDepths_=GameScanner::LoadDepths(savedFile(dir_+"infinity360-scan-depths.txt"));
     disabledRoots_=GameScanner::LoadRoots(savedFile(dir_+"infinity360-scanpaths-disabled.txt"),{});
     roots_.erase(std::remove_if(roots_.begin(),roots_.end(),[&](const std::string& path){return std::any_of(disabledRoots_.begin(),disabledRoots_.end(),[&](const std::string& d){return GameScanner::SameRoot(path,d);});}),roots_.end());
 }
-void ConsoleHome::ToggleScanPath() {
+void ConsoleHome::ToggleScanPath(bool packages) {
     if(folders_.size()<2 || !fileWorkspace_.CanBrowse(folders_.back())) {
         notice_="Abra uma pasta abaixo da raiz do dispositivo.";return;
     }
     const std::string path=GameScanner::ValidRoot(folders_.back());
     if(path.empty()) {notice_="Caminho invalido para varredura.";return;}
-    const std::string config=dir_+"aurorax-scanpaths-ui.txt";
+    const auto& configured=packages?configuredPackageRoots_:configuredRoots_;
+    const std::string config=dir_+(packages?"infinity360-package-paths.txt":"aurorax-scanpaths-ui.txt");
     std::vector<std::string> custom=GameScanner::LoadRoots(savedFile(config),std::vector<std::string>());
     size_t index=0;
     while(index<custom.size() && !GameScanner::SameRoot(custom[index],path))++index;
     const bool remove=index<custom.size();
     if(remove)custom.erase(custom.begin()+index);
     else {
-        for(size_t i=0;i<configuredRoots_.size();++i)
-            if(GameScanner::SameRoot(configuredRoots_[i],path)) {
+        for(size_t i=0;i<configured.size();++i)
+            if(GameScanner::SameRoot(configured[i],path)) {
                 notice_="Pasta ja cadastrada em outro arquivo de configuracao.";return;
             }
-        if(configuredRoots_.size()>=32 || custom.size()>=32) {
+        if(configured.size()>=32 || custom.size()>=32) {
             notice_="Limite total de 32 pastas atingido.";return;
         }
         custom.push_back(path);
@@ -405,22 +411,24 @@ void ConsoleHome::ToggleScanPath() {
         notice_="Falha ao gravar caminhos.";return;
     }
     LoadScanPaths();
-    notice_=remove?"Pasta removida da busca personalizada.":"Pasta adicionada. Biblioteca atualiza ao abrir.";
+    notice_=remove?"Pasta removida da busca personalizada.":packages?"Raiz de pacotes adicionada. Biblioteca atualiza ao abrir.":"Pasta XEX adicionada. Biblioteca atualiza ao abrir.";
 }
 void ConsoleHome::ToggleLibraryRoot(){
-    if(configuredRoots_.empty()||TransferRunning())return;
-    const auto path=configuredRoots_[libraryPathRow_];
-    auto next=disabledRoots_;
+    const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    if(configured.empty()||TransferRunning())return;
+    const auto path=configured[libraryPathRow_];
+    auto next=packagePathsPage_?disabledPackageRoots_:disabledRoots_;
+    next.erase(std::remove_if(next.begin(),next.end(),[&](const std::string& d){return std::none_of(configured.begin(),configured.end(),[&](const std::string& r){return GameScanner::SameRoot(d,r);});}),next.end());
     auto it=std::find_if(next.begin(),next.end(),[&](const std::string& d){return GameScanner::SameRoot(d,path);});
     const bool enable=it!=next.end();
     if(enable)next.erase(it);
     else{if(next.size()>=32){notice_="Limite de caminhos desativados.";return;}next.push_back(path);}
-    const auto file=dir_+"infinity360-scanpaths-disabled.txt";
+    const auto file=dir_+(packagePathsPage_?"infinity360-package-paths-disabled.txt":"infinity360-scanpaths-disabled.txt");
     std::ofstream out((file+".tmp").c_str(),std::ios::trunc);
     for(const auto& item:next)out<<item<<"\n";
     out.close();
     if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar caminhos.";return;}
-    LoadScanPaths();clampRow(libraryPathRow_,configuredRoots_.size());
+    LoadScanPaths();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());
     notice_=enable?"Caminho habilitado. Y atualiza biblioteca.":"Caminho desativado. Y atualiza biblioteca.";
 }
 void ConsoleHome::ChangeLibraryDepth(int delta){
@@ -1056,11 +1064,12 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
 std::string ConsoleHome::Press(Key key) {
     if(libraryPathsPage_){
         if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
-        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,configuredRoots_.size());}
+        if(key==PageDown||key==PageUp){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();return "";}
+        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());}
         if(key==Favorite)ToggleLibraryRoot();
-        if(key==Left||key==Right)ChangeLibraryDepth(key==Right?1:-1);
-        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,configuredRoots_.size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
-        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra uma pasta; Esquerda cadastra/remove da biblioteca.";}
+        if(!packagePathsPage_&&(key==Left||key==Right))ChangeLibraryDepth(key==Right?1:-1);
+        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
+        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
         return "";
     }
     if(luaPage_){
@@ -1077,7 +1086,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         return "";
     }
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;libraryPathsPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
         const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
@@ -1815,7 +1824,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(scanPathConfirm_) {
             scanPathConfirm_=false;
-            if(key==Accept)ToggleScanPath();
+            if(key==Accept||key==Favorite)ToggleScanPath(key==Favorite);
             else notice_="Alteracao de caminho cancelada.";
             return "";
         }
@@ -1841,7 +1850,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(key==Left) {
             if(folders_.size()<2 || TransferRunning())notice_="Abra uma pasta; conclua transferencias antes de editar caminhos.";
-            else {scanPathConfirm_=true;notice_="A alterna pasta atual na busca personalizada; B cancela.";}
+            else {scanPathConfirm_=true;notice_="A alterna XEX | X alterna pacotes GOD/XBLA | B cancela.";}
             return "";
         }
         if(key==PageDown) {
@@ -3097,16 +3106,18 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
 }
 void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
     c.Text(45,93,"Biblioteca | Pastas de varredura",36,White,1180);
-    c.Text(48,150,number(roots_.size())+" ativas / "+number(configuredRoots_.size())+" cadastradas (XEX)",21,Muted,1160);
+    const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    const auto& active=packagePathsPage_?packageRoots_:roots_;
+    c.Text(48,150,std::string(packagePathsPage_?"Pacotes GOD/XBLA":"Jogos XEX")+" | "+number(active.size())+" ativas / "+number(configured.size())+" cadastradas",21,Muted,1160);
     const int first=(libraryPathRow_/7)*7;
-    for(int i=first;i<first+7&&size_t(i)<configuredRoots_.size();++i){
-        const auto& path=configuredRoots_[i];const int y=190+(i-first)*54;
-        const bool enabled=std::any_of(roots_.begin(),roots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
+    for(int i=first;i<first+7&&size_t(i)<configured.size();++i){
+        const auto& path=configured[i];const int y=190+(i-first)*54;
+        const bool enabled=std::any_of(active.begin(),active.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
         panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
-        c.TextFit(62,y+8,path,21,White,735);c.Text(810,y+9,"Nivel "+number(GameScanner::DepthFor(scanDepths_,path)),19,White,170);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
+        c.TextFit(62,y+8,path,21,White,735);c.Text(810,y+9,packagePathsPage_?"Title/Tipo":"Nivel "+number(GameScanner::DepthFor(scanDepths_,path)),19,White,170);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
     }
-    c.Text(48,580,"Pacotes GOD/XBLA mantem a busca propria. A abre o gerenciador para adicionar/remover.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,"A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer | B Voltar",18,Lime,1170);
+    c.Text(48,580,packagePathsPage_?"Raiz deve conter pastas TitleID/Tipo. Pacotes importados mantem busca propria.":"A abre o gerenciador para adicionar/remover caminhos XEX ou pacotes.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,packagePathsPage_?"LB/RB XEX | A Pastas | X Alternar | Y Varrer | B Voltar":"LB/RB Pacotes | A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer",18,Lime,1170);
 }
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     c.Text(45,93,"Scripts Lua",36,White,1180);
