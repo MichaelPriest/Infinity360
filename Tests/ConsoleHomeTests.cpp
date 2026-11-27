@@ -217,6 +217,22 @@ static int captureScreens(const char* atlas,const char* destination) {
         context.Press(ConsoleHome::Context);context.Press(ConsoleHome::GlobalGuide);assert(!context.ContextOpen()&&context.QuickGuideOpen());
         context.Press(ConsoleHome::GlobalGuide);assert(!context.QuickGuideOpen());
     }
+    {
+        ConsoleHome filesModern(dir,roots);filesModern.Load();
+        using namespace ApprovedHome;
+        std::vector<std::vector<int>> routes(End);std::vector<bool> seen(End,false);std::vector<int> queue{Home};seen[Home]=true;
+        for(size_t k=0;k<queue.size()&&!seen[Disc];++k)for(int d=0;d<4;++d){int n=Move(queue[k],d,6);if(!seen[n]){seen[n]=true;routes[n]=routes[queue[k]];routes[n].push_back(d);queue.push_back(n);}}
+        assert(seen[Disc]);for(int d:routes[Disc])filesModern.Press(static_cast<ConsoleHome::Key>(d));
+        filesModern.Press(ConsoleHome::Accept);filesModern.Press(ConsoleHome::Down);filesModern.Press(ConsoleHome::Accept);
+        assert(!filesModern.ApprovedHeader());ok=save("96-arquivos-moderno",filesModern)&&ok;
+        ConsoleHome events(dir,roots);events.Load();events.Press(ConsoleHome::PageUp);
+        assert(!events.ApprovedHeader());ok=save("97-notificacoes-moderno",events)&&ok;
+        ConsoleHome telemetry(dir,roots);telemetry.Load();
+        for(int i=0;i<5;++i)telemetry.Press(ConsoleHome::Right);
+        telemetry.Press(ConsoleHome::Accept);telemetry.Press(ConsoleHome::Accept);
+        telemetry.Press(ConsoleHome::Right);telemetry.Press(ConsoleHome::Right);telemetry.Press(ConsoleHome::Accept);
+        ok=save("98-telemetria-moderno",telemetry)&&ok;
+    }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
         ConsoleHome themed(dir,roots);themed.Load();
@@ -240,6 +256,8 @@ static int captureScreens(const char* atlas,const char* destination) {
         if(style==DashboardLayout::TopIcons){modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("63-biblioteca-grade",modern)&&ok;
             modern.Press(ConsoleHome::Up);ok=save("64-biblioteca-filtros",modern)&&ok;
             modern.Press(ConsoleHome::Down);modern.Press(ConsoleHome::Accept);ok=save("65-detalhes-moderno",modern)&&ok;
+            modern.Press(ConsoleHome::PageDown);ok=save("94-conteudo-moderno",modern)&&ok;
+            modern.Press(ConsoleHome::Right);ok=save("95-dlc-moderno",modern)&&ok;modern.Press(ConsoleHome::Back);
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::PageDown);ok=save("66-store-moderna",modern)&&ok;
             modern.Press(ConsoleHome::Accept);ok=save("67-store-produto-moderno",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Search);ok=save("68-fontes-store",modern)&&ok;

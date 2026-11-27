@@ -90,3 +90,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-27 V0.3.28 contextual BACK menu, remove direct physical R3, 93 portable captures; no XEX.
 
 2026-11-27 V0.3.29 portable SMB compile fix and playback guide; 93 captures, no XEX.
+
+2026-11-27 V0.3.30 modern content, file browser, notifications and telemetry; 98 portable captures; no XEX.

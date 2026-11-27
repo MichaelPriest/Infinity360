@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.29 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.30 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -39,7 +39,7 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Conteúdo | TU, DLC, saves, backups; Homes modernas detectam DVD legível, executa XEX e abre instalação HDD/USB (GOD ou extração) |
 | Store e downloads | Catálogo homebrew, fila persistente, fontes configuráveis e importação local de metadados Andromeda |
 | Cloud360 IPTV | FFmpeg integrado ao pacote principal (MP4/TS/HLS); homologação física pendente |
-| Sistema | Hub com cinco categorias, indicadores locais, arquivos, FTP, rede, SMB experimental, armazenamento e sensores |
+| Sistema | Hub com cinco categorias, arquivos e notificações com painéis de detalhe, telemetria ampliada, FTP, rede, SMB experimental, armazenamento e sensores |
 | Personalização | Configurações em oito categorias, valores diretos, ajuda contextual e prévia em sete paletas, navegação LB/RB, prévia e edição com salvar/cancelar; sete temas, três idiomas, quatro níveis de opacidade e animações opcionais |
 
 Implementação no código não equivale a homologação física.

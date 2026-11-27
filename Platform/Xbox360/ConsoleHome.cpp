@@ -1575,7 +1575,7 @@ std::string ConsoleHome::Press(Key key) {
 #endif
             return "";
         }
-        if(key!=Search&&notice_=="BACK > Instalar novamente: confirmar?")notice_.clear();
+        if(key!=Search&&notice_=="BACK > Instalar/atualizar novamente: confirma?")notice_.clear();
         if(key==Back) {
             if(storeConfirm_)storeConfirm_=false;
             else if(storeDetails_)storeDetails_=false;
@@ -1626,7 +1626,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(TransferRunning()||!store_.Staged(item)||store_.Installed(item)||(item.category!="app"&&item.category!="homebrew"&&item.category!="emulator")){
                     notice_="Instalacao: pacote autorizado, baixado e ainda nao instalado.";return "";
                 }
-                if(notice_!="BACK > Instalar novamente: confirmar?"){notice_="BACK > Instalar novamente: confirmar?";return "";}
+                if(notice_!="BACK > Instalar/atualizar novamente: confirma?"){notice_="BACK > Instalar/atualizar novamente: confirma?";return "";}
                 storeInstallItem_=item;storeInstallPending_=true;notice_="Verificando e instalando XEX.";
 #else
                 notice_="Instalador nativo indisponivel.";
@@ -3157,6 +3157,64 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
            hexId(contentInfo_.mediaId)+"    Versao: "+hexId(contentInfo_.version),
            21,Muted,1180);
     const char* const tabs[]={"Title Updates","DLC","Saves","Trainers","TU Baixadas","Backups","TU Arquivadas","TU Retiradas"};
+    if(layout_){
+        const int icons[]={36,37,38,41,5,39,40,55};
+        c.SeriesTile(45,178,255,417,false,190);
+        for(int i=0;i<8;++i){const int y=187+i*50;c.SeriesTile(54,y,237,44,i==contentTab_);
+            InfinityIcons::Draw(c,icons[i],66,y+10,23,i==contentTab_?Lime:White);
+            c.TextFit(101,y+10,c.Tr(tabs[i]),19,White,179);}
+        c.TextFit(316,174,number(ContentCount())+" itens | "+c.Tr(tabs[contentTab_]),23,White,905);
+        const int pageSize=contentTab_==3?4:5,first=(contentRow_/pageSize)*pageSize;
+        for(int i=first;i<first+pageSize;++i){
+            const int y=218+(i-first)*71;
+            if(contentTab_==3){
+                if(size_t(i)>=trainers_.size())break;const auto& t=trainers_[i];
+                c.SeriesTile(315,y,523,64,i==contentRow_);
+                InfinityIcons::Draw(c,41,328,y+16,29,White);
+                c.TextFit(370,y+7,t.name,22,White,450);
+                c.TextFit(370,y+36,"Media "+hexId(t.mediaId)+" | Versao "+hexId(t.version),16,Muted,450);
+            }else{
+                const auto* item=ContentAt(i);if(!item)break;
+                c.SeriesTile(315,y,523,64,i==contentRow_);
+                InfinityIcons::Draw(c,icons[contentTab_],328,y+16,29,White);
+                c.TextFit(370,y+7,item->name,22,White,450);
+                c.TextFit(370,y+36,contentTab_==5?StorageInfo::FormatBytes(backups_[i].bytes):contentTab_==2?item->saveDevice:contentTab_==1?"Marketplace / DLC":"Versao "+hexId(item->version),16,Muted,450);
+            }
+        }
+        if(!ContentCount())c.TextFit(330,256,"Nenhum item reconhecido nesta categoria.",20,Muted,490);
+        c.SeriesTile(853,218,381,350,false,205);
+        c.TextFit(869,232,"Detalhes e compatibilidade",22,White,349);
+        if(contentTab_==3&&contentRow_>=0&&size_t(contentRow_)<trainers_.size()){
+            const auto& t=trainers_[contentRow_];const auto match=t.Compatibility(contentInfo_);const auto tu=t.CheckUpdates(contentItems_);
+            c.TextFit(869,281,t.name,20,White,349);
+            c.TextFit(869,322,match==TrainerEntry::HeaderMatches?"Cabecalho coincide":match==TrainerEntry::DifferentMedia?"Media ID diferente":match==TrainerEntry::DifferentVersion?"Versao diferente":"Indeterminado",17,match==TrainerEntry::HeaderMatches?Lime:Muted,349);
+            c.TextFit(869,365,tu==TrainerEntry::RequiredLocal?"TU localizada; ativa?":tu==TrainerEntry::RequiredMissing?"TU exigida ausente":tu==TrainerEntry::RequiredAmbiguous?"TUs ambiguas":"TU nao confirmada",17,Muted,349);
+            c.TextFit(869,422,"Utilitario independente; use offline.",16,Muted,349);
+            c.TextFit(869,456,"Funcionamento nao verificado.",16,Muted,349);
+            if(fpsReferenceCount_)c.TextFit(869,490,number(fpsReferenceCount_)+" referencias FPS; sem aplicacao",15,Muted,349);
+        }else if(const auto* item=ContentAt(contentRow_)){
+            c.TextFit(869,278,item->name,20,White,349);
+            if(contentTab_==0||contentTab_==4||contentTab_==6||contentTab_==7){
+                const bool differentMedia=contentInfo_.mediaId&&item->mediaId&&item->mediaId!=contentInfo_.mediaId;
+                const bool differentBase=contentInfo_.baseVersion&&item->baseVersion&&item->baseVersion!=contentInfo_.baseVersion;
+                const bool known=contentInfo_.mediaId&&item->mediaId&&contentInfo_.baseVersion&&item->baseVersion;
+                c.TextFit(869,319,"Media "+hexId(item->mediaId),17,Muted,349);
+                c.TextFit(869,351,"Base "+hexId(item->baseVersion),17,Muted,349);
+                c.TextFit(869,392,differentMedia?"Media ID diferente":differentBase?"Base Version diferente":known?"Identidade compativel":"Compatibilidade inconclusiva",17,known&&!differentMedia&&!differentBase?Lime:Muted,349);
+                c.TextFit(869,432,contentTab_==0?"Ativacao desconhecida":contentTab_==7?"TU retirada":"Nao ativada",17,Muted,349);
+            }else if(contentTab_==2){
+                const auto& owner=item->saveOwner;
+                c.TextFit(869,323,item->saveDevice,18,Muted,349);
+                c.TextFit(869,361,owner.empty()?"Perfil nao identificado":owner=="0000000000000000"?"Pasta compartilhada":"Perfil ..."+owner.substr(owner.size()>6?owner.size()-6:0),17,Muted,349);
+            }else c.TextFit(869,328,contentTab_==5?"Backup pessoal":"Marketplace / DLC",18,Muted,349);
+            c.TextFit(869,500,"Y Atualizar | BACK Opcoes",17,Lime,349);
+        }else c.TextFit(869,289,"Selecione um item da lista.",18,Muted,349);
+        const bool confirm=recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_||toggleTuConfirm_||trainerConfirm_;
+        if(confirm)c.NoticeSurface(45,603,1189,34);
+        const char* commands=confirm?"A Confirmar | B Cancelar":contentTab_==3?"A Abrir utilitario | Y Atualizar | B Voltar":contentTab_==7?"A Recolocar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia | X Verificar | BACK Opcoes | Y Atualizar":contentTab_==4?"A Instalar | X Arquivar | RB Backup | Y Atualizar":contentTab_==0?"A Caminho | X Retirar TU | START XboxUnity | RB Backup":"A Caminho | RB Backup | Y Atualizar | B Voltar";
+        InfinityButtons::Strip(c,45,607,commands,17,Lime,1180);
+        return;
+    }
     for(int i=0;i<8;++i) {
         const int x=45+i*149;
         panel(c,x,183,141,47,Panel,i==contentTab_);
@@ -3298,7 +3356,7 @@ void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
 void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
     if(thermalPage_){DrawThermal(c);return;}
     if(telemetryVideo_){
-        c.Text(45,349,c.Tr("Telemetria 2/2 | Video e kernel"),27,White,1170);
+        c.Text(45,layout_?140:349,c.Tr("Telemetria 2/2 | Video e kernel"),27,White,1170);
         const auto& v=videoTelemetry_;
         const std::string labels[]={"Saida configurada","Frequencia","Proporcao","Varredura","Display kernel","Buffer kernel","Kernel","Modo HD"};
         const std::string values[]={
@@ -3309,31 +3367,31 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
             v.displayAvailable?number(v.bufferWidth)+" x "+number(v.bufferHeight):"Indisponivel",
             v.kernel.empty()?"Indisponivel":v.kernel,v.available?(v.hiDef?"Sim":"Nao"):"-"};
         for(int i=0;i<8;++i){
-            const int x=45+(i%4)*300,y=390+(i/4)*78;
-            panel(c,x,y,289,70,Panel,false);
-            c.Text(x+9,y+5,c.Tr(labels[i].c_str()),17,Muted,270);
-            c.Text(x+9,y+30,values[i],22,White,270);
+            const int x=45+(i%4)*300,y=(layout_?194:390)+(i/4)*(layout_?148:78);
+            panel(c,x,y,289,layout_?132:70,Panel,false);
+            c.TextFit(x+12,y+(layout_?15:5),c.Tr(labels[i].c_str()),17,Muted,270);
+            c.TextFit(x+12,y+(layout_?54:30),values[i],layout_?30:22,White,265);
         }
         InfinityButtons::Strip(c,48,552,"Margem segura: < "+number(safeArea_)+"% > por lado | Esq/Dir Ajustar | X Zerar",20,Lime,1170);
         c.Text(48,580,v.available&&v.width==1920&&v.height==1080&&!v.interlaced?"Saida 1080p detectada | UI 720p escalonada pelo console":"UI 720p | Para 1080p, configure a saida no menu oficial Xbox",18,Muted,1170);
         InfinityButtons::Strip(c,48,606,c.Tr("LB/RB Pagina | Y Atualizar | B Voltar"),17,Lime,1170);
         return;
     }
-    c.Text(45,349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);
+    c.Text(45,layout_?140:349,c.Tr("Telemetria 1/2 | Memoria e sensores"),27,White,1170);
     if(telemetry_.available){
         const uint64_t bytes[]={telemetry_.physical,telemetry_.kernel,telemetry_.titlePhysical,
             telemetry_.titleAvailable,telemetry_.systemPhysical,telemetry_.titleHeap,telemetry_.titleStack,telemetry_.titleImage};
         const char* labels[]={"RAM fisica","Kernel","Titulo: fisica","Titulo: disponivel","Sistema: fisica","Titulo: heap","Titulo: stack","Titulo: imagem"};
         for(int i=0;i<8;++i){
-            const int x=45+(i%4)*300,y=390+(i/4)*78;
-            panel(c,x,y,289,70,Panel,false);
-            c.Text(x+9,y+5,c.Tr(labels[i]),17,Muted,270);
-            c.Text(x+9,y+30,StorageInfo::FormatBytes(bytes[i]),22,White,270);
+            const int x=45+(i%4)*300,y=(layout_?194:390)+(i/4)*(layout_?148:78);
+            panel(c,x,y,289,layout_?132:70,Panel,false);
+            c.TextFit(x+12,y+(layout_?15:5),c.Tr(labels[i]),17,Muted,270);
+            c.TextFit(x+12,y+(layout_?54:30),StorageInfo::FormatBytes(bytes[i]),22,White,270);
         }
     }else{
-        c.Surface(45,391,1190,150,Panel,10);
-        c.Text(65,420,std::string(c.Tr("Memoria: provider indisponivel ou consulta recusada.")),23,White,1145);
-        c.Text(65,467,std::string(c.Tr("Nenhuma medida simulada e exibida.")),19,Muted,1145);
+        c.Surface(45,layout_?194:391,1190,layout_?290:150,Panel,10);
+        c.Text(65,layout_?245:420,std::string(c.Tr("Memoria: provider indisponivel ou consulta recusada.")),23,White,1145);
+        c.Text(65,layout_?301:467,std::string(c.Tr("Nenhuma medida simulada e exibida.")),19,Muted,1145);
     }
     InfinityButtons::Strip(c,48,559,std::string(c.Tr("START Sensores SMC | Consulta experimental somente leitura")),18,Muted,1170);
     InfinityButtons::Strip(c,48,585,std::string(c.Tr("LB/RB Pagina | Y Atualizar | B Voltar")),18,Lime,1170);
@@ -3679,6 +3737,33 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
     const auto rows=notifications_.Visible(eventFilter_);
     static const char* filters[]={"Todas","Nao lidas","Atencao","Social"};
+    if(layout_){
+        c.TextFit(45,141,"Notificacoes | "+number(notifications_.UnreadCount())+" nao lidas",27,White,1170);
+        c.SeriesTile(45,187,254,383,false,190);
+        for(unsigned i=0;i<NotificationCenter::FilterCount;++i){const int y=199+int(i)*67;c.SeriesTile(54,y,236,58,i==unsigned(eventFilter_));
+            InfinityIcons::Draw(c,i==2?InfinityIcons::Warning:22,67,y+14,28,i==unsigned(eventFilter_)?Lime:White);
+            c.TextFit(109,y+16,c.Tr(filters[i]),20,White,170);}
+        c.TextFit(60,510,"LB/RB Filtro",17,Muted,225);
+        const int first=(eventRow_/4)*4;
+        for(int i=first;i<first+4&&size_t(i)<rows.size();++i){
+            const auto& item=notifications_.At(rows[i]);const int y=190+(i-first)*92;
+            const unsigned tone=item.level==NotificationCenter::Warning?0xffe4a34bu:item.level==NotificationCenter::Success?Lime:Muted;
+            c.SeriesTile(313,y,570,84,i==eventRow_);
+            c.Box(324,y+13,5,57,item.read?Muted:tone,2);
+            c.TextFit(343,y+7,item.area+" | "+(item.read?"Lida":"Nova"),17,tone,520);
+            c.TextFit(343,y+35,item.text,20,White,520);
+        }
+        if(rows.empty())c.TextFit(325,244,"Nenhuma notificacao neste filtro.",23,Muted,550);
+        c.SeriesTile(898,187,336,383,false,200);c.TextFit(914,202,"Evento selecionado",22,White,306);
+        if(eventRow_>=0&&size_t(eventRow_)<rows.size()){
+            const auto& item=notifications_.At(rows[eventRow_]);c.TextFit(914,254,item.area,21,White,304);
+            std::istringstream words(item.text);std::string word,line;int y=298;
+            while(words>>word&&y<463){if(!line.empty()&&line.size()+word.size()>31){c.TextFit(914,y,line,17,Muted,304);line.clear();y+=25;}if(!line.empty())line+=" ";line+=word;}
+            if(!line.empty()&&y<488)c.TextFit(914,y,line,17,Muted,304);
+            c.TextFit(914,509,item.read?"Lida":"Nao lida",18,item.read?Muted:Lime,304);
+        }else c.TextFit(914,254,"Nenhum evento.",18,Muted,304);
+        InfinityButtons::Strip(c,45,607,"LB/RB Filtro | A Ler | X Ler todas | B Voltar",18,White,1180);return;
+    }
     c.Text(45,349,std::string(c.Tr("Notificacoes"))+" | "+number(notifications_.UnreadCount())+" "+c.Tr("nao lidas"),26,White,1170);
     for(unsigned i=0;i<NotificationCenter::FilterCount;++i){
         const int x=48+static_cast<int>(i)*210;
@@ -3937,7 +4022,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.TextFit(390,565,"LB/RB: categorias | Cima/baixo: opcoes | A: abrir",16,Lime,815);
             c.TextFit(45,612,"CPU "+headerThermal_.CompactCelsius(0)+" | GPU "+headerThermal_.CompactCelsius(1)+" | Plugins: consultar painel",17,Muted,1180);
             return;
-        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||(systemTab_==7&&!localMilestones_&&!saveCenter_&&!achievementsPage_&&!powerPage_)))){
+        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||(systemTab_==2&&!thermalPage_)||systemTab_==5||(systemTab_==7&&!localMilestones_&&!saveCenter_&&!achievementsPage_&&!powerPage_)))){
             // A single selected category replaces eight unrelated shortcuts on details pages.
             c.SeriesTile(42,166,1196,166,false);
             InfinityIcons::Draw(c,marks[systemTab_],65,193,68,Lime);
@@ -4048,6 +4133,37 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                    18,Muted,1170);
         }
     } else if(section_==Files) {
+        if(layout_&&!folders_.empty()){
+            const auto& path=folders_.back();const bool writable=fileWorkspace_.CanWrite(path);
+            c.SeriesTile(45,140,1189,63,false,195);
+            InfinityIcons::Draw(c,InfinityIcons::Folder,61,155,31,White);
+            c.TextFit(107,146,path,22,White,1100);
+            c.TextFit(107,176,writable?"Espaco pessoal | escrita habilitada":"Somente leitura | START prepara espaco pessoal",16,writable?Lime:Muted,1100);
+            c.SeriesTile(45,215,782,379,false,185);
+            const int first=row_/7*7;
+            for(int i=first;i<first+7&&size_t(i)<files_.size();++i){
+                const auto& item=files_[i];const int y=224+(i-first)*51;
+                const bool marked=copyDir_==path&&(contains(copyNames_,item.name)||(!copyName_.empty()&&copyName_==item.name));
+                c.SeriesTile(55,y,762,45,i==row_);
+                InfinityIcons::Draw(c,item.directory?InfinityIcons::Folder:InfinityIcons::Package,68,y+10,24,marked?Lime:White);
+                c.TextFit(107,y+10,item.name,20,White,528);
+                c.TextFit(647,y+11,marked?"Marcado":item.directory?"Pasta":"Arquivo",16,marked?Lime:Muted,158);
+            }
+            if(files_.empty())c.TextFit(70,270,"Pasta vazia ou indisponivel.",22,Muted,730);
+            c.SeriesTile(842,215,392,379,false,200);
+            c.TextFit(857,229,"Item e operacoes",23,White,360);
+            if(row_>=0&&size_t(row_)<files_.size()){
+                const auto& item=files_[row_];c.TextFit(857,277,item.name,22,White,360);
+                c.TextFit(857,309,item.directory?"Pasta":"Arquivo",17,Muted,360);
+            }else c.TextFit(857,277,"Nenhum item selecionado",19,Muted,360);
+            c.TextFit(857,352,multiSelect_&&copyDir_==path?number(copyNames_.size())+" itens marcados":cutMode_?"Recorte pendente":copyName_.empty()?"Nenhuma copia selecionada":"Copia selecionada",17,Lime,360);
+            InfinityButtons::Strip(c,857,390,"A Abrir | X Copiar",18,White,360);
+            InfinityButtons::Strip(c,857,429,"LB Colar | RB Dispositivo",17,White,360);
+            InfinityButtons::Strip(c,857,468,"START Nova pasta",18,White,360);
+            c.TextFit(857,507,"Direita: acoes do item",17,Muted,360);
+            c.TextFit(857,541,"BACK: renomear e opcoes",17,Lime,360);
+            InfinityButtons::Strip(c,45,610,"A Abrir | B Voltar | X Copiar | LB Colar | RB Dispositivo | BACK Opcoes",18,White,1180);return;
+        }
         c.Text(49,146,folders_.back(),21,White,1140);
         c.Text(49,176,multiSelect_ && copyDir_==folders_.back()?
             "Multisselecao: "+number(copyNames_.size())+" itens | X marca/desmarca":
@@ -4890,7 +5006,7 @@ const SettingRow SettingsRows[]={
     {StTheme,"Tema e paleta","Escolha a identidade visual da dashboard."},
     {StBackground,"Fundo da interface","Gradiente, cor solida ou papel de parede local."},
     {StDim,"Escurecimento","Ajuste a legibilidade do fundo."},
-    {StLayout,"Layout da Home","BACK > Previa abre a previa do layout selecionado."},
+    {StLayout,"Layout da Home","Abra Opcoes (BACK) e selecione Previa da Home."},
     {StArtwork,"Arte dos jogos","Escolha entre capas, fundos ou ambos."},
     {StGrid,"Visualizacao da biblioteca","Defina como os jogos aparecem na biblioteca."},
     {StPaths,"Pastas de jogos e pacotes","Abra o gerenciador de raizes XEX, GOD e XBLA."},

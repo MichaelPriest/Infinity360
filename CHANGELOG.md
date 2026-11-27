@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.30 — Conteúdo, arquivos e diagnósticos
+
+- Conteúdo de jogos em três colunas: categorias, lista e detalhes de compatibilidade, incluindo TU, DLC, saves, trainers, backups e arquivos de TU; ações e confirmações existentes preservadas. Não presume TU ativa.
+- Gerenciador de arquivos com caminho, permissão, seleção e ações visíveis; notificações com filtros e detalhe; telemetria com cartões ampliados. Mantém o layout clássico e o menu contextual BACK.
+- Cinco capturas modernas adicionais solicitadas (98 no total). Sem XEX/release; validação física pendente.
+
 ## V0.3.29 — Correção portátil e Guide na reprodução
 
 - Corrige referência a confirmação SMB fora da flag experimental, que impedia a compilação portátil da V0.3.28.

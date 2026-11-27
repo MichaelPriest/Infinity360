@@ -425,5 +425,30 @@
         "caption": "Menu de opções da biblioteca — BACK"
       }
     ]
+  },
+  {
+    "title": "Conteúdo, arquivos e diagnósticos — interface moderna",
+    "images": [
+      {
+        "stem": "94-conteudo-moderno",
+        "caption": "Conteúdo do jogo — Title Updates"
+      },
+      {
+        "stem": "95-dlc-moderno",
+        "caption": "Conteúdo do jogo — DLC"
+      },
+      {
+        "stem": "96-arquivos-moderno",
+        "caption": "Gerenciador de arquivos — lista e ações"
+      },
+      {
+        "stem": "97-notificacoes-moderno",
+        "caption": "Notificações — filtros e detalhe"
+      },
+      {
+        "stem": "98-telemetria-moderno",
+        "caption": "Telemetria — memória e sensores"
+      }
+    ]
   }
 ]
