@@ -469,9 +469,13 @@ private:
     void OpenApprovedAction(int action);
     void DrawApprovedGroup(HomeCanvas& c)const;
     int approvedGroup_=-1,approvedGroupRow_=0;
-    unsigned themeDraft_=0,appearanceRow_=0;
+    unsigned themeDraft_=0,appearanceRow_=0,settingsCategory_=0;
+    unsigned languageDraft_=0,idleDraft_=0,safeAreaDraft_=0;
+    bool settingsReturnHome_=false;
     bool appearanceEditor_=false;
     mutable bool wallpaperDirty_=true;
+    void OpenSettings(bool returnHome);
+    bool SettingsDirty()const;
     void PressAppearance(Key key);
     void DrawAppearance(HomeCanvas& c)const;
     bool sessionExitConfirm_=false;

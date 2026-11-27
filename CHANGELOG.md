@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.21 — Central de configurações remodelada
+
+- Painel nativo de tela inteira com cinco categorias, seleção vertical e valores separados; LB/RB troca categoria, direcional altera ajustes, Y salva, X restaura a categoria, R3 abre prévia e B confirma descarte de alterações.
+- Home e Guia Rápido abrem o mesmo editor. Inclui idioma, UTC, clima, margem segura, protetor de tela e atalhos para pastas, discos, rede, plugins/Lua e energia. Reutiliza persistência de perfil e confirmação de energia; não inicia serviços automaticamente.
+- Prévia de tema e idioma durante edição; margem segura e protetor aplicados ao salvar. Falha de gravação restaura valores anteriores. Sem XEX ou release solicitados; compilação, capturas nativas e homologação pendentes.
+
 ## V0.3.20 — Múltiplos repositórios Lua
 
 - Até sete fontes adicionais em sources.tsv, alternadas com RB. Manifestos HTTPS com pins independentes, cache por ID e nomes instalados com prefixo de origem para reduzir conflitos. Cache adicional só é carregado se corresponder ao pin configurado. Sem sincronização/instalação automática. Cadastro ainda por arquivo, não teclado da dashboard.

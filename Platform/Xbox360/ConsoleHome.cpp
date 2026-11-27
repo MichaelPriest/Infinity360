@@ -1257,7 +1257,7 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         case QuickGuide::Transfers:
             section_=System;systemTab_=3;page_=Details;storeDownloads_=false;storeDownloadRow_=0;break;
         case QuickGuide::Settings:
-            section_=System;systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;achievementsPage_=false;appearanceEditor_=false;powerPage_=false;powerConfirm_.Cancel();status_=ConsoleStatus::Read();break;
+            OpenSettings(true);break;
         case QuickGuide::Store:
             storeActive_=true;storeDetails_=false;storeConfirm_=false;storeRow_=0;storeTab_=0;
             notice_=store_.Load()?"":"Catalogo ausente: configure aurorax-store.tsv.";RebuildStore();break;
@@ -1272,10 +1272,11 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Favorite)ToggleLibraryRoot();
         if(!packagePathsPage_&&(key==Left||key==Right))ChangeLibraryDepth(key==Right?1:-1);
         if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
-        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
+        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;appearanceEditor_=false;layoutPreview_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
         return "";
     }
     if(luaPage_){PressLuaScripts(key);return "";}
+    if(appearanceEditor_){PressAppearance(key);return "";}
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=LuaUtilities;luaRepoPage_=false;luaRepoConfirm_=false;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
@@ -2081,7 +2082,7 @@ std::string ConsoleHome::Press(Key key) {
         if(!tv_.Press(static_cast<MenuKey>(key))) {page_=Home;notice_.clear();}
         return "";
     }
-    if(appearanceEditor_&&section_==System&&systemTab_==7&&page_==Details){PressAppearance(key);return "";}
+    
     if(achievementsPage_&&section_==System&&systemTab_==7&&page_==Details){PressAchievements(key);return "";}
     if(saveCenter_&&section_==System&&systemTab_==7&&page_==Details){PressSaveCenter(key);return "";}
     // Modal power panel consumes every input; Back cancels before leaving.
@@ -2192,7 +2193,7 @@ std::string ConsoleHome::Press(Key key) {
         }
         if(page_==Details&&systemTab_==7){
             if(key==Up||key==Down){localMilestones_=!localMilestones_;return "";}
-            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();}return "";}
+            if(localMilestones_){if(key==Guide){saveCenter_=true;RefreshSaveProfiles();notice_.clear();}else if(key==Accept){achievementsPage_=true;RefreshAchievements();}else if(key==Favorite){OpenSettings(false);}return "";}
             if(key==Accept){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();notice_.clear();return "";}
             if(key==PageUp||key==PageDown){const auto previous=language_;
                 language_=(language_+(key==PageDown?1:UiLanguage::Count-1))%UiLanguage::Count;
@@ -3593,6 +3594,7 @@ void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(libraryPathsPage_){DrawLibraryPaths(c);return;}
     if(luaPage_){DrawLuaScripts(c);return;}
+    if(appearanceEditor_){if(layoutPreview_)DrawModernHome(c,layoutDraft_,true);else DrawAppearance(c);return;}
     if(updateActive_){DrawDashboardUpdate(c);return;}
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
@@ -4152,7 +4154,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
     if(wallpaperDirty_){c.ClearWallpaper();wallpaperDirty_=false;}
-    c.SetTheme(appearanceEditor_?themeDraft_:theme_);c.SetLanguage(language_);
+    c.SetTheme(appearanceEditor_?themeDraft_:theme_);c.SetLanguage(appearanceEditor_?languageDraft_:language_);
     c.SetAppearance(appearanceEditor_?appearanceDraft_:appearance_,FileWorkspace::Join(FileWorkspace::Join(dir_,"UserFiles"),"wallpaper.rgba"));
     c.Background();
     const bool approved=ApprovedHeader()&&!weatherPanel_;
@@ -4186,7 +4188,8 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?"A Pedido PC | B Voltar | X Remover PC | START Baixar":"A Detalhes | B Voltar | Y Atualizar | R3 Fontes";
         InfinityButtons::Strip(c,45,674,commands,19,White,1190);return;
     }
-    if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
+    if(appearanceEditor_&&!libraryPathsPage_){InfinityButtons::Strip(c,45,674,layoutPreview_?"B Voltar da previa":"LB/RB Categoria | A Alterar/Abrir | X Padrao | Y Salvar | R3 Previa | B Voltar",17,White,1190);return;}
+    if(homeEditing_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
     if(luaPage_){
         if(luaRepoPage_){InfinityButtons::Strip(c,45,674,(luaRepoConfirm_||luaManifestConfirm_)?"A Confirmar | B Cancelar":"A Instalar | X Remover | LB Restaurar | RB Fonte | Y Reler | B Voltar",19,White,1190);return;}
@@ -4602,45 +4605,151 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,607,achievementDetails_?std::string(c.Tr("LB/RB Pagina | Y Recarregar resumo | B Voltar")):std::string(c.Tr("A Detalhes | X Jogos instalados | LB/RB Pagina | Y Recarregar | B Voltar")),18,Lime,1170);
 }
 
+namespace {
+enum SettingOption { StTheme, StBackground, StDim, StLayout, StArtwork, StGrid, StPaths,
+    StLanguage, StUtc, StCity, StMargin, StIdle, StStorage, StNetwork, StPlugins, StPower };
+struct SettingRow { SettingOption id; const char* name; const char* help; };
+const SettingRow SettingsRows[]={
+    {StTheme,"Tema e paleta","Escolha a identidade visual da dashboard."},
+    {StBackground,"Fundo da interface","Gradiente, cor solida ou papel de parede local."},
+    {StDim,"Escurecimento","Ajuste a legibilidade do fundo."},
+    {StLayout,"Layout da Home","R3 abre a previa do layout selecionado."},
+    {StArtwork,"Arte dos jogos","Escolha entre capas, fundos ou ambos."},
+    {StGrid,"Visualizacao da biblioteca","Defina como os jogos aparecem na biblioteca."},
+    {StPaths,"Pastas de jogos e pacotes","Abra o gerenciador de raizes XEX, GOD e XBLA."},
+    {StLanguage,"Idioma da interface","Altere o idioma da dashboard."},
+    {StUtc,"Fuso horario / UTC","Afeta a hora exibida; nao altera o relogio do console."},
+    {StCity,"Cidade para clima","Previsao Open-Meteo com cidade selecionada manualmente."},
+    {StMargin,"Margem segura da tela","Ajuste a margem para TVs com overscan; aplicada ao salvar."},
+    {StIdle,"Protetor de tela","Tempo de inatividade antes de ativar o protetor."},
+    {StStorage,"Armazenamento","Abra a central de discos e espaco livre."},
+    {StNetwork,"Rede e FTP","Abra os ajustes e diagnosticos de rede existentes."},
+    {StPlugins,"Plugins e scripts Lua","Abra a central de extensoes; R3 acessa Lua."},
+    {StPower,"Energia do console","Abra o painel de energia; nenhuma acao automatica."}
+};
+struct SettingGroup { const char* name; unsigned first,count; int icon; };
+const SettingGroup SettingsGroups[]={
+    {"Aparencia",0,4,10},{"Biblioteca",4,3,23},{"Idioma e relogio",7,3,20},
+    {"Tela",10,2,46},{"Sistema",12,4,14}
+};
+constexpr unsigned SettingsGroupCount=sizeof(SettingsGroups)/sizeof(SettingsGroups[0]);
+}
+void ConsoleHome::OpenSettings(bool returnHome){
+    section_=System;systemTab_=7;page_=Details;
+    saveCenter_=false;achievementsPage_=false;powerPage_=false;powerConfirm_.Cancel();
+    appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;
+    layoutDraft_=layout_;gridDraft_=gridPreference_;languageDraft_=language_;
+    idleDraft_=idleMinutes_;safeAreaDraft_=safeArea_;
+    settingsCategory_=appearanceRow_=0;settingsReturnHome_=returnHome;
+    layoutPreview_=false;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();
+}
+bool ConsoleHome::SettingsDirty()const{
+    return appearanceDraft_.Encode()!=appearance_.Encode()||clockDraft_.Encode()!=clockSettings_.Encode()||
+        themeDraft_!=theme_||layoutDraft_!=layout_||gridDraft_!=gridPreference_||
+        languageDraft_!=language_||idleDraft_!=idleMinutes_||safeAreaDraft_!=safeArea_;
+}
 void ConsoleHome::PressAppearance(Key key){
     if(layoutPreview_){if(key==Back||key==Search)layoutPreview_=false;return;}
-    if(key==Back){appearanceEditor_=false;notice_.clear();return;}
-    if(key==Search){layoutPreview_=layoutDraft_!=0;return;}
-    if(key==Up)appearanceRow_=(appearanceRow_+7)%8;
-    if(key==Down)appearanceRow_=(appearanceRow_+1)%8;
-    if(key==Left||key==Right||key==Accept){
-        auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
-        if(appearanceRow_==0)cycle(themeDraft_,HomeCanvas::ThemeCount);
-        if(appearanceRow_==1)cycle(appearanceDraft_.background,AppearanceSettings::BackgroundCount);
-        if(appearanceRow_==2)cycle(appearanceDraft_.dim,AppearanceSettings::DimCount);
-        if(appearanceRow_==3)cycle(appearanceDraft_.artwork,AppearanceSettings::ArtworkCount);
-        if(appearanceRow_==4)cycle(layoutDraft_,DashboardLayout::Count);
-        if(appearanceRow_==5)cycle(gridDraft_,GameGrid::Count);
-        if(appearanceRow_==6)clockDraft_.offset=ClockWeather::NextOffset(clockDraft_.offset,key==Left?-1:1);
-        if(appearanceRow_==7)cycle(clockDraft_.city,ClockWeather::CityCount);
+    if(key==Back){
+        if(SettingsDirty()&&notice_!="Alteracoes nao salvas. B descarta; Y salva."){
+            notice_="Alteracoes nao salvas. B descarta; Y salva.";return;
+        }
+        appearanceEditor_=false;if(settingsReturnHome_)page_=Home;notice_.clear();return;
     }
-    if(key==Favorite){appearanceDraft_={};clockDraft_={};themeDraft_=0;layoutDraft_=initialLayout_;gridDraft_=0;notice_.clear();}
-    if(key==Guide){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";}
+    if(key==Search){layoutPreview_=true;notice_.clear();return;}
+    if(key==PageUp||key==PageDown){
+        settingsCategory_=(settingsCategory_+SettingsGroupCount+(key==PageDown?1:SettingsGroupCount-1))%SettingsGroupCount;
+        appearanceRow_=0;notice_.clear();return;
+    }
+    const auto& group=SettingsGroups[settingsCategory_];
+    if(key==Up||key==Down){
+        appearanceRow_=(appearanceRow_+group.count+(key==Down?1:group.count-1))%group.count;
+        notice_.clear();return;
+    }
+    const auto id=SettingsRows[group.first+appearanceRow_].id;
+    if(key==Left||key==Right||key==Accept){
+        notice_.clear();
+        auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
+        switch(id){
+            case StTheme:cycle(themeDraft_,HomeCanvas::ThemeCount);break;
+            case StBackground:cycle(appearanceDraft_.background,AppearanceSettings::BackgroundCount);break;
+            case StDim:cycle(appearanceDraft_.dim,AppearanceSettings::DimCount);break;
+            case StLayout:cycle(layoutDraft_,DashboardLayout::Count);break;
+            case StArtwork:cycle(appearanceDraft_.artwork,AppearanceSettings::ArtworkCount);break;
+            case StGrid:cycle(gridDraft_,GameGrid::Count);break;
+            case StLanguage:cycle(languageDraft_,UiLanguage::Count);break;
+            case StUtc:clockDraft_.offset=ClockWeather::NextOffset(clockDraft_.offset,key==Left?-1:1);break;
+            case StCity:cycle(clockDraft_.city,ClockWeather::CityCount);break;
+            case StMargin:cycle(safeAreaDraft_,DisplaySafeArea::Max+1);break;
+            case StIdle:
+                for(unsigned i=0;i<(key==Left?4u:1u);++i)idleDraft_=IdleScreen::Next(idleDraft_);
+                break;
+            default:
+                if(key!=Accept)return;
+                if(SettingsDirty()){notice_="Salve com Y antes de abrir outro painel.";return;}
+                if(id==StPaths){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;return;}
+                appearanceEditor_=false;
+                if(id==StPower){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();return;}
+                page_=Listing;systemTab_=id==StStorage?0:id==StNetwork?1:4;
+                Press(Accept);return;
+        }
+        return;
+    }
+    if(key==Favorite){
+        if(settingsCategory_==0){themeDraft_=0;appearanceDraft_.background=AppearanceSettings::Gradient;appearanceDraft_.dim=1;layoutDraft_=initialLayout_;}
+        if(settingsCategory_==1){appearanceDraft_.artwork=AppearanceSettings::Both;gridDraft_=0;}
+        if(settingsCategory_==2){languageDraft_=0;clockDraft_={};}
+        if(settingsCategory_==3){safeAreaDraft_=idleDraft_=0;}
+        notice_.clear();return;
+    }
+    if(key==Guide&&settingsCategory_==0){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";return;}
     if(key==Refresh){
-        const auto previous=appearance_;const auto previousClock=clockSettings_;const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
-        appearance_=appearanceDraft_;clockSettings_=clockDraft_;theme_=themeDraft_;layout_=layoutDraft_;gridPreference_=gridDraft_;gridFilter_=false;
-        if(SaveProfile()){appearanceEditor_=false;focus_=0;if(previousClock.city!=clockSettings_.city)weather_={};if(clockSettings_.city)weatherPending_=true;notice_="Configuracoes salvas.";}
-        else{appearance_=previous;clockSettings_=previousClock;theme_=previousTheme;layout_=previousLayout;gridPreference_=previousGrid;notice_="Falha ao salvar configuracoes.";}
+        const auto previous=appearance_;const auto previousClock=clockSettings_;
+        const auto previousTheme=theme_,previousLayout=layout_,previousGrid=gridPreference_;
+        const auto previousLanguage=language_,previousIdle=idleMinutes_,previousMargin=safeArea_;
+        const bool previousGridFilter=gridFilter_;
+        appearance_=appearanceDraft_;clockSettings_=clockDraft_;theme_=themeDraft_;layout_=layoutDraft_;
+        gridPreference_=gridDraft_;language_=languageDraft_;idleMinutes_=idleDraft_;safeArea_=safeAreaDraft_;gridFilter_=false;
+        if(SaveProfile()){
+            focus_=0;
+            if(previousClock.city!=clockSettings_.city)weather_={};
+            weatherPending_=clockSettings_.city!=0;notice_="Configuracoes salvas.";
+        }else{
+            appearance_=previous;clockSettings_=previousClock;theme_=previousTheme;layout_=previousLayout;
+            gridPreference_=previousGrid;language_=previousLanguage;idleMinutes_=previousIdle;safeArea_=previousMargin;
+            gridFilter_=previousGridFilter;notice_="Falha ao salvar configuracoes.";
+        }
     }
 }
 void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
-    c.Text(45,349,c.Tr("Personalizar aparencia"),27,White,1170);
-    const char* labels[]={"Paleta","Fundo da interface","Escurecimento","Arte dos jogos","Layout","Biblioteca","Fuso horario / UTC","Cidade para clima"};
-    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),DashboardLayout::Name(layoutDraft_),c.Tr(GameGrid::Name(gridDraft_)),ClockWeather::Zone(clockDraft_.offset),ClockWeather::Cities[clockDraft_.city].name};
-    for(unsigned i=0;i<8;++i){
-        const int x=48+(i%2)*600,y=385+(i/2)*54;
-        panel(c,x,y,582,49,Panel,i==appearanceRow_);
-        const int icons[]={10,62,46,62,24,23,20,25};InfinityIcons::Draw(c,icons[i],x+12,y+10,28,White);
-        c.TextFit(x+52,y+4,c.Tr(labels[i]),17,Muted,510);
-        c.TextFit(x+52,y+21,"< "+values[i]+" >",20,Lime,510);
+    c.TextFit(48,85,c.Tr("Configuracoes"),38,White,770);
+    c.TextFit(840,99,SettingsDirty()?"Alteracoes nao salvas":"Configuracoes salvas",18,SettingsDirty()?Lime:Muted,380);
+    c.TextFit(48,143,"LB/RB: categorias",17,Muted,300);
+    for(unsigned i=0;i<SettingsGroupCount;++i){
+        const int y=177+int(i)*68;const bool selected=i==settingsCategory_;
+        c.SeriesTile(48,y,300,59,selected);
+        InfinityIcons::Draw(c,SettingsGroups[i].icon,63,y+15,28,selected?Lime:White);
+        c.TextFit(106,y+14,c.Tr(SettingsGroups[i].name),22,White,230);
     }
-    c.Text(48,596,"Clima: Open-Meteo | Cidade manual | UTC nao altera o relogio do sistema",16,Muted,1170);
-    InfinityButtons::Strip(c,48,618,c.Tr("Direcoes Ajustar | R3 Previa | X Padrao | Y Salvar | B Cancelar"),17,Lime,1170);
+    const auto& group=SettingsGroups[settingsCategory_];
+    c.SeriesTile(370,139,862,469,false,210);
+    c.TextFit(392,154,c.Tr(group.name),29,White,816);
+    const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),
+        c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),
+        number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",DashboardLayout::Name(layoutDraft_),
+        c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),c.Tr(GameGrid::Name(gridDraft_)),"",
+        UiLanguage::Name(languageDraft_),ClockWeather::Zone(clockDraft_.offset),ClockWeather::Cities[clockDraft_.city].name,
+        number(safeAreaDraft_)+"%",idleDraft_?number(idleDraft_)+" min":c.Tr("Desativado"),"","","",""};
+    for(unsigned i=0;i<group.count;++i){
+        const auto& row=SettingsRows[group.first+i];const int y=202+int(i)*75;
+        const bool selected=i==appearanceRow_,link=row.id==StPaths||row.id>=StStorage;
+        c.SeriesTile(392,y,818,65,selected);
+        c.TextFit(412,y+18,c.Tr(row.name),22,White,465);
+        c.TextFit(880,y+18,link?"A  Abrir":("< "+values[row.id]+" >"),21,selected?Lime:Muted,311);
+    }
+    c.Box(392,519,818,1,0xff414743u);
+    c.TextFit(404,535,c.Tr(SettingsRows[group.first+appearanceRow_].help),19,White,790);
+    c.TextFit(404,568,"Cima/baixo: selecionar | Esq/dir: alterar valor",17,Muted,790);
 }
 
 void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const{
@@ -4945,6 +5054,7 @@ void ConsoleHome::OpenProfileGuide(){
 void ConsoleHome::OpenApprovedAction(int action){
     using namespace ApprovedHome;
     if(action==ApprovedHome::Profiles){OpenProfileGuide();return;}
+    if(action==Settings){OpenSettings(true);return;}
     if(action==ApprovedHome::Games){searchTerm_.clear();Enter(Library);return;}
     if(action==ApprovedHome::Apps){Enter(ConsoleHome::Apps);return;}
     if(action==ApprovedHome::Iptv||action==Tv){Enter(ConsoleHome::Iptv);return;}
@@ -4957,7 +5067,6 @@ void ConsoleHome::OpenApprovedAction(int action){
     Press(Accept);
     if(action==Link){networkPeer_=true;}
     if(action==Achievements||action==Awards){localMilestones_=true;achievementsPage_=true;RefreshAchievements();}
-    if(action==Settings){localMilestones_=true;appearanceDraft_=appearance_;clockDraft_=clockSettings_;themeDraft_=theme_;layoutDraft_=layout_;gridDraft_=gridPreference_;layoutPreview_=false;appearanceRow_=0;appearanceEditor_=true;wallpaperDirty_=true;}
     if(action==Power){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();}
 }
 void ConsoleHome::DrawApprovedGroup(HomeCanvas& c)const{
