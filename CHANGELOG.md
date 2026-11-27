@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.25 — Aplicação do mockup: mídia e serviços
+
+- Cloud360 IPTV e INFINITY Store com categorias laterais, foco em lista e painel de detalhes persistente. Mantém navegação, fontes autorizadas e contratos de reprodução/download existentes.
+- Fila com progresso visual baseado em registros reais, inclusive proteção contra divisão por zero; plugins com estados explícitos; energia com confirmação destacada. Traduções da nova central de configurações.
+- Capturas nativas e regressão portátil solicitadas. Ainda não é homologação física nem implementação de overlay em jogo.
+
 ## V0.3.24 — Aplicação do mockup: configurações e Home
 
 - Editor compartilhado em três colunas, oito categorias, resumo de tema/vidro/animações, ajuda contextual e prévia de aparência. Mantém confirmação de saída sem salvar, reset por categoria e acesso aos painéis existentes.

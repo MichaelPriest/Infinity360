@@ -481,47 +481,55 @@ void CloudTv::DrawSearch(HomeCanvas& c) const {
 
 void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
     const bool picking=tab_==TvSources;
-    if(picking){DrawList(c,now);return;}
-    const size_t total=rows_.size();
+    const size_t total=picking?sources_.size():rows_.size();
     InfinityIcons::Draw(c,3,46,91,32,Ink);c.TextFit(91,76,"Cloud360 IPTV",38,Ink,695);
-    c.Text(830,94,countText(total)+" "+c.Tr("itens"),20,Lime,400);
+    c.TextFit(830,94,countText(total)+" "+c.Tr(picking?"listas":"itens"),20,Lime,400);
+    tile(c,45,141,264,447,false);
+    const int icons[]={2,3,52,53,54,54,21,48};
     for(int i=0;i<TvTabCount;++i){
-        const int x=45+i*150;
-        tile(c,x,141,143,43,i==tab_);
-        const int icons[]={2,3,52,53,54,54,21,48};InfinityIcons::Draw(c,icons[i],x+7,151,23,i==tab_?Lime:Ink);
-        c.TextFit(x+35,151,c.Tr(tabs[i]),16,Ink,100);
+        const int y=151+i*53;tile(c,54,y,246,47,i==tab_);
+        InfinityIcons::Draw(c,icons[i],65,y+11,24,i==tab_?Lime:Ink);
+        c.TextFit(101,y+12,c.Tr(tabs[i]),19,Ink,187);
     }
-    if(!query_.empty())c.Text(47,192,c.Tr("Busca")+std::string(": ")+query_,17,Lime,1165);
-    else c.Text(47,192,source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,17,Soft,1165);
+    c.TextFit(326,145,!query_.empty()&&!picking?c.Tr("Busca")+std::string(": ")+query_:source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,19,Soft,901);
     if(!total){
-        tile(c,45,232,1190,335,false);
-        c.Text(65,270,c.Tr("Nenhum item nesta seção."),26,Ink,1145);
-        c.Text(65,321,"Fontes: escolha um arquivo M3U autorizado na pasta Listas.",20,Soft,1145);return;
+        tile(c,325,186,910,402,false);
+        c.TextFit(345,240,c.Tr("Nenhum item nesta seção."),26,Ink,865);
+        c.TextFit(345,288,"Fontes: escolha um arquivo M3U autorizado na pasta Listas.",20,Soft,865);
+        c.TextFit(345,332,"Esq/Dir: categorias | Y Atualizar",18,Lime,865);return;
     }
     const size_t first=row_/PageSize*PageSize;
     for(size_t i=first;i<total&&i<first+PageSize;++i){
-        const auto& item=catalog_.Items()[rows_[i]];
-        const int y=226+int(i-first)*69;
-        tile(c,45,y,493,62,i==row_);
-        c.Surface(55,y+9,42,44,0xff102923u,5);
-        c.Text(60,y+20,countText(i+1),18,i==row_?Lime:Soft,34);
-        std::string name=item.name;
-        TvEpisode ep;if((tab_==TvSeries||tab_==TvAnime||tab_==TvCartoon)&&tvEpisode(name,ep))name=ep.show;
-        const bool favorite=cloud_favorite_has_id(&favorites_,item.id);
-        c.Text(107,y+5,name,22,Ink,419);
-        c.Text(107,y+33,(favorite?"* ":"")+item.group,16,Soft,419);
+        const int y=186+int(i-first)*79;
+        tile(c,325,y,423,71,i==row_);
+        c.Surface(336,y+11,45,45,0xff102923u,5);
+        std::string name,sub;
+        if(picking){name=sources_[i];sub=name==source_?"Lista ativa":"Lista local";InfinityIcons::Draw(c,48,345,y+20,27,i==row_?Lime:Soft);}
+        else{const auto& item=catalog_.Items()[rows_[i]];name=item.name;TvEpisode ep;
+            if((tab_==TvSeries||tab_==TvAnime||tab_==TvCartoon)&&tvEpisode(name,ep))name=ep.show;
+            sub=(cloud_favorite_has_id(&favorites_,item.id)?"* ":"")+item.group;
+            c.TextFit(342,y+24,countText(i+1),18,i==row_?Lime:Soft,34);}
+        c.TextFit(392,y+9,name,22,Ink,341);c.TextFit(392,y+40,sub,16,Soft,341);
     }
-    const size_t index=rows_[row_];const auto& item=catalog_.Items()[index];
-    tile(c,550,226,685,335,false);
-    DrawArt(c,index,561,237,663,190);
-    c.Text(566,436,item.group,17,Lime,654);
-    c.Text(566,461,item.name,27,Ink,654);
-    if(item.category==TvLive){
-        const auto& schedule=guide_.For(item.channel,item.name);
-        const auto* on=TvGuide::Current(schedule,now);const auto* next=TvGuide::Next(schedule,now);
-        c.Text(566,504,on?"Agora: "+on->title:"Agora: sem programação",18,Soft,654);
-        c.Text(566,531,next?"A seguir: "+localTime(next->start)+" "+next->title:"A seguir: sem programação",16,Soft,654);
-    }else c.Text(566,509,protocol(item,dir_+source_),18,Soft,654);
-    c.Text(45,587,countText(row_+1)+" / "+countText(total),17,Lime,470);
-    c.Text(551,587,c.Tr("A Detalhes"),19,Lime,675);
+    tile(c,760,186,475,387,false);
+    if(picking){
+        c.TextFit(778,206,c.Tr("Lista selecionada"),27,Ink,438);
+        c.TextFit(778,257,sources_[row_],20,Lime,438);
+        c.TextFit(778,316,InfinityIptv::OpenMode(dir_)?"Rede: Livre (X alterna)":"Rede: Restrita (X alterna)",18,Soft,438);
+        c.TextFit(778,363,"Guia XMLTV",21,Ink,438);
+        c.TextFit(778,401,"Use XML com o nome da lista ou guide.xml.",17,Soft,438);
+    }else{
+        const size_t index=rows_[row_];const auto& item=catalog_.Items()[index];
+        DrawArt(c,index,772,198,451,179);
+        c.TextFit(778,392,item.group,17,Lime,438);c.TextFit(778,419,item.name,26,Ink,438);
+        if(item.category==TvLive){const auto& schedule=guide_.For(item.channel,item.name);
+            const auto* on=TvGuide::Current(schedule,now);const auto* next=TvGuide::Next(schedule,now);
+            c.TextFit(778,464,on?"Agora: "+on->title:"Agora: sem programação",18,Soft,438);
+            c.TextFit(778,492,next?"A seguir: "+localTime(next->start)+" "+next->title:"A seguir: sem programação",16,Soft,438);
+        }else c.TextFit(778,474,protocol(item,dir_+source_),18,Soft,438);
+        InfinityButtons::Hint(c,InfinityButtons::A,778,529,23,c.Tr("Detalhes"),235,Lime);
+    }
+    c.TextFit(45,599,"Esq/Dir: categorias",17,Soft,260);
+    c.TextFit(326,599,countText(row_+1)+" / "+countText(total),17,Lime,415);
+    c.TextFit(760,599,"L3: Guia rapido",17,Soft,475);
 }

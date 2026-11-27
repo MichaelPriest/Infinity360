@@ -17,6 +17,19 @@ inline const char* Name(unsigned language){
 inline const char* Translate(unsigned language,const char* key){
     if(!key||!language||language>=Count)return key?key:"";
     static const char* const rows[][3]={
+        {"Personalize a dashboard","Personalize the dashboard","Personaliza la interfaz"},
+        {"Ajuda contextual","Context help","Ayuda contextual"},
+        {"Transparencia","Transparency","Transparencia"},
+        {"Animacoes","Animations","Animaciones"},
+        {"Plugins e scripts","Plugins and scripts","Plugins y scripts"},
+        {"Energia e comportamento","Power and behavior","Energía y comportamiento"},
+        {"Alteracoes nao salvas","Unsaved changes","Cambios sin guardar"},
+        {"Configuracoes salvas","Settings saved","Configuración guardada"},
+        {"Transparencia dos paineis","Panel transparency","Transparencia de paneles"},
+        {"Animacoes de foco","Focus animations","Animaciones de enfoque"},
+        {"Tema e paleta","Theme and palette","Tema y paleta"},
+        {"R3: Previa da Home","R3: Home preview","R3: Vista previa"},
+        {"Abrir >","Open >","Abrir >"},
         {"Sem sessao","Signed out","Sin sesión"},
         {"Sessao local","Local session","Sesión local"},
         {"Sessao online (XAM)","Online sign-in (XAM)","Sesión en línea (XAM)"},

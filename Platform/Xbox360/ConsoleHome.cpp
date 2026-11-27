@@ -2675,7 +2675,8 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
         if(!config.valid)c.Text(51,430,"Configuracao invalida ou acima do limite de leitura.",20,White,1160);
         for(size_t i=0;i<config.slots.size();++i){
             const auto& slot=config.slots[i];const int y=415+static_cast<int>(i)*32;
-            c.Text(51,y,"Slot "+number(i+1),18,White,110);
+            c.Surface(45,y-3,1188,30,Panel,5,184);
+            c.TextFit(58,y,"Slot "+number(i+1),18,White,105);
             c.Text(171,y,slot.path.empty()?"Vazio":slot.path,18,Muted,670);
             std::string state=slot.duplicate?"Ambiguo":slot.repeated?"Repetido":isLiveEmulationReference(slot.path)?"LiveEmulation":"";
 #ifdef __XSDK__
@@ -2724,7 +2725,8 @@ void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
         c.Text(62,y+2,item.name+" | "+item.version,19,White,690);
         c.Text(64,y+23,item.id+" | "+item.category,14,Muted,690);
         const char* state=item.conflict?"ID conflitante":!item.headerValid?"XEX ausente/invalido":!item.manifestEnabled?"Manifesto desativado":PluginAllowed(item)?"Habilitado":"Desabilitado localmente";
-        c.Text(806,y+9,state,19,PluginAllowed(item)?Lime:Muted,400);
+        c.SeriesTile(789,y+6,428,31,false,195);
+        c.TextFit(801,y+10,state,17,PluginAllowed(item)?Lime:Muted,402);
     }
     c.Text(48,585,"Preferencia local; nao altera launch.ini, nao carrega modulos residentes.",18,Muted,1170);
     InfinityButtons::Strip(c,48,610,"X Alternar | START DashLaunch | R3 Scripts Lua | Y Atualizar",18,Lime,1170);
@@ -3326,7 +3328,8 @@ void ConsoleHome::DrawPower(HomeCanvas& c)const{
     }
     const bool supported=ConsolePower::Supported(),busy=PowerBusy();
     c.Text(48,520,!supported?std::string(c.Tr("Provider nao incluido nesta build.")):busy?std::string(c.Tr("Bloqueado: encerre operacoes e FTP.")):std::string(c.Tr("Provider experimental: nao homologado no console.")),20,White,1170);
-    c.Text(48,556,powerConfirm_.armed?std::string(c.Tr("CONFIRMACAO: A executa a acao selecionada; B cancela.")):std::string(c.Tr("Nenhuma acao automatica; exige dupla confirmacao.")),19,Muted,1170);
+    if(powerConfirm_.armed)c.NoticeSurface(45,547,1190,40);
+    c.TextFit(58,555,powerConfirm_.armed?std::string(c.Tr("CONFIRMACAO: A executa a acao selecionada; B cancela.")):std::string(c.Tr("Nenhuma acao automatica; exige dupla confirmacao.")),19,powerConfirm_.armed?White:Muted,1155);
     InfinityButtons::Strip(c,48,607,std::string(c.Tr("Esq/Dir Selecionar | A Confirmar | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawConsoleStatus(HomeCanvas& c) const{
@@ -3558,12 +3561,17 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
         const int y=390+(i-first)*48;
         panel(c,45,y,1189,43,Panel,i==storeDownloadRow_);
         c.Text(60,y+8,item.name,20,White,650);
+        const unsigned percent=item.bytes?static_cast<unsigned>(std::min(100.0,100.0*status.received/item.bytes)):0;
         const std::string label=status.state==StoreProgress::NativeVerified?"Verificado no Xbox (registro)":status.state==StoreProgress::Verified?"Verificado pelo PC":
-            status.state==StoreProgress::NativePaused?"Pausado "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
+            status.state==StoreProgress::NativePaused?"Pausado "+number(percent)+"%":
             status.state==StoreProgress::Failed?"Ultima tentativa falhou":
-            status.state==StoreProgress::Receiving?"Ultimo progresso "+number(static_cast<unsigned>(100.0*status.received/item.bytes))+"%":
+            status.state==StoreProgress::Receiving?"Ultimo progresso "+number(percent)+"%":
             store_.NativeQueued(item)?"Na fila nativa":"Pedido PC / sem estado";
-        c.Text(745,y+8,label,18,Muted,465);
+        c.TextFit(690,y+5,label,17,Muted,514);
+        if(status.state==StoreProgress::NativePaused||status.state==StoreProgress::Receiving){
+            c.Box(690,y+28,510,6,0xff28413au,3);
+            if(percent)c.Box(690,y+28,int(510*percent/100),6,Lime,3);
+        }
     }
     if(storeDownloadItems_.empty())c.Text(48,415,"Nenhum download ou pedido no catalogo atual.",22,Muted,1160);
 #if defined(INFINITY_XSDK_HTTPS)
@@ -5019,14 +5027,18 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
     c.Text(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
-    for(int i=0;i<8;++i){
-        const int x=45+i*149;panel(c,x,171,140,42,Panel,i==storeTab_);
-        const int icons[]={2,1,35,42,2,1,37,45};InfinityIcons::Draw(c,icons[i],x+7,181,22,i==storeTab_?Lime:White);
-        c.TextFit(x+34,180,c.Tr(tabs[i]),16,White,100);
+    if(!storeDetails_){
+        c.SeriesTile(45,171,250,417,false,190);
+        for(int i=0;i<8;++i){
+            const int y=181+i*50;panel(c,53,y,234,44,Panel,i==storeTab_);
+            const int icons[]={2,1,35,42,2,1,37,45};InfinityIcons::Draw(c,icons[i],64,y+10,23,i==storeTab_?Lime:White);
+            c.TextFit(100,y+10,c.Tr(tabs[i]),19,White,176);
+        }
     }
     if(storeVisible_.empty()){
-        c.Text(55,270,c.Tr("Nenhum item no catalogo desta categoria."),23,White,1170);
-        c.Text(55,320,c.Tr("Configure aurorax-store.tsv com fontes e licencas autorizadas."),19,Muted,1170);return;
+        c.SeriesTile(310,171,925,417,false);
+        c.TextFit(330,250,c.Tr("Nenhum item no catalogo desta categoria."),23,White,880);
+        c.TextFit(330,300,c.Tr("Configure aurorax-store.tsv com fontes e licencas autorizadas."),19,Muted,880);return;
     }
     const auto& item=store_.Items()[storeVisible_[storeRow_]];
     const auto status=[&](const StoreItem& p)->const char*{
@@ -5041,15 +5053,17 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     if(!storeDetails_){
         const int first=storeRow_/5*5;
         for(int i=first;i<std::min(first+5,static_cast<int>(storeVisible_.size()));++i){
-            const auto& p=store_.Items()[storeVisible_[i]];const int y=228+(i-first)*70;
-            panel(c,45,y,675,64,Panel,i==storeRow_);
-            c.Text(60,y+5,p.name,23,White,643);
-            c.Text(60,y+34,p.version+" | "+StorageInfo::FormatBytes(p.bytes),17,Muted,643);
+            const auto& p=store_.Items()[storeVisible_[i]];const int y=181+(i-first)*81;
+            panel(c,310,y,425,74,Panel,i==storeRow_);
+            InfinityIcons::Draw(c,4,321,y+19,29,i==storeRow_?Lime:Muted);
+            c.TextFit(363,y+9,p.name,22,White,359);
+            c.TextFit(363,y+41,p.version+" | "+StorageInfo::FormatBytes(p.bytes),16,Muted,359);
         }
     }
-    const int x=storeDetails_?45:735,w=storeDetails_?1190:500;
-    panel(c,x,228,w,344,Panel,false);
+    const int x=storeDetails_?45:750,w=storeDetails_?1190:485;
+    panel(c,x,171,w,401,Panel,false);
     c.SeriesTile(x+10,238,w-20,58,false,190);
+    c.TextFit(x+18,187,storeDetails_?"Detalhes do produto":"Item selecionado",23,White,w-36);
     InfinityIcons::Draw(c,4,x+22,254,24,White);c.TextFit(x+58,249,item.name,26,White,w-78);
     c.Text(x+20,310,c.Tr(status(item)),21,Lime,w-40);
     c.Text(x+20,346,item.version+" | "+StorageInfo::FormatBytes(item.bytes),20,White,w-40);
