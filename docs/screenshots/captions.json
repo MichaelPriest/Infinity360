@@ -450,5 +450,38 @@
         "caption": "Telemetria — memória e sensores"
       }
     ]
+  },
+  {
+    "title": "Perfis, personalização e ferramentas",
+    "images": [
+      {
+        "stem": "99-conquistas-moderno",
+        "caption": "Central de conquistas — dados GPD e perfil"
+      },
+      {
+        "stem": "100-saves-moderno",
+        "caption": "Central de saves — inventário local"
+      },
+      {
+        "stem": "101-temperaturas-moderno",
+        "caption": "Temperaturas — sensores SMC"
+      },
+      {
+        "stem": "102-refrigeracao-moderno",
+        "caption": "Refrigeração — diagnóstico"
+      },
+      {
+        "stem": "103-arte-moderna",
+        "caption": "Editor de capas e fundos"
+      },
+      {
+        "stem": "104-teclado-moderno",
+        "caption": "Teclado virtual — pesquisa"
+      },
+      {
+        "stem": "105-colecoes-moderno",
+        "caption": "Gerenciamento de coleções"
+      }
+    ]
   }
 ]

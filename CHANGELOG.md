@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.31 — Centrais de perfil e ferramentas
+
+- Conquistas e saves com resumo, lista e painel de detalhes, diferenciando GPD offline, perfil reportado e títulos instalados. Instalador DVD/GOD com métodos, origem, destino e confirmações; sem simular provider indisponível.
+- Teclado de 42 teclas com ajuda, gerenciador de coleções e editor de arte com três categorias visuais. Sensores e refrigeração ampliados, atualizador com painéis. Preserva ações e restrições anteriores.
+- Sete capturas adicionais solicitadas (105 no total). Sem XEX/release; homologação física pendente.
+
 ## V0.3.30 — Conteúdo, arquivos e diagnósticos
 
 - Conteúdo de jogos em três colunas: categorias, lista e detalhes de compatibilidade, incluindo TU, DLC, saves, trainers, backups e arquivos de TU; ações e confirmações existentes preservadas. Não presume TU ativa.

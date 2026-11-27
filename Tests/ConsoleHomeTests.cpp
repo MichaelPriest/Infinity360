@@ -209,6 +209,8 @@ static int captureScreens(const char* atlas,const char* destination) {
         hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Search);ok=save("91-lua-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);ok=save("92-perfis-moderno",hub)&&ok;
+        hub.Press(ConsoleHome::Down);hub.Press(ConsoleHome::Accept);ok=save("99-conquistas-moderno",hub)&&ok;
+        hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Guide);ok=save("100-saves-moderno",hub)&&ok;
     }
     {
         ConsoleHome context(dir,roots);context.Load();context.Press(ConsoleHome::Right);context.Press(ConsoleHome::Accept);
@@ -232,6 +234,9 @@ static int captureScreens(const char* atlas,const char* destination) {
         telemetry.Press(ConsoleHome::Accept);telemetry.Press(ConsoleHome::Accept);
         telemetry.Press(ConsoleHome::Right);telemetry.Press(ConsoleHome::Right);telemetry.Press(ConsoleHome::Accept);
         ok=save("98-telemetria-moderno",telemetry)&&ok;
+        telemetry.Press(ConsoleHome::Guide);ok=save("101-temperaturas-moderno",telemetry)&&ok;
+        telemetry.Press(ConsoleHome::PageDown);ok=save("102-refrigeracao-moderno",telemetry)&&ok;
+        filesModern.Press(ConsoleHome::Back);
     }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
@@ -256,9 +261,12 @@ static int captureScreens(const char* atlas,const char* destination) {
         if(style==DashboardLayout::TopIcons){modern.Press(ConsoleHome::Right);modern.Press(ConsoleHome::Accept);ok=save("63-biblioteca-grade",modern)&&ok;
             modern.Press(ConsoleHome::Up);ok=save("64-biblioteca-filtros",modern)&&ok;
             modern.Press(ConsoleHome::Down);modern.Press(ConsoleHome::Accept);ok=save("65-detalhes-moderno",modern)&&ok;
+            modern.Press(ConsoleHome::Guide);ok=save("103-arte-moderna",modern)&&ok;modern.Press(ConsoleHome::Back);
             modern.Press(ConsoleHome::PageDown);ok=save("94-conteudo-moderno",modern)&&ok;
             modern.Press(ConsoleHome::Right);ok=save("95-dlc-moderno",modern)&&ok;modern.Press(ConsoleHome::Back);
-            modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::PageDown);ok=save("66-store-moderna",modern)&&ok;
+            modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Guide);ok=save("104-teclado-moderno",modern)&&ok;modern.Press(ConsoleHome::Back);
+            modern.Press(ConsoleHome::PageDown);ok=save("105-colecoes-moderno",modern)&&ok;modern.Press(ConsoleHome::Back);
+            modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::PageDown);ok=save("66-store-moderna",modern)&&ok;
             modern.Press(ConsoleHome::Accept);ok=save("67-store-produto-moderno",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Search);ok=save("68-fontes-store",modern)&&ok;
             modern.Press(ConsoleHome::Back);modern.Press(ConsoleHome::Back);

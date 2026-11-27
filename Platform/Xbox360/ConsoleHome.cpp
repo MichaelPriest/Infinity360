@@ -3028,6 +3028,7 @@ void ConsoleHome::DashboardUpdateResult(const std::string& message,bool success)
 }
 void ConsoleHome::DrawDashboardUpdate(HomeCanvas& c) const{
     c.Text(44,78,"INFINITY | Atualizar dashboard",38,White,1170);
+    if(layout_){c.SeriesTile(45,186,1189,265,false,200);c.SeriesTile(45,471,1189,99,false,190);}
     c.Text(48,142,"Instalacao lado a lado. Nao altera a versao em execucao nem launch.ini.",21,Muted,1170);
     if(updateKnown_){
         c.Text(48,205,updateItem_.name+" | "+StorageInfo::FormatBytes(updateItem_.bytes),30,White,1170);
@@ -3324,6 +3325,40 @@ void ConsoleHome::DiscInstallResult(const std::string& message,bool success){
     RefreshDiscInstall();notice_=message;RecordEvent(success?"DVD copiado e verificado":"Instalacao DVD interrompida");
 }
 void ConsoleHome::DrawDiscInstall(HomeCanvas& c) const{
+    if(layout_){
+        c.TextFit(45,140,"Instalador de jogos",29,White,1180);
+        c.TextFit(45,177,"DVD, GOD, XEX e pacotes locais",19,Muted,1180);
+#if defined(INFINITY_DISC_INSTALL)
+        const char* modes[]={"Extrair DVD (XEX)","Converter DVD para GOD","Importar GOD/XBLA","NXE / Sistema"};
+        const char* hints[]={"Copia arquivos para Games","Cria pacote de jogo","Pacote original em PackageImport","Retorna ao sistema oficial"};
+        c.SeriesTile(45,215,586,350,false,190);
+        for(int i=0;i<DiscMethodCount;++i){
+            int y=226+i*81;c.SeriesTile(55,y,566,72,i==discMode_);
+            InfinityIcons::Draw(c,i==3?8:13,69,y+16,32,i==discMode_?Lime:White);
+            c.TextFit(120,y+8,modes[i],23,White,485);c.TextFit(120,y+41,hints[i],17,Muted,485);
+        }
+        c.SeriesTile(647,215,587,350,false,205);
+        c.TextFit(665,229,"Origem e destino",25,White,550);
+        c.TextFit(665,273,discKnown_?"Disco reconhecido":"DVD sem default.xex legivel",21,discKnown_?Lime:Muted,550);
+        if(discKnown_)c.TextFit(665,310,"Title "+hexId(discIdentity_.titleId)+" | Media "+hexId(discIdentity_.mediaId),18,Muted,550);
+        if(discMode_==ExtractDvd||discMode_==ConvertGod){
+            const char* drives[]={"hdd:/","usb0:/","usb1:/","usb2:/"};
+            c.TextFit(665,361,std::string("Destino: < ")+drives[discDestination_]+" >",26,White,550);
+            c.TextFit(665,405,discVolume_.available?StorageInfo::FormatBytes(discVolume_.writableBytes)+" livres":"Destino indisponivel",21,discVolume_.available?Lime:Muted,550);
+            c.TextFit(665,454,"Cima/baixo: selecione HDD ou USB",18,Muted,550);
+        }else c.TextFit(665,377,discMode_==ImportPackage?"UserFiles/PackageImport":"Retorno manual; sem instalacao automatica",19,Muted,550);
+        c.TextFit(665,514,discConfirm_?"Confirme somente apos revisar o destino.":"Permissoes e integridade verificadas ao iniciar.",16,Muted,550);
+        InfinityButtons::Strip(c,45,607,discConfirm_?"A Confirmar | B Cancelar":"Esq/Dir Metodo | Cima/Baixo Destino | A Selecionar | Y Atualizar | B Voltar",17,White,1180);
+#else
+        c.SeriesTile(45,215,1189,350,false,200);
+        InfinityIcons::Draw(c,13,83,259,64,Muted);
+        c.TextFit(177,264,"Instalador indisponivel neste ambiente",29,White,1020);
+        c.TextFit(177,318,"Leitura e instalacao de disco requerem o provider XSDK.",21,Muted,1020);
+        c.TextFit(177,372,"Nenhum disco ou capacidade de armazenamento simulados.",19,Muted,1020);
+        InfinityButtons::Strip(c,45,607,"B Voltar",18,White,1180);
+#endif
+        return;
+    }
     c.Text(45,349,"Instalar a partir do DVD",28,White,1170);
 #if defined(INFINITY_DISC_INSTALL)
     static const char* modes[]={"Extrair DVD (XEX)","DVD para GOD","Importar GOD/XBLA","NXE / Sistema"};
@@ -3398,16 +3433,16 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
 }
 void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     if(coolingPage_){DrawCooling(c);return;}
-    c.Text(45,349,std::string(c.Tr("Temperaturas SMC | Experimental")),27,White,1170);
+    c.Text(45,layout_?140:349,std::string(c.Tr("Temperaturas SMC | Experimental")),27,White,1170);
     const char* labels[]={"CPU","GPU","EDRAM","Chassi"};
     for(unsigned i=0;i<4;++i){
         const int x=45+int(i)*300;
-        panel(c,x,396,289,121,Panel,false);
-        InfinityIcons::Draw(c,43,x+246,405,28,thermal_.available[i]?Lime:Muted);
-        c.TextFit(x+12,405,c.Tr(labels[i]),19,Muted,220);
-        c.Text(x+12,432,thermal_.Celsius(i),27,thermal_.available[i]?Lime:Muted,260);
-        c.Text(x+12,471,"Min: "+thermalHistory_.Min(i),17,White,260);
-        c.Text(x+12,493,"Max: "+thermalHistory_.Max(i),17,White,260);
+        panel(c,x,layout_?204:396,289,layout_?238:121,Panel,false);
+        InfinityIcons::Draw(c,43,x+246,layout_?219:405,28,thermal_.available[i]?Lime:Muted);
+        c.TextFit(x+12,layout_?219:405,c.Tr(labels[i]),19,Muted,220);
+        c.Text(x+12,layout_?264:432,thermal_.Celsius(i),27,thermal_.available[i]?Lime:Muted,260);
+        c.Text(x+12,layout_?351:471,"Min: "+thermalHistory_.Min(i),17,White,260);
+        c.Text(x+12,layout_?390:493,"Max: "+thermalHistory_.Max(i),17,White,260);
     }
     const char* state=!ThermalTelemetry::Supported()?"Provider nao incluido nesta build.":thermal_.state==ThermalTelemetry::NotRead?"A solicita leitura manual.":thermal_.state==ThermalTelemetry::Valid?"Resposta SMC valida; leitura instantanea.":thermal_.state==ThermalTelemetry::Partial?"Resposta parcial; sensores ausentes nao estimados.":"Resposta invalida ou indisponivel.";
     c.Text(48,526,c.Tr(state),20,White,1170);
@@ -3416,15 +3451,15 @@ void ConsoleHome::DrawThermal(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Consultar | X Limpar historico | START Telemetria | B Voltar")),18,Lime,1170);
 }
 void ConsoleHome::DrawCooling(HomeCanvas& c)const{
-    c.Text(45,349,std::string(c.Tr("SMC | Diagnostico de refrigeracao")),27,White,1170);
-    panel(c,45,394,585,110,Panel,false);
-    c.Text(62,406,std::string(c.Tr("Alvo calculado pelo SMC")),20,Muted,550);
-    c.Text(62,437,thermal_.FanTargetLabel(),34,thermal_.fanTargetAvailable?Lime:Muted,550);
-    c.Text(62,478,std::string(c.Tr("Nao representa RPM nem override ativo.")),17,Muted,550);
-    panel(c,645,394,585,110,Panel,false);
-    c.Text(662,406,std::string(c.Tr("Limite de aviso (sessao)")),20,Muted,550);
-    c.Text(662,437,thermalLimit_?number(thermalLimit_)+" C":"Desativado",30,White,550);
-    c.Text(662,478,std::string(c.Tr("Esq/Dir: alterar limite escolhido")),17,Muted,550);
+    c.Text(45,layout_?140:349,std::string(c.Tr("SMC | Diagnostico de refrigeracao")),27,White,1170);
+    panel(c,45,layout_?204:394,585,layout_?238:110,Panel,false);
+    c.Text(62,layout_?225:406,std::string(c.Tr("Alvo calculado pelo SMC")),20,Muted,550);
+    c.Text(62,layout_?282:437,thermal_.FanTargetLabel(),34,thermal_.fanTargetAvailable?Lime:Muted,550);
+    c.Text(62,layout_?379:478,std::string(c.Tr("Nao representa RPM nem override ativo.")),17,Muted,550);
+    panel(c,645,layout_?204:394,585,layout_?238:110,Panel,false);
+    c.Text(662,layout_?225:406,std::string(c.Tr("Limite de aviso (sessao)")),20,Muted,550);
+    c.Text(662,layout_?282:437,thermalLimit_?number(thermalLimit_)+" C":"Desativado",30,White,550);
+    c.Text(662,layout_?379:478,std::string(c.Tr("Esq/Dir: alterar limite escolhido")),17,Muted,550);
     const auto status=ThermalAdvisory::Evaluate(thermal_,thermalLimit_);
     const char* message=status==ThermalAdvisory::Reached?"ATENCAO: limite escolhido atingido em pelo menos um sensor.":
         status==ThermalAdvisory::Below?"Ultima amostra: abaixo do limite escolhido.":
@@ -3850,20 +3885,21 @@ void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
 }
 void ConsoleHome::DrawArtEditor(HomeCanvas& c) const {
     c.Text(44,78,"Personalizar arte",40,White,1190);
+    if(layout_){const char* tabs[]={"Frente da capa","Imagem de fundo","Verso da capa"};for(int i=0;i<3;++i){const int x=45+i*398;c.SeriesTile(x,137,388,36,i==artEditRow_);c.TextFit(x+12,144,tabs[i],17,i==artEditRow_?Lime:White,362);}}
     if(artEditRow_==2){
-        c.TextFit(46,137,"Title ID: "+artEditId_+" | Verso da capa",21,Muted,1180);
+        if(!layout_)c.TextFit(46,137,"Title ID: "+artEditId_+" | Verso da capa",21,Muted,1180);
         c.SeriesTile(45,180,370,375,true);
         const auto path=Count()?ReverseArtPath(*visible_[row_]):std::string();
         if(path.empty()||!c.LocalArt(path,true,130,210,200,300,false,8))c.CenterText(55,330,350,"Sem verso",23,Muted);
         c.SeriesTile(430,180,805,375,false);
-        c.TextFit(455,207,"Capa traseira",28,White,740);
+        c.TextFit(455,207,"Capa traseira | "+artEditId_,28,White,740);
         c.TextFit(455,277,"UserFiles/ArtImport/"+artEditId_+"/cover-back.jpg",18,White,740);
         c.TextFit(455,310,"ou cover-back.png | Importacao sem sobrescrita",18,Muted,740);
         c.TextFit(455,380,"Na Home, B alterna a frente e o verso do jogo selecionado.",18,White,740);
         InfinityButtons::Strip(c,46,570,"Cima/Baixo Selecionar | BACK Importar | RB Recarregar",19,White,1180);
         InfinityButtons::Strip(c,46,604,"Y Salvar | B Voltar",18,Lime,1180);return;
     }
-    c.Text(46,137,"Title ID: "+artEditId_,21,Muted,1180);
+    if(!layout_)c.Text(46,137,"Title ID: "+artEditId_,21,Muted,1180);
     static const char* const modes[]={"Principal","Alternativa","Visual padrao"};
     for(int i=0;i<2;++i) {
         const int x=i?430:45, w=i?805:370;
@@ -3935,6 +3971,23 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
+        if(layout_){
+            const char* heading=keyboardMode_==1?"Nova colecao":keyboardMode_==2?"Renomear colecao":keyboardMode_==3?"Nova pasta":keyboardMode_==4?"Renomear item":"Buscar jogos instalados";
+            c.TextFit(45,139,heading,28,White,1180);
+            c.SeriesTile(45,183,1189,58,false,205);
+            c.TextFit(61,196,searchDraft_.empty()?"Digite um nome...":searchDraft_+"_",28,Lime,1050);
+            c.TextFit(1130,203,number(searchDraft_.size())+"/36",18,Muted,94);
+            for(int i=0;i<KeyCount;++i){const int x=45+(i%7)*127,y=258+(i/7)*56;
+                c.SeriesTile(x,y,119,50,i==searchCursor_);c.CenterText(x,y+12,119,keyboardKeys[i],i>=36?17:24,i==searchCursor_?Lime:White);}
+            c.SeriesTile(944,258,290,330,false,200);
+            c.TextFit(958,276,"Como usar",25,White,260);
+            c.TextFit(958,329,"Direcional: escolha uma tecla",17,Muted,260);
+            InfinityButtons::Strip(c,958,375,"A Digitar",20,White,260);
+            InfinityButtons::Strip(c,958,420,"X Apagar",20,White,260);
+            InfinityButtons::Strip(c,958,465,"Y Confirmar",20,Lime,260);
+            InfinityButtons::Strip(c,958,510,"B Cancelar",20,White,260);
+            return;
+        }
         c.Text(45,139,keyboardMode_==1?"Nova colecao":
                keyboardMode_==2?"Renomear colecao":keyboardMode_==3?"Nova pasta":
                keyboardMode_==4?"Renomear item":"Buscar jogos instalados",
@@ -3962,6 +4015,24 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                20,Muted,1130);
         const int total=static_cast<int>(lists.size())+1;
         const int first=(collectionRow_/7)*7;
+        if(layout_){
+            c.SeriesTile(45,229,790,382,false,190);
+            for(int i=first;i<total&&i<first+7;++i){const int y=237+(i-first)*52;
+                const bool creation=size_t(i)==lists.size(),assigned=!creation&&!pickerGame_.empty()&&collections_.Contains(size_t(i),pickerGame_);
+                c.SeriesTile(54,y,772,46,i==collectionRow_);
+                InfinityIcons::Draw(c,creation?33:InfinityIcons::Folder,66,y+10,26,i==collectionRow_?Lime:White);
+                c.TextFit(107,y+10,creation?"+ Nova colecao":lists[i].name,21,White,540);
+                if(assigned)c.TextFit(655,y+11,"Jogo incluido",16,Lime,160);
+            }
+            c.SeriesTile(850,229,384,382,false,205);c.TextFit(865,244,"Gerenciar colecoes",24,White,350);
+            c.TextFit(865,295,number(lists.size())+" colecoes locais",21,Lime,350);
+            c.TextFit(865,339,pickerGame_.empty()?"Selecione ou crie uma colecao.":"A alterna a inclusao do jogo.",17,Muted,350);
+            InfinityButtons::Strip(c,865,390,"A Selecionar",18,White,350);
+            InfinityButtons::Strip(c,865,432,"X Renomear",18,White,350);
+            InfinityButtons::Strip(c,865,474,"Y Excluir",18,White,350);
+            c.TextFit(865,533,deleteCollectionConfirm_?"Y novamente confirma exclusao.":"Exclusao requer confirmacao.",17,Muted,350);
+            return;
+        }
         for(int i=first;i<total && i<first+7;++i) {
             const int y=229+(i-first)*57;
             panel(c,45,y,1189,50,Panel,i==collectionRow_);
@@ -4022,7 +4093,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             c.TextFit(390,565,"LB/RB: categorias | Cima/baixo: opcoes | A: abrir",16,Lime,815);
             c.TextFit(45,612,"CPU "+headerThermal_.CompactCelsius(0)+" | GPU "+headerThermal_.CompactCelsius(1)+" | Plugins: consultar painel",17,Muted,1180);
             return;
-        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||(systemTab_==2&&!thermalPage_)||systemTab_==5||(systemTab_==7&&!localMilestones_&&!saveCenter_&&!achievementsPage_&&!powerPage_)))){
+        }else if(!(layout_&&(systemTab_==0||(systemTab_==1&&!networkPeer_&&!smbPage_)||systemTab_==2||systemTab_==5||systemTab_==6||(systemTab_==7&&!powerPage_&&(saveCenter_||achievementsPage_||!localMilestones_))))){
             // A single selected category replaces eight unrelated shortcuts on details pages.
             c.SeriesTile(42,166,1196,166,false);
             InfinityIcons::Draw(c,marks[systemTab_],65,193,68,Lime);
@@ -4863,6 +4934,32 @@ void ConsoleHome::PressSaveCenter(Key key){
     }
 }
 void ConsoleHome::DrawSaveCenter(HomeCanvas& c)const{
+    if(layout_){
+        const size_t row=saveBackups_?saveBackupRow_:saveList_?saveRow_:saveProfileRow_;
+        const size_t count=saveBackups_?saveRecords_.size():saveList_?saveItems_.size():saveProfiles_.size();
+        const std::string mode=saveBackups_?"Backups por jogo":saveList_?"Saves do perfil":"Perfis e saves";
+        c.TextFit(45,140,mode,29,White,1180);
+        c.TextFit(45,177,number(count)+" registros reconhecidos | Inventario local",19,Muted,1180);
+        c.SeriesTile(45,215,774,359,false,190);
+        const size_t first=(row/4)*4;
+        for(size_t i=first;i<count&&i<first+4;++i){
+            int y=226+int(i-first)*84; c.SeriesTile(56,y,752,75,i==row);
+            InfinityIcons::Draw(c,saveBackups_?39:saveList_?38:27,70,y+18,36,i==row?Lime:White);
+            const std::string name=saveBackups_?saveRecords_[i].package.name:saveList_?saveItems_[i].name:saveProfiles_[i].owner;
+            const std::string sub=saveBackups_?saveRecords_[i].slot+" | "+StorageInfo::FormatBytes(saveRecords_[i].bytes):saveList_?"Title ID "+hexId(saveItems_[i].titleId):saveProfiles_[i].device;
+            c.TextFit(122,y+9,name,23,White,665);c.TextFit(122,y+44,sub,17,Muted,665);
+        }
+        if(!count)c.TextFit(65,278,"Nenhum registro reconhecido.",23,Muted,725);
+        c.SeriesTile(834,215,400,359,false,205);
+        c.TextFit(852,230,"Gerenciamento",24,White,364);
+        c.TextFit(852,280,saveBackups_?"Title ID "+hexId(saveTitle_):saveList_?"Copia pessoal do save":"Selecione uma pasta de perfil",19,White,364);
+        c.TextFit(852,324,saveBackups_?"A Recuperar copia | X Verificar":saveList_?"A Criar backup":"A Abrir saves",18,Lime,364);
+        if(saveList_&&!saveBackups_)c.TextFit(852,363,"START Backups do jogo",18,White,364);
+        c.TextFit(852,421,"Inventario local; titularidade nao verificada.",16,Muted,364);
+        if(saveLimited_)c.TextFit(852,456,"Limite de inventario atingido",16,Muted,364);
+        c.TextFit(852,514,count?number(row+1)+"/"+number(count):"0 registros",19,Lime,364);
+        InfinityButtons::Strip(c,45,607,saveConfirm_?"A Confirmar | B Cancelar":saveBackups_?"A Recuperar copia | X Verificar | Y Atualizar | B Voltar":saveList_?"A Backup | START Backups do jogo | Y Atualizar | B Voltar":"A Saves | Y Atualizar | LB/RB Pagina | B Voltar",18,White,1180);return;
+    }
     c.Text(45,349,saveBackups_?std::string(c.Tr("Saves | Backups do Title ID "))+hexId(saveTitle_):saveList_?std::string(c.Tr("Saves | "))+saveProfiles_[saveProfileRow_].owner+" / "+saveProfiles_[saveProfileRow_].device:std::string(c.Tr("Perfis e saves | Inventario de armazenamento")),25,White,1170);
     const size_t row=saveBackups_?saveBackupRow_:saveList_?saveRow_:saveProfileRow_;
     const size_t count=saveBackups_?saveRecords_.size():saveList_?saveItems_.size():saveProfiles_.size();
@@ -4955,6 +5052,38 @@ void ConsoleHome::PressAchievements(Key key){
     }
 }
 void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
+    if(layout_){
+        const size_t row=nativeAchievements_?nativeAchievementRow_:achievementDetails_?achievementDetailRow_:achievementRow_;
+        const size_t count=nativeAchievements_?nativeAchievementTitles_.size():achievementDetails_?achievementItems_.size():achievementSummary_.titles.size();
+        c.TextFit(45,140,nativeAchievements_?"Conquistas Xbox | Jogos instalados":"Conquistas | GPD offline",29,White,1180);
+        c.SeriesTile(45,187,388,80,false);c.TextFit(58,195,"Perfil conectado",17,Muted,360);
+        c.TextFit(58,223,social_.controller<0?"Indisponivel":social_.displayName,25,White,360);
+        c.SeriesTile(445,187,388,80,false);c.TextFit(458,195,"Gamerscore reportado",17,Muted,360);
+        c.TextFit(458,223,social_.gamerscoreKnown?number(social_.gamerscore)+" G":"Indisponivel",25,White,360);
+        c.SeriesTile(845,187,389,80,false);c.TextFit(858,195,"Conquistas reportadas",17,Muted,360);
+        c.TextFit(858,223,social_.achievementsKnown?number(social_.achievements):"Indisponivel",25,White,360);
+        const size_t first=row/4*4;
+        for(size_t i=first;i<count&&i<first+4;++i){
+            int y=282+int(i-first)*68; c.SeriesTile(45,y,790,62,i==row);
+            InfinityIcons::Draw(c,9,59,y+14,32,i==row?Lime:White);
+            std::string name,sub;
+            if(nativeAchievements_){name=nativeAchievementTitles_[i].second;sub="Title ID "+hexId(nativeAchievementTitles_[i].first);}
+            else if(achievementDetails_){const auto& a=achievementItems_[i];name=a.name;sub=std::string(a.earned?"Desbloqueada":"Bloqueada")+" | "+number(a.score)+" G";}
+            else{const auto& t=achievementSummary_.titles[i];name=t.name;sub=number(t.earned)+"/"+number(t.total)+" conquistas | "+number(t.earnedScore)+"/"+number(t.score)+" G";}
+            c.TextFit(107,y+5,name,22,White,705);c.TextFit(107,y+33,sub,17,Muted,705);
+        }
+        if(!count)c.TextFit(60,330,nativeAchievements_?"Nenhum Title ID reconhecido.":"Nenhuma entrada GPD reconhecida.",22,Muted,755);
+        c.SeriesTile(850,282,384,266,false,205);c.TextFit(865,297,nativeAchievements_?"Inventario de titulos":"Resumo GPD local",23,White,354);
+        if(!nativeAchievements_&&achievementLoaded_){
+            const auto& s=achievementSummary_;
+            c.TextFit(865,344,number(s.earnedScore)+"/"+number(s.score)+" G",27,Lime,354);
+            c.TextFit(865,387,number(s.earned)+"/"+number(s.total)+" conquistas",20,White,354);
+            c.TextFit(865,428,number(s.titles.size())+" titulos",18,Muted,354);
+        }else c.TextFit(865,344,number(count)+" registros",22,White,354);
+        c.TextFit(865,478,nativeAchievements_?"Nao e historico Xbox Live.":"GPD nao vinculado ao perfil ativo.",16,Muted,354);
+        c.TextFit(45,568,nativeAchievements_?"Interface Xbox experimental.":social_.origin==InfinitySocial::Origin::Test?"Perfil de teste | Dados GPD nao autenticados.":"Dados locais, nao autenticados pela Xbox Live.",17,Muted,1180);
+        InfinityButtons::Strip(c,45,607,nativeAchievements_?"A Abrir Xbox | X GPD offline | Y Atualizar | LB/RB Pagina | B Voltar":achievementDetails_?"LB/RB Pagina | Y Recarregar | B Voltar":"A Detalhes | X Jogos instalados | Y Recarregar | LB/RB Pagina | B Voltar",17,White,1180);return;
+    }
     if(nativeAchievements_){
         c.TextFit(45,349,"Conquistas Xbox | Jogos instalados",26,White,1170);
         c.TextFit(48,382,"Selecione o titulo para abrir as conquistas do perfil no sistema.",18,Lime,1170);
