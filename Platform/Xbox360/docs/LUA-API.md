@@ -95,3 +95,7 @@ end
 ```
 
 Em Ordenação, esquerda escolhe crescente, direita decrescente, e A aplica. Callbacks Aurora recebem a direção selecionada; para a API INFINITY, DESC inverte a sequência retornada pelo script. Erros não substituem o script ativo.
+
+## Repositório local (V0.3.16)
+
+Em Sistema > Plugins > R3, START abre o repositório. A instala, X remove, ambos com confirmação adicional; Y relê o catálogo e B retorna. O catálogo `Scripts/Repository/catalog.tsv` usa o cabeçalho `INFINITY-LUA-REPO-V1` e linhas TSV categoria, filename, bytes, sha256. Categorias Utilities, Filters, Sorts e Subtitles. A fonte deve estar no próprio diretório Repository e o destino na categoria correspondente. O tamanho e SHA-256 são conferidos antes de copiar; um arquivo diferente no destino nunca é sobrescrito ou removido. Remover não limpa uma seleção Lua já aplicada; use X na categoria correspondente. A instalação nunca executa o script. O pacote inclui Resumo.lua, Favoritos.lua e Inverter.lua. Não há sincronização online nesta revisão; o manifesto local não é uma assinatura digital.

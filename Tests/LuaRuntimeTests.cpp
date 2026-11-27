@@ -1,4 +1,7 @@
 #include "Modules/Scripts/LuaRuntime.h"
+#include "Modules/Scripts/LuaRepository.h"
+#include <filesystem>
+#include <chrono>
 #include <cassert>
 int main(int argc,char** argv){
     assert(InfinityLua::Available());
@@ -124,4 +127,32 @@ int main(int argc,char** argv){
                             "GameListSubtitles['x']=function(c) while true do end end","GameListSubtitles['x']=function(c) return 1 end"}){
         auto bad=SubtitlePage(script,compat,{0});assert(!bad.error.empty()&&bad.lines.empty());
     }
+    namespace fs=std::filesystem;
+    const auto scriptsRoot=fs::path(argv[1]).parent_path();
+    const auto temp=fs::temp_directory_path()/("infinity-lua-repo-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(temp/"Scripts"/"Filters");
+    fs::create_directories(temp/"Scripts"/"Sorts");
+    fs::copy(scriptsRoot/"Repository",temp/"Scripts"/"Repository",fs::copy_options::recursive);
+    const auto root=temp.string()+"/";
+    std::vector<InfinityLuaRepo::Entry> entries;
+    assert(InfinityLuaRepo::Load(root,entries)&&entries.size()==3);
+    for(const auto& entry:entries){
+        assert(InfinityLuaRepo::Status(root,entry)=="Disponivel");
+        assert(InfinityLuaRepo::Install(root,entry)=="Script instalado.");
+        assert(InfinityLuaRepo::Status(root,entry)=="Instalado");
+        assert(InfinityLuaRepo::Remove(root,entry)=="Script removido.");
+        assert(InfinityLuaRepo::Status(root,entry)=="Disponivel");
+    }
+    const auto entry=entries[0];assert(InfinityLuaRepo::Install(root,entry)=="Script instalado.");
+    std::ofstream(InfinityLuaRepo::Destination(root,entry),std::ios::trunc)<<"custom";
+    assert(InfinityLuaRepo::Status(root,entry)=="Local diferente");
+    assert(InfinityLuaRepo::Install(root,entry)!="Script instalado.");
+    assert(InfinityLuaRepo::Remove(root,entry)!="Script removido.");
+    fs::remove(InfinityLuaRepo::Destination(root,entry));
+    std::ofstream(InfinityLuaRepo::Source(root,entry),std::ios::app)<<"tamper";
+    assert(InfinityLuaRepo::Install(root,entry)!="Script instalado.");
+    std::ofstream(temp/"Scripts"/"Repository"/"catalog.tsv",std::ios::trunc)<<"INFINITY-LUA-REPO-V1\nFilters\t../bad.lua\t1\t"<<std::string(64,'a')<<"\n";
+    assert(!InfinityLuaRepo::Load(root,entries)&&entries.empty());
+    fs::remove_all(temp);
+
 }

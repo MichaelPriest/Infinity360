@@ -121,6 +121,8 @@ def main():
         (preview/rel).mkdir(parents=True, exist_ok=True)
     subtitle_dir = Path("Scripts/Subtitles")
     shutil.copytree(args.repo/"Platform/Xbox360/ReleaseDefaults"/subtitle_dir, preview/subtitle_dir, dirs_exist_ok=True)
+    lua_repo_dir = Path("Scripts/Repository")
+    shutil.copytree(args.repo/"Platform/Xbox360/ReleaseDefaults"/lua_repo_dir, preview/lua_repo_dir, dirs_exist_ok=True)
     shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults/README.md",preview/"LEIA-ME-RECURSOS.txt")
     (preview/"infinity-preview.txt").write_text("INFINITY360-XSDK-PREVIEW\n")
     for filename in ("aurorax-store.tsv","infinity360-providers.tsv","infinity360-store-hosts.txt","FONTES.txt"):
@@ -183,6 +185,8 @@ def main():
         assert b"#EXTINF:" in z.read("MenuPreview/playlist.m3u")
         for script in ("Dispositivo.lua", "Tipo.lua", "Title-ID.lua", "Versao.lua"):
             assert z.read(f"MenuPreview/Scripts/Subtitles/{script}") == (preview/subtitle_dir/script).read_bytes()
+        for script in ("catalog.tsv","Favoritos.lua","Inverter.lua","Resumo.lua"):
+            assert z.read(f"MenuPreview/Scripts/Repository/{script}") == (preview/lua_repo_dir/script).read_bytes()
         assert "Licenses/FFmpeg-LGPL-2.1.txt" in z.namelist()
     install.with_name(install.name+".sha256").write_text(f"{digest(install)}  {install.name}\n")
     print(archive, digest(archive))

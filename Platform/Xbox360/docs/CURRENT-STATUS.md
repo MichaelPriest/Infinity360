@@ -1,6 +1,6 @@
-# Status V0.3.15
+# Status V0.3.16
 
-Último XEX compilado com sucesso: V0.3.5 (XSDK e FFmpeg). Gates portáteis V0.3.7–V0.3.13 aprovados. V0.3.13 também teve CI Cloud360 e capturas aprovados. V0.3.14 teve regressão portátil aprovada; V0.3.15 aguarda CI; Lua e caminhos novos ainda não homologados em XSDK/Xbox físico.
+Último XEX compilado com sucesso: V0.3.5 (XSDK e FFmpeg). Gates portáteis V0.3.7–V0.3.13 aprovados. V0.3.13 também teve CI Cloud360 e capturas aprovados. V0.3.14 teve regressão portátil aprovada; V0.3.15 teve regressão portátil aprovada; V0.3.16 aguarda CI; Lua e caminhos novos ainda não homologados em XSDK/Xbox físico.
 
 | Área | Estado |
 |---|---|
@@ -68,3 +68,5 @@ V0.3.13: legendas Lua por página, API v3 e quatro scripts distribuídos; CI por
 V0.3.14: adaptador inicial para callbacks Aurora de filtros e ordenações; API v4. Sem nova build XEX.
 
 V0.3.15: compatibilidade inicial GameListSubtitles (um callback), ordenação Lua ASC/DESC. CI pendente; sem XEX. Categorias aninhadas, dados Aurora específicos e utilitários ainda não implementados.
+
+V0.3.16: repositório local Lua com catálogo e três fontes, instalação/remoção confirmadas e SHA-256. Atualização/sincronização HTTPS ainda pendentes; sem build XEX.

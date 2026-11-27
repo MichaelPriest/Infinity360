@@ -49,6 +49,7 @@
 #include <utility>
 #include <set>
 
+#include "Modules/Scripts/LuaRepository.h"
 namespace InfinityLua { struct Library; struct SubtitleResult; }
 
 class ConsoleHome {
@@ -333,6 +334,12 @@ private:
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();
     void PressLuaScripts(Key key);
+    bool luaRepoPage_=false,luaRepoConfirm_=false,luaRepoRemove_=false;
+    int luaRepoRow_=0;
+    std::vector<InfinityLuaRepo::Entry> luaRepoEntries_;
+    void RefreshLuaRepository();
+    void PressLuaRepository(Key key);
+    void DrawLuaRepository(HomeCanvas& c)const;
     std::string LuaDirectory()const;
     InfinityLua::Library LuaLibrary()const;
     InfinityLua::SubtitleResult FormatLuaPage(const std::string& code,int first,int rows)const;

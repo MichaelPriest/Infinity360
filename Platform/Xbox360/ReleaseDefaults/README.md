@@ -32,3 +32,5 @@ Os arquivos de legenda incluídos mostram Title ID, versão, dispositivo ou tipo
 Compatibilidade inicial: filtros Aurora de um callback em GameListFilterCategories.User e ordenações GameListSorters (ASC/DESC) podem ser executados nas categorias correspondentes quando utilizam campos suportados. Consulte LUA-API.md. Não é compatibilidade integral.
 
 V0.3.15: GameListSubtitles aceita um callback simples com campos suportados; em Sorts, esquerda/direita escolhem crescente/decrescente antes de A aplicar.
+
+START em Scripts Lua abre o repositório local. A instala e X remove com confirmação; Y relê o catálogo. Inclui três scripts próprios; valida tamanho e SHA-256 e não sobrescreve alterações locais. Sincronização remota pendente.

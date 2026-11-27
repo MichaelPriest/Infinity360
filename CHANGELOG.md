@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.16 — Repositório local de scripts
+
+- START no gerenciador Lua abre catálogo local com três scripts próprios. Instalação e remoção confirmadas pelo controle; SHA-256 e tamanho validados, arquivos personalizados preservados. Catálogo limitado, sem execução automática. Reutiliza StoreSha256 e SavedFile.
+- Empacotamento inclui catálogo e fontes próprias; testes de instalação, remoção, adulteração e caminhos inválidos. Sincronização HTTPS e atualizações remotas pendentes. Sem solicitação XEX.
+
 ## V0.3.15 — Legendas Aurora e ordenação bidirecional
 
 - API v5: aceita um callback em GameListSubtitles por arquivo, usando o mesmo Content limitado. Mantém os limites de página, memória e saída. Campos e APIs ausentes continuam recusados.
