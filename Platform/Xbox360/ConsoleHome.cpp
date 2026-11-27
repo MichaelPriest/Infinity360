@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "Modules/Scripts/LuaRuntime.h"
 #include "Modules/Emulators/ToolRoots.h"
 #include "Modules/Emulators/Ps1CoverIndex.h"
 #include "Modules/Patches/FpsCatalog.h"
@@ -370,6 +371,9 @@ void ConsoleHome::LoadScanPaths() {
     roots_=GameScanner::LoadRoots(dir_+"aurorax-scanpaths.txt",baseRoots_);
     roots_=GameScanner::LoadRoots(savedFile(dir_+"aurorax-scanpaths-ui.txt"),roots_);
     roots_=GameScanner::LoadRoots(dir_+"aurorax-aurora-paths.txt",roots_);
+    configuredRoots_=roots_;
+    disabledRoots_=GameScanner::LoadRoots(savedFile(dir_+"infinity360-scanpaths-disabled.txt"),{});
+    roots_.erase(std::remove_if(roots_.begin(),roots_.end(),[&](const std::string& path){return std::any_of(disabledRoots_.begin(),disabledRoots_.end(),[&](const std::string& d){return GameScanner::SameRoot(path,d);});}),roots_.end());
 }
 void ConsoleHome::ToggleScanPath() {
     if(folders_.size()<2 || !fileWorkspace_.CanBrowse(folders_.back())) {
@@ -384,11 +388,11 @@ void ConsoleHome::ToggleScanPath() {
     const bool remove=index<custom.size();
     if(remove)custom.erase(custom.begin()+index);
     else {
-        for(size_t i=0;i<roots_.size();++i)
-            if(GameScanner::SameRoot(roots_[i],path)) {
+        for(size_t i=0;i<configuredRoots_.size();++i)
+            if(GameScanner::SameRoot(configuredRoots_[i],path)) {
                 notice_="Pasta ja cadastrada em outro arquivo de configuracao.";return;
             }
-        if(roots_.size()>=32 || custom.size()>=32) {
+        if(configuredRoots_.size()>=32 || custom.size()>=32) {
             notice_="Limite total de 32 pastas atingido.";return;
         }
         custom.push_back(path);
@@ -401,6 +405,57 @@ void ConsoleHome::ToggleScanPath() {
     }
     LoadScanPaths();
     notice_=remove?"Pasta removida da busca personalizada.":"Pasta adicionada. Biblioteca atualiza ao abrir.";
+}
+void ConsoleHome::ToggleLibraryRoot(){
+    if(configuredRoots_.empty()||TransferRunning())return;
+    const auto path=configuredRoots_[libraryPathRow_];
+    auto next=disabledRoots_;
+    auto it=std::find_if(next.begin(),next.end(),[&](const std::string& d){return GameScanner::SameRoot(d,path);});
+    const bool enable=it!=next.end();
+    if(enable)next.erase(it);
+    else{if(next.size()>=32){notice_="Limite de caminhos desativados.";return;}next.push_back(path);}
+    const auto file=dir_+"infinity360-scanpaths-disabled.txt";
+    std::ofstream out((file+".tmp").c_str(),std::ios::trunc);
+    for(const auto& item:next)out<<item<<"\n";
+    out.close();
+    if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar caminhos.";return;}
+    LoadScanPaths();clampRow(libraryPathRow_,configuredRoots_.size());
+    notice_=enable?"Caminho habilitado. Y atualiza biblioteca.":"Caminho desativado. Y atualiza biblioteca.";
+}
+void ConsoleHome::RefreshLuaScripts(){
+    luaScripts_.clear();std::vector<FolderEntry> items;
+    if(ReadFolder(FileWorkspace::Join(dir_,"Scripts"),items)){
+        for(const auto& item:items){
+            if(luaScripts_.size()>=128)break;
+            if(!item.directory&&item.name.size()<=128&&item.name.find_first_of("/\\:")==std::string::npos&&tvEndsWith(item.name,".lua"))luaScripts_.push_back(item.name);
+        }
+    }
+    std::sort(luaScripts_.begin(),luaScripts_.end());clampRow(luaRow_,luaScripts_.size());
+}
+void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
+    c.Text(45,93,"Biblioteca | Pastas de varredura",36,White,1180);
+    c.Text(48,150,number(roots_.size())+" ativas / "+number(configuredRoots_.size())+" cadastradas (XEX)",21,Muted,1160);
+    const int first=(libraryPathRow_/7)*7;
+    for(int i=first;i<first+7&&size_t(i)<configuredRoots_.size();++i){
+        const auto& path=configuredRoots_[i];const int y=190+(i-first)*54;
+        const bool enabled=std::any_of(roots_.begin(),roots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
+        panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
+        c.TextFit(62,y+8,path,21,White,925);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
+    }
+    c.Text(48,580,"Pacotes GOD/XBLA mantem a busca propria. A abre o gerenciador para adicionar/remover.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,"A Pastas | X Ativar/desativar | Y Varrer | B Voltar",18,Lime,1170);
+}
+void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
+    c.Text(45,93,"Scripts Lua",36,White,1180);
+    c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execucao manual isolada":"Runtime Lua nao incluido nesta build",21,Muted,1160);
+    const int first=(luaRow_/7)*7;
+    for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
+        const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
+        c.TextFit(62,y+8,luaScripts_[i],22,White,1145);
+    }
+    if(luaScripts_.empty())c.Text(48,245,"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
+    c.Text(48,580,"Sem acesso direto a arquivos, rede, memoria do jogo ou plugins nativos.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,"A Executar | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::Reload() {
     notice_.clear();
@@ -1005,6 +1060,23 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
     }
 }
 std::string ConsoleHome::Press(Key key) {
+    if(libraryPathsPage_){
+        if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
+        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,configuredRoots_.size());}
+        if(key==Favorite)ToggleLibraryRoot();
+        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,configuredRoots_.size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
+        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;Enter(Files);notice_="Abra uma pasta; Esquerda cadastra/remove da biblioteca.";}
+        return "";
+    }
+    if(luaPage_){
+        if(key==Back){luaPage_=false;notice_.clear();return "";}
+        if(key==Up||key==Down){luaRow_=std::max(0,luaRow_+(key==Down?1:-1));clampRow(luaRow_,luaScripts_.size());}
+        if(key==Refresh)RefreshLuaScripts();
+        if(key==Accept&&!TransferRunning()&&!ftp_.Running()&&!luaScripts_.empty())notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),games_.size());
+        return "";
+    }
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;libraryPathsPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
         const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
         const int count=actions[3]<0?3:4;
@@ -2386,7 +2458,7 @@ void ConsoleHome::DrawResidentPlugins(HomeCanvas& c) const {
         }
     }
     c.Text(47,588,"Somente leitura: estado carregado e conexao nao verificados.",18,Muted,1170);
-    InfinityButtons::Strip(c,47,610,"LB/RB Fonte | START Plugins locais | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,47,610,"LB/RB Fonte | START Plugins locais | R3 Scripts Lua | Y Atualizar",18,Lime,1170);
 }
 bool ConsoleHome::PluginAllowed(const PluginDescriptor& item)const{
     return item.manifestEnabled&&item.headerValid&&!item.conflict&&!disabledPluginIds_.count(PluginRegistry::Key(item.id));
@@ -2422,7 +2494,7 @@ void ConsoleHome::DrawLocalPlugins(HomeCanvas& c)const{
         c.Text(806,y+9,state,19,PluginAllowed(item)?Lime:Muted,400);
     }
     c.Text(48,585,"Preferencia local; nao altera launch.ini, nao carrega modulos residentes.",18,Muted,1170);
-    InfinityButtons::Strip(c,48,610,"X Alternar | START DashLaunch | Y Atualizar | B Voltar",18,Lime,1170);
+    InfinityButtons::Strip(c,48,610,"X Alternar | START DashLaunch | R3 Scripts Lua | Y Atualizar",18,Lime,1170);
 }
 void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
     if(layout_==DashboardLayout::TopIcons){
@@ -3043,7 +3115,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         if(percent)c.Box(x+14,y+63,static_cast<int>(551*percent/100),10,Lime,5);
         c.Text(x+14,y+76,number(percent)+std::string(c.Tr("% ocupado")),15,White,550);
     }
-    InfinityButtons::Strip(c,45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | Y Atualizar | B Voltar | Volumes podem compartilhar disco.",18,Muted,1180);
+    InfinityButtons::Strip(c,45,610,"LB/RB Pagina "+number(storagePage_+1)+"/"+number((storageVolumes_.size()+3)/4)+" | START Pastas biblioteca | Y Atualizar | B Voltar",18,Muted,1180);
 }
 void ConsoleHome::DrawSmb(HomeCanvas& c)const{
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
@@ -3269,6 +3341,8 @@ void ConsoleHome::DrawDiscSet(HomeCanvas& c) const{
     InfinityButtons::Strip(c,48,590,"A Selecionar XEX | Y Revalidar | B Voltar | Sem troca automatica",19,Lime,1170);
 }
 void ConsoleHome::DrawSection(HomeCanvas& c) const {
+    if(libraryPathsPage_){DrawLibraryPaths(c);return;}
+    if(luaPage_){DrawLuaScripts(c);return;}
     if(updateActive_){DrawDashboardUpdate(c);return;}
     if(discSetActive_){DrawDiscSet(c);return;}
     if(artEditing_) {DrawArtEditor(c);return;}
@@ -3850,6 +3924,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     }
     if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
+    if(libraryPathsPage_||luaPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     if(contentActive_||artEditing_||discSetActive_||updateActive_||fileAction_||collectionPicker_||searchActive_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);

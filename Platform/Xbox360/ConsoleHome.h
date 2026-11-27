@@ -323,6 +323,13 @@ private:
     void DrawFileActions(HomeCanvas& c) const;
     void ToggleScanPath();
     void LoadScanPaths();
+    std::vector<std::string> configuredRoots_,disabledRoots_,luaScripts_;
+    bool libraryPathsPage_=false,luaPage_=false;
+    int libraryPathRow_=0,luaRow_=0;
+    void DrawLibraryPaths(HomeCanvas& c)const;
+    void DrawLuaScripts(HomeCanvas& c)const;
+    void RefreshLuaScripts();
+    void ToggleLibraryRoot();
     std::string copyDir_, copyName_, renameName_;
     void StartFileEdit(bool rename);
     void ConfirmFileEdit();

@@ -13,3 +13,7 @@ Copie listas M3U/M3U8 autorizadas em MenuPreview/Listas (TV, Filmes, Series, Ani
 ## Rede IPTV
 
 O pacote unificado inclui infinity360-iptv-network.txt com OPEN. Em Cloud360 > Fontes, X alterna entre OPEN e RESTRICTED (ou edite o arquivo em MenuPreview). OPEN aceita endereços HTTP/HTTPS válidos em portas alternativas sem cadastro de domínio; HTTP não é criptografado. TLS continua validado, redirecionamentos permanecem desativados e os formatos de mídia suportados continuam limitados. Store e demais módulos mantêm sua política. Arquivo ausente ou inválido resulta em modo restrito.
+
+## Biblioteca e scripts
+
+Sistema > Discos > START abre Pastas de varredura XEX. X habilita/desabilita; Y varre novamente; A abre Arquivos, onde Esquerda na pasta registra/remove caminhos personalizados. A busca GOD/XBLA continua independente. Sistema > Plugins > R3 abre Scripts Lua; copie fontes .lua para MenuPreview/Scripts. A executa manualmente e Y atualiza. API inicial infinity.game_count; retorne texto para exibir resultado. Sem execucao automatica, acesso direto a disco, rede, memoria ou API Aurora/Freestyle. Runtime depende da compilacao com INFINITY_ENABLE_LUA.

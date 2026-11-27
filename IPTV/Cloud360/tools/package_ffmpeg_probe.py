@@ -108,6 +108,9 @@ def main():
     shutil.copy2(args.repo/"IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh",stage/"config")
     shutil.copy2(args.tls/"programs/xsdk/cacert.pem",stage/"bin")
     shutil.copy2(args.miniz/"LICENSE",stage/"licenses"/"miniz-LICENSE.txt")
+    lua_notice = args.build / "_deps/infinity_lua-src/doc/readme.html"
+    if lua_notice.is_file():
+        shutil.copy2(lua_notice,stage/"licenses"/"Lua-5.4.9-readme.html")
     shutil.copy2(args.repo/"Platform/Xbox360/Assets/home.tga",stage/"bin")
     shutil.copy2(stage/"bin"/"infinity_menu_preview.xex",stage/"bin"/"default.xex")
     preview=stage/"bin"/"MenuPreview"

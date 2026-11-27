@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.6 — Caminhos da biblioteca e Lua
+
+- Gerenciador de caminhos XEX em Sistema > Discos > START; alterna busca, salva preferências e permite varredura e cadastro via Arquivos. Busca de pacotes independente.
+- Scripts locais em Sistema > Plugins > R3. Runtime Lua 5.4.9 opcional, fonte oficial com SHA256, memória e instruções limitadas, execução manual, API inicial somente leitura. Sem API Aurora/Freestyle.
+- CI portátil habilita Lua; build XEX permanece sem nova solicitação.
+
 ## V0.3.5 — Diagnóstico de abertura IPTV remota
 
 - Diferencia bloqueio de rede, URL/formato, certificado, inicialização e opção libcurl recusada; evita opções TLS em HTTP. Propaga motivo de abertura HLS. Testa modo livre e isolamento da Store. Causa específica no console ainda desconhecida.

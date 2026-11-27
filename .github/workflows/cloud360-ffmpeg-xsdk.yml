@@ -77,8 +77,8 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$HOME/xsdk/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$HOME/xsdk-gcc" \
             -DXSDK_GLSLANG="$(command -v glslangValidator)" \
             -DMBEDTLS_XENON_DIR="$HOME/mbedtls-xenon" -DCURL_XENON_DIR="$HOME/curl-xenon" \
-            -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" \
-            -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" -DINFINITY_EXPERIMENTAL_MENU_FFMPEG=ON \
+            -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" -DINFINITY_ENABLE_LUA=ON \
+            -DCLOUD360_CONTAINER_FFMPEG_ROOT="$RUNNER_TEMP/ffmpeg-install" -DINFINITY_EXPERIMENTAL_MENU_FFMPEG=ON -DINFINITY_ENABLE_LUA=ON \
             -DCLOUD360_WITH_LOGOS=OFF -DCLOUD360_WITH_FFMPEG=OFF -DCMAKE_BUILD_TYPE=Release \
             2>&1 | tee "$RUNNER_TEMP/ffmpeg-diagnostics/cmake.log"
           cmake --build "$RUNNER_TEMP/av-native" --parallel 2 --target cloud360_container_probe cloud360_av_probe infinity_menu_preview \

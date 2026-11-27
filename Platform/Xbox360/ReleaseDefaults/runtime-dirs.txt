@@ -19,3 +19,4 @@ IPTV
 Nexus
 Series360
 Cinema
+Scripts

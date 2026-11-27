@@ -28,7 +28,7 @@ jobs:
           git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d
       - name: Configure and compile host tests only
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DINFINITY_MINIZ_DIR="$HOME/infinity-miniz" -DINFINITY_ENABLE_LUA=ON
           cmake --build build --parallel 2
       - name: Verify required test registration and run suite
         run: |
