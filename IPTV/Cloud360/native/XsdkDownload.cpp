@@ -219,6 +219,16 @@ static std::string fetchMetadata(const std::string& url,unsigned long long limit
     if(!progress(transfer.data.size(),limit))return "Consulta cancelada.";
     data.swap(transfer.data);success=true;return "";
 }
+std::string XsdkLuaSync(const InfinityLuaRepo::Manifest& manifest,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
+    success=false;
+    if(!InfinityLuaRepo::ValidManifest(manifest))return "Fonte Lua invalida.";
+    std::string data;bool fetched=false;
+    const auto error=fetchMetadata(manifest.url,manifest.bytes,true,root,progress,data,fetched,30);
+    if(!fetched)return error+" | Catalogo anterior preservado.";
+    const auto result=InfinityLuaRepo::ImportManifest(root,manifest,data);
+    success=result=="Catalogo Lua sincronizado.";return result;
+}
 std::string XsdkLuaDownload(const InfinityLuaRepo::Entry& entry,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
     success=false;

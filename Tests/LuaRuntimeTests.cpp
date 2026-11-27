@@ -159,6 +159,25 @@ int main(int argc,char** argv){
     assert(!InfinityLuaRepo::RemoteUrl("http://example.org/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://user@example.org/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://example.org:8443/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://example.org/a.lua#x"));
     std::ofstream(temp/"Scripts"/"Repository"/"catalog.tsv",std::ios::trunc)<<"INFINITY-LUA-REPO-V1\nFilters\t../bad.lua\t1\t"<<std::string(64,'a')<<"\n";
     assert(!InfinityLuaRepo::Load(root,entries)&&entries.empty());
+    // The bundled pin must match the exact catalog bytes. Remote import is atomic.
+    InfinityLuaRepo::Manifest manifest;
+    assert(InfinityLuaRepo::ReadManifest(root,manifest));
+    std::string original;
+    assert(InfinityLuaRepo::ReadBounded((scriptsRoot/"Repository"/"catalog.tsv").string(),32768,original));
+    assert(InfinityLuaRepo::ImportManifest(root,manifest,original)=="Catalogo Lua sincronizado.");
+    assert(InfinityLuaRepo::Load(root,entries)&&entries.size()==3);
+    assert(InfinityLuaRepo::ImportManifest(root,manifest,original+"x")!="Catalogo Lua sincronizado.");
+    auto modified=original;modified[0]='X';
+    assert(InfinityLuaRepo::ImportManifest(root,manifest,modified)!="Catalogo Lua sincronizado.");
+    auto invalid=manifest;invalid.bytes=modified.size();StoreSha256 h;
+    h.Update(reinterpret_cast<const unsigned char*>(modified.data()),modified.size());invalid.sha=h.Finish();
+    assert(InfinityLuaRepo::ImportManifest(root,invalid,modified)!="Catalogo Lua sincronizado.");
+    assert(InfinityLuaRepo::Load(root,entries)&&entries.size()==3);
+    std::string empty="INFINITY-LUA-REPO-V2\n";StoreSha256 eh;
+    eh.Update(reinterpret_cast<const unsigned char*>(empty.data()),empty.size());
+    auto next=manifest;next.bytes=empty.size();next.sha=eh.Finish();
+    assert(InfinityLuaRepo::ImportManifest(root,next,empty)=="Catalogo Lua sincronizado.");
+    assert(InfinityLuaRepo::Load(root,entries)&&entries.empty());
     fs::remove_all(temp);
 
 }

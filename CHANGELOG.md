@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.18 — Sincronização de catálogo Lua
+
+- R3 no repositório confirma download de manifesto fixado em source.tsv (URL HTTPS, tamanho e SHA-256). Valida formato integral antes de salvar catalog-remote.tsv; cache anterior preservado em falhas e catálogo local permanece como fallback. Não instala nem executa scripts.
+- Transporte XSDK com progresso/cancelamento; fonte padrão aponta para revisão imutável V0.3.17. Testes de pin real, corrupção, formato e substituição de cache. CI V0.3.17 aprovado. Sem nova solicitação XEX.
+
 ## V0.3.17 — Download HTTPS de scripts Lua
 
 - Catálogo V2 admite URL HTTPS opcional por script; V1 segue aceito. A instalação confirmada prefere fonte local verificada e, se ausente/inválida, solicita download nativo com TLS, host permitido, limite de 64 KiB, tamanho exato e SHA-256 antes da gravação. Nenhum overwrite ou execução automática.

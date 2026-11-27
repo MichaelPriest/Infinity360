@@ -136,6 +136,8 @@ public:
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
     bool TakeLuaDownload(InfinityLuaRepo::Entry& entry);
+    bool TakeLuaManifest(InfinityLuaRepo::Manifest& manifest);
+    void LuaManifestResult(const std::string& message,bool success);
     void LuaDownloadResult(const std::string& message,bool success);
     bool TakeUnityRequest(XboxExecutionInfo& info);
     bool TakeArtRequest(unsigned& title,bool& cover,bool& remote);
@@ -338,7 +340,8 @@ private:
     void PressLuaScripts(Key key);
     bool luaRepoPage_=false,luaRepoConfirm_=false,luaRepoRemove_=false;
     int luaRepoRow_=0;
-    bool luaDownloadPending_=false;
+    bool luaDownloadPending_=false,luaManifestPending_=false,luaManifestConfirm_=false;
+    InfinityLuaRepo::Manifest luaManifest_;
     InfinityLuaRepo::Entry luaDownloadEntry_;
     std::vector<std::string> luaRepoStatuses_;
     void RefreshLuaRepositoryStatuses();
