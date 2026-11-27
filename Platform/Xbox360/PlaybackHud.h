@@ -29,6 +29,25 @@ public:
     }
 };
 
+// Shared loading presentation; phase markers are steps, not measured progress.
+inline void DrawPlaybackLoading(HomeCanvas& c,unsigned phase,const std::string& heading,const std::string& detail,const std::string& footer){
+    c.Background();
+    c.GroupGlass(140,185,1000,350);
+    c.TextFit(180,212,"INFINITY 360  |  Cloud360 IPTV",23,0xffa8ff00u,920);
+    c.TextFit(180,252,heading,34,0xfff2f7f3u,920);
+    c.TextFit(180,303,detail,22,0xffc3d2c9u,920);
+    static const char* labels[]={"Conexao","Decoder","Buffer","Audio"};
+    for(unsigned i=0;i<4;++i){
+        const int x=180+int(i)*230;
+        c.Translucent(x,366,210,75,0xff172c28u,120,8);
+        c.Box(x+12,379,8,8,i<phase?0xffa8ff00u:i==phase?0xffe8bd24u:0xff697a70u,4);
+        c.TextFit(x+28,375,labels[i],20,0xfff2f7f3u,168);
+        c.TextFit(x+12,405,i<phase?"Concluido":i==phase?"Em andamento":"Aguardando",16,0xffc3d2c9u,185);
+    }
+    c.TextFit(180,461,footer,18,0xffc3d2c9u,920);
+    InfinityButtons::Strip(c,180,493,"B Cancelar",18,0xfff2f7f3u,920);
+}
+
 // Read-only Guide during playback. One full frame (3.52 MiB) only when open.
 // New decoded frames invalidate the old snapshot; restoration prevents stacked alpha.
 class PlaybackGuideOverlay {

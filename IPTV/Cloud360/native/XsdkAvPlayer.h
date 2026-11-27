@@ -62,6 +62,15 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudContainerSession* session=nullptr;
     MediaUrl url;bool remoteSource=url.Parse(path);
     unsigned selectedBitrate=0;
+    // Never render the source URL: IPTV credentials may be embedded in it.
+    auto loading=[&](unsigned phase,const std::string& detail){
+        if(Cancelled())return false;
+        DrawPlaybackLoading(canvas,phase,"Preparando transmissao",detail,"A reproducao sera iniciada quando audio e video estiverem prontos.");
+        return present(true)&&!Cancelled();
+    };
+    auto loadingError=[](){return Cancelled()?"Reproducao cancelada.":"Falha ao apresentar carregamento IPTV.";};
+    if(remoteSource&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
+    if(remoteSource&&!loading(0,"Abrindo fonte e verificando acesso"))return loadingError();
 #ifdef INFINITY_AV_NETWORK
     XsdkMpeg::RemoteReader remote;
     XsdkMpeg::RangeReader ranged;
@@ -100,15 +109,18 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(!manualCap)hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
             if(!hls.Start(path,cap,true))return hlsError.empty()?"Playlist HLS recusada ou indisponivel.":hlsError;
             selectedBitrate=hls.SelectedBitrate();
+            if(!loading(1,"Identificando codecs e abrindo decoder"))return loadingError();
             auto readHls=[](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);};
             session=hls.Fragmented()?cloud_container_open_mp4(readHls,&hls,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(readHls,&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             const bool mp4=CloudHls::Extension(path,".mp4");
             if(mp4&&ranged.Open(path,root)){
+                if(!loading(1,"Abrindo decoder MP4"))return loadingError();
                 session=cloud_container_open_mp4_seekable(XsdkMpeg::RangeReader::ReadCallback,XsdkMpeg::RangeReader::SeekCallback,ranged.Length(),&ranged,CloudAvStreamQueue::Capture,&timeline);
             }else{
             if(Cancelled())return "Reproducao cancelada.";
             if(!remote.Open(path,root,!mp4,false,mp4))return remote.Error();
+            if(!loading(1,"Identificando codecs da fonte"))return loadingError();
             auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
             session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
             }
@@ -127,9 +139,11 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 #endif
         return Cancelled()?"Reproducao cancelada.":"Fonte FFmpeg indisponivel ou incompativel.";
     }
+    if(remoteSource&&!loading(2,"Preparando fila inicial de audio e video")){cloud_container_close(session);return loadingError();}
     int rc=1;
     auto prepare=[&](){unsigned prefill=0;while(rc>0&&timeline.WantsInput(0)&&prefill++<4096&&!Cancelled())rc=cloud_container_step(session,1);if(rc==0)timeline.EndInput();return !Cancelled()&&rc>=0&&timeline.Prepare();};
     if(!prepare()){cloud_container_close(session);return Cancelled()?"Reproducao cancelada.":"Falha ao preparar audio e video FFmpeg.";}
+    if(remoteSource&&!loading(3,"Inicializando saida de audio")){cloud_container_close(session);return loadingError();}
     const int64_t duration=cloud_container_duration(session),mediaStart=cloud_container_start(session);
     bool audioOpen=NT_SUCCESS(xsdk_audio_open(16)),ok=audioOpen,cancelled=false;
     unsigned shown=0,submitted=0,sourceWidth=0,sourceHeight=0;
@@ -332,10 +346,8 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
             else return result;
         }
         if(attempt==12)return result;
-        canvas.Background();canvas.SeriesTile(160,240,960,220,false,220);
-        canvas.TextFit(190,265,"Cloud360 | Reconectando transmissao ao vivo",30,0xfff2f7f3u,900);
-        canvas.TextFit(190,320,result,22,0xffb7c9c1u,900);
-        canvas.TextFit(190,379,"Sessao "+std::to_string(attempt+2)+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
+        DrawPlaybackLoading(canvas,0,manualChange?"Alterando qualidade":"Reconectando transmissao",
+            result,"Sessao "+std::to_string(attempt+2)+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":""));
         if(!present(true))return "Falha ao apresentar reconexao IPTV.";
         const auto start=std::chrono::steady_clock::now();
         while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(manualChange?250:500*std::min(attempt+1,3u))){

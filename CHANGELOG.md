@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.49 — Carregamento IPTV por etapas
+
+- Player FFmpeg remoto apresenta tela nativa com grupos translucidos nas fases de conexao, decoder, buffer inicial e audio; reconexao e troca de qualidade reutilizam a mesma apresentacao. Marcadores indicam etapas reais, nao porcentagem de download. Cancelamento checado entre fases, com fechamento da sessao aberta; chamadas sincrônicas ainda podem bloquear a interface temporariamente. Nao exibe URL de origem na tela de carregamento. Troca rapida de canais no catalogo, testes XSDK e capturas nativas pendentes. Sem XEX/release.
+
 ## V0.3.48 — Menu de qualidade no HUD
 
 - Y abre/fecha seletor de qualidade; esquerda/direita navega entre Auto e tetos HLS compativeis, A confirma. A reproducao continua durante a navegacao; a sessao so reinicia se o modo mudar (reconexao automatica continua independente). L3 fecha o seletor ao abrir Guide; B permanece saida global devido ao cancelamento de rede. Reutiliza a faixa inferior translucida sem outro framebuffer. Mantem teto configurado e orcamento de trocas. Testes portateis de menu adicionados; execucao e XSDK pendentes. Sem XEX/release.
