@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.16.0 Alpha
+# INFINITY 360 Remote — Android 0.17.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -80,3 +80,7 @@ Com o FTP parado, no painel Rede/FTP do Xbox use BACK para alternar o destino pr
 ## FTP de pastas completas
 
 Use Enviar pasta inteira e selecione uma pasta Android pelo seletor do sistema. O aplicativo cria uma nova pasta no workspace do Xbox e transfere seus arquivos e subpastas. Para receber, marque até 32 itens da listagem e toque em Receber itens selecionados; escolha uma pasta Android. Cada plano tem até 256 entradas, profundidade 8 e 16 GiB, respeitando o limite de upload por arquivo negociado. Nomes ASCII de até 42 caracteres e caminhos de até 200 são obrigatórios. Não mescla destinos existentes; lote para na primeira falha e mantém itens concluídos. Download usa cache de um arquivo e tenta remover documentos incompletos criados pelo app. FTP continua sem criptografia. Testes físicos e APK pendentes.
+
+## Retomar e renomear FTP
+
+Marque exatamente um item e use Renomear item selecionado (modo upload). Sem sobrescrita. Para download individual interrompido, Retomar último download reaproveita o cache na mesma sessão da tela se XSTAMP confirmar tamanho, data de modificação e raiz. O marcador não é hash de conteúdo; não retome arquivos alterados. Descartar download parcial remove o cache. Retomada de lotes e upload não implementadas. APK e homologação pendentes.

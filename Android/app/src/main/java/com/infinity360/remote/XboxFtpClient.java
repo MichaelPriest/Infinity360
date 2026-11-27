@@ -116,6 +116,18 @@ final class XboxFtpClient implements Closeable {
         if(!validPath(path)||path.equals("/")||serverUploadLimit==0)throw new IOException("Criação de pasta indisponível");
         expect(command("MKD "+path),257);
     }
+    void rename(String source,String destination)throws IOException{
+        if(!validPath(source)||!validPath(destination)||source.equals("/")||destination.equals("/")||serverUploadLimit==0)throw new IOException("Renomeação indisponível");
+        expect(command("RNFR "+source),350);expect(command("RNTO "+destination),250);
+    }
+    String stamp(String path)throws IOException{
+        if(!validPath(path)||path.equals("/"))throw new IOException("Arquivo inválido");
+        String reply=command("XSTAMP "+path);
+        if(reply.startsWith("502 ")||reply.startsWith("500 "))return "";
+        expect(reply,213);
+        if(!reply.matches("213 [0-9]{1,20}-[0-9]{1,20}-[0-9]{1,20}"))throw new IOException("Metadados inválidos");
+        return reply.substring(4);
+    }
     long size(String path)throws IOException{
         if(!validPath(path)||path.equals("/"))throw new IOException("Arquivo inválido");
         String reply=command("SIZE "+path);expect(reply,213);
@@ -123,9 +135,13 @@ final class XboxFtpClient implements Closeable {
         catch(NumberFormatException e){throw new IOException("Tamanho inválido");}
     }
     void download(String path,OutputStream destination,long expected,Progress progress)throws IOException{
-        if(!validPath(path)||path.equals("/")||expected<0)throw new IOException("Arquivo inválido");
-        long done=0;progress.update(0,expected);
+        downloadFrom(path,destination,expected,0,progress);
+    }
+    void downloadFrom(String path,OutputStream destination,long expected,long offset,Progress progress)throws IOException{
+        if(!validPath(path)||path.equals("/")||expected<0||offset<0||offset>expected)throw new IOException("Arquivo inválido");
+        long done=offset;progress.update(done,expected);
         try(Socket channel=passive()){
+            if(offset>0)expect(command("REST "+offset),350);
             expect(command("RETR "+path),150);
             InputStream in=channel.getInputStream();byte[] buffer=new byte[32768];int n;
             while((n=in.read(buffer))!=-1){check();if(n>expected-done)throw new IOException("Tamanho remoto mudou");destination.write(buffer,0,n);done+=n;progress.update(done,expected);}

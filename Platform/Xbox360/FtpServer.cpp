@@ -300,7 +300,8 @@ struct FtpServer::Impl {
     bool restartPending;
     Upload upload;
     FtpSession* session;
-    std::string root,user,password,input,reply,payload;
+    std::string root,user,password,input,reply,payload,renameFrom,renamePhysical;
+    bool renameFolder=false;
     std::ifstream file;
     size_t offset;
     const FileWorkspace& workspace;
@@ -313,7 +314,7 @@ struct FtpServer::Impl {
     }
     void clearClient() {
         clearData();closeSock(control);delete session;session=0;input.clear();reply.clear();
-        closing=false;binary=false;allocated=false;restartPending=false;restartOffset=0;disconnected=ticks();
+        closing=false;binary=false;allocated=false;restartPending=false;restartOffset=0;renameFrom.clear();renamePhysical.clear();disconnected=ticks();
     }
     ~Impl() {
         clearClient();closeSock(server);
@@ -331,7 +332,8 @@ struct FtpServer::Impl {
         for(size_t i=0;i<verb.size();++i)verb[i]=(char)std::toupper((unsigned char)verb[i]);
         bool valid=!line.empty()&&line.size()<=512;
         for(size_t i=0;i<line.size();++i)if((unsigned char)line[i]<32||(unsigned char)line[i]>126)valid=false;
-        if(!valid){respond("500 Invalid command");return;}
+        if(verb!="RNTO"){renameFrom.clear();renamePhysical.clear();}
+        if(!valid){renameFrom.clear();renamePhysical.clear();respond("500 Invalid command");return;}
         if(!session->Authenticated()||verb=="USER"||verb=="PASS"||verb=="QUIT") {
             clearData();binary=false;allocated=false;restartPending=false;restartOffset=0;respond(session->Command(line));closing=session->Closed();return;
         }
@@ -365,6 +367,47 @@ struct FtpServer::Impl {
             respond("350 Restart position accepted for next RETR");return;
         }
         if(verb=="XMAX"&&arg.empty()){respond("213 "+num(uploadEnabled?uploadLimit:0));return;}
+        if(verb=="XSTAMP"){
+            std::string path;
+            if(!session->DataFile(arg,path)){respond("550 File unavailable");return;}
+#ifdef _XBOX
+            WIN32_FILE_ATTRIBUTE_DATA info;
+            if(!GetFileAttributesExA(path.c_str(),GetFileExInfoStandard,&info)){respond("550 Metadata unavailable");return;}
+            const unsigned long long length=(static_cast<unsigned long long>(info.nFileSizeHigh)<<32)|info.nFileSizeLow;
+            const unsigned long long stamp=(static_cast<unsigned long long>(info.ftLastWriteTime.dwHighDateTime)<<32)|info.ftLastWriteTime.dwLowDateTime;
+#else
+            struct stat info{};
+            if(stat(path.c_str(),&info)!=0||!S_ISREG(info.st_mode)||info.st_size<0){respond("550 Metadata unavailable");return;}
+            const unsigned long long length=static_cast<unsigned long long>(info.st_size),stamp=static_cast<unsigned long long>(info.st_mtime);
+#endif
+            // Bind the marker to the selected workspace without returning the physical path.
+            unsigned long long rootId=14695981039346656037ULL;
+            for(unsigned char ch:root){rootId^=ch;rootId*=1099511628211ULL;}
+            respond("213 "+num(length)+"-"+num(stamp)+"-"+num(rootId));return;
+        }
+        if(verb=="RNFR"&&uploadEnabled){
+            std::string physical;
+            if(arg.empty()||arg=="/"||arg=="."||arg==".."||!FileWorkspace::ValidName(arg.substr(arg.find_last_of('/')==std::string::npos?0:arg.find_last_of('/')+1))){
+                respond("550 Invalid source");return;
+            }
+            renameFolder=session->DataDirectory(arg,physical);
+            if(!renameFolder&&!session->DataFile(arg,physical)){respond("550 Source unavailable");return;}
+            if(physical==root){respond("550 Invalid source");return;}
+            renameFrom=arg;renamePhysical=physical;respond("350 Source accepted");return;
+        }
+        if(verb=="RNTO"&&uploadEnabled){
+            const auto source=renameFrom,physical=renamePhysical;renameFrom.clear();renamePhysical.clear();
+            std::string checked,parent;
+            const size_t slash=arg.find_last_of('/');
+            const auto name=slash==std::string::npos?arg:arg.substr(slash+1);
+            if(source.empty()||arg.size()>200||!FileWorkspace::ValidName(name)||
+               !(renameFolder?session->DataDirectory(source,checked):session->DataFile(source,checked))||checked!=physical||
+               !session->DataDirectory(slash==std::string::npos?".":slash==0?"/":arg.substr(0,slash),parent)||
+               !workspace.MovePersonalExclusive(physical,FileWorkspace::Join(parent,name),renameFolder)){
+                respond("550 Rename refused");return;
+            }
+            respond("250 Rename complete");return;
+        }
         if(verb=="MKD"&&uploadEnabled){
             // Create exactly one directory within the authenticated workspace.
             // No implicit parents, overwrite, deletion or absolute drive paths.

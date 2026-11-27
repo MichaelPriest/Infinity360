@@ -39,6 +39,11 @@ public final class FtpActivity extends Activity {
     private final ArrayList<XboxFtpClient.Entry> selected=new ArrayList<>();
     private ArrayList<XboxFtpClient.Entry> pendingTreeDownload=new ArrayList<>();
     private String pendingTreePath="/";
+    private File resumeFile;
+    private String resumePath="",resumeStamp="",resumeHost="",resumeUser="";
+    private Uri resumeDestination;
+    private long resumeSize;
+    private String jobHost,jobUser;
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
     private TextView label(String value,int size,int color){TextView text=new TextView(this);text.setText(value);text.setTextColor(color);text.setTextSize(size);text.setPadding(0,dp(5),0,dp(5));return text;}
     private Button button(String value,Runnable action){Button button=new Button(this);button.setAllCaps(false);button.setText(value);button.setTextColor(TEXT);button.setBackgroundColor(PANEL);button.setOnClickListener(v->action.run());return button;}
@@ -64,6 +69,9 @@ public final class FtpActivity extends Activity {
         addButton(root,"Criar pasta no Xbox",()->createFolder());
         addButton(root,"Enviar pasta inteira",()->pickTree(true));
         addButton(root,"Receber itens selecionados",()->pickTree(false));
+        addButton(root,"Renomear item selecionado",()->renameSelected());
+        addButton(root,"Retomar último download",()->resumeLast());
+        addButton(root,"Descartar download parcial",()->{if(!busy){clearResume();status.setText("Parcial descartado.");}});
         addButton(root,"Cancelar transferência",()->cancelTransfer());
         bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);root.addView(bar,new LinearLayout.LayoutParams(-1,dp(14)));
         status=label("Servidor FTP: porta 2121.",14,MUTED);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
@@ -88,7 +96,7 @@ public final class FtpActivity extends Activity {
     interface Job{String run(XboxFtpClient client)throws Exception;}
     private void runJob(String message,Job job){
         if(busy)return;String[] conn=connection();if(conn==null)return;
-        cancelled=false;busy=true;bar.setProgress(0);status.setText(message);lastProgress=0;
+        jobHost=conn[0];jobUser=conn[1];cancelled=false;busy=true;bar.setProgress(0);status.setText(message);lastProgress=0;
         worker.execute(()->{
             String result;
             XboxFtpClient client=new XboxFtpClient(conn[0]);active=client;
@@ -98,7 +106,7 @@ public final class FtpActivity extends Activity {
                 check();client.connect(conn[1],conn[2]);check();result=job.run(client);
                 client.quit();
             }catch(Exception e){result=cancelled?"Transferência cancelada. Confira o destino.":e instanceof IOException&&e.getMessage()!=null?e.getMessage():"Operação FTP não concluída.";}
-            finally{client.close();active=null;lastFinish=SystemClock.elapsedRealtime();}
+            finally{client.close();active=null;lastFinish=SystemClock.elapsedRealtime();if(isDestroyed())clearResume();}
             final String report=result;
             runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(report);if(cancelled)bar.setProgress(0);});
         });
@@ -193,20 +201,69 @@ public final class FtpActivity extends Activity {
         }else if(request==PICK_DOWNLOAD&&!pendingDownload.isEmpty()){
             final String target=pendingDownload,name=pendingName;final long listedSize=pendingSize;pendingDownload="";
             runJob("Recebendo "+name+"...",client->{
+                clearResume();
                 long size=client.size(target);if(size!=listedSize)throw new IOException("Arquivo alterado. Atualize a listagem.");
                 if(size>getCacheDir().getUsableSpace())throw new IOException("Espaço temporário insuficiente no celular.");
-                File temp=File.createTempFile("ftp-download-",".part",getCacheDir());
-                try{
-                    try(OutputStream out=new FileOutputStream(temp)){transferStarted=SystemClock.elapsedRealtime();client.download(target,out,size,this::progress);}
-                    check();
-                    try(InputStream in=new FileInputStream(temp);OutputStream out=getContentResolver().openOutputStream(uri,"wt")){
-                        if(out==null)throw new IOException("Destino indisponível");byte[] buffer=new byte[32768];int n;long copied=0;
-                        while((n=in.read(buffer))!=-1){check();out.write(buffer,0,n);copied+=n;}
-                        if(copied!=size)throw new IOException("Cópia local incompleta");out.flush();
-                    }catch(IOException e){throw new IOException("Falha ao salvar no destino Android. Confira se ficou um arquivo incompleto.");}
-                    return "Download salvo no destino Android.";
-                }finally{temp.delete();}
+                String stamp=client.stamp(target);
+                resumeFile=File.createTempFile("ftp-download-",".part",getCacheDir());
+                resumePath=target;resumeStamp=stamp;resumeSize=size;resumeDestination=uri;resumeHost=jobHost;resumeUser=jobUser;
+                return receiveSingle(client);
             });
+        }
+    }
+    private void renameSelected(){
+        if(busy||connection()==null)return;
+        if(selected.size()!=1){status.setText("Marque exatamente um arquivo ou pasta.");return;}
+        final String folder=directory,old=selected.get(0).name;
+        EditText name=new EditText(this);name.setSingleLine(true);name.setText(old);
+        new AlertDialog.Builder(this).setTitle("Renomear "+old).setView(name).setNegativeButton("Cancelar",null)
+            .setPositiveButton("Renomear",(d,w)->{
+                final String target;try{target=XboxFtpClient.child(folder,name.getText().toString());}catch(IllegalArgumentException e){status.setText("Nome inválido.");return;}
+                runJob("Renomeando...",client->{client.rename(XboxFtpClient.child(folder,old),target);return "Renomeado. Atualize a pasta.";});
+            }).show();
+    }
+    private void clearResume(){
+        if(resumeFile!=null)resumeFile.delete();
+        resumeFile=null;resumePath="";resumeStamp="";resumeDestination=null;resumeHost="";resumeUser="";resumeSize=0;
+    }
+    private void resumeLast(){
+        if(busy)return;
+        if(resumeFile==null||!resumeFile.isFile()||resumeStamp.isEmpty()){status.setText("Nenhum parcial retomável nesta sessão.");return;}
+        String[] conn=connection();if(conn==null)return;
+        if(!resumeHost.equals(conn[0])||!resumeUser.equals(conn[1])){status.setText("Use o mesmo console e usuário.");return;}
+        new AlertDialog.Builder(this).setTitle("Retomar "+resumePath+"?")
+            .setMessage("O Xbox verificará tamanho, data de modificação e raiz. Não retome se o arquivo original foi alterado.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Retomar",(d,w)->runJob("Retomando...",client->{
+                if(!resumeHost.equals(jobHost)||!resumeUser.equals(jobUser))throw new IOException("Conexão alterada.");
+                return receiveSingle(client);
+            })).show();
+    }
+    private String receiveSingle(XboxFtpClient client)throws IOException{
+        boolean saved=false;
+        try{
+            long offset=resumeFile.length();
+            if(offset>resumeSize||client.size(resumePath)!=resumeSize||
+               (!resumeStamp.isEmpty()&&!resumeStamp.equals(client.stamp(resumePath)))){
+                clearResume();throw new IOException("Arquivo ou destino FTP alterado; parcial descartado.");
+            }
+            if(resumeSize-offset>getCacheDir().getUsableSpace())throw new IOException("Espaço temporário insuficiente.");
+            transferStarted=SystemClock.elapsedRealtime();
+            try(OutputStream out=new FileOutputStream(resumeFile,true)){
+                client.downloadFrom(resumePath,out,resumeSize,offset,this::progress);
+            }
+            if(!resumeStamp.isEmpty()&&!resumeStamp.equals(client.stamp(resumePath))){
+                clearResume();throw new IOException("Arquivo alterado durante o download.");
+            }
+            check();
+            try(InputStream in=new FileInputStream(resumeFile);OutputStream out=getContentResolver().openOutputStream(resumeDestination,"wt")){
+                if(out==null)throw new IOException("Destino indisponível");
+                byte[] buffer=new byte[32768];int n;long copied=0;
+                while((n=in.read(buffer))!=-1){check();out.write(buffer,0,n);copied+=n;}
+                if(copied!=resumeSize)throw new IOException("Cópia local incompleta.");out.flush();
+            }
+            saved=true;return "Download salvo no destino Android.";
+        }finally{
+            if(saved||resumeStamp.isEmpty())clearResume();
         }
     }
     private void pickTree(boolean upload){
@@ -360,5 +417,5 @@ public final class FtpActivity extends Activity {
     }
     private void cancelTransfer(){if(!busy)return;cancelled=true;XboxFtpClient client=active;if(client!=null)client.close();status.setText("Cancelamento solicitado...");}
     @Override protected void onStop(){if(busy)cancelTransfer();super.onStop();}
-    @Override protected void onDestroy(){cancelTransfer();worker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){cancelTransfer();if(!busy)clearResume();worker.shutdownNow();super.onDestroy();}
 }

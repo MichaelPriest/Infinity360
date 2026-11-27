@@ -46,6 +46,8 @@ with tempfile.TemporaryDirectory() as directory:
             buf=io.BytesIO()
             ftp.retrbinary("RETR sample.bin",buf.write)
             assert buf.getvalue()==payload
+            reject(lambda:ftp.sendcmd("RNFR sample.bin"))
+            assert ftp.sendcmd("XSTAMP sample.bin").startswith("213 "+str(len(payload))+"-")
             reject(lambda:ftp.sendcmd("MKD NoWrite"))
             reject(lambda:ftp.sendcmd("STOR new.bin"))
             reject(lambda:ftp.sendcmd("DELE sample.bin"))
@@ -74,6 +76,14 @@ with tempfile.TemporaryDirectory() as directory:
             ftp.voidcmd("ALLO "+str(len(payload)))
             ftp.storbinary("STOR new.bin",io.BytesIO(payload))
             assert (personal/"new.bin").read_bytes()==payload
+            ftp.rename("new.bin","renamed.bin")
+            assert (personal/"renamed.bin").read_bytes()==payload
+            reject(lambda:ftp.rename("renamed.bin","sample.bin"))
+            ftp.rename("renamed.bin","new.bin")
+            ftp.rename("Batch","Batch2")
+            assert (personal/"Batch2").is_dir()
+            reject(lambda:ftp.rename("new.bin","../outside.bin"))
+            reject(lambda:ftp.rename("link.txt","link2.txt"))
             ftp.voidcmd("ALLO 3")
             reject(lambda:ftp.storbinary("STOR resumed.bin",io.BytesIO(b"abc"),rest=1))
             assert not (personal/"resumed.bin").exists()
