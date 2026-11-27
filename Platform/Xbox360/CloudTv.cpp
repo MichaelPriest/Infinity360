@@ -234,6 +234,14 @@ bool CloudTv::Press(MenuKey key) {
         else view_=Browse;
         return true;
     }
+    if(view_==Browse&&tab_==TvSources&&key==MenuFavorite){
+        const bool open=InfinityIptv::OpenMode(dir_);
+        const std::string file=dir_+"infinity360-iptv-network.txt";
+        std::ofstream out((file+".tmp").c_str(),std::ios::binary);out<<(open?"RESTRICTED\n":"OPEN\n");out.close();
+        if(!out||!replaceSavedFile(file))notice_="Falha ao salvar modo de rede IPTV.";
+        else notice_=open?"IPTV: modo restrito.":"IPTV: modo livre. HTTP sem criptografia; use fontes confiáveis.";
+        return true;
+    }
     if(key==MenuRefresh) {
         const TvCategory last=tab_;const std::string query=query_;Open();tab_=last;query_=query;Filter();return true;
     }
@@ -343,7 +351,7 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     if(picking) {
         c.Text(649,238,c.Tr("Lista selecionada"),29,Ink,554);
         c.Text(649,302,sources_[row_],23,Lime,552);
-        c.Text(649,373,"A abre a lista e salva a escolha.",20,Soft,552);
+        c.Text(649,373,InfinityIptv::OpenMode(dir_)?"Rede: Livre (X alterna)":"Rede: Restrita (X alterna)",20,Soft,552);
         c.Text(649,429,"Guia XMLTV",21,Ink,550);
         c.Text(649,471,"Use um XML com o nome da lista ou guide.xml.",19,Soft,552);
     } else {
@@ -433,6 +441,7 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     if(view_!=Details||playable){InfinityButtons::Draw(c,InfinityButtons::A,44,675,24);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
     InfinityButtons::Draw(c,InfinityButtons::B,240,675,24);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
     if(tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::X,390,675,22,c.Tr("Favorito"),120,Ink);
+    else if(view_==Browse)InfinityButtons::Hint(c,InfinityButtons::X,390,675,22,InfinityIptv::OpenMode(dir_)?"Livre":"Restrito",145,Ink);
     InfinityButtons::Hint(c,InfinityButtons::Y,567,675,22,c.Tr("Atualizar"),125,Ink);
     if(view_!=Details && view_!=Episodes)InfinityButtons::Hint(c,InfinityButtons::Start,764,675,22,c.Tr("Guia"),105,Ink);
     if(view_!=Details){InfinityButtons::Draw(c,InfinityButtons::LB,908,675,22);InfinityButtons::Hint(c,InfinityButtons::RB,943,675,22,c.Tr("Página"),80,Ink);}

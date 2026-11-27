@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.4 — Modo livre IPTV
+
+- Preferência exclusiva OPEN/RESTRICTED, alternável com X em Fontes; pacote unificado inicia em OPEN. HTTP/HTTPS e portas alternativas para fontes de mídia compatíveis, sem cadastro manual. TLS e política da Store preservados; redirecionamentos não liberados.
+- Build unificada solicitada com gates existentes. Sem homologação física.
+
 ## V0.3.3 — Descoberta ampliada de fontes IPTV
 
 - Descoberta limitada de M3U/M3U8 em Listas, IPTV, Nexus, Series360, Cinema e Andromeda, incluindo subpastas; diretórios de organização no pacote.

@@ -1,4 +1,4 @@
-# Status V0.3.3
+# Status V0.3.4
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -45,3 +45,5 @@ V0.3.1: bypass exato 48 kHz, downmix de layouts reconhecidos até 8 canais, gate
 V0.3.2: corrige erro de link fmaxf no gate host sem remover testes; build unificada solicitada novamente. Validação pendente.
 
 V0.3.3: descoberta recursiva limitada de listas IPTV e estrutura de pastas no pacote. Catálogos externos não incorporados; seleção individual por fonte. Sem novo XEX.
+
+V0.3.4: política de rede IPTV independente com modo livre padrão no pacote unificado, alternância em Fontes e fallback restrito se arquivo ausente/inválido. Build solicitada.

@@ -120,7 +120,7 @@ def main():
     (preview/"infinity-preview.txt").write_text("INFINITY360-XSDK-PREVIEW\n")
     for filename in ("aurorax-store.tsv","infinity360-providers.tsv","infinity360-store-hosts.txt","FONTES.txt"):
         shutil.copy2(args.repo/"Platform/Xbox360/StoreDefaults"/filename,preview)
-    for filename in ("aurorax-profile.txt","enable-file-writes.txt","enable-https-store.txt","enable-store-install.txt","enable-xboxunity.txt","enable-xex-launch.txt","enable-continuous-session.txt","enable-dvd-install.txt","enable-iptv-playback.txt","infinity360-iptv-bitrate.txt"):
+    for filename in ("aurorax-profile.txt","enable-file-writes.txt","enable-https-store.txt","enable-store-install.txt","enable-xboxunity.txt","enable-xex-launch.txt","enable-continuous-session.txt","enable-dvd-install.txt","enable-iptv-playback.txt","infinity360-iptv-bitrate.txt","infinity360-iptv-network.txt"):
         shutil.copy2(args.repo/"Platform/Xbox360/ReleaseDefaults"/filename,preview)
     (stage/"bin"/"VERSION.txt").write_text(version+"\n")
     (stage/"bin"/"BUILD-COMMIT.txt").write_text(run("git","-C",str(args.repo),"rev-parse","HEAD",text=True))
