@@ -11,6 +11,9 @@ extern "C" {
 }
 #endif
 namespace InfinityLua {
+// Borrowed synchronous view: no executable paths or writable console handles.
+struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false;};
+struct Library{size_t count=0;const void* context=nullptr;GameView (*get)(const void*,size_t)=nullptr;};
 inline bool Available(){
 #ifdef INFINITY_WITH_LUA
     return true;
@@ -19,7 +22,7 @@ inline bool Available(){
 #endif
 }
 #ifdef INFINITY_WITH_LUA
-struct Budget{size_t used=0;unsigned ticks=0;};
+struct Budget{size_t used=0;unsigned ticks=0;Library library{};};
 inline void* Alloc(void* ud,void* ptr,size_t old,size_t bytes){
     auto& b=*static_cast<Budget*>(ud);
     if(!ptr)old=0;
@@ -33,40 +36,62 @@ inline void Limit(lua_State* L,lua_Debug*){
     void* ud=nullptr;lua_getallocf(L,&ud);
     if(++static_cast<Budget*>(ud)->ticks>=100)luaL_error(L,"limite de instrucoes");
 }
+inline void Field(lua_State* L,const char* key,const std::string* value){
+    if(value)lua_pushlstring(L,value->data(),value->size()>256?256:value->size());else lua_pushliteral(L,"");
+    lua_setfield(L,-2,key);
+}
+inline int GameAt(lua_State* L){
+    void* ud=nullptr;lua_getallocf(L,&ud);
+    const auto& library=static_cast<Budget*>(ud)->library;
+    const auto index=luaL_checkinteger(L,1);
+    if(index<=0||static_cast<unsigned long long>(index)>library.count||!library.get){lua_pushnil(L);return 1;}
+    const GameView g=library.get(library.context,static_cast<size_t>(index-1));
+    lua_createtable(L,0,5);
+    Field(L,"name",g.name);Field(L,"device",g.device);
+    lua_pushboolean(L,g.favorite);lua_setfield(L,-2,"favorite");
+    lua_pushboolean(L,g.package);lua_setfield(L,-2,"package");
+    lua_pushinteger(L,index);lua_setfield(L,-2,"index");
+    return 1;
+}
 inline int Setup(lua_State* L){
-    const auto count=lua_tointeger(L,1);
+    void* ud=nullptr;lua_getallocf(L,&ud);
+    const auto count=static_cast<Budget*>(ud)->library.count;
     luaL_requiref(L,"_G",luaopen_base,1);lua_pop(L,1);
     const char* blocked[]={"dofile","loadfile","load","collectgarbage","pcall","xpcall","setmetatable","getmetatable","print","warn"};
     for(const auto* name:blocked){lua_pushnil(L);lua_setglobal(L,name);}
-    lua_newtable(L);lua_pushinteger(L,count);lua_setfield(L,-2,"game_count");
+    lua_newtable(L);lua_pushinteger(L,static_cast<lua_Integer>(count));lua_setfield(L,-2,"game_count");
+    lua_pushcfunction(L,GameAt);lua_setfield(L,-2,"game");
+    lua_pushinteger(L,1);lua_setfield(L,-2,"api_version");
     lua_setglobal(L,"infinity");return 0;
 }
 inline std::string Result(lua_State* L,const char* fallback){
-    if(lua_type(L,-1)!=LUA_TSTRING&&lua_type(L,-1)!=LUA_TNUMBER)return fallback;
+    if(lua_type(L,-1)==LUA_TNUMBER)return lua_isinteger(L,-1)?std::to_string(lua_tointeger(L,-1)):std::to_string(lua_tonumber(L,-1));
+    if(lua_type(L,-1)!=LUA_TSTRING)return fallback;
     size_t n=0;const char* s=lua_tolstring(L,-1,&n);if(!s)return fallback;
     std::string msg(s,n>180?180:n);for(auto& ch:msg)if(static_cast<unsigned char>(ch)<32)ch=' ';
     return msg;
 }
 #endif
-inline std::string RunText(const std::string& code,size_t gameCount){
+inline std::string RunText(const std::string& code,const Library& library){
     if(code.size()>65536)return "Script excede 64 KiB.";
 #ifdef INFINITY_WITH_LUA
-    Budget b;lua_State* L=lua_newstate(Alloc,&b);if(!L)return "Memoria Lua indisponivel.";
-    lua_pushcfunction(L,Setup);lua_pushinteger(L,static_cast<lua_Integer>(gameCount));
-    int rc=lua_pcall(L,1,0,0);
+    Budget b;b.library=library;lua_State* L=lua_newstate(Alloc,&b);if(!L)return "Memoria Lua indisponivel.";
+    lua_pushcfunction(L,Setup);
+    int rc=lua_pcall(L,0,0,0);
     if(rc==LUA_OK)rc=luaL_loadbufferx(L,code.data(),code.size(),"script","t");
     if(rc==LUA_OK){lua_sethook(L,Limit,LUA_MASKCOUNT,1000);rc=lua_pcall(L,0,1,0);}
     auto result=rc==LUA_OK?std::string("Lua: ")+Result(L,"concluido."):std::string("Lua erro: ")+Result(L,"execucao recusada.");
     lua_close(L);return result;
 #else
-    (void)gameCount;return "Runtime Lua nao incluido nesta build.";
+    (void)library;return "Runtime Lua nao incluido nesta build.";
 #endif
 }
-inline std::string RunFile(const std::string& path,size_t count){
+inline std::string RunText(const std::string& code,size_t count){return RunText(code,Library{count});}
+inline std::string RunFile(const std::string& path,const Library& library){
     std::ifstream f(path.c_str(),std::ios::binary|std::ios::ate);
     if(!f||f.tellg()<0||f.tellg()>65536)return "Script ausente ou acima de 64 KiB.";
     const auto n=static_cast<size_t>(f.tellg());std::string code(n,'\0');f.seekg(0);
     if(n&&!f.read(&code[0],n))return "Falha de leitura do script.";
-    return RunText(code,count);
+    return RunText(code,library);
 }
 }

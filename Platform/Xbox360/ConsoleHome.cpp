@@ -432,31 +432,6 @@ void ConsoleHome::RefreshLuaScripts(){
     }
     std::sort(luaScripts_.begin(),luaScripts_.end());clampRow(luaRow_,luaScripts_.size());
 }
-void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
-    c.Text(45,93,"Biblioteca | Pastas de varredura",36,White,1180);
-    c.Text(48,150,number(roots_.size())+" ativas / "+number(configuredRoots_.size())+" cadastradas (XEX)",21,Muted,1160);
-    const int first=(libraryPathRow_/7)*7;
-    for(int i=first;i<first+7&&size_t(i)<configuredRoots_.size();++i){
-        const auto& path=configuredRoots_[i];const int y=190+(i-first)*54;
-        const bool enabled=std::any_of(roots_.begin(),roots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
-        panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
-        c.TextFit(62,y+8,path,21,White,925);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
-    }
-    c.Text(48,580,"Pacotes GOD/XBLA mantem a busca propria. A abre o gerenciador para adicionar/remover.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,"A Pastas | X Ativar/desativar | Y Varrer | B Voltar",18,Lime,1170);
-}
-void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
-    c.Text(45,93,"Scripts Lua",36,White,1180);
-    c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execucao manual isolada":"Runtime Lua nao incluido nesta build",21,Muted,1160);
-    const int first=(luaRow_/7)*7;
-    for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
-        const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
-        c.TextFit(62,y+8,luaScripts_[i],22,White,1145);
-    }
-    if(luaScripts_.empty())c.Text(48,245,"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
-    c.Text(48,580,"Sem acesso direto a arquivos, rede, memoria do jogo ou plugins nativos.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,"A Executar | Y Atualizar | B Voltar",18,Lime,1170);
-}
 void ConsoleHome::Reload() {
     notice_.clear();
     artFolders_.clear();artDirty_=true;
@@ -1072,7 +1047,14 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back){luaPage_=false;notice_.clear();return "";}
         if(key==Up||key==Down){luaRow_=std::max(0,luaRow_+(key==Down?1:-1));clampRow(luaRow_,luaScripts_.size());}
         if(key==Refresh)RefreshLuaScripts();
-        if(key==Accept&&!TransferRunning()&&!ftp_.Running()&&!luaScripts_.empty())notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),games_.size());
+        if(key==Accept&&!TransferRunning()&&!ftp_.Running()&&!luaScripts_.empty()){
+            InfinityLua::Library library{games_.size(),this,[](const void* ctx,size_t i)->InfinityLua::GameView{
+                const auto& home=*static_cast<const ConsoleHome*>(ctx);
+                const auto& g=home.games_[i];
+                return {&g.name,&g.device,contains(home.favorites_,g.executable),isContentPackage(g)};
+            }};
+            notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),library);
+        }
         return "";
     }
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;libraryPathsPage_=true;notice_.clear();return "";}
@@ -3092,6 +3074,31 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
     c.Text(48,552,c.Tr("Indicadores locais; nao sao conquistas oficiais nem Gamerscore."),19,White,1170);
     InfinityButtons::Strip(c,48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
     InfinityButtons::Strip(c,48,606,std::string(c.Tr("START Central de saves | X Aparencia | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
+}
+void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
+    c.Text(45,93,"Biblioteca | Pastas de varredura",36,White,1180);
+    c.Text(48,150,number(roots_.size())+" ativas / "+number(configuredRoots_.size())+" cadastradas (XEX)",21,Muted,1160);
+    const int first=(libraryPathRow_/7)*7;
+    for(int i=first;i<first+7&&size_t(i)<configuredRoots_.size();++i){
+        const auto& path=configuredRoots_[i];const int y=190+(i-first)*54;
+        const bool enabled=std::any_of(roots_.begin(),roots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
+        panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
+        c.TextFit(62,y+8,path,21,White,925);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
+    }
+    c.Text(48,580,"Pacotes GOD/XBLA mantem a busca propria. A abre o gerenciador para adicionar/remover.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,"A Pastas | X Ativar/desativar | Y Varrer | B Voltar",18,Lime,1170);
+}
+void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
+    c.Text(45,93,"Scripts Lua",36,White,1180);
+    c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execucao manual isolada":"Runtime Lua nao incluido nesta build",21,Muted,1160);
+    const int first=(luaRow_/7)*7;
+    for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
+        const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
+        c.TextFit(62,y+8,luaScripts_[i],22,White,1145);
+    }
+    if(luaScripts_.empty())c.Text(48,245,"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
+    c.Text(48,580,"Sem acesso direto a arquivos, rede, memoria do jogo ou plugins nativos.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,"A Executar | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.7 — Correção visual e API Lua de jogos
+
+- Corrige posição das funções de desenho das telas de caminhos e scripts após auxiliares gráficos, causa da falha no CI V0.3.6.
+- API Lua v1: infinity.game_count, infinity.game(index), nome, dispositivo, favorito e tipo pacote; cópias somente leitura do catálogo. Sem caminhos executáveis ou mutação da biblioteca.
+- Testes para índices inválidos, isolamento, limite de memória e API. Sem nova solicitação de XEX.
+
 ## V0.3.6 — Caminhos da biblioteca e Lua
 
 - Gerenciador de caminhos XEX em Sistema > Discos > START; alterna busca, salva preferências e permite varredura e cadastro via Arquivos. Busca de pacotes independente.
