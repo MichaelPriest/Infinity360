@@ -95,6 +95,7 @@ inline int Setup(lua_State* L){
     void* ud=nullptr;lua_getallocf(L,&ud);
     const auto count=static_cast<Budget*>(ud)->library.count;
     luaL_requiref(L,"_G",luaopen_base,1);lua_pop(L,1);
+    luaL_requiref(L,"table",luaopen_table,1);lua_pop(L,1);
     const char* blocked[]={"dofile","loadfile","load","collectgarbage","pcall","xpcall","setmetatable","getmetatable","print","warn"};
     for(const auto* name:blocked){lua_pushnil(L);lua_setglobal(L,name);}
     lua_newtable(L);lua_pushinteger(L,static_cast<lua_Integer>(count));lua_setfield(L,-2,"game_count");
@@ -126,7 +127,7 @@ inline std::string RunText(const std::string& code,const Library& library){
 #endif
 }
 inline std::string RunText(const std::string& code,size_t count){return RunText(code,Library{count});}
-inline FilterResult FilterText(const std::string& code,const Library& library){
+inline FilterResult FilterText(const std::string& code,const Library& library,bool ordered=false){
     FilterResult result;
     if(code.size()>65536||library.count>32768){result.message="Limite de filtro excedido.";return result;}
 #ifdef INFINITY_WITH_LUA
@@ -138,8 +139,9 @@ inline FilterResult FilterText(const std::string& code,const Library& library){
     if(rc!=LUA_OK)result.message="Lua erro: "+Result(L,"filtro recusado.");
     else if(lua_type(L,-1)!=LUA_TTABLE)result.message="Filtro deve retornar uma lista de indices.";
     else{
-        const auto n=lua_rawlen(L,-1);bool valid=n<=library.count;
+        const auto n=lua_rawlen(L,-1);bool valid=n<=library.count&&(!ordered||n==library.count);
         std::vector<unsigned char> seen(library.count,0);
+        std::vector<size_t> order;if(valid&&ordered)order.resize(n);
         size_t entries=0;
         if(valid){
             lua_pushnil(L);
@@ -149,13 +151,16 @@ inline FilterResult FilterText(const std::string& code,const Library& library){
                 if(key<1||static_cast<unsigned long long>(key)>n||value<1||static_cast<unsigned long long>(value)>library.count||seen[static_cast<size_t>(value-1)]){
                     valid=false;lua_pop(L,2);break;
                 }
-                seen[static_cast<size_t>(value-1)]=1;++entries;lua_pop(L,1);
+                seen[static_cast<size_t>(value-1)]=1;
+                if(ordered)order[static_cast<size_t>(key-1)]=static_cast<size_t>(value-1);
+                ++entries;lua_pop(L,1);
             }
         }
         if(valid&&entries==n){
-            for(size_t i=0;i<seen.size();++i)if(seen[i])result.indices.push_back(i);
-            result.ok=true;result.message="Filtro aplicado: "+std::to_string(result.indices.size())+" jogos.";
-        }else result.message="Filtro invalido: indices unicos, inteiros e lista sem lacunas.";
+            if(ordered)result.indices.swap(order);
+            else for(size_t i=0;i<seen.size();++i)if(seen[i])result.indices.push_back(i);
+            result.ok=true;result.message=std::string(ordered?"Ordenacao aplicada: ":"Filtro aplicado: ")+std::to_string(result.indices.size())+" jogos.";
+        }else result.message=ordered?"Ordenacao invalida: inclua todos os indices uma vez.":"Filtro invalido: indices unicos, inteiros e lista sem lacunas.";
     }
     lua_close(L);
 #else
@@ -163,12 +168,12 @@ inline FilterResult FilterText(const std::string& code,const Library& library){
 #endif
     return result;
 }
-inline FilterResult FilterFile(const std::string& path,const Library& library){
+inline FilterResult FilterFile(const std::string& path,const Library& library,bool ordered=false){
     std::ifstream f(path.c_str(),std::ios::binary|std::ios::ate);
     if(!f||f.tellg()<0||f.tellg()>65536)return {false,{},"Script ausente ou acima de 64 KiB."};
     const auto n=static_cast<size_t>(f.tellg());std::string code(n,'\0');f.seekg(0);
     if(n&&!f.read(&code[0],n))return {false,{},"Falha de leitura do script."};
-    return FilterText(code,library);
+    return FilterText(code,library,ordered);
 }
 inline std::string RunFile(const std::string& path,const Library& library){
     std::ifstream f(path.c_str(),std::ios::binary|std::ios::ate);

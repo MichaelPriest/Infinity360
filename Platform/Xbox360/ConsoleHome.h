@@ -330,7 +330,9 @@ private:
     void DrawLibraryPaths(HomeCanvas& c)const;
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();
-    bool luaFiltersPage_=false;
+    unsigned luaCategory_=0; // 0 utilities, 1 filters, 2 sorts
+    std::string luaActiveSort_;
+    std::map<std::string,size_t> luaSortRanks_;
     std::string luaActiveFilter_;
     std::set<std::string> luaFilterPaths_;
     void ToggleLibraryRoot();

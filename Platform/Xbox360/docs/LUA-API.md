@@ -34,3 +34,16 @@ return result
 ```
 
 Não é a API de filtros do Aurora. Os limites de memória e instruções continuam aplicáveis.
+
+## Ordenações da biblioteca (V0.3.12)
+
+Coloque fontes em `MenuPreview/Scripts/Sorts`. LB/RB navega pelas três categorias. Retorne uma permutação completa de 1 a `infinity.game_count` (todos os índices exatamente uma vez). A ordem retornada é preservada. `table.sort`, `table.insert` e as demais operações da biblioteca `table` estão disponíveis. Filtros e categorias continuam ativos, a aba Fixados mantém a ordem manual. Novos jogos sem posição entram no fim em ordem nativa; reexecute para atualizar. X na categoria Sorts limpa a ordenação, RS na biblioteca restaura ordenação nativa. A seleção dura a sessão.
+
+```lua
+local order = {}
+for i = 1, infinity.game_count do order[i] = i end
+for i = 1, #order do order[i] = infinity.game_count - i + 1 end
+return order
+```
+
+Não é a API Sorts do Aurora. Limites existentes continuam valendo.

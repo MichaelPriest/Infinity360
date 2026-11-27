@@ -21,3 +21,4 @@ Series360
 Cinema
 Scripts
 Scripts/Filters
+Scripts/Sorts

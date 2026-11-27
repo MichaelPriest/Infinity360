@@ -41,4 +41,11 @@ int main(){
     }
     auto chosen=InfinityLua::FilterText("local r={}; for i=1,infinity.game_count do if infinity.game(i).favorite then r[#r+1]=i end end; return r",library);
     assert(chosen.ok&&chosen.indices==std::vector<size_t>({0}));
+    auto ordered=InfinityLua::FilterText("return {3,1,2}",InfinityLua::Library{3},true);
+    assert(ordered.ok&&ordered.indices==std::vector<size_t>({2,0,1}));
+    auto sorted=InfinityLua::FilterText("local r={1,2,3}; table.sort(r,function(a,b) return a>b end); return r",InfinityLua::Library{3},true);
+    assert(sorted.ok&&sorted.indices==std::vector<size_t>({2,1,0}));
+    for(const auto* code:{"return {1,2}","return {1,1,3}","return {1,2,4}","return {[1]=1,[3]=3}"}){
+        assert(!InfinityLua::FilterText(code,InfinityLua::Library{3},true).ok);
+    }
 }

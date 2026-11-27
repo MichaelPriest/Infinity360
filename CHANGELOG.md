@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.12 — Ordenação Lua
+
+- Scripts/Sorts recebe permutação completa dos índices da biblioteca, preserva ordem retornada e combina com filtros nativos e Lua. Fixados mantém ordem manual. Novos itens sem posição entram no fim em ordem nativa; RS restaura ordenação nativa, X limpa no gerenciador.
+- Biblioteca table do Lua, inclusive table.sort, disponível no sandbox; testes de permutação, validação e controle. Sem nova solicitação XEX.
+
 ## V0.3.11 — Filtros Lua da biblioteca
 
 - Scripts/Filters permite selecionar índices por Lua, com validação de lista densa, inteiros, duplicidades e limites. Aplica seleção temporária por caminho à biblioteca e mantém categorias/busca existentes. X limpa filtro no gerenciador de scripts. Sem mutação de arquivos ou favoritos.

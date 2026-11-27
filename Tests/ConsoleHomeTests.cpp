@@ -1271,7 +1271,7 @@ int main(int argc,char** argv) {
     {
         const auto luaRoot=root/"LuaFilterFixture";
         fs::create_directories(luaRoot/"Games"/"Alpha");fs::create_directories(luaRoot/"Games"/"Beta");
-        fs::create_directories(luaRoot/"Scripts"/"Filters");
+        fs::create_directories(luaRoot/"Scripts"/"Filters");fs::create_directories(luaRoot/"Scripts"/"Sorts");
         std::ofstream(luaRoot/"Games"/"Alpha"/"default.xex")<<"fixture";
         std::ofstream(luaRoot/"Games"/"Beta"/"default.xex")<<"fixture";
         std::ofstream(luaRoot/"Scripts"/"Filters"/"Beta.lua")<<"local r={} for i=1,infinity.game_count do if infinity.game(i).name=='Beta' then r[#r+1]=i end end return r";
@@ -1281,6 +1281,13 @@ int main(int argc,char** argv) {
         luaHome.Press(ConsoleHome::Accept);luaHome.Press(ConsoleHome::Search);luaHome.Press(ConsoleHome::PageDown);luaHome.Press(ConsoleHome::Accept);
         luaHome.Press(ConsoleHome::Accept);
         assert(luaHome.Press(ConsoleHome::Accept)==(luaRoot/"Games"/"Beta"/"default.xex").string());
+        std::ofstream(luaRoot/"Scripts"/"Sorts"/"Reverse.lua")<<"return {2,1}";
+        LegacyFixtureHome sortHome(luaRoot.string()+"/",{(luaRoot/"Games").string()});sortHome.Load();
+        sortHome.Press(ConsoleHome::Right);sortHome.Press(ConsoleHome::Down);sortHome.Press(ConsoleHome::Right);sortHome.Press(ConsoleHome::Accept);
+        for(int i=0;i<4;++i)sortHome.Press(ConsoleHome::Right);
+        sortHome.Press(ConsoleHome::Accept);sortHome.Press(ConsoleHome::Search);sortHome.Press(ConsoleHome::PageUp);sortHome.Press(ConsoleHome::Accept);
+        sortHome.Press(ConsoleHome::Accept);
+        assert(sortHome.Press(ConsoleHome::Accept)==(luaRoot/"Games"/"Beta"/"default.xex").string());
     }
 #endif
     // Native explorer context actions: confirmed deletion, cancel and cut/paste.
