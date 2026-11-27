@@ -339,7 +339,8 @@ private:
     void RefreshLuaScripts();
     void PressLuaScripts(Key key);
     bool luaRepoPage_=false,luaRepoConfirm_=false,luaRepoRemove_=false,luaRepoRestore_=false;
-    int luaRepoRow_=0;
+    int luaRepoRow_=0,luaRepositoryIndex_=0;
+    std::vector<InfinityLuaRepo::Repository> luaRepositories_;
     bool luaDownloadPending_=false,luaManifestPending_=false,luaManifestConfirm_=false;
     InfinityLuaRepo::Manifest luaManifest_;
     InfinityLuaRepo::Entry luaDownloadEntry_;

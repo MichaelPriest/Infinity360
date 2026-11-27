@@ -8,7 +8,12 @@
 #include <set>
 #include <cstdio>
 namespace InfinityLuaRepo {
-struct Entry{std::string category,file,sha;size_t bytes=0;std::string url;};
+struct Entry{std::string category,file,sha;size_t bytes=0;std::string url,repository;};
+inline bool RepositoryId(const std::string& id){
+    return id.size()<=8&&id.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_-")==std::string::npos&&
+        (id.empty()||(id!="local"&&id.front()!='-'&&id.front()!='_'));
+}
+inline std::string FileName(const Entry& e){return e.repository.empty()?e.file:e.repository+"-"+e.file;}
 inline bool RemoteUrl(const std::string& url){
     if(url.size()<12||url.size()>768||url.compare(0,8,"https://")!=0||url.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?=&%+")!=std::string::npos)return false;
     const auto slash=url.find('/',8);return slash!=std::string::npos&&slash>8&&slash+1<url.size()&&url.find(':',8)>=slash;
@@ -22,11 +27,11 @@ inline bool Valid(const Entry& e){
         && e.file.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_- .")==std::string::npos
         && e.file.front()!='.'&&e.file.front()!=' '&&e.file.find("..")==std::string::npos
         && e.bytes>0&&e.bytes<=65536&&e.sha.size()==64&&e.sha.find_first_not_of("0123456789abcdef")==std::string::npos
-        && (e.url.empty()||RemoteUrl(e.url));
+        && (e.url.empty()||RemoteUrl(e.url))&&RepositoryId(e.repository)&&FileName(e).size()<=36;
 }
-inline std::string Source(const std::string& root,const Entry& e){return Join(Join(Join(root,"Scripts"),"Repository"),e.file);}
+inline std::string Source(const std::string& root,const Entry& e){return Join(Join(Join(root,"Scripts"),"Repository"),FileName(e));}
 inline std::string Destination(const std::string& root,const Entry& e){
-    const auto scripts=Join(root,"Scripts");return Join(e.category=="Utilities"?scripts:Join(scripts,e.category),e.file);
+    const auto scripts=Join(root,"Scripts");return Join(e.category=="Utilities"?scripts:Join(scripts,e.category),FileName(e));
 }
 inline std::string Directory(const std::string& root){return Join(Join(root,"Scripts"),"Repository");}
 inline bool ReadBounded(const std::string& path,size_t limit,std::string& data){
@@ -62,9 +67,9 @@ inline bool Load(const std::string& root,std::vector<Entry>& out){
     if(ReadBounded(savedFile(cached),32768,data)&&Parse(data,out))return true;
     return ReadBounded(Join(Directory(root),"catalog.tsv"),32768,data)&&Parse(data,out);
 }
-struct Manifest{std::string url,sha;size_t bytes=0;};
+struct Manifest{std::string url,sha;size_t bytes=0;std::string repository;};
 inline bool ValidManifest(const Manifest& m){
-    return RemoteUrl(m.url)&&m.bytes>0&&m.bytes<=32768&&m.sha.size()==64&&m.sha.find_first_not_of("0123456789abcdef")==std::string::npos;
+    return RepositoryId(m.repository)&&RemoteUrl(m.url)&&m.bytes>0&&m.bytes<=32768&&m.sha.size()==64&&m.sha.find_first_not_of("0123456789abcdef")==std::string::npos;
 }
 inline bool ReadManifest(const std::string& root,Manifest& m){
     m={};std::string data;
@@ -80,13 +85,58 @@ inline bool ReadManifest(const std::string& root,Manifest& m){
     for(char ch:count)m.bytes=m.bytes*10+size_t(ch-'0');
     return ValidManifest(m);
 }
+struct Repository{std::string id,name;Manifest manifest;};
+inline bool ReadRepositories(const std::string& root,std::vector<Repository>& out){
+    out.clear();Manifest primary;ReadManifest(root,primary);
+    out.push_back({"","INFINITY",primary});
+    const auto path=Join(Directory(root),"sources.tsv");
+    if(!fileExists(path))return true;
+    std::string data;if(!ReadBounded(path,8192,data)||data.find('\0')!=std::string::npos)return false;
+    std::istringstream in(data);std::string line;
+    auto strip=[](std::string& s){if(!s.empty()&&s.back()=='\r')s.pop_back();};
+    if(!std::getline(in,line))return false;strip(line);
+    if(line!="INFINITY-LUA-SOURCES-V1")return false;
+    std::vector<Repository> rows;std::set<std::string> ids;
+    while(std::getline(in,line)){
+        strip(line);if(line.empty())continue;
+        if(rows.size()>=7||line.size()>1024)return false;
+        Repository r;std::string count;std::istringstream fields(line);
+        if(!std::getline(fields,r.id,'\t')||!std::getline(fields,r.name,'\t')||
+           !std::getline(fields,r.manifest.url,'\t')||!std::getline(fields,count,'\t')||!std::getline(fields,r.manifest.sha))return false;
+        if(r.id.empty()||!RepositoryId(r.id)||!ids.insert(r.id).second||r.name.empty()||r.name.size()>48||
+           r.name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 -_.")!=std::string::npos||
+           count.empty()||count.size()>5||count.find_first_not_of("0123456789")!=std::string::npos)return false;
+        for(char ch:count)r.manifest.bytes=r.manifest.bytes*10+size_t(ch-'0');
+        r.manifest.repository=r.id;if(!ValidManifest(r.manifest))return false;
+        rows.push_back(r);
+    }
+    if(in.bad())return false;
+    out.insert(out.end(),rows.begin(),rows.end());return true;
+}
+inline std::string CachePath(const std::string& root,const std::string& id){
+    return Join(Directory(root),id.empty()?"catalog-remote.tsv":"repo-"+id+".tsv");
+}
+inline bool ParseRepository(const std::string& data,const std::string& id,std::vector<Entry>& out){
+    if(!RepositoryId(id)||!Parse(data,out)){out.clear();return false;}
+    for(auto& e:out){e.repository=id;if(!Valid(e)||(!id.empty()&&e.url.empty())){out.clear();return false;}}
+    return true;
+}
+inline bool LoadRepository(const std::string& root,const Repository& repository,std::vector<Entry>& out){
+    if(repository.id.empty())return Load(root,out);
+    out.clear();const auto& m=repository.manifest;
+    if(!ValidManifest(m)||m.repository!=repository.id)return false;
+    std::string data;
+    if(!ReadBounded(savedFile(CachePath(root,repository.id)),32768,data)||data.size()!=m.bytes)return false;
+    StoreSha256 hash;hash.Update(reinterpret_cast<const unsigned char*>(data.data()),data.size());
+    return hash.Finish()==m.sha&&ParseRepository(data,repository.id,out);
+}
 inline std::string ImportManifest(const std::string& root,const Manifest& m,const std::string& data){
     if(!ValidManifest(m)||data.size()!=m.bytes)return "Manifesto Lua: tamanho invalido.";
     StoreSha256 hash;hash.Update(reinterpret_cast<const unsigned char*>(data.data()),data.size());
     if(hash.Finish()!=m.sha)return "Manifesto Lua: SHA-256 invalido.";
     std::vector<Entry> rows;
-    if(!Parse(data,rows))return "Manifesto Lua: catalogo invalido.";
-    const auto path=Join(Directory(root),"catalog-remote.tsv"),tmp=path+".tmp";
+    if(!ParseRepository(data,m.repository,rows))return "Manifesto Lua: catalogo invalido.";
+    const auto path=CachePath(root,m.repository),tmp=path+".tmp";
     if(fileExists(tmp))return "Temporario existente; catalogo anterior preservado.";
     std::ofstream out(tmp.c_str(),std::ios::binary|std::ios::trunc);
     out.write(data.data(),data.size());out.close();

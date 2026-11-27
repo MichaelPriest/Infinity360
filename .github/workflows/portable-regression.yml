@@ -22,7 +22,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Dependencies and pinned miniz
         run: |
-          sudo apt-get update -qq
+          # These tests need Ubuntu packages only; a third-party apt mirror can fail independently.
+          sudo apt-get update -qq || sudo apt-get update -qq -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=-
           sudo apt-get install -y ffmpeg openssl libssl-dev
           git clone https://github.com/richgel999/miniz.git "$HOME/infinity-miniz"
           git -C "$HOME/infinity-miniz" checkout 77d0dce8627735138c51770d1799a1ef48f2117d

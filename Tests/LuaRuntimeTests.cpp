@@ -194,6 +194,26 @@ int main(int argc,char** argv){
     auto next=manifest;next.bytes=empty.size();next.sha=eh.Finish();
     assert(InfinityLuaRepo::ImportManifest(root,next,empty)=="Catalogo Lua sincronizado.");
     assert(InfinityLuaRepo::Load(root,entries)&&entries.empty());
+    // Additional sources have pinned, independent caches and namespaced installs.
+    const std::string third="INFINITY-LUA-REPO-V2\nFilters\tExtra.lua\t"+std::to_string(updated.size())+"\t"+InfinityLuaRepo::Hash(updated)+"\thttps://example.org/Extra.lua\n";
+    auto extra=manifest;extra.repository="extra";extra.bytes=third.size();extra.sha=InfinityLuaRepo::Hash(third);
+    std::ofstream(temp/"Scripts"/"Repository"/"sources.tsv")<<"INFINITY-LUA-SOURCES-V1\nextra\tExtra repo\t"<<extra.url<<"\t"<<extra.bytes<<"\t"<<extra.sha<<"\n";
+    std::vector<InfinityLuaRepo::Repository> repositories;
+    assert(InfinityLuaRepo::ReadRepositories(root,repositories)&&repositories.size()==2);
+    assert(!InfinityLuaRepo::LoadRepository(root,repositories[1],entries));
+    assert(InfinityLuaRepo::ImportManifest(root,extra,third)=="Catalogo Lua sincronizado.");
+    assert(InfinityLuaRepo::LoadRepository(root,repositories[1],entries)&&entries.size()==1);
+    assert(InfinityLuaRepo::FileName(entries[0])=="extra-Extra.lua");
+    assert(InfinityLuaRepo::InstallData(root,entries[0],updated)=="Script instalado.");
+    assert(fs::exists(temp/"Scripts"/"Filters"/"extra-Extra.lua"));
+    assert(InfinityLuaRepo::Load(root,entries)&&entries.empty());
+    auto changed=repositories[1];changed.manifest.sha=std::string(64,'b');
+    assert(!InfinityLuaRepo::LoadRepository(root,changed,entries));
+    assert(InfinityLuaRepo::LoadRepository(root,repositories[1],entries)&&entries.size()==1);
+    auto invalidRepo=extra;invalidRepo.repository="../x";
+    assert(InfinityLuaRepo::ImportManifest(root,invalidRepo,third)!="Catalogo Lua sincronizado.");
+    std::ofstream(temp/"Scripts"/"Repository"/"sources.tsv",std::ios::trunc)<<"INFINITY-LUA-SOURCES-V1\n../x\tBad\t"<<extra.url<<"\t"<<extra.bytes<<"\t"<<extra.sha<<"\n";
+    assert(!InfinityLuaRepo::ReadRepositories(root,repositories)&&repositories.size()==1);
     fs::remove_all(temp);
 
 }

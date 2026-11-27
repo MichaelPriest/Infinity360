@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.20 — Múltiplos repositórios Lua
+
+- Até sete fontes adicionais em sources.tsv, alternadas com RB. Manifestos HTTPS com pins independentes, cache por ID e nomes instalados com prefixo de origem para reduzir conflitos. Cache adicional só é carregado se corresponder ao pin configurado. Sem sincronização/instalação automática. Cadastro ainda por arquivo, não teclado da dashboard.
+- CI portátil: fallback de atualização APT usando apenas as fontes Ubuntu quando repositório externo falha; V0.3.19 foi bloqueada por HTTP 403 antes da compilação. Testes de isolamento, cache, nomes e IDs inválidos. Sem XEX solicitado.
+
 ## V0.3.19 — Atualização e restauração Lua
 
 - Instalações gerenciadas registram SHA-256; A atualiza somente arquivos reconhecidos, com fonte local ou HTTPS verificada. Preserva a primeira versão instalada em .old; LB confirma restauração. Arquivos modificados ou sem recibo não são sobrescritos. X remove apenas o arquivo correspondente ao catálogo; remoção gerenciada elimina o backup associado.

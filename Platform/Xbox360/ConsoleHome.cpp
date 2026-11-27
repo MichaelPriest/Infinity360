@@ -531,8 +531,12 @@ void ConsoleHome::LuaManifestResult(const std::string& message,bool success){
 }
 void ConsoleHome::RefreshLuaRepository(){
     luaRepoConfirm_=false;luaManifestConfirm_=false;
-    if(!InfinityLuaRepo::Load(dir_,luaRepoEntries_))notice_="Catalogo Lua ausente ou invalido.";
-    else notice_.clear();
+    const std::string previous=luaRepositoryIndex_>=0&&size_t(luaRepositoryIndex_)<luaRepositories_.size()?luaRepositories_[luaRepositoryIndex_].id:"";
+    const bool valid=InfinityLuaRepo::ReadRepositories(dir_,luaRepositories_);
+    luaRepositoryIndex_=0;
+    for(size_t i=0;i<luaRepositories_.size();++i)if(luaRepositories_[i].id==previous){luaRepositoryIndex_=int(i);break;}
+    const bool loaded=InfinityLuaRepo::LoadRepository(dir_,luaRepositories_[luaRepositoryIndex_],luaRepoEntries_);
+    notice_=!valid?"sources.tsv invalido; apenas INFINITY.":!loaded?"Catalogo ausente ou invalido. R3 sincroniza.":"";
     clampRow(luaRepoRow_,luaRepoEntries_.size());RefreshLuaRepositoryStatuses();
 }
 void ConsoleHome::PressLuaRepository(Key key){
@@ -570,9 +574,13 @@ void ConsoleHome::PressLuaRepository(Key key){
     }
     if(key==Back||key==Guide){luaRepoPage_=false;RefreshLuaScripts();notice_.clear();return;}
     if(key==Refresh){RefreshLuaRepository();return;}
+    if(key==PageDown&&!luaRepositories_.empty()){
+        luaRepositoryIndex_=(luaRepositoryIndex_+1)%luaRepositories_.size();luaRepoRow_=0;RefreshLuaRepository();return;
+    }
     if(key==Search){
         if(TransferRunning()||ftp_.Running()){notice_="Encerre FTP e transferencias.";return;}
-        if(!InfinityLuaRepo::ReadManifest(dir_,luaManifest_)){notice_="Fonte Lua ausente ou invalida (source.tsv).";return;}
+        if(luaRepositories_.empty()||!InfinityLuaRepo::ValidManifest(luaRepositories_[luaRepositoryIndex_].manifest)){notice_="Fonte Lua ausente ou invalida.";return;}
+        luaManifest_=luaRepositories_[luaRepositoryIndex_].manifest;
         luaManifestConfirm_=true;notice_="A confirma sincronizacao do manifesto fixado; B cancela.";return;
     }
     if(key==Up||key==Down){luaRepoRow_=std::max(0,luaRepoRow_+(key==Down?1:-1));clampRow(luaRepoRow_,luaRepoEntries_.size());return;}
@@ -584,7 +592,7 @@ void ConsoleHome::PressLuaRepository(Key key){
 }
 void ConsoleHome::PressLuaScripts(Key key){
     if(luaRepoPage_){PressLuaRepository(key);return;}
-    if(key==Guide){luaRepoPage_=true;luaRepoRow_=0;RefreshLuaRepository();return;}
+    if(key==Guide){luaRepoPage_=true;luaRepoRow_=0;luaRepositoryIndex_=0;RefreshLuaRepository();return;}
     if(key==Back){luaPage_=false;notice_.clear();return;}
     if(key==Up || key==Down){
         luaRow_=std::max(0,luaRow_+(key==Down?1:-1));
@@ -3305,12 +3313,13 @@ void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
 }
 void ConsoleHome::DrawLuaRepository(HomeCanvas& c)const{
     c.Text(45,93,"Scripts Lua | Repositorio",36,White,1180);
-    c.Text(48,150,"Catalogo local/HTTPS | SHA-256 | Instalacao manual",21,Muted,1160);
+    const auto label=luaRepositories_.empty()?std::string("INFINITY"):luaRepositories_[luaRepositoryIndex_].name;
+    c.TextFit(48,150,"Fonte: "+label+" | RB Alternar | SHA-256",21,Muted,1160);
     const int first=(luaRepoRow_/7)*7;
     for(int i=first;i<first+7&&size_t(i)<luaRepoEntries_.size();++i){
         const auto& item=luaRepoEntries_[i];const int y=190+(i-first)*54;
         panel(c,48,y,1180,49,Panel,i==luaRepoRow_);
-        c.TextFit(62,y+4,item.file,21,White,760);
+        c.TextFit(62,y+4,InfinityLuaRepo::FileName(item),21,White,760);
         c.TextFit(62,y+26,item.category,15,Muted,760);
         const auto status=static_cast<size_t>(i)<luaRepoStatuses_.size()?luaRepoStatuses_[i]:std::string("Atualize");
         c.TextFit(850,y+10,status,18,Lime,350);
@@ -4180,7 +4189,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
     if(luaPage_){
-        if(luaRepoPage_){InfinityButtons::Strip(c,45,674,(luaRepoConfirm_||luaManifestConfirm_)?"A Confirmar | B Cancelar":"A Instalar/atualizar | X Remover | LB Restaurar | Y Reler | B Voltar",19,White,1190);return;}
+        if(luaRepoPage_){InfinityButtons::Strip(c,45,674,(luaRepoConfirm_||luaManifestConfirm_)?"A Confirmar | B Cancelar":"A Instalar | X Remover | LB Restaurar | RB Fonte | Y Reler | B Voltar",19,White,1190);return;}
         using namespace InfinityButtons;
         Hint(c,A,45,674,22,luaCategory_==LuaUtilities?"Executar":"Aplicar",150,White);
         Hint(c,X,245,674,22,luaCategory_==LuaUtilities?"Limpar filtro":"Limpar",175,White);
