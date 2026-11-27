@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**92 capturas nativas** — commit [ad3334a9fb3a](https://github.com/MichaelPriest/Infinity360/commit/ad3334a9fb3a1796ad2aa44def48c18c4907b4b5).
+**93 capturas nativas** — commit [2e7b45d7ae27](https://github.com/MichaelPriest/Infinity360/commit/2e7b45d7ae2726b62272d49b5828253ba940f027).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -153,6 +153,13 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Armazenamento — dispositivos e espaço livre** | **Rede — conexão, FTP e atalhos** |
 | ![Scripts Lua — categorias e scripts locais](91-lua-moderno.png) | ![Perfis — avatar e controles conectados](92-perfis-moderno.png) |
 | **Scripts Lua — categorias e scripts locais** | **Perfis — avatar e controles conectados** |
+
+### Navegacao contextual
+
+| Tela | Tela |
+| --- | --- |
+| ![Menu de opções da biblioteca — BACK](93-opcoes-contextuais.png) |  |
+| **Menu de opções da biblioteca — BACK** |  |
 
 
 <!-- NATIVE-GALLERY-END -->
