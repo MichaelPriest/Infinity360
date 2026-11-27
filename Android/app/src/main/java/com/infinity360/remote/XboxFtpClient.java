@@ -88,6 +88,7 @@ final class XboxFtpClient implements Closeable {
     private void cwd(String path)throws IOException{if(!validPath(path))throw new IOException("Pasta inválida");expect(command("CWD "+path),250);}
     static ArrayList<Entry> parseListing(String listing)throws IOException{
         ArrayList<Entry> rows=new ArrayList<>();
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
         if(listing.isEmpty())return rows;
         if(!listing.endsWith("\r\n"))throw new IOException("Lista truncada");
         Pattern format=Pattern.compile("^([d-])r-x?r-x?r-x?r?-? 1 owner owner ([0-9]{1,19}) Jan 01 2000 (.+)$");
@@ -96,6 +97,7 @@ final class XboxFtpClient implements Closeable {
         for(String line:listing.substring(0,listing.length()-2).split("\r\n",-1)){
             Matcher match=format.matcher(line);if(!match.matches()||!validName(match.group(3))||rows.size()>=512)throw new IOException("Listagem incompatível");
             long size;try{size=Long.parseLong(match.group(2));}catch(NumberFormatException e){throw new IOException("Tamanho inválido");}
+            if(!seen.add(match.group(3).toLowerCase(java.util.Locale.ROOT)))throw new IOException("Nomes remotos duplicados");
             rows.add(new Entry(match.group(3),match.group(1).startsWith("d"),size));
         }
         rows.sort((left,right)->left.directory==right.directory?left.name.compareToIgnoreCase(right.name):left.directory?-1:1);

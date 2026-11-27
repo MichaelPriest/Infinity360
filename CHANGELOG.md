@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.73 — FTP recursivo e recebimento em lote
+
+- Android Remote 0.16.0 Alpha: envio de árvore Android via seletor SAF, recebimento de até 32 itens marcados com subpastas, plano limitado a 256 entradas, profundidade 8 e 16 GiB por lote; nomes e tamanhos validados, sem mesclar pastas, sem sobrescrita intencional. Cache de um arquivo por vez no recebimento, limpeza de parcial local em melhor esforço, progresso agregado. Rejeição de nomes duplicados na listagem FTP. Retomada pendente. Testes adicionados; APK e homologação não confirmados. Sem XEX/release.
+
 ## V0.3.72 — FTP em lote, pastas e seletor no console
 
 - Android Remote 0.15.0 Alpha: seleção de até 32 arquivos, validação prévia dos nomes e tamanhos, envio sequencial na mesma sessão, progresso agregado, velocidade média e ETA estimado. MKD autenticado somente no modo upload e dentro do workspace. Dashboard permite alternar destino FTP preparado com BACK no painel Rede/FTP, servidor parado, sem editar arquivo manualmente. Sem sobrescrita, exclusão ou envio recursivo. Testes ampliados; APK/XSDK pendentes. Sem XEX/release.

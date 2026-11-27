@@ -7,6 +7,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.OpenableColumns;
+import android.provider.DocumentsContract;
+import android.provider.DocumentsContract.Document;
+import java.util.HashSet;
+import java.util.Locale;
 import android.text.InputType;
 import android.view.View;
 import android.widget.*;
@@ -18,7 +22,7 @@ import java.util.concurrent.Executors;
 /** User-selected Android files only. No broad storage permission. */
 public final class FtpActivity extends Activity {
     private static final int BG=0xff101b15,PANEL=0xff20382b,ACCENT=0xffa8ff00,TEXT=0xffeff7f0,MUTED=0xffb1c8bb;
-    private static final int PICK_UPLOAD=701,PICK_DOWNLOAD=702;
+    private static final int PICK_UPLOAD=701,PICK_DOWNLOAD=702,PICK_UPLOAD_TREE=703,PICK_DOWNLOAD_TREE=704;
     private EditText ip,user,password;
     private TextView location,status;
     private ProgressBar bar;
@@ -30,7 +34,11 @@ public final class FtpActivity extends Activity {
     private String directory="/",pendingDownload="",pendingName="";
     private long pendingSize,lastFinish;
     private long lastProgress,transferStarted;
-    private static final int MAX_BATCH=32;
+    private static final int MAX_BATCH=32,MAX_TREE_NODES=256,MAX_TREE_DEPTH=8;
+    private static final long MAX_TREE_BYTES=16L*1024*1024*1024;
+    private final ArrayList<XboxFtpClient.Entry> selected=new ArrayList<>();
+    private ArrayList<XboxFtpClient.Entry> pendingTreeDownload=new ArrayList<>();
+    private String pendingTreePath="/";
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
     private TextView label(String value,int size,int color){TextView text=new TextView(this);text.setText(value);text.setTextColor(color);text.setTextSize(size);text.setPadding(0,dp(5),0,dp(5));return text;}
     private Button button(String value,Runnable action){Button button=new Button(this);button.setAllCaps(false);button.setText(value);button.setTextColor(TEXT);button.setBackgroundColor(PANEL);button.setOnClickListener(v->action.run());return button;}
@@ -54,6 +62,8 @@ public final class FtpActivity extends Activity {
         addButton(root,"Voltar uma pasta",()->{if(!busy){int i=directory.lastIndexOf('/');browse(i<=0?"/":directory.substring(0,i));}});
         addButton(root,"Enviar arquivos do celular",()->pickUpload());
         addButton(root,"Criar pasta no Xbox",()->createFolder());
+        addButton(root,"Enviar pasta inteira",()->pickTree(true));
+        addButton(root,"Receber itens selecionados",()->pickTree(false));
         addButton(root,"Cancelar transferência",()->cancelTransfer());
         bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);root.addView(bar,new LinearLayout.LayoutParams(-1,dp(14)));
         status=label("Servidor FTP: porta 2121.",14,MUTED);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
@@ -97,11 +107,16 @@ public final class FtpActivity extends Activity {
         if(!XboxFtpClient.validPath(path))return;
         runJob("Consultando pasta...",client->{
             ArrayList<XboxFtpClient.Entry> entries=client.list(path);check();
-            runOnUiThread(()->{if(isDestroyed()||cancelled)return;directory=path;location.setText(path);rows.removeAllViews();
+            runOnUiThread(()->{if(isDestroyed()||cancelled)return;directory=path;location.setText(path);rows.removeAllViews();selected.clear();
                 if(entries.isEmpty())rows.addView(label("Pasta vazia.",14,MUTED));
                 for(XboxFtpClient.Entry entry:entries){
                     String title=(entry.directory?"[Pasta] ":"[Arquivo] ")+entry.name+(entry.directory?"":" • "+android.text.format.Formatter.formatFileSize(this,entry.size));
-                    addButton(rows,title,()->{if(busy)return;try{String target=XboxFtpClient.child(directory,entry.name);if(entry.directory)browse(target);else pickDownload(target,entry);}catch(IllegalArgumentException e){status.setText("Caminho inválido ou muito longo.");}});
+                    LinearLayout line=new LinearLayout(this);line.setOrientation(LinearLayout.HORIZONTAL);
+                    CheckBox choose=new CheckBox(this);choose.setContentDescription("Selecionar "+entry.name);choose.setOnCheckedChangeListener((view,checked)->{
+                        if(checked){if(selected.size()>=MAX_BATCH){view.setChecked(false);status.setText("Selecione até 32 itens.");return;}selected.add(entry);}else selected.remove(entry);
+                    });line.addView(choose,new LinearLayout.LayoutParams(dp(48),dp(50)));
+                    line.addView(button(title,()->{if(busy)return;try{String target=XboxFtpClient.child(directory,entry.name);if(entry.directory)browse(target);else pickDownload(target,entry);}catch(IllegalArgumentException e){status.setText("Caminho inválido ou muito longo.");}}),new LinearLayout.LayoutParams(0,dp(50),1));
+                    rows.addView(line);
                 }
             });return entries.size()+" itens. "+(client.uploadLimit()==0?"Somente leitura.":"Limite de envio: "+android.text.format.Formatter.formatFileSize(this,client.uploadLimit())+".");
         });
@@ -150,6 +165,12 @@ public final class FtpActivity extends Activity {
             for(int i=0;i<clip.getItemCount();i++){Uri entry=clip.getItemAt(i).getUri();if(entry==null){status.setText("Seleção inválida.");return;}files.add(entry);}
             uploadBatch(files);return;
         }
+        if(request==PICK_UPLOAD_TREE||request==PICK_DOWNLOAD_TREE){
+            Uri tree=data.getData();if(tree==null||!DocumentsContract.isTreeUri(tree)){status.setText("Pasta inválida.");return;}
+            if(request==PICK_UPLOAD_TREE)uploadTree(tree,pendingTreePath);
+            else downloadTree(tree,pendingTreePath,new ArrayList<>(pendingTreeDownload));
+            pendingTreeDownload.clear();return;
+        }
         final Uri uri=data.getData()!=null?data.getData():data.getClipData()!=null&&data.getClipData().getItemCount()==1?data.getClipData().getItemAt(0).getUri():null;
         if(uri==null){pendingDownload="";return;}
         if(request==PICK_UPLOAD){
@@ -187,6 +208,130 @@ public final class FtpActivity extends Activity {
                 }finally{temp.delete();}
             });
         }
+    }
+    private void pickTree(boolean upload){
+        if(busy||connection()==null)return;
+        if(!upload&&selected.isEmpty()){status.setText("Marque arquivos ou pastas da listagem.");return;}
+        pendingTreePath=directory;pendingTreeDownload=new ArrayList<>(selected);
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|(upload?0:Intent.FLAG_GRANT_WRITE_URI_PERMISSION));
+        try{startActivityForResult(intent,upload?PICK_UPLOAD_TREE:PICK_DOWNLOAD_TREE);}
+        catch(Exception e){pendingTreeDownload.clear();status.setText("Seletor de pastas indisponível.");}
+    }
+    private static final class TreeNode{
+        final String path,parent,name;final Uri source;final long bytes;final boolean folder;
+        TreeNode(String path,String parent,String name,Uri source,long bytes,boolean folder){
+            this.path=path;this.parent=parent;this.name=name;this.source=source;this.bytes=bytes;this.folder=folder;
+        }
+    }
+    private static final class TreePlan{
+        final ArrayList<TreeNode> nodes=new ArrayList<>();final HashSet<String> paths=new HashSet<>();
+        long total;int files;
+        void add(TreeNode node,int depth)throws IOException{
+            if(depth>MAX_TREE_DEPTH||nodes.size()>=MAX_TREE_NODES||!paths.add(node.path.toLowerCase(Locale.ROOT)))throw new IOException("Árvore muito grande ou nomes duplicados.");
+            if(!node.folder){if(node.bytes<0||node.bytes>MAX_TREE_BYTES-total)throw new IOException("Tamanho da árvore indisponível ou acima de 16 GiB.");total+=node.bytes;files++;}
+            nodes.add(node);
+        }
+    }
+    private Uri rootDocument(Uri tree){return DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));}
+    private Cursor children(Uri tree,Uri parent){
+        return getContentResolver().query(DocumentsContract.buildChildDocumentsUriUsingTree(tree,DocumentsContract.getDocumentId(parent)),
+            new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE,Document.COLUMN_SIZE},null,null,null);
+    }
+    private String documentName(Uri doc)throws IOException{
+        try(Cursor cursor=getContentResolver().query(doc,new String[]{Document.COLUMN_DISPLAY_NAME},null,null,null)){
+            if(cursor!=null&&cursor.moveToFirst()&&XboxFtpClient.validName(cursor.getString(0)))return cursor.getString(0);
+        }throw new IOException("Nome da pasta incompatível com Xbox.");
+    }
+    private void planUpload(Uri tree,Uri source,String parent,String name,int depth,TreePlan plan,HashSet<String> visited,long limit)throws IOException{
+        check();String path=XboxFtpClient.child(parent,name);
+        if(!visited.add(DocumentsContract.getDocumentId(source)))throw new IOException("Árvore Android contém referência repetida.");
+        plan.add(new TreeNode(path,parent,name,source,0,true),depth);
+        try(Cursor cursor=children(tree,source)){
+            if(cursor==null)throw new IOException("Não foi possível listar a pasta Android.");
+            while(cursor.moveToNext()){
+                check();String id=cursor.getString(0),child=cursor.getString(1),mime=cursor.getString(2);
+                if(id==null||mime==null||!XboxFtpClient.validName(child))throw new IOException("Nome ou tipo de arquivo incompatível.");
+                Uri doc=DocumentsContract.buildDocumentUriUsingTree(tree,id);
+                if(Document.MIME_TYPE_DIR.equals(mime))planUpload(tree,doc,path,child,depth+1,plan,visited,limit);
+                else{
+                    long bytes=cursor.isNull(3)?sourceSize(doc):cursor.getLong(3);
+                    if(!visited.add(id)||bytes<0||bytes>limit)throw new IOException("Arquivo repetido, tamanho indisponível ou acima do limite: "+child);
+                    plan.add(new TreeNode(XboxFtpClient.child(path,child),path,child,doc,bytes,false),depth+1);
+                }
+            }
+        }
+    }
+    private void uploadTree(Uri tree,String target){
+        new AlertDialog.Builder(this).setTitle("Enviar pasta inteira ao Xbox?")
+            .setMessage("Será criada uma nova pasta em "+target+". Até 256 entradas, 8 níveis e 16 GiB por lote; limite do servidor por arquivo. Sem mesclar pastas ou sobrescrever arquivos.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Enviar",(d,w)->runJob("Validando pasta...",client->{
+                if(client.uploadLimit()==0)throw new IOException("Upload não habilitado.");
+                Uri source=rootDocument(tree);TreePlan plan=new TreePlan();
+                planUpload(tree,source,target,documentName(source),0,plan,new HashSet<>(),client.uploadLimit());
+                final long total=plan.total;long completed=0;int count=0;transferStarted=SystemClock.elapsedRealtime();
+                for(TreeNode node:plan.nodes){check();try{
+                    if(node.folder)client.mkdir(node.path);
+                    else{final long before=completed;
+                        try(InputStream in=getContentResolver().openInputStream(node.source)){
+                            if(in==null)throw new IOException("Arquivo indisponível.");
+                            client.upload(node.path,in,node.bytes,(done,ignored)->progress(before+done,total));
+                        }completed+=node.bytes;count++;
+                    }
+                }catch(IOException e){throw new IOException(count+" arquivos concluídos; pasta interrompida: "+e.getMessage());}}
+                return count+" arquivos enviados com estrutura de pastas. Atualize a listagem.";
+            })).show();
+    }
+    private void planDownload(XboxFtpClient client,String parent,XboxFtpClient.Entry entry,int depth,TreePlan plan)throws IOException{
+        check();String path=XboxFtpClient.child(parent,entry.name);
+        plan.add(new TreeNode(path,parent,entry.name,null,entry.size,entry.directory),depth);
+        if(entry.directory)for(XboxFtpClient.Entry child:client.list(path))planDownload(client,path,child,depth+1,plan);
+    }
+    private Uri createExclusive(Uri tree,Uri parent,String mime,String name)throws IOException{
+        check();
+        try(Cursor cursor=children(tree,parent)){
+            if(cursor==null)throw new IOException("Destino Android indisponível.");
+            while(cursor.moveToNext())if(name.equalsIgnoreCase(cursor.getString(1)))throw new IOException("Destino já existe: "+name);
+        }
+        Uri created=DocumentsContract.createDocument(getContentResolver(),parent,mime,name);
+        if(created==null)throw new IOException("Não foi possível criar "+name);
+        if(!name.equals(documentName(created))){
+            try{DocumentsContract.deleteDocument(getContentResolver(),created);}catch(Exception ignored){}
+            throw new IOException("Provedor alterou o nome de destino.");
+        }
+        return created;
+    }
+    private void downloadTree(Uri tree,String folder,ArrayList<XboxFtpClient.Entry> items){
+        if(items.isEmpty())return;
+        new AlertDialog.Builder(this).setTitle("Receber "+items.size()+" itens do Xbox?")
+            .setMessage("Preserva subpastas e nomes. Não mescla pastas existentes. Até 256 entradas e 16 GiB por lote. Usa cache de um arquivo por vez.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Receber",(d,w)->runJob("Validando árvore do Xbox...",client->{
+                TreePlan plan=new TreePlan();for(XboxFtpClient.Entry entry:items)planDownload(client,folder,entry,0,plan);
+                java.util.HashMap<String,Uri> parents=new java.util.HashMap<>();parents.put(folder,rootDocument(tree));
+                final long total=plan.total;long completed=0;int count=0;transferStarted=SystemClock.elapsedRealtime();
+                for(TreeNode node:plan.nodes){
+                    check();Uri parent=parents.get(node.parent);if(parent==null)throw new IOException("Pasta de destino ausente.");
+                    try{
+                        if(node.folder){parents.put(node.path,createExclusive(tree,parent,Document.MIME_TYPE_DIR,node.name));continue;}
+                        if(client.size(node.path)!=node.bytes)throw new IOException("Arquivo remoto alterado.");
+                        if(node.bytes>getCacheDir().getUsableSpace())throw new IOException("Cache Android insuficiente.");
+                        File temp=File.createTempFile("ftp-tree-",".part",getCacheDir());Uri created=null;boolean saved=false;
+                        try{
+                            final long before=completed;
+                            try(OutputStream out=new FileOutputStream(temp)){client.download(node.path,out,node.bytes,(done,ignored)->progress(before+done,total));}
+                            check();created=createExclusive(tree,parent,"application/octet-stream",node.name);
+                            try(InputStream in=new FileInputStream(temp);OutputStream out=getContentResolver().openOutputStream(created,"wt")){
+                                if(out==null)throw new IOException("Destino indisponível.");
+                                byte[] buffer=new byte[32768];int n;long copied=0;
+                                while((n=in.read(buffer))!=-1){check();out.write(buffer,0,n);copied+=n;}
+                                if(copied!=node.bytes)throw new IOException("Cópia local incompleta.");out.flush();
+                            }
+                            saved=true;completed+=node.bytes;count++;
+                        }finally{temp.delete();if(!saved&&created!=null)try{DocumentsContract.deleteDocument(getContentResolver(),created);}catch(Exception ignored){}}
+                    }catch(IOException e){throw new IOException(count+" arquivos salvos; lote interrompido: "+e.getMessage());}
+                }
+                return count+" arquivos recebidos. Estrutura de pastas preservada.";
+            })).show();
     }
     private void uploadBatch(ArrayList<Uri> files){
         final String folder=directory;

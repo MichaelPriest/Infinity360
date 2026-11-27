@@ -18,6 +18,8 @@ public final class XboxFtpClientTest {
         try{XboxFtpClient.parseUploadLimit("213 536870913");throw new AssertionError();}catch(java.io.IOException expected){}
         require(XboxFtpClient.child("/Batch","Save").equals("/Batch/Save"));
         require(!XboxFtpClient.validPath("/Batch/../Escape"));
+        try{XboxFtpClient.parseListing("-r--r--r-- 1 owner owner 1 Jan 01 2000 Save.bin\r\n-r--r--r-- 1 owner owner 1 Jan 01 2000 save.bin\r\n");throw new AssertionError();}catch(java.io.IOException expected){}
+        require(!XboxFtpClient.validPath("/a//b")&&!XboxFtpClient.validPath("/a/./b"));
         System.out.println("FTP parser and bounds OK");
     }
 }
