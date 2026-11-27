@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**98 capturas nativas** — commit [b5a853afec7a](https://github.com/MichaelPriest/Infinity360/commit/b5a853afec7af63d5d127bbb40f3fe7c5caefa0c).
+**105 capturas nativas** — commit [1bc626906a4d](https://github.com/MichaelPriest/Infinity360/commit/1bc626906a4d2d0e198c4a40f50eadd2be4fd663).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -171,6 +171,19 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | **Gerenciador de arquivos — lista e ações** | **Notificações — filtros e detalhe** |
 | ![Telemetria — memória e sensores](98-telemetria-moderno.png) |  |
 | **Telemetria — memória e sensores** |  |
+
+### Perfis, personalização e ferramentas
+
+| Tela | Tela |
+| --- | --- |
+| ![Central de conquistas — dados GPD e perfil](99-conquistas-moderno.png) | ![Central de saves — inventário local](100-saves-moderno.png) |
+| **Central de conquistas — dados GPD e perfil** | **Central de saves — inventário local** |
+| ![Temperaturas — sensores SMC](101-temperaturas-moderno.png) | ![Refrigeração — diagnóstico](102-refrigeracao-moderno.png) |
+| **Temperaturas — sensores SMC** | **Refrigeração — diagnóstico** |
+| ![Editor de capas e fundos](103-arte-moderna.png) | ![Teclado virtual — pesquisa](104-teclado-moderno.png) |
+| **Editor de capas e fundos** | **Teclado virtual — pesquisa** |
+| ![Gerenciamento de coleções](105-colecoes-moderno.png) |  |
+| **Gerenciamento de coleções** |  |
 
 
 <!-- NATIVE-GALLERY-END -->
