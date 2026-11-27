@@ -19,6 +19,8 @@ int main(){
        !SupportedCodecs("\"mp4v.61,mp4a.69\"")||!SupportedCodecs("\"avc1.42001e,mp4a.6B\"")||
        SupportedCodecs("\"hvc1.1.6.L93.B0,ec-3\"")||SupportedCodecs("\"avc1.42001e,ac-3,ec-3\"")||
        SupportedCodecs("\"mp4v.20.9,mp4a.40.2\""))return 15;
+    List full;if(!Parse(root+"master.m3u8",master,full,false,true)||Choose(full,4000000)!=root+"full.m3u8"||Choose(full,1000000)!=root+"low.m3u8")return 16;
+    Variant oversized;if(!ParseVariant("BANDWIDTH=3000000,RESOLUTION=3840x2160",oversized,true)||oversized.compatible)return 17;
     unsigned cap=DefaultBitrate;
     if(!BitrateCap("1000000",cap)||cap!=1000000||BitrateCap("99999",cap)||BitrateCap("4000001",cap)||BitrateCap("1.5",cap)||cap!=1000000)return 2;
     if(Parse(root+"master.m3u8","#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=123,RESOLUTION=640xBAD\na.m3u8\n",l))return 3;

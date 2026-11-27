@@ -14,6 +14,10 @@
 
 Esta ordem substitui a classificação histórica abaixo. Preservar funcionalidades essenciais de boot, lançamento, armazenamento e recuperação; corrigir regressões críticas quando encontradas. Não disparar build XEX/release sem autorização.
 
+### V0.3.40 — Entrada Full HD experimental
+
+Decoder admite fontes de até 1920×1080 e reduz os quadros diretamente na conversão para RGB 720p, com fila de 32 MiB. Seleção de variantes HLS Full HD é opt-in por arquivo `enable-iptv-1080p.txt` (`ENABLE-IPTV-1080P`); teto de bitrate permanece. Teste host com mídia original 1080p a 5 fps, não garantia de desempenho a 30/60 fps. Saída 1080p nativa, desentrelaçamento e homologação permanecem pendentes.
+
 ### V0.3.39 — Codecs adicionais
 
 Player MP4/TS/HLS admite H.264/MPEG-2 Video e AAC/MP2/MP3/AC-3/E-AC-3, com saída estéreo e limite de 1280×720; novos fixtures reais no host. Configuração FFmpeg PPC preparada, ainda sem compilação XEX. HEVC, 1080p, deinterlacing e homologação física pendentes.

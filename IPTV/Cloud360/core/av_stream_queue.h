@@ -19,16 +19,19 @@ public:
         if(!f||pts < -86400000000LL||pts>86400000000LL||eof_)return false;
         if(ready_&&(pts<origin_||pts-origin_>MaxDuration))return false;
         if(video){
-            if(f->width<1||f->height<1||f->width>1280||f->height>720||
+            unsigned width=0,height=0;
+            if(!cloud_video_fit(f->width,f->height,&width,&height)||
                 (haveVideo_&&pts<lastVideo_)||video_.size()>=64)return false;
-            size_t bytes=static_cast<size_t>(f->width)*f->height*3;
+            size_t bytes=static_cast<size_t>(width)*height*3;
             if(bytes>MaxBytes-used_)return false;
             double aspect=1.0;
             if(f->sample_aspect_ratio.num>0&&f->sample_aspect_ratio.den>0)
                 aspect=double(f->sample_aspect_ratio.num)/f->sample_aspect_ratio.den;
-            Video v{pts,static_cast<unsigned>(f->width),static_cast<unsigned>(f->height),aspect,{}};
+            // Retain display aspect even when integer scaling rounds one dimension.
+            aspect*=double(f->width)*height/(double(f->height)*width);
+            Video v{pts,width,height,aspect,{}};
             v.rgb.resize(bytes);
-            if(cloud_frame_rgb(f,v.rgb.data(),bytes))return false;
+            if(cloud_frame_rgb_scaled(f,v.rgb.data(),bytes,width,height))return false;
             if(haveVideo_&&pts>lastVideo_)videoPeriod_=std::min<int64_t>(1000000,pts-lastVideo_);
             lastVideo_=pts;haveVideo_=true;used_+=bytes;video_.push_back(std::move(v));
         }else{

@@ -64,7 +64,7 @@ inline bool SupportedCodecs(const std::string& value){
 }
 // Unknown codec/resolution metadata is inconclusive, not verified. The decoder
 // still independently enforces the supported codec IDs, actual frame size and timestamps.
-inline bool ParseVariant(const std::string& attrs,Variant& variant){
+inline bool ParseVariant(const std::string& attrs,Variant& variant,bool allowFullHd=false){
     variant=Variant{};
     std::string field;bool quoted=false,codecs=false,resolution=false;
     for(size_t i=0;i<=attrs.size();++i){
@@ -81,7 +81,7 @@ inline bool ParseVariant(const std::string& attrs,Variant& variant){
                 const auto x=value.find('x');uint64_t w=0,h=0;
                 if(resolution||x==std::string::npos||!Number(value.substr(0,x),16384,w)||!Number(value.substr(x+1),16384,h)||!w||!h)return false;
                 resolution=true;variant.width=static_cast<unsigned>(w);variant.height=static_cast<unsigned>(h);
-                if(w>1280||h>720)variant.compatible=false;
+                if(w>(allowFullHd?1920u:1280u)||h>(allowFullHd?1080u:720u))variant.compatible=false;
             }else if(key=="CODECS"){
                 if(codecs||value.front()!='"'||value.back()!='"')return false;
                 codecs=true;if(!SupportedCodecs(value))variant.compatible=false;
@@ -94,7 +94,7 @@ inline bool ParseVariant(const std::string& attrs,Variant& variant){
     }
     return !quoted&&variant.bandwidth>0;
 }
-inline bool Parse(const std::string& base,const std::string& text,List& result,bool allowLive=false){
+inline bool Parse(const std::string& base,const std::string& text,List& result,bool allowLive=false,bool allowFullHd=false){
     result=List{};
     if(text.empty()||text.size()>MaxPlaylist)return false;
     std::istringstream in(text);std::string line;
@@ -108,7 +108,7 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
         if(line.size()>4096||result.ended)return false;
         if(line.compare(0,18,"#EXT-X-STREAM-INF:")==0){
             if(variant.bandwidth||duration||!result.segments.empty())return false;
-            if(!ParseVariant(line.substr(18),variant))return false;
+            if(!ParseVariant(line.substr(18),variant,allowFullHd))return false;
         }else if(line.compare(0,8,"#EXTINF:")==0){
             if(duration||variant.bandwidth||!result.variants.empty())return false;
             const auto comma=line.find(',',8);
@@ -206,6 +206,7 @@ public:
         }
         if(prefetch_&&!poll_(*prefetch_)){prefetch_.reset();prefetchUrl_.clear();}
     }
+    bool EnableFullHd(){if(started_)return false;allowFullHd_=true;return true;}
     bool EnableStartupAdaptation(Clock clock){if(started_||!clock)return false;clock_=std::move(clock);return true;}
     unsigned StartupThroughput()const{return throughput_;}
     // Arm only after playback preparation; VOD and standalone playlists remain unchanged.
@@ -421,7 +422,7 @@ private:
         fetchFailure_=Failure::Transport;auto reader=open_(url,true);if(!reader)return false;
         std::string text;unsigned char block[4096];
         for(;;){int n=reader->Read(block,sizeof block);if(n<0)return false;if(n>int(sizeof block)||size_t(n)>MaxPlaylist-text.size()){fetchFailure_=Failure::InvalidPlaylist;return false;}if(!n)break;text.append(reinterpret_cast<char*>(block),n);}
-        if(!Parse(url,text,list,allowLive_)){fetchFailure_=Failure::InvalidPlaylist;return false;}return true;
+        if(!Parse(url,text,list,allowLive_,allowFullHd_)){fetchFailure_=Failure::InvalidPlaylist;return false;}return true;
     }
     int Fail(Failure reason){failed_=true;failure_=reason;reader_.reset();prefetch_.reset();return -1;}
     Failure failure_=Failure::None,refreshFailure_=Failure::StalePlaylist,segmentFailure_=Failure::Transport,fetchFailure_=Failure::Transport;
@@ -430,7 +431,7 @@ private:
     Poll poll_;std::unique_ptr<Reader> prefetch_;std::string prefetchUrl_;uint64_t prefetchSeq_=0;bool prefetchTried_=false;unsigned prefetched_=0;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
-    bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;
+    bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false,allowFullHd_=false;
     std::vector<unsigned char> segment_;size_t segmentOffset_=0;unsigned recovered_=0;
     bool largeStreaming_=false,streamingSegment_=false,initDone_=false;
 };

@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.40 — Entrada Full HD experimental
+
+- Decoder aceita fontes até 1920×1080, com limite de pixels alinhados; conversão YUV420→RGB reduz diretamente à resolução máxima de 1280×720 preservando proporção, sem alocar RGB em 1080p. Fila mantém teto de 32 MiB. HUD informa a resolução da fonte quando superior à saída. HLS automático continua limitado a 720p; `MenuPreview/enable-iptv-1080p.txt` com `ENABLE-IPTV-1080P` libera variantes Full HD dentro do bitrate configurado.
+- Fixture H.264/AAC 1080p real de 2 s a 5 fps e testes de dimensões/limites HLS. Não comprova fluidez a 30/60 fps, consumo total do decoder no console, 1080i ou saída física 1080p. Testes portáteis solicitados; nova galeria solicitada após falha de publicação GitHub na V0.3.39. Sem XEX/release.
+
 ## V0.3.39 — Compatibilidade adicional de codecs IPTV
 
 - Player integrado admite MPEG-2 Video além de H.264, MP2 e E-AC-3 além de AAC/MP3/AC-3. Configuração PPC inclui os novos decoders; parser HLS aceita declarações MPEG-2, MPEG Audio, AC-3 e E-AC-3 reconhecidas, mantendo rejeição de variantes HEVC e limites de 720p.

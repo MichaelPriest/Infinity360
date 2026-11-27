@@ -1,4 +1,5 @@
 #include "container_decode.h"
+#include "video_limits.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -52,13 +53,13 @@ static int deny_open(AVFormatContext* s, AVIOContext** pb,const char* url,int fl
 }
 static AVCodecContext* open_codec(AVStream* stream,enum AVCodecID expected){
     if(stream->codecpar->codec_id!=expected)return NULL;
-    if(stream->codecpar->codec_type==AVMEDIA_TYPE_VIDEO&&(stream->codecpar->width>1280||stream->codecpar->height>720))return NULL;
+    if(stream->codecpar->codec_type==AVMEDIA_TYPE_VIDEO&&(stream->codecpar->width>CLOUD_VIDEO_INPUT_W||stream->codecpar->height>CLOUD_VIDEO_INPUT_H))return NULL;
     const AVCodec* codec=avcodec_find_decoder(expected);
     if(!codec)return NULL;
     AVCodecContext* ctx=avcodec_alloc_context3(codec);
     if(!ctx)return NULL;
     if(avcodec_parameters_to_context(ctx,stream->codecpar)<0){avcodec_free_context(&ctx);return NULL;}
-    ctx->thread_count=1;ctx->max_pixels=1280*720;
+    ctx->thread_count=1;ctx->max_pixels=CLOUD_VIDEO_DECODE_PIXELS;
     if(avcodec_open2(ctx,codec,NULL)<0){avcodec_free_context(&ctx);return NULL;}
     return ctx;
 }
@@ -69,7 +70,7 @@ static int drain(AVCodecContext* ctx,AVFrame* frame,CloudContainerReport* r,int 
         if(rc==AVERROR(EAGAIN)||rc==AVERROR_EOF)return 0;
         if(rc<0)return rc;
         if(video){
-            if(frame->width<=0||frame->height<=0||frame->width>1280||frame->height>720||++r->video_frames>sink.max_frames)return AVERROR_INVALIDDATA;
+            if(frame->width<=0||frame->height<=0||frame->width>CLOUD_VIDEO_INPUT_W||frame->height>CLOUD_VIDEO_INPUT_H||++r->video_frames>sink.max_frames)return AVERROR_INVALIDDATA;
             r->width=(unsigned)frame->width;r->height=(unsigned)frame->height;
         }else{
             if(frame->nb_samples<=0||frame->nb_samples>8192||++r->audio_frames>sink.max_frames)return AVERROR_INVALIDDATA;

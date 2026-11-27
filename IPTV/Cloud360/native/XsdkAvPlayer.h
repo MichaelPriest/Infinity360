@@ -89,6 +89,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
                 if(!value.empty()&&value.back()=='\r')value.pop_back();
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
+            // Keep automatic HLS selection at 720p unless explicitly enabled.
+            std::ifstream fullHd((root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
+            if(fullHd){std::string marker;std::getline(fullHd,marker);if(!marker.empty()&&marker.back()=='\r')marker.pop_back();
+                if(marker=="ENABLE-IPTV-1080P"&&fullHd.peek()==std::char_traits<char>::eof())hls.EnableFullHd();}
             hls.EnableBufferedSegments(true);
             hls.EnablePrefetch([](XsdkMpeg::RemoteReader& r){return r.Prefetch();});
             hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
@@ -126,7 +130,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(!prepare()){cloud_container_close(session);return Cancelled()?"Reproducao cancelada.":"Falha ao preparar audio e video FFmpeg.";}
     const int64_t duration=cloud_container_duration(session),mediaStart=cloud_container_start(session);
     bool audioOpen=NT_SUCCESS(xsdk_audio_open(16)),ok=audioOpen,cancelled=false;
-    unsigned shown=0,submitted=0;
+    unsigned shown=0,submitted=0,sourceWidth=0,sourceHeight=0;
     using Clock=std::chrono::steady_clock;
     auto start=Clock::now();
     CloudReadClock playbackClock;
@@ -145,12 +149,13 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     auto overlay=[&](){
         guide.Restore(canvas);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
-        const auto info=state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(duration>0?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):"");
+        const auto info=state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(sourceWidth>1280||sourceHeight>720?" | "+std::to_string(sourceWidth)+"x"+std::to_string(sourceHeight)+" > 720p":"")+(duration>0?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):"");
         lastHud=hud.Visible(wall(),controls.Paused());
         hud.Draw(canvas,wall(),controls.Paused(),"Cloud360 IPTV | FFmpeg",info,remoteSource&&duration<=0?"X Mudo | LB/RB Volume | B Sair":duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1);
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
+        const auto* report=cloud_container_report(session);if(report){sourceWidth=report->width;sourceHeight=report->height;}
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);
         guide.NewFrame();hud.Frame(canvas);++shown;overlay();return present(true);
     };

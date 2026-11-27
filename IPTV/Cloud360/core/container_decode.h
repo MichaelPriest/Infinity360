@@ -10,6 +10,7 @@ typedef struct {
     uint64_t audio_samples;
 } CloudContainerReport;
 /* Bounded local diagnostic, H.264/MPEG-2 video and AAC/MP2/MP3/AC-3/E-AC-3 audio in MP4 or MPEG-TS.
+ * Source dimensions <=1920x1080; actual output scaling is the caller's responsibility.
  * No URL, playlists, output, DRM, or unrestricted demuxing. */
 typedef int (*CloudContainerFrame)(void* user,const AVFrame* frame,int video,int64_t pts_us);
 /* Incremental local session: step returns 1 for progress, 0 at clean EOF,
