@@ -75,6 +75,11 @@ unsigned HomeCanvas::ThemeColor(unsigned color) const {
     const unsigned r=(color>>16)&255,g=(color>>8)&255,b=color&255;
     // Recolor only green UI accents and green-tinted panels; retain warning colors and artwork.
     if(g<=r||g<=b)return color;
+    // Distinct high-contrast focus on every palette; muted green surfaces retain luminance mapping.
+    if(g>=210&&g-b>=140&&g-r>=40){
+        static const unsigned accents[]={0xffa8ff00u,0xff49cfff,0xffffc54du,0xffd090ffu,0xffff7676u,0xff53f6e5u,0xffe1e7e5u};
+        return accents[theme_];
+    }
     if(theme_==1){const unsigned low=std::min(r,b),delta=g-low;return (color&0xff000000u)|(low<<16)|((low+delta/2)<<8)|g;}
     if(theme_==2)return (color&0xff000000u)|(g<<16)|(r<<8)|b;
     // Preserve luminance contrast and use only green-dominant UI pixels.
@@ -434,7 +439,7 @@ void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacit
             dest=blend(reflection,dest,glow);
         }
     }
-    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,38+(appearance_.animations?focusAnimation_:100)*28/100,8);SeriesFocus(x,y,w,h);}
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,50+(appearance_.animations?focusAnimation_:100)*38/100,8);SeriesFocus(x,y,w,h);}
 }
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.

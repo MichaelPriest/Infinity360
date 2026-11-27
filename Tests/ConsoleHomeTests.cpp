@@ -198,6 +198,20 @@ static int captureScreens(const char* atlas,const char* destination) {
             system.Press(ConsoleHome::Down);ok=save("42-marcos-locais",system)&&ok;system.Press(ConsoleHome::Accept);ok=save("52-conquistas-gpd",system)&&ok;system.Press(ConsoleHome::Favorite);system.Press(ConsoleHome::Accept);assert(system.TakeNativeSocialRequest()==InfinitySocial::NativeAction::None);system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Favorite);ok=save("53-aparencia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Guide);ok=save("51-perfis-saves",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Up);system.Press(ConsoleHome::Accept);ok=save("46-energia",system)&&ok;system.Press(ConsoleHome::Back);system.Press(ConsoleHome::Back);
         }
     }
+    // The actual settings editor (not the old console-status panel), all seven palettes.
+    {
+        ConsoleHome themed(dir,roots);themed.Load();
+        themed.Press(ConsoleHome::GlobalGuide);
+        for(int i=0;i<6;++i)themed.Press(ConsoleHome::Down);
+        themed.Press(ConsoleHome::Accept);
+        for(unsigned i=0;i<HomeCanvas::ThemeCount;++i){
+            const auto name=std::to_string(82+i)+"-config-tema-"+std::to_string(i);
+            ok=save(name.c_str(),themed)&&ok;themed.Press(ConsoleHome::Right);
+        }
+        themed.Press(ConsoleHome::PageDown);themed.Press(ConsoleHome::PageDown);
+        themed.Press(ConsoleHome::GlobalGuide);assert(themed.QuickGuideOpen());
+        themed.Press(ConsoleHome::GlobalGuide);assert(!themed.QuickGuideOpen());
+    }
     // Real renderer captures for the nine modern home layouts and cover grid.
     for(unsigned style=1;style<DashboardLayout::Count;++style){
         {std::ofstream out(root/"aurorax-profile.txt",std::ios::app);out<<"J\t"<<style<<"\nG\t2\n";}

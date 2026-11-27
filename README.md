@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.23 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.24 Alpha (código-fonte)**
 
 Interface nativa em 720p inspirada no Xbox Series, com navegação por controle, biblioteca, IPTV, gerenciamento de conteúdo e personalização. Anteriormente AuroraX; Cloud360 IPTV mantém sua identidade.
 
@@ -20,7 +20,7 @@ Interface nativa em 720p inspirada no Xbox Series, com navegação por controle,
 | **INFINITY Store** | **Cloud360 IPTV** |
 | ![Store](docs/screenshots/66-store-moderna.png) | ![IPTV](docs/screenshots/69-iptv-moderno.png) |
 | **Configurações** | **Sistema** |
-| ![Configurações](docs/screenshots/53-aparencia.png) | ![Sistema](docs/screenshots/07-sistema.png) |
+| ![Configurações](docs/screenshots/82-config-tema-0.png) | ![Sistema](docs/screenshots/07-sistema.png) |
 
 **[Galeria de capturas nativas](docs/screenshots/README.md)** · [Commit das imagens](docs/screenshots/source.txt)
 
@@ -34,11 +34,11 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Biblioteca | XEX/GOD/XBLA, recentes, favoritos, capas frente/verso e multidisco. Filtros, ordenação e legendas em [Lua](Platform/Xbox360/docs/LUA-API.md) |
 | Perfil Xbox | Seleção, Gamerpic, retrato e imagem estática de corpo inteiro do avatar (atualização opcional), diagnóstico de componentes e memória de assets, Gamerscore e conquistas por título via XAM experimental |
 | Social | Cartão próprio/de amigos, lista de amigos/presença e amigos por título, jogadores recentes, edição de perfil, composição oficial de mensagens, central de comunicação/Party, consulta de permissões, chat e editor de avatar via XAM experimental; painel de avatar e leitor de geometria oficial e rasterização diagnóstica CPU e adaptador XAvatar/D3D9 e pass para textura opcionais (não integrados ao presenter XSDK), preferência visual Avatar/Gamerpic/Oculto |
-| Conteúdo | TU, DLC, saves, backups; Home Series Infinity detecta DVD legível, executa XEX e abre instalação HDD/USB (GOD ou extração) |
+| Conteúdo | TU, DLC, saves, backups; Homes modernas detectam DVD legível, executa XEX e abre instalação HDD/USB (GOD ou extração) |
 | Store e downloads | Catálogo homebrew, fila persistente, fontes configuráveis e importação local de metadados Andromeda |
 | Cloud360 IPTV | FFmpeg integrado ao pacote principal (MP4/TS/HLS); homologação física pendente |
 | Sistema | Hub com cinco categorias, indicadores locais, arquivos, FTP, rede, SMB experimental, armazenamento e sensores |
-| Personalização | Configurações por categoria (aparência, biblioteca, idioma/relógio, tela e sistema), navegação LB/RB, prévia e edição com salvar/cancelar; sete temas, três idiomas, quatro níveis de opacidade e animações opcionais |
+| Personalização | Configurações em oito categorias, valores diretos, ajuda contextual e prévia em sete paletas, navegação LB/RB, prévia e edição com salvar/cancelar; sete temas, três idiomas, quatro níveis de opacidade e animações opcionais |
 
 Implementação no código não equivale a homologação física.
 

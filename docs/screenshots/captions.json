@@ -362,5 +362,38 @@
         "caption": "Performance — indicadores locais e menu em duas colunas"
       }
     ]
+  },
+  {
+    "title": "Configurações — editor em todas as paletas",
+    "images": [
+      {
+        "stem": "82-config-tema-0",
+        "caption": "Editor de configurações — Verde Infinity"
+      },
+      {
+        "stem": "83-config-tema-1",
+        "caption": "Editor de configurações — Azul"
+      },
+      {
+        "stem": "84-config-tema-2",
+        "caption": "Editor de configurações — Âmbar"
+      },
+      {
+        "stem": "85-config-tema-3",
+        "caption": "Editor de configurações — Violeta"
+      },
+      {
+        "stem": "86-config-tema-4",
+        "caption": "Editor de configurações — Vermelho"
+      },
+      {
+        "stem": "87-config-tema-5",
+        "caption": "Editor de configurações — Ciano"
+      },
+      {
+        "stem": "88-config-tema-6",
+        "caption": "Editor de configurações — Grafite"
+      }
+    ]
   }
 ]

@@ -2443,7 +2443,7 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(page_==Home) {
-        if(layout_==DashboardLayout::TopIcons&&homeDiscKnown_&&focus_==ApprovedHome::Hero){
+        if(homeDiscKnown_&&((layout_==DashboardLayout::TopIcons&&focus_==ApprovedHome::Hero)||(layout_>DashboardLayout::TopIcons&&focus_==DashboardLayout::DiscSlot))){
             if(key==Accept){if(PowerBusy()){notice_="Conclua as operacoes ativas antes de executar o DVD.";return "";}if(PollHomeDisc(true)||!homeDiscKnown_){notice_="Disco alterado; selecione novamente.";return "";}return "dvd:/default.xex";}
             if(key==Favorite||key==Guide){OpenHomeDiscInstall(key==Favorite);return "";}
         }
@@ -2452,7 +2452,7 @@ std::string ConsoleHome::Press(Key key) {
             {0,1,0,2},{0,1,1,4},{2,3,0,6},{2,4,0,6},
             {3,5,1,7},{4,5,1,7},{6,7,2,6},{6,7,4,7}
         };
-        if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key):next[focus_<8?focus_:0][key]; notice_.clear(); }
+        if(key<=Down) { focus_=layout_==DashboardLayout::TopIcons?ApprovedHome::Move(focus_,key,static_cast<int>(ApprovedShelf().size())):layout_?DashboardLayout::Move(DashboardLayout::Get(layout_),focus_,key,homeDiscKnown_):next[focus_<8?focus_:0][key]; notice_.clear(); }
         if(key==Search){quickGuideOpen_=true;quickGuideEditing_=false;quickGuideRow_=0;socialGuideFocus_=false;socialGuideRow_=0;friendGuideOpen_=false;avatarGuideOpen_=false;avatarBodyPending_=false;communicationGuideOpen_=false;communicationRow_=0;privilegeGuideOpen_=false;privilegePending_=false;friendRosterPending_=false;avatarExitConfirm_.Cancel();notice_.clear();return "";}
         if(key==PageUp){section_=System;systemTab_=5;page_=Details;eventFilter_=NotificationCenter::All;eventRow_=0;notice_.clear();return "";}
         if(key==PageDown) {
@@ -3128,6 +3128,7 @@ bool ConsoleHome::PollHomeDisc(bool force){
     const bool known=ContentCatalog::ReadExecutionInfo("dvd:/default.xex",info)&&info.titleId!=0;
     if(known==homeDiscKnown_&&(!known||DiscIdentity::Same(info,homeDiscIdentity_)))return false;
     homeDiscKnown_=known;homeDiscIdentity_=info;homeDiscName_.clear();homeDiscCover_.clear();
+    if(!known&&layout_>DashboardLayout::TopIcons&&focus_==DashboardLayout::DiscSlot)focus_=0;
     artFolders_.erase("dvd:/default.xex");artDirty_=true;
     if(known){
         char id[9];std::sprintf(id,"%08X",info.titleId);
@@ -4277,7 +4278,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?"A Pedido PC | B Voltar | X Remover PC | START Baixar":"A Detalhes | B Voltar | Y Atualizar | R3 Fontes";
         InfinityButtons::Strip(c,45,674,commands,19,White,1190);return;
     }
-    if(appearanceEditor_&&!libraryPathsPage_){InfinityButtons::Strip(c,45,674,layoutPreview_?"B Voltar da previa":"LB/RB Categoria | A Alterar/Abrir | X Padrao | Y Salvar | R3 Previa | B Voltar",17,White,1190);return;}
+    if(appearanceEditor_&&!libraryPathsPage_){InfinityButtons::Strip(c,45,674,layoutPreview_?"B Voltar da previa":"A Alterar | B Voltar | X Padrao | Y Salvar | LB/RB Categoria | R3 Previa | L3 Guia",16,White,1190);return;}
     if(homeEditing_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
     if(luaPage_){
@@ -4293,7 +4294,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     if(libraryPathsPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar | L3 Guia",19,White,1190);return;}
     if(page_==Listing&&section_==System){InfinityButtons::Strip(c,45,674,"A Abrir | LB/RB Categoria | Y Atualizar | B Voltar | L3 Guia",19,White,1190);return;}
-    if(approved&&homeDiscKnown_&&focus_==ApprovedHome::Hero){InfinityButtons::Strip(c,45,674,"A Executar DVD | X Converter GOD | START Extrair | Y Atualizar | L3 Guia",18,White,1190);return;}
+    if(page_==Home&&homeDiscKnown_&&((approved&&focus_==ApprovedHome::Hero)||(layout_>DashboardLayout::TopIcons&&focus_==DashboardLayout::DiscSlot))){InfinityButtons::Strip(c,45,674,"A Executar DVD | X Converter GOD | START Extrair | Y Atualizar | L3 Guia",18,White,1190);return;}
     if(contentActive_||artEditing_||discSetActive_||updateActive_||fileAction_||collectionPicker_||searchActive_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     if(!approved||ApprovedHome::CoverSlot(focus_))buttonHint(c,254,"B",approved?"Girar capa":"Voltar",0xffb83c28u);
@@ -4720,10 +4721,16 @@ const SettingRow SettingsRows[]={
     {StPlugins,"Plugins e scripts Lua","Abra a central de extensoes; R3 acessa Lua."},
     {StPower,"Energia do console","Abra o painel de energia; nenhuma acao automatica."}
 };
-struct SettingGroup { const char* name; unsigned first,count; int icon; };
+struct SettingGroup { const char* name; unsigned count; int icon; SettingOption rows[6]; };
 const SettingGroup SettingsGroups[]={
-    {"Aparencia",0,4,10},{"Biblioteca",4,3,23},{"Idioma e relogio",7,3,20},
-    {"Tela",10,4,46},{"Sistema",14,4,14}
+    {"Aparencia",6,10,{StTheme,StLayout,StGlass,StAnimation,StBackground,StDim}},
+    {"Biblioteca",3,23,{StArtwork,StGrid,StPaths}},
+    {"Idioma e relogio",3,20,{StLanguage,StUtc,StCity}},
+    {"Tela",2,46,{StMargin,StIdle}},
+    {"Sistema",1,14,{StStorage}},
+    {"Rede",1,7,{StNetwork}},
+    {"Plugins e scripts",1,42,{StPlugins}},
+    {"Energia e comportamento",1,11,{StPower}}
 };
 constexpr unsigned SettingsGroupCount=sizeof(SettingsGroups)/sizeof(SettingsGroups[0]);
 }
@@ -4759,7 +4766,7 @@ void ConsoleHome::PressAppearance(Key key){
         appearanceRow_=(appearanceRow_+group.count+(key==Down?1:group.count-1))%group.count;
         notice_.clear();return;
     }
-    const auto id=SettingsRows[group.first+appearanceRow_].id;
+    const auto id=SettingsRows[group.rows[appearanceRow_]].id;
     if(key==Left||key==Right||key==Accept){
         notice_.clear();
         auto cycle=[&](unsigned& value,unsigned count){value=(value+(key==Left?count-1:1))%count;};
@@ -4791,10 +4798,10 @@ void ConsoleHome::PressAppearance(Key key){
         return;
     }
     if(key==Favorite){
-        if(settingsCategory_==0){themeDraft_=0;appearanceDraft_.background=AppearanceSettings::Gradient;appearanceDraft_.dim=1;layoutDraft_=initialLayout_;}
+        if(settingsCategory_==0){themeDraft_=0;appearanceDraft_.background=AppearanceSettings::Gradient;appearanceDraft_.dim=1;layoutDraft_=initialLayout_;appearanceDraft_.glass=AppearanceSettings::BalancedGlass;appearanceDraft_.animations=1;}
         if(settingsCategory_==1){appearanceDraft_.artwork=AppearanceSettings::Both;gridDraft_=0;}
         if(settingsCategory_==2){languageDraft_=0;clockDraft_={};}
-        if(settingsCategory_==3){safeAreaDraft_=idleDraft_=0;appearanceDraft_.glass=AppearanceSettings::BalancedGlass;appearanceDraft_.animations=1;}
+        if(settingsCategory_==3){safeAreaDraft_=idleDraft_=0;}
         notice_.clear();return;
     }
     if(key==Guide&&settingsCategory_==0){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";return;}
@@ -4817,34 +4824,56 @@ void ConsoleHome::PressAppearance(Key key){
     }
 }
 void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
-    c.TextFit(48,85,c.Tr("Configuracoes"),38,White,770);
-    c.TextFit(840,99,SettingsDirty()?"Alteracoes nao salvas":"Configuracoes salvas",18,SettingsDirty()?Lime:Muted,380);
-    c.TextFit(48,143,"LB/RB: categorias",17,Muted,300);
+    InfinityIcons::Draw(c,10,45,90,33,Lime);
+    c.TextFit(89,80,c.Tr("Configuracoes"),38,White,520);
+    c.TextFit(48,128,c.Tr("Personalize a dashboard"),18,Muted,490);
+    const char* headings[]={"Tema","Transparencia","Animacoes"};
+    const char* badges[]={HomeCanvas::ThemeName(themeDraft_),AppearanceSettings::GlassName(appearanceDraft_.glass),appearanceDraft_.animations?"Ativadas":"Desativadas"};
+    for(int i=0;i<3;++i){const int x=584+i*216;c.SeriesTile(x,85,207,65,false);
+        c.TextFit(x+12,91,c.Tr(headings[i]),15,Muted,183);c.TextFit(x+12,115,c.Tr(badges[i]),19,White,183);}
+    c.SeriesTile(44,164,278,450,false,190);
     for(unsigned i=0;i<SettingsGroupCount;++i){
-        const int y=177+int(i)*68;const bool selected=i==settingsCategory_;
-        c.SeriesTile(48,y,300,59,selected);
-        InfinityIcons::Draw(c,SettingsGroups[i].icon,63,y+15,28,selected?Lime:White);
-        c.TextFit(106,y+14,c.Tr(SettingsGroups[i].name),22,White,230);
+        const int y=174+int(i)*54;const bool selected=i==settingsCategory_;
+        c.SeriesTile(52,y,262,48,selected,selected?215:174);
+        InfinityIcons::Draw(c,SettingsGroups[i].icon,64,y+11,25,selected?Lime:White);
+        c.TextFit(101,y+12,c.Tr(SettingsGroups[i].name),19,White,203);
     }
     const auto& group=SettingsGroups[settingsCategory_];
-    c.SeriesTile(370,139,862,469,false,210);
-    c.TextFit(392,154,c.Tr(group.name),29,White,816);
+    c.SeriesTile(335,164,557,450,false,190);
+    c.TextFit(351,174,c.Tr(group.name),27,White,520);
     const std::string values[]={c.Tr(HomeCanvas::ThemeName(themeDraft_)),
         c.Tr(AppearanceSettings::BackgroundName(appearanceDraft_.background)),
         number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",DashboardLayout::Name(layoutDraft_),
         c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),c.Tr(GameGrid::Name(gridDraft_)),"",
         UiLanguage::Name(languageDraft_),ClockWeather::Zone(clockDraft_.offset),ClockWeather::Cities[clockDraft_.city].name,
         number(safeAreaDraft_)+"%",idleDraft_?number(idleDraft_)+" min":c.Tr("Desativado"),c.Tr(AppearanceSettings::GlassName(appearanceDraft_.glass)),c.Tr(appearanceDraft_.animations?"Ativadas":"Desativadas"),"","","",""};
+    const int rowIcons[]={10,25,46,23,1,23,32,20,20,25,46,11,10,42,14,7,42,11};
     for(unsigned i=0;i<group.count;++i){
-        const auto& row=SettingsRows[group.first+i];const int y=202+int(i)*75;
+        const auto& row=SettingsRows[group.rows[i]];const int y=218+int(i)*62;
         const bool selected=i==appearanceRow_,link=row.id==StPaths||row.id>=StStorage;
-        c.SeriesTile(392,y,818,65,selected);
-        c.TextFit(412,y+18,c.Tr(row.name),22,White,465);
-        c.TextFit(880,y+18,link?"A  Abrir":("< "+values[row.id]+" >"),21,selected?Lime:Muted,311);
+        c.SeriesTile(346,y,535,55,selected,selected?215:184);
+        InfinityIcons::Draw(c,rowIcons[row.id],358,y+14,26,selected?Lime:White);
+        c.TextFit(396,y+16,c.Tr(row.name),19,White,285);
+        c.TextFit(685,y+16,link?c.Tr("Abrir >"):("< "+values[row.id]+" >"),18,selected?Lime:Muted,185);
     }
-    c.Box(392,519,818,1,0xff414743u);
-    c.TextFit(404,535,c.Tr(SettingsRows[group.first+appearanceRow_].help),19,White,790);
-    c.TextFit(404,568,"Cima/baixo: selecionar | Esq/dir: alterar valor",17,Muted,790);
+    const auto& selected=SettingsRows[group.rows[appearanceRow_]];
+    c.SeriesTile(904,164,330,450,false,210);
+    InfinityIcons::Draw(c,rowIcons[selected.id],922,181,35,Lime);
+    c.TextFit(967,185,c.Tr("Ajuda contextual"),20,White,250);
+    c.TextFit(921,236,c.Tr(selected.name),22,White,298);
+    // Word wrap without allocating a second framebuffer; max three help lines.
+    const std::string help=c.Tr(selected.help);std::string line;unsigned y=279;
+    std::istringstream words(help);std::string word;
+    while(words>>word){if(!line.empty()&&line.size()+word.size()>32){c.TextFit(921,y,line,18,Muted,298);y+=28;line.clear();}if(!line.empty())line+=" ";line+=word;}
+    if(!line.empty())c.TextFit(921,y,line,18,Muted,298);
+    if(selected.id==StTheme||selected.id==StGlass||selected.id==StAnimation||selected.id==StBackground||selected.id==StDim||selected.id==StLayout){
+        c.SeriesTile(921,380,296,128,false,184);
+        c.SeriesTile(937,393,145,76,true,190);
+        c.SeriesTile(1030,421,168,69,false,198);
+        c.TextFit(936,512,c.Tr("R3: Previa da Home"),17,Lime,280);
+    }else c.TextFit(921,445,c.Tr(selected.id==StPaths||selected.id>=StStorage?"A: Abrir painel":"A / Esq / Dir: Alterar"),19,Lime,298);
+    c.TextFit(921,565,c.Tr(SettingsDirty()?"Alteracoes nao salvas":"Configuracoes salvas"),17,SettingsDirty()?Lime:Muted,298);
+    c.TextFit(48,627,c.Tr("LB/RB: categorias | Cima/baixo: opcoes | Esq/dir: alterar"),17,Muted,1170);
 }
 
 void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const{
@@ -4872,7 +4901,8 @@ void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const
     if(!featured)for(const auto& item:games_)if(!contains(hidden_,item.executable)){featured=&item;break;}
     const bool performance=style==DashboardLayout::Performance;
     const bool media=style==DashboardLayout::MediaHub;
-    if(featured&&!performance&&!media){
+    if(homeDiscKnown_&&!preview){DrawHomeDisc(c,hero.x,hero.y,hero.w,hero.h,focus_==DashboardLayout::DiscSlot);}
+    else if(featured&&!performance&&!media){
         if(appearance.ShowBackdrop()){
             const auto file=ArtPath(*featured,false);
             if(!file.empty())c.LocalArt(file,false,hero.x+hero.w/2,hero.y+2,hero.w/2-2,hero.h-4);

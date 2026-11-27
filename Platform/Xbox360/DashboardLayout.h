@@ -7,7 +7,7 @@
 // Classic is unchanged; the nine modern layouts share existing destinations.
 namespace DashboardLayout {
 enum Style { Classic, TopIcons, LateralPro, Hybrid, BladeNeo, Immersive, Minimal, Arcade, MediaHub, Performance, Count };
-constexpr int Slots=10;
+constexpr int Slots=10,DiscSlot=Slots;
 struct Rect {int x,y,w,h;};
 struct Geometry {std::array<Rect,Slots> nav{};Rect hero{},shelf{};};
 inline const char* Name(unsigned i){
@@ -49,12 +49,13 @@ inline Geometry Get(unsigned style){
     }
     return g;
 }
-inline int Move(const Geometry& g,int row,int direction){
-    if(row<0||row>=Slots||direction<0||direction>3)return 0;
-    const auto a=g.nav[row];const int ax=2*a.x+a.w,ay=2*a.y+a.h;
+inline int Move(const Geometry& g,int row,int direction,bool disc=false){
+    const int count=Slots+(disc?1:0);
+    if(row<0||row>=count||direction<0||direction>3)return 0;
+    const auto a=row==DiscSlot?g.hero:g.nav[row];const int ax=2*a.x+a.w,ay=2*a.y+a.h;
     int best=row;long bestScore=0x7fffffff;
-    for(int i=0;i<Slots;++i){
-        if(i==row)continue;const auto b=g.nav[i];
+    for(int i=0;i<count;++i){
+        if(i==row)continue;const auto b=i==DiscSlot?g.hero:g.nav[i];
         const int dx=2*b.x+b.w-ax,dy=2*b.y+b.h-ay;
         const int forward=direction==0?-dx:direction==1?dx:direction==2?-dy:dy;
         if(forward<=0)continue;

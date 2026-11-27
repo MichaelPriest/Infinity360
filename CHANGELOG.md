@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.24 — Aplicação do mockup: configurações e Home
+
+- Editor compartilhado em três colunas, oito categorias, resumo de tema/vidro/animações, ajuda contextual e prévia de aparência. Mantém confirmação de saída sem salvar, reset por categoria e acesso aos painéis existentes.
+- Seleção de alto contraste nas sete paletas; cards de foco mais evidentes. DVD ganha foco navegável nos oito layouts modernos alternativos, mantendo os atalhos de execução/conversão/extração do layout Series Infinity.
+- Sete capturas adicionais do editor real; 88 capturas portáteis solicitadas. Sem XEX/release. Validação física, ícone embutido de DVD, overlay durante jogo e redesign de todas as subtelas ainda pendentes.
+
 ## V0.3.23 — Hub Sistema e DVD na Home
 
 - Central Sistema em cinco categorias com cards translúcidos, resumo de armazenamento, IP, FTP e eventos; LB/RB navega categorias, direcional seleciona funções e Y atualiza indicadores. Atalhos diretos para configurações e energia com confirmação existente.
