@@ -137,6 +137,7 @@ bool CloudTv::Load(const std::string& source) {
     if(source.empty() || !catalog_.Load(dir_+source)) {
         notice_="Não foi possível abrir a lista. Confira o dispositivo e as fontes.";return false;
     }
+    lastLive_=static_cast<size_t>(-1);
     source_=source; const size_t dot=source.find_last_of('.');
     const std::string paired=source.substr(0,dot)+".xml";
     const TvGuide::Status state=guide_.Load(dir_+(fileExists(dir_+paired)?paired:"guide.xml"));
@@ -221,6 +222,35 @@ void CloudTv::Toggle(size_t index) {
     if(tab_==TvFavorites) {view_=Browse;Filter();}
 }
 std::string CloudTv::TakeMovie() {std::string path;path.swap(pending_);return path;}
+bool CloudTv::CanZap()const{
+    return view_==Details&&detail_<Count()&&catalog_.Items()[detail_].category==TvLive&&
+        std::find(rows_.begin(),rows_.end(),detail_)!=rows_.end()&&rows_.size()>1;
+}
+std::string CloudTv::Zap(int direction){
+    if(!CanZap()||direction<-1||direction>1)return "";
+    const auto& items=catalog_.Items();
+    auto target=[&](size_t index){
+        if(index>=items.size()||index==detail_||items[index].category!=TvLive)return std::string{};
+        const auto path=movieTarget(dir_+source_,items[index].uri,dir_);
+        MediaUrl url;
+        return url.Parse(path)?path:std::string{};
+    };
+    const auto pos=std::find(rows_.begin(),rows_.end(),detail_);
+    const size_t start=static_cast<size_t>(pos-rows_.begin());
+    size_t selected=start;std::string path;
+    if(!direction){
+        const auto it=std::find(rows_.begin(),rows_.end(),lastLive_);
+        if(it==rows_.end())return "";
+        selected=static_cast<size_t>(it-rows_.begin());path=target(rows_[selected]);
+    }else{
+        for(size_t i=1;i<rows_.size();++i){
+            selected=(start+(direction>0?i:rows_.size()-i))%rows_.size();
+            path=target(rows_[selected]);if(!path.empty())break;
+        }
+    }
+    if(path.empty())return "";
+    lastLive_=detail_;detail_=rows_[selected];row_=selected;return path;
+}
 bool CloudTv::Press(MenuKey key) {
     notice_.clear();
     if(view_==Search) {SearchKey(key);return true;}

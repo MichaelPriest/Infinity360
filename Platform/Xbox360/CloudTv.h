@@ -12,6 +12,8 @@ public:
     bool Press(MenuKey key); // false returns to the dashboard
     void Draw(HomeCanvas& canvas,int64_t now,bool modern=false) const;
     std::string TakeMovie();
+    bool CanZap()const;
+    std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
     bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
@@ -25,6 +27,7 @@ private:
     TvGuide guide_;
     CloudFavorites favorites_;
     size_t row_,episodeRow_,season_,detail_;
+    size_t lastLive_=static_cast<size_t>(-1);
     TvCategory tab_;
     View view_,behindDetails_,behindEpisodes_;
     int guideOffset_,letter_;

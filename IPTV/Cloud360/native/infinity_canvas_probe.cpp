@@ -350,7 +350,7 @@ int main(){
                     else {pendingPackage=true;pendingLaunch=pkg;}
                 }
             }
-            const auto movie=menu.TakeMovie();
+            auto movie=menu.TakeMovie();
             if(!movie.empty()){
                 menu.StopFtp();bool presentFailed=false;
                 canvas.Box(0,0,1280,720,0xff000000u);
@@ -359,7 +359,15 @@ int main(){
                 auto presentMovie=[&](bool upload){if(!p.Show(canvas,upload)){presentFailed=true;return false;}return true;};
                 auto drawGuide=[&](HomeCanvas& frame,int row){menu.DrawPlaybackGuide(frame,row);};
 #ifdef INFINITY_MENU_FFMPEG
-                const auto result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                std::string result;
+                do{
+                    std::string next;
+                    std::function<bool(int)> zap;
+                    if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    if(result!="Alterando canal."||next.empty()||presentFailed)break;
+                    movie=next;
+                }while(!XsdkAv::Cancelled());
 #else
                 const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #endif

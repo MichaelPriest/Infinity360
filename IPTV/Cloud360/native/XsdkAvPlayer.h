@@ -54,8 +54,8 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange){
-    retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange){
+    retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;channelChange=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
     CloudAvStreamQueue timeline;
@@ -161,6 +161,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     std::string qualityHint;
+    const bool canZap=bool(zap)&&remoteSource&&duration<=0;
 #ifdef INFINITY_AV_NETWORK
     if(qualityAvailable)qualityHint=" | Y Qualidade";
 #endif
@@ -192,7 +193,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             detailLine="Qualidade: < "+(choice?std::to_string(choice/1000)+" kbps (teto)":std::string("Automatica"))+" >  | "+std::to_string(qualityMenu.Index()+1)+"/"+std::to_string(qualityMenu.Count())+(choice==manualCap?" | Atual":" | A Aplicar");
         }
         lastHud=hud.Visible(wall(),controls.Paused()||showDetails||qualityMenu.Active());
-        hud.Draw(canvas,wall(),controls.Paused()||showDetails||qualityMenu.Active(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,qualityMenu.Active()?"Esq/Dir Selecionar | A Aplicar | Y Voltar | B Sair":remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine);
+        hud.Draw(canvas,wall(),controls.Paused()||showDetails||qualityMenu.Active(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,qualityMenu.Active()?"Esq/Dir Selecionar | A Aplicar | Y Voltar | B Sair":remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint+(canZap?" | Esq/Dir Canal | Cima Ultimo":"")):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine);
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
@@ -251,6 +252,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             else if(edges&&ControlKeys(edges))hud.Reveal(wall());
         }
         if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused()||showDetails||qualityMenu.Active())){overlay();if(!present(true)){ok=false;break;}}
+        if(canZap&&!guide.Active()&&!wasGuide&&!guideEdge&&!wasQuality&&!qualityMenu.Active()&&shown&&submitted){
+            const int direction=(edges&INPUT_GAMEPAD_DPAD_UP)?0:(edges&INPUT_GAMEPAD_DPAD_LEFT)?-1:1;
+            if((edges&(INPUT_GAMEPAD_DPAD_UP|INPUT_GAMEPAD_DPAD_LEFT|INPUT_GAMEPAD_DPAD_RIGHT))&&zap(direction)){channelChange=true;break;}
+        }
         const int seek=controls.TakeSeek();
         if(seek&&duration>0&&!controls.Paused()){
             const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));
@@ -301,6 +306,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
     xsdk_log_write("Cloud360 read stalls=%u compensated_ms=%u ahead_ms=%u",playbackClock.Stalls(),static_cast<unsigned>(playbackClock.Stalled()/1000),static_cast<unsigned>(playbackClock.Ahead()/1000));
     if(cancelled||Cancelled())return "Reproducao cancelada.";
+    if(channelChange)return "Alterando canal.";
     if(manualChange)return manualCap?("Qualidade manual ate "+std::to_string(manualCap/1000)+" kbps"):"Qualidade automatica";
 #ifdef INFINITY_AV_NETWORK
     xsdk_log_write("Cloud360 prefetched HLS segments=%u remote_peak=%u",hls.PrefetchedSegments(),static_cast<unsigned>(remote.Peak()));
@@ -324,16 +330,17 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
+                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={}){
     std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference audioPreference;
     unsigned normalRetries=0,rollbackCap=0,manualCap=0,rollbackManual=0,manualChanges=0;bool upgradeUsed=false;
     // Two ordinary retries, one upgrade/rollback, and four user changes with rollback.
     for(unsigned attempt=0;attempt<13;++attempt){
-        bool retry=false,upgrade=false,played=false,manualChange=false;unsigned previousBitrate=0;
+        bool retry=false,upgrade=false,played=false,manualChange=false,channelChange=false;unsigned previousBitrate=0;
         const unsigned oldManual=manualCap;
         result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference,
-            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange);
+            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange,zap,channelChange);
         if(Cancelled()||result=="Reproducao cancelada.")return "Reproducao cancelada.";
+        if(channelChange)return result;
         if(rollbackCap&&!played&&!retry){
             adaptiveCap=rollbackCap;manualCap=rollbackManual;rollbackCap=0;retry=true;
             result="Qualidade superior indisponivel; retornando a anterior.";

@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.50 — Navegacao rapida de canais IPTV
+
+- Durante FFmpeg remoto sem duracao indexada, direcional esquerdo/direito seleciona canal anterior/proximo da lista filtrada; cima retorna ao ultimo canal selecionado. Ignora itens nao-live e destinos nao autorizados/incompativeis via movieTarget; nao altera selecao sem destino valido. Fecha decoder/audio antes de abrir a proxima midia, sem sessoes paralelas. Guide e seletor de qualidade tem prioridade. Ultimo canal em memoria, reiniciado ao carregar lista; volume e qualidade reiniciam em cada canal. Player legado nao recebe zap. Testes e XSDK pendentes; sem XEX/release.
+
 ## V0.3.49 — Carregamento IPTV por etapas
 
 - Player FFmpeg remoto apresenta tela nativa com grupos translucidos nas fases de conexao, decoder, buffer inicial e audio; reconexao e troca de qualidade reutilizam a mesma apresentacao. Marcadores indicam etapas reais, nao porcentagem de download. Cancelamento checado entre fases, com fechamento da sessao aberta; chamadas sincrônicas ainda podem bloquear a interface temporariamente. Nao exibe URL de origem na tela de carregamento. Troca rapida de canais no catalogo, testes XSDK e capturas nativas pendentes. Sem XEX/release.
