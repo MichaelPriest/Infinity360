@@ -76,7 +76,7 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange,const std::function<void()>& onPlaying,const std::function<TvPlaybackInfo(int64_t)>& tvInfo,const std::function<void()>& favorite,const std::function<std::vector<TvChannelChoice>()>& listChannels,const std::function<bool(size_t)>& chooseChannel,const std::vector<unsigned char>& channelLogo,const std::function<TvRemote::Key()>& remoteInput,const std::string& remoteAddress){
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange,const std::function<void()>& onPlaying,const std::function<TvPlaybackInfo(int64_t)>& tvInfo,const std::function<void()>& favorite,const std::function<std::vector<TvChannelChoice>()>& listChannels,const std::function<bool(size_t)>& chooseChannel,const std::vector<unsigned char>& channelLogo,const std::function<TvRemote::Key(bool)>& remoteInput,const std::string& remoteAddress){
     retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;channelChange=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
@@ -254,7 +254,9 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         INPUT_STATE state{};
         const bool physicalOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
         const unsigned physical=physicalOk?state.gamepad.buttons:0;
-        const unsigned pulse=remoteSource&&remoteInput?RemoteButtons(remoteInput()):0;
+        const auto remoteKey=remoteSource&&remoteInput?remoteInput(!physical&&liveMetadata&&shown&&submitted&&!guide.Active()&&!qualityMenu.Active()&&!channelMenu.Active()&&!programme.channel.empty()):TvRemote::Key::None;
+        if(remoteKey==TvRemote::Key::Tune){channelChange=true;break;}
+        const unsigned pulse=physical?0:RemoteButtons(remoteKey);
         const bool inputOk=physicalOk||bool(remoteInput);
         state.gamepad.buttons=physical|pulse;
         if(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)){cancelled=true;break;}
@@ -401,7 +403,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={},CloudPlaybackControls::AudioPreference* sharedAudio=nullptr,const std::function<void()>& onPlaying={},const std::function<TvPlaybackInfo(int64_t)>& tvInfo={},const std::function<void()>& favorite={},const std::function<std::vector<TvChannelChoice>()>& listChannels={},const std::function<bool(size_t)>& chooseChannel={},const std::vector<unsigned char>& channelLogo={},const std::function<TvRemote::Key()>& remoteInput={},const std::string& remoteAddress={}){
+                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={},CloudPlaybackControls::AudioPreference* sharedAudio=nullptr,const std::function<void()>& onPlaying={},const std::function<TvPlaybackInfo(int64_t)>& tvInfo={},const std::function<void()>& favorite={},const std::function<std::vector<TvChannelChoice>()>& listChannels={},const std::function<bool(size_t)>& chooseChannel={},const std::vector<unsigned char>& channelLogo={},const std::function<TvRemote::Key(bool)>& remoteInput={},const std::string& remoteAddress={}){
     std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference localAudio;
     auto& audioPreference=sharedAudio?*sharedAudio:localAudio;
     unsigned normalRetries=0,rollbackCap=0,manualCap=0,rollbackManual=0,manualChanges=0;bool upgradeUsed=false;

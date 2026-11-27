@@ -3,6 +3,7 @@
 #include "TvGuide.h"
 #include "HomeCanvas.h"
 #include "TvPreferences.h"
+#include <functional>
 
 enum MenuKey { MenuLeft, MenuRight, MenuUp, MenuDown, MenuAccept, MenuBack, MenuFavorite,
                MenuRefresh, MenuPageUp, MenuPageDown, MenuGuide, MenuSearch, MenuGroups, MenuClearHistory, MenuSettings };
@@ -20,6 +21,7 @@ public:
     void FinishPlayback();
     std::vector<TvChannelChoice> ChannelChoices()const;
     std::string ChooseChannel(size_t row);
+    std::string ChooseRemoteChannel(const std::string& id,const std::function<bool(const std::string&)>& supported);
     std::vector<unsigned char> PlayingLogo()const;
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }

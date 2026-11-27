@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
     private TextView status,monitor,catalogResult;
+    private LinearLayout catalogCards;
     private EditText catalogQuery;
     private boolean tvCatalog=false;
     private int catalogNext=-1;
@@ -59,6 +60,7 @@ public final class MainActivity extends Activity {
         content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Consultar canais ao vivo",PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,dp(54)));
         catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));catalogResult.setBackground(shape(PANEL));content.addView(catalogResult);
+        catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
         content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
@@ -112,24 +114,37 @@ public final class MainActivity extends Activity {
         if(query.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>64){status.setText("Busca limitada a 64 bytes.");return;}
         busy=true;status.setText("Consultando catálogo...");
         worker.execute(()->{
-            String result;int next=-1;boolean success=false;
+            String result;int next=-1;boolean success=false;org.json.JSONArray data=new org.json.JSONArray();
             try{
                 org.json.JSONObject page=new org.json.JSONObject(RemoteProtocol.catalog(ip,secret,tv,offset,query));
                 if(page.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
                 org.json.JSONArray rows=page.getJSONArray("items");if(rows.length()>16)throw new java.io.IOException("Página inválida");
-                StringBuilder out=new StringBuilder(tv?"TV ao vivo":"Biblioteca de jogos");
-                for(int i=0;i<rows.length();i++){
-                    org.json.JSONObject item=rows.getJSONObject(i);
-                    out.append("\n\n").append(item.optBoolean("favorite")?"★ ":"").append(item.getString("name"));
-                    if(tv){out.append("\n").append(item.optString("group"));if(!item.optString("current").isEmpty())out.append("\nAgora: ").append(item.optString("current"));if(!item.optString("next").isEmpty())out.append("\nA seguir: ").append(item.optString("next"));}
-                }
+                data=rows;
                 if(!page.isNull("next")){next=page.getInt("next");if(next<=offset||next>999999)throw new java.io.IOException("Cursor inválido");}
-                if(rows.length()==0)out.append("\nNenhum resultado nesta página.");
-                result=out.toString();success=true;
+                result=(tv?"TV ao vivo":"Biblioteca de jogos")+" • "+rows.length()+" resultados nesta página";success=true;
             }catch(Exception e){result="Consulta indisponível. Confira a conexão e a versão da dashboard.";}
-            final String message=result;final int cursor=next;final boolean ok=success;
-            runOnUiThread(()->{if(isDestroyed())return;busy=false;catalogResult.setText(message);catalogNext=ok?cursor:-1;tvCatalog=tv;activeQuery=query;status.setText(ok?(cursor<0?"Fim da consulta.":"Página recebida."):"Falha na consulta.");});
+            final String message=result;final int cursor=next;final boolean ok=success;final org.json.JSONArray items=data;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;catalogResult.setText(message);renderCatalog(items,tv,ok,ip,secret);catalogNext=ok?cursor:-1;tvCatalog=tv;activeQuery=query;status.setText(ok?(cursor<0?"Fim da consulta.":"Página recebida."):"Falha na consulta.");});
         });
+    }
+    private void renderCatalog(org.json.JSONArray items,boolean tv,boolean ok,String ip,String secret){
+        catalogCards.removeAllViews();if(!ok)return;
+        for(int i=0;i<items.length();i++){
+            org.json.JSONObject item=items.optJSONObject(i);if(item==null)continue;
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);catalogCards.addView(card,lp);
+            final String name=item.optString("name"),id=item.optString("id");
+            TextView title=text((item.optBoolean("favorite")?"★ ":"")+name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
+            if(tv){
+                card.addView(text(item.optString("group"),13,MUTED));
+                if(!item.optString("current").isEmpty())card.addView(text("Agora: "+item.optString("current"),14,ACCENT));
+                if(!item.optString("next").isEmpty())card.addView(text("A seguir: "+item.optString("next"),14,MUTED));
+                if(id.matches("[1-9][0-9]{0,19}"))card.addView(button("Assistir no Xbox",ACCENT,()->{
+                    if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
+                    new AlertDialog.Builder(this).setTitle("Trocar canal?").setMessage(name).setNegativeButton("Cancelar",null).setPositiveButton("Assistir",(d,w)->send("tune/"+id)).show();
+                }));
+            }
+        }
     }
     private void refreshMonitor(){
         if(busy)return;

@@ -26,5 +26,9 @@ int main(){
     const auto list=CatalogPage(20,0,[](size_t){return std::string("{}");});
     if(list.find("\"next\":16")==std::string::npos)return 19;
     if(!Matches("ABC","ab"))return 20;
+    if(Parse(request("tune/18446744073709551615",key,host),host,key).key!=Key::Tune)return 21;
+    if(Parse(request("tune/18446744073709551616",key,host),host,key).key!=Key::None)return 22;
+    if(Parse(request("tune/0",key,host),host,key).key!=Key::None)return 23;
+    if(Parse(request("tune/1","wrong",host),host,key).key!=Key::None)return 24;
     return 0;
 }

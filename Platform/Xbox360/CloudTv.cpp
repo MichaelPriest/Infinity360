@@ -203,7 +203,7 @@ std::string CloudTv::RemoteCatalog(unsigned offset,const std::string& query,int6
         const auto& schedule=guide_.For(item.channel,item.name);
         const auto* current=TvGuide::Current(schedule,now);
         const auto* next=TvGuide::Next(schedule,now);
-        return "{\"name\":"+TvRemote::Quote(item.name)+",\"group\":"+TvRemote::Quote(item.group)+
+        return "{\"id\":\""+std::to_string(item.id)+"\",\"name\":"+TvRemote::Quote(item.name,40)+",\"group\":"+TvRemote::Quote(item.group,40)+
             ",\"current\":"+TvRemote::Quote(current?current->title:"")+",\"next\":"+TvRemote::Quote(next?next->title:"")+
             ",\"favorite\":"+(cloud_favorite_has_id(&favorites_,item.id)?"true":"false")+"}";
     });
@@ -381,6 +381,25 @@ std::string CloudTv::ChooseChannel(size_t row){
     const auto path=movieTarget(dir_+source_,item.uri,dir_);
     MediaUrl url;if(!url.Parse(path))return "";
     detail_=rows_[row];row_=row;return path;
+}
+std::string CloudTv::ChooseRemoteChannel(const std::string& id,const std::function<bool(const std::string&)>& supported){
+    if(view_!=Details||detail_>=Count()||catalog_.Items()[detail_].category!=TvLive||!supported)return "";
+    const auto& items=catalog_.Items();size_t target=items.size();
+    for(size_t i=0;i<items.size();++i)if(items[i].category==TvLive&&items[i].id&&std::to_string(items[i].id)==id){
+        if(target!=items.size())return ""; // ambiguous ID, require a fresh selection
+        target=i;
+    }
+    if(target==items.size()||target==detail_)return "";
+    const auto path=movieTarget(dir_+source_,items[target].uri,dir_);
+    MediaUrl url;if(!url.Parse(path)||!supported(path))return "";
+    auto it=std::find(rows_.begin(),rows_.end(),target);
+    if(it==rows_.end()){
+        tab_=TvLive;query_.clear();groupFilter_.clear();view_=Browse;row_=0;Filter();
+        it=std::find(rows_.begin(),rows_.end(),target);
+        if(it==rows_.end())return "";
+        behindDetails_=Browse;view_=Details;
+    }
+    detail_=target;row_=static_cast<size_t>(it-rows_.begin());return path;
 }
 std::vector<unsigned char> CloudTv::PlayingLogo()const{
     if(view_!=Details||detail_>=Count()||catalog_.Items()[detail_].category!=TvLive)return {};

@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.62 — Selecao direta de canais e cards Android
+
+- Android Remote 0.5.0 Alpha: cards reais de jogos e canais, favoritos, EPG e botao Assistir no Xbox com confirmacao. Comando autenticado por ID decimal de 64 bits, validado contra lista ativa, rejeita ID ambiguo/ausente, fonte nao autorizada ou formato nao suportado. Troca direta somente durante reproducao live FFmpeg, fora de Guide e menus; reutiliza encerramento limpo e reinicio de canal. Sem iniciar midia da Home ou controlar jogos diretamente. Testes de protocolo ampliados; APK/XSDK pendentes. Sem XEX/release.
+
 ## V0.3.61 — Catalogos remotos paginados
 
 - Android Remote 0.4.0 Alpha: biblioteca de jogos e canais live da lista IPTV carregada, busca por titulo/grupo, favoritos e EPG atual/proximo. Consultas autenticadas somente leitura, 16 resultados por pagina, 1024 entradas examinadas por consulta, JSON limitado a 8 KiB, nomes limitados e UTF-8 validado; nenhum campo de caminho de executavel ou URI de midia enviado. Busca ASCII sem distinguir maiusculas; sem capas ou lancamento direto. Testes ampliados, APK/XSDK pendentes. Sem XEX/release.

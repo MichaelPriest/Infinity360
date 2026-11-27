@@ -146,6 +146,7 @@ public:
     void FinishTvPlayback(){tv_.FinishPlayback();}
     bool CanZapTv()const{return tv_.CanZap();}
     std::vector<TvChannelChoice> TvChannelChoices()const{return tv_.ChannelChoices();}
+    std::string ChooseRemoteTvChannel(const std::string& id,const std::function<bool(const std::string&)>& supported){return page_!=Home&&section_==Iptv&&!TransferRunning()?tv_.ChooseRemoteChannel(id,supported):std::string{};}
     std::string ChooseTvChannel(size_t row){return TransferRunning()?std::string{}:tv_.ChooseChannel(row);}
     std::vector<unsigned char> PlayingTvLogo()const{return tv_.PlayingLogo();}
     std::string ZapTv(int direction){return TransferRunning()?std::string{}:tv_.Zap(direction);}
