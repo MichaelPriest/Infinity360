@@ -374,6 +374,15 @@ void HomeCanvas::Translucent(int x,int y,int w,int h,unsigned color,unsigned opa
         }
     }
 }
+void HomeCanvas::Surface(int x,int y,int w,int h,unsigned color,int radius,unsigned opacity){
+    if(w<=0||h<=0)return;
+    const unsigned alpha=appearance_.Opacity(opacity);
+    if(w<12||h<12){Translucent(x,y,w,h,color,alpha,radius);return;}
+    Translucent(x,y,w,h,0xff788b81u,80,radius);
+    Translucent(x+1,y+1,w-2,h-2,color,alpha,std::max(0,radius-1));
+}
+void HomeCanvas::Footer(){Translucent(0,663,1280,57,0xff0b110eu,appearance_.Opacity(210));Box(28,663,1224,1,0xff414743u);}
+void HomeCanvas::NoticeSurface(int x,int y,int w,int h){Translucent(x,y,w,h,0xff102923u,242,6);}
 void HomeCanvas::SeriesBackground(){
     if(appearance_.background!=AppearanceSettings::Gradient)return;
     // Smooth dark graphite with three off-center green ribbons like the approved reference.
@@ -403,7 +412,7 @@ void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
             const float d=std::sqrt(dx*dx+dy*dy);
             const float outer=std::max(0.0f,std::min(1.0f,float(radius)+0.5f-d));
             const float inner=std::max(0.0f,std::min(1.0f,float(radius)-2.0f-d));
-            const unsigned alpha=unsigned(std::max(0.0f,outer-inner)*255+0.5f)*(75+focusAnimation_/4)/100;
+            const unsigned alpha=unsigned(std::max(0.0f,outer-inner)*255+0.5f)*(75+(appearance_.animations?focusAnimation_:100)/4)/100;
             if(alpha){auto& p=frame_[yy*Width+xx];p=blend(accent,p,alpha);}
         }
 }
@@ -411,7 +420,7 @@ void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacit
     if(w<12||h<12)return;
     Translucent(x,y+5,w,h,0xff000000u,55,11);
     Translucent(x,y,w,h,0xff8a9691u,92,11);
-    Translucent(x+1,y+1,w-2,h-2,0xff19221fu,opacity,10);
+    Translucent(x+1,y+1,w-2,h-2,0xff19221fu,appearance_.Opacity(opacity),10);
     // Full-surface shading plus green reflection at lower right.
     const unsigned highlight=ThemeColor(0xff6c7772u),reflection=ThemeColor(0xff426d42u);
     for(int yy=3;yy<h-3;++yy){
@@ -425,7 +434,7 @@ void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacit
             dest=blend(reflection,dest,glow);
         }
     }
-    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,38+focusAnimation_*28/100,8);SeriesFocus(x,y,w,h);}
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,38+(appearance_.animations?focusAnimation_:100)*28/100,8);SeriesFocus(x,y,w,h);}
 }
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.

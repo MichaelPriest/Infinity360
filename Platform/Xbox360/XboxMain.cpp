@@ -345,6 +345,7 @@ int main() {
         }
         const bool transferChanged=menu.Tick();
         SYSTEMTIME time; GetLocalTime(&time);
+        if(!menu.AnimationsEnabled())focusFrames=0;
         const bool animate=focusFrames!=0;
         if(animate){canvas.SetFocusAnimation((4-focusFrames)*100/3);--focusFrames;}
         else canvas.SetFocusAnimation(100);

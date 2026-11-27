@@ -742,6 +742,7 @@ int main(){
         if(socialListener.Poll(menu.SocialHeader(),TransferRate::Now(),pendingLaunch.empty()&&!menu.TransferRunning(),
             [&](const char* label){menu.NativeSocialSignal(label);}))dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
+        if(!menu.AnimationsEnabled())focusFrames=0;
         if(focusFrames&& !idleScreen.Active()){
             canvas.SetFocusAnimation((4-focusFrames)*100/3);--focusFrames;dirty=true;
         }else canvas.SetFocusAnimation(100);
@@ -751,7 +752,7 @@ int main(){
             if(!menu.ApprovedHeader()){canvas.Text(920,678,"INFINITY 360",16,LIME,300);}
 
             if(!launchNotice.empty()){
-                canvas.Box(40,590,1200,38,0xff102923u,6);
+                canvas.NoticeSurface(40,590,1200,38);
                 canvas.Text(54,593,launchNotice,22,LIME,1160);
             }
             if(!pendingLaunch.empty()){

@@ -1620,11 +1620,21 @@ int main(int argc,char** argv) {
         assert(a.Encode()=="0:1:0"&&a.ShowCover()&&a.ShowBackdrop());
         assert(AppearanceSettings::Parse("2:0:3",a)&&!a.ShowCover()&&!a.ShowBackdrop());
         assert(!AppearanceSettings::Parse("2:3:0",a)&&a.Encode()=="2:0:3");
+        assert(a.glass==AppearanceSettings::BalancedGlass&&a.animations==1);
+        assert(AppearanceSettings::Parse("2:0:3:0:0",a)&&a.Encode()=="2:0:3:0:0");
+        assert(!AppearanceSettings::Parse("2:0:3:4:0",a)&&a.glass==AppearanceSettings::LightGlass);
+        assert(!AppearanceSettings::Parse("2:0:3:1:2",a)&&a.animations==0);
+        assert(a.Opacity(198)==162);
+        assert(AppearanceSettings::Parse("2:0:3",a)&&a.glass==AppearanceSettings::BalancedGlass&&a.animations==1);
         HomeCanvas canvas;canvas.SetAppearance(a,"");canvas.Background();
         assert(canvas.Pixels()[0]==0xff031310u);
         assert(!canvas.WallpaperReady());
         a.background=AppearanceSettings::Solid;canvas.SetAppearance(a,"");canvas.Background();
         assert(canvas.Pixels()[0]==canvas.Pixels()[1280*720-1]);
+        a.glass=AppearanceSettings::LightGlass;canvas.SetAppearance(a,"");canvas.Box(0,0,1280,720,0xffeeeeeeu);canvas.Surface(40,40,160,80,0xff172c28u);
+        const unsigned light=canvas.Pixels()[80*1280+120];
+        a.glass=AppearanceSettings::OpaqueGlass;canvas.SetAppearance(a,"");canvas.Box(0,0,1280,720,0xffeeeeeeu);canvas.Surface(40,40,160,80,0xff172c28u);
+        assert(canvas.Pixels()[80*1280+120]==0xff172c28u&&light!=0xff172c28u&&canvas.Pixels()[0]==0xffeeeeeeu);
     }
     // Safe area: zero-copy default and explicit border/scale.
     {

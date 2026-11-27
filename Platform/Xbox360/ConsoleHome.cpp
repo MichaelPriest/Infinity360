@@ -2739,7 +2739,7 @@ void ConsoleHome::DrawHomeEditor(HomeCanvas& c) const {
 void ConsoleHome::DrawAuroraProfile(HomeCanvas& c) const {
     c.Text(44,78,"Importar perfil Aurora",40,White,1180);
     c.Text(48,152,"Previa da mesclagem com jogos encontrados neste console",23,Muted,1180);
-    c.Box(44,215,1190,272,Panel,12);
+    c.Surface(44,215,1190,272,Panel,12);
     c.Text(70,244,"Novos favoritos: "+number(importFavorites_.size()),30,Lime,1130);
     c.Text(70,308,"Registros de historico encontrados: "+number(importHistory_.size()),26,White,1130);
     c.Text(70,370,"Recentes locais tem prioridade. Jogos ambiguos ou ausentes sao ignorados.",21,Muted,1130);
@@ -2863,9 +2863,9 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
         for(size_t i=0;i<paths.size() && shown<3;++i) {
             const Game* g=Installed(paths[i]); if(!g || contains(hidden_,paths[i])) continue;
             int left=x+shown*(cardWidth+9);
-            c.Box(left,504,cardWidth,126,Panel,8);
+            c.Surface(left,504,cardWidth,126,Panel,8);
             const std::string backFile=ArtPath(*g,false), coverFile=ArtPath(*g,true);
-            c.Box(left+1,505,cardWidth-2,84,0xff194739u,6);
+            c.Surface(left+1,505,cardWidth-2,84,0xff194739u,6);
             const bool backdrop=appearance_.ShowBackdrop() && !backFile.empty() && c.LocalArt(backFile,false,left+1,505,cardWidth-2,84);
             const bool cover=appearance_.ShowCover() && !coverFile.empty() && c.LocalArt(coverFile,true,left+(cardWidth-56)/2,505,56,84);
             if(!backdrop && !cover) {
@@ -2881,7 +2881,7 @@ void ConsoleHome::DrawHome(HomeCanvas& c) const {
             ++shown;
         }
         if(!shown) {
-            c.Box(x,503,w,124,Panel,9);
+            c.Surface(x,503,w,124,Panel,9);
             c.Text(x+15,543,side?c.Tr("LB nos detalhes fixa um jogo."):c.Tr("Os jogos abertos aparecem aqui."),19,Muted,w-26);
         }
     }
@@ -3200,7 +3200,7 @@ void ConsoleHome::DrawTelemetry(HomeCanvas& c) const{
             c.Text(x+9,y+30,StorageInfo::FormatBytes(bytes[i]),22,White,270);
         }
     }else{
-        c.Box(45,391,1190,150,Panel,10);
+        c.Surface(45,391,1190,150,Panel,10);
         c.Text(65,420,std::string(c.Tr("Memoria: provider indisponivel ou consulta recusada.")),23,White,1145);
         c.Text(65,467,std::string(c.Tr("Nenhuma medida simulada e exibida.")),19,Muted,1145);
     }
@@ -3366,7 +3366,7 @@ void ConsoleHome::DrawStorage(HomeCanvas& c) const {
         const StorageVolume& v=storageVolumes_[index];
         const int x=42+(static_cast<int>(i)%2)*602;
         const int y=391+(static_cast<int>(i)/2)*106;
-        c.Box(x,y,589,97,Panel,10);
+        c.Surface(x,y,589,97,Panel,10);
         const std::string label=index==0?std::string(c.Tr("Pasta INFINITY 360")):v.path;
         InfinityIcons::Draw(c,14,x+14,y+9,22,White);
         c.TextFit(x+45,y+7,label,22,White,520);
@@ -3445,7 +3445,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         InfinityButtons::Strip(c,48,607,std::string(c.Tr("A Iniciar | X Parar | START IP | R3 Opcoes | LB/RB Pagina")),18,Lime,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
-    c.Box(42,391,589,190,Panel,10);
+    c.Surface(42,391,589,190,Panel,10);
     c.Text(58,404,c.Tr("Conexao e endereco IPv4"),25,White,550);
     c.Text(58,447,c.Tr(NetworkInfo::StateLabel(network_.state)),20,Muted,550);
     c.Text(58,486,"IP: "+(network_.ipv4.empty()?std::string(std::string(c.Tr("Nao identificado"))):network_.ipv4),
@@ -3453,7 +3453,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(58,534,network_.ethernetKnown?
            (network_.ethernetActive?"Ethernet: ativo"+(network_.linkMbps?" | "+number(network_.linkMbps)+" Mbps":"")+(network_.duplex.empty()?"":" | "+network_.duplex):"Ethernet: sem link"):
            "Ethernet: leitura indisponivel",19,Muted,550);
-    c.Box(644,391,594,190,Panel,10);
+    c.Surface(644,391,594,190,Panel,10);
     c.Text(660,404,c.Tr("Servicos de rede"),25,White,558);
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?std::string(c.Tr("FTP: cliente conectado")):std::string(c.Tr("FTP: aguardando cliente"))):std::string(c.Tr("FTP: desligado")),21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string(c.Tr("A Leitura | X Leitura/upload (ALLO)")),20,Muted,558);
@@ -3519,7 +3519,7 @@ void ConsoleHome::DrawStoreDownloads(HomeCanvas& c) const {
 void ConsoleHome::DrawTransfers(HomeCanvas& c) const {
     if(storeDownloads_) {DrawStoreDownloads(c);return;}
     c.Text(45,349,"Transferencias locais | RB Downloads da loja",27,White,1170);
-    c.Box(42,391,1196,202,Panel,10);
+    c.Surface(42,391,1196,202,Panel,10);
     const FileTransfer::State state=transfer_.Status();
     if(state==FileTransfer::Idle) {
         c.Text(60,422,"Nenhuma transferencia nesta sessao.",24,White,1150);
@@ -3633,7 +3633,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
                keyboardMode_==2?"Renomear colecao":keyboardMode_==3?"Nova pasta":
                keyboardMode_==4?"Renomear item":"Buscar jogos instalados",
                26,White,1100);
-        c.Box(42,176,1196,49,Panel,9);
+        c.Surface(42,176,1196,49,Panel,9);
         c.Text(58,181,searchDraft_.empty()?"Digite um nome...":searchDraft_,
                26,Lime,1156);
         for(int i=0;i<KeyCount;++i) {
@@ -3719,13 +3719,13 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
         if(page_==Details && systemTab_==6) {DrawDiscInstall(c);return;}
         if(page_==Details && systemTab_==7) {DrawConsoleStatus(c);return;}
         if(page_==Details) {
-            c.Box(42,369,1196,220,Panel,12);
+            c.Surface(42,369,1196,220,Panel,12);
             c.Text(68,391,c.Tr(titles[systemTab_]),34,White,1120);
             c.Text(69,470,details[systemTab_],23,Muted,1122);
             c.Text(69,543,"B para voltar aos paineis.",20,Lime,1120);
         } else {
             c.Text(47,369,"Resumo INFINITY 360",29,White,1100);
-            c.Box(42,422,1196,165,Panel,12);
+            c.Surface(42,422,1196,165,Panel,12);
             c.Text(67,443,"Jogos encontrados    "+number(games_.size()),25,White,1120);
             c.Text(67,494,"Catalogo IPTV local   "+number(tv_.Count())+" itens",23,Muted,1120);
             c.Text(67,543,"Interface nativa      1280 x 720",22,Muted,1120);
@@ -3734,7 +3734,7 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     }
     if(page_==Details && Count()) {
         if(section_==Library||section_==Recent||section_==Favorites){DrawModernGameDetails(c);return;}
-        c.Box(44,169,1190,407,Panel,12);
+        c.Surface(44,169,1190,407,Panel,12);
         std::string title,sub,hint;
         if(section_==Files) {
             title=files_[row_].name; sub=folders_.back(); hint="Visualização de arquivos";
@@ -4196,10 +4196,10 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
                " | "+number(copyQueue_.size())+" aguardando",16,Lime,540);
     }
     if(!notice_.empty()) {
-        c.Box(40,628,1200,35,0xff102923u,6);
+        c.NoticeSurface(40,628,1200,35);
         c.Text(51,630,c.Tr(notice_.c_str()),18,Lime,1170);
     }
-    c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
+    c.Footer();
     // Modals and specialised pages must not inherit unrelated Home commands.
     if(weatherPanel_){InfinityButtons::Strip(c,45,674,"Y Atualizar | B Voltar",19,White,1190);return;}
     if(storeActive_){
@@ -4625,7 +4625,7 @@ void ConsoleHome::DrawAchievements(HomeCanvas& c)const{
 
 namespace {
 enum SettingOption { StTheme, StBackground, StDim, StLayout, StArtwork, StGrid, StPaths,
-    StLanguage, StUtc, StCity, StMargin, StIdle, StStorage, StNetwork, StPlugins, StPower };
+    StLanguage, StUtc, StCity, StMargin, StIdle, StGlass, StAnimation, StStorage, StNetwork, StPlugins, StPower };
 struct SettingRow { SettingOption id; const char* name; const char* help; };
 const SettingRow SettingsRows[]={
     {StTheme,"Tema e paleta","Escolha a identidade visual da dashboard."},
@@ -4640,6 +4640,8 @@ const SettingRow SettingsRows[]={
     {StCity,"Cidade para clima","Previsao Open-Meteo com cidade selecionada manualmente."},
     {StMargin,"Margem segura da tela","Ajuste a margem para TVs com overscan; aplicada ao salvar."},
     {StIdle,"Protetor de tela","Tempo de inatividade antes de ativar o protetor."},
+    {StGlass,"Transparencia dos paineis","Ajuste o vidro em toda a dashboard."},
+    {StAnimation,"Animacoes de foco","Desative para reduzir movimento e redesenhos."},
     {StStorage,"Armazenamento","Abra a central de discos e espaco livre."},
     {StNetwork,"Rede e FTP","Abra os ajustes e diagnosticos de rede existentes."},
     {StPlugins,"Plugins e scripts Lua","Abra a central de extensoes; R3 acessa Lua."},
@@ -4648,7 +4650,7 @@ const SettingRow SettingsRows[]={
 struct SettingGroup { const char* name; unsigned first,count; int icon; };
 const SettingGroup SettingsGroups[]={
     {"Aparencia",0,4,10},{"Biblioteca",4,3,23},{"Idioma e relogio",7,3,20},
-    {"Tela",10,2,46},{"Sistema",12,4,14}
+    {"Tela",10,4,46},{"Sistema",14,4,14}
 };
 constexpr unsigned SettingsGroupCount=sizeof(SettingsGroups)/sizeof(SettingsGroups[0]);
 }
@@ -4699,6 +4701,8 @@ void ConsoleHome::PressAppearance(Key key){
             case StUtc:clockDraft_.offset=ClockWeather::NextOffset(clockDraft_.offset,key==Left?-1:1);break;
             case StCity:cycle(clockDraft_.city,ClockWeather::CityCount);break;
             case StMargin:cycle(safeAreaDraft_,DisplaySafeArea::Max+1);break;
+            case StGlass:cycle(appearanceDraft_.glass,AppearanceSettings::GlassCount);break;
+            case StAnimation:cycle(appearanceDraft_.animations,2);break;
             case StIdle:
                 for(unsigned i=0;i<(key==Left?4u:1u);++i)idleDraft_=IdleScreen::Next(idleDraft_);
                 break;
@@ -4717,7 +4721,7 @@ void ConsoleHome::PressAppearance(Key key){
         if(settingsCategory_==0){themeDraft_=0;appearanceDraft_.background=AppearanceSettings::Gradient;appearanceDraft_.dim=1;layoutDraft_=initialLayout_;}
         if(settingsCategory_==1){appearanceDraft_.artwork=AppearanceSettings::Both;gridDraft_=0;}
         if(settingsCategory_==2){languageDraft_=0;clockDraft_={};}
-        if(settingsCategory_==3){safeAreaDraft_=idleDraft_=0;}
+        if(settingsCategory_==3){safeAreaDraft_=idleDraft_=0;appearanceDraft_.glass=AppearanceSettings::BalancedGlass;appearanceDraft_.animations=1;}
         notice_.clear();return;
     }
     if(key==Guide&&settingsCategory_==0){wallpaperDirty_=true;notice_="Papel de parede recarregado na proxima renderizacao.";return;}
@@ -4757,7 +4761,7 @@ void ConsoleHome::DrawAppearance(HomeCanvas& c)const{
         number(AppearanceSettings::Darkness(appearanceDraft_.dim))+"%",DashboardLayout::Name(layoutDraft_),
         c.Tr(AppearanceSettings::ArtworkName(appearanceDraft_.artwork)),c.Tr(GameGrid::Name(gridDraft_)),"",
         UiLanguage::Name(languageDraft_),ClockWeather::Zone(clockDraft_.offset),ClockWeather::Cities[clockDraft_.city].name,
-        number(safeAreaDraft_)+"%",idleDraft_?number(idleDraft_)+" min":c.Tr("Desativado"),"","","",""};
+        number(safeAreaDraft_)+"%",idleDraft_?number(idleDraft_)+" min":c.Tr("Desativado"),c.Tr(AppearanceSettings::GlassName(appearanceDraft_.glass)),c.Tr(appearanceDraft_.animations?"Ativadas":"Desativadas"),"","","",""};
     for(unsigned i=0;i<group.count;++i){
         const auto& row=SettingsRows[group.first+i];const int y=202+int(i)*75;
         const bool selected=i==appearanceRow_,link=row.id==StPaths||row.id>=StStorage;
@@ -4800,7 +4804,7 @@ void ConsoleHome::DrawModernHome(HomeCanvas& c,unsigned style,bool preview)const
             const auto file=ArtPath(*featured,false);
             if(!file.empty())c.LocalArt(file,false,hero.x+hero.w/2,hero.y+2,hero.w/2-2,hero.h-4);
         }
-        c.Box(hero.x+10,hero.y+10,hero.w/2-16,hero.h-20,Panel,8);
+        c.Surface(hero.x+10,hero.y+10,hero.w/2-16,hero.h-20,Panel,8);
         c.Text(hero.x+25,hero.y+26,c.Tr("Destaque"),21,Lime,hero.w/2-46);
         c.Text(hero.x+25,hero.y+70,featured->name,34,White,hero.w/2-46);
         c.Text(hero.x+25,hero.y+122,c.Tr("Abra Jogos para selecionar o titulo."),19,Muted,hero.w/2-46);

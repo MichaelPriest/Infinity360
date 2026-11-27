@@ -23,6 +23,9 @@ public:
     void VideoRgb(const unsigned char* pixels,unsigned width,unsigned height,double pixelAspect=1.0);
     void Box(int x, int y, int w, int h, unsigned color, int radius = 0);
     void Glass(int x,int y,int w,int h,bool focused=false);
+    void Surface(int x,int y,int w,int h,unsigned color=0xff172c28u,int radius=8,unsigned opacity=198);
+    void Footer();
+    void NoticeSurface(int x,int y,int w,int h);
     void Stroke(int x0,int y0,int x1,int y1,unsigned color,int width=3);
     void NeonBackground();
     void SeriesBackground();

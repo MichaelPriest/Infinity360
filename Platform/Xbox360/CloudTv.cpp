@@ -39,7 +39,7 @@ std::string localTime(int64_t timestamp) {
     char text[16];return local && std::strftime(text,sizeof text,"%H:%M",local) ? text : "--:--";
 }
 void tile(HomeCanvas& c,int x,int y,int w,int h,bool focused) {
-    c.SeriesTile(x,y,w,h,focused,220);
+    if(w<12||h<12)c.Surface(x,y,w,h,Panel,4);else c.SeriesTile(x,y,w,h,focused,focused?215:184);
 }
 void filesIn(const std::string& dir,const std::string& prefix,std::vector<std::string>& found,unsigned depth=0,unsigned* remaining=nullptr) {
     if(found.size()>=512||(remaining&&!*remaining))return;
@@ -294,7 +294,7 @@ void CloudTv::DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const 
     const size_t dot=source_.find_last_of('.');
     const std::string file=countText(index)+".rgba";
     const std::string pack=dir_+source_.substr(0,dot)+".logos"+slash+file;
-    c.Box(x,y,w,h,0xff0c2821u,6);
+    c.Surface(x,y,w,h,0xff0c2821u,6);
     const int aw=std::min(w,h*16/9),ah=aw*9/16,ax=x+(w-aw)/2,ay=y+(h-ah)/2;
     if(c.Logo(pack,ax,ay,aw,ah)) return;
     if(tvLower(source_)=="playlist.m3u" && c.Logo(dir_+"logos"+slash+file,ax,ay,aw,ah)) return;
@@ -380,7 +380,7 @@ void CloudTv::DrawGuide(HomeCanvas& c,int64_t now) const {
     for(size_t i=base;i<rows_.size() && i<base+PageSize;++i) {
         const TvItem& item=catalog_.Items()[rows_[i]];const int y=213+int(i-base)*76;
         tile(c,45,y,253,67,i==row_);c.Text(57,y+14,item.name,20,Ink,227);
-        c.Box(left,y,w,67,Panel,4);
+        c.Surface(left,y,w,67,Panel,4);
         const TvGuide::Schedule& list=guide_.For(item.channel,item.name);
         bool painted=false;
         for(size_t j=0;j<list.size() && list[j].start<end;++j) {
@@ -434,9 +434,9 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     else if(modern) DrawModernList(c,now);
     else DrawList(c,now);
     if(!notice_.empty()) {
-        c.Box(44,626,1191,35,0xff132e23u,6);c.Text(57,629,notice_,18,Lime,1160);
+        c.NoticeSurface(44,626,1191,35);c.Text(57,629,notice_,18,Lime,1160);
     }
-    c.Translucent(0,663,1280,57,0xff0b110eu,180);c.Box(28,663,1224,1,0xff414743u);
+    c.Footer();
     const bool playable=view_==Details && !movieTarget(dir_+source_,catalog_.Items()[detail_].uri,dir_).empty();
     if(view_!=Details||playable){InfinityButtons::Draw(c,InfinityButtons::A,44,675,24);c.TextFit(77,673,view_==Details?c.Tr("Reproduzir"):c.Tr("Selecionar"),18,Ink,150);}
     InfinityButtons::Draw(c,InfinityButtons::B,240,675,24);c.TextFit(273,673,c.Tr("Voltar"),18,Ink,104);
@@ -474,7 +474,7 @@ void CloudTv::DrawSearch(HomeCanvas& c) const {
         int x=48+(i%6)*196,y=220+(i/6)*56;tile(c,x,y,183,49,i==letter_);
         c.Text(x+15,y+8,i<36?std::string(1,letters[i]):c.Tr(actions[i-36]),20,i==letter_?Lime:Ink,155);
     }
-    c.Box(0,663,1280,57,0xff061915u);
+    c.Footer();
     InfinityButtons::Hint(c,InfinityButtons::A,44,675,22,c.Tr("Selecionar"),165,Lime);InfinityButtons::Hint(c,InfinityButtons::B,260,675,22,c.Tr("Cancelar"),165,Ink);
     InfinityButtons::Hint(c,InfinityButtons::X,482,675,22,c.Tr("Apagar"),165,Ink);InfinityButtons::Hint(c,InfinityButtons::Y,706,675,22,c.Tr("Buscar"),165,Ink);
 }
@@ -503,7 +503,7 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
         const auto& item=catalog_.Items()[rows_[i]];
         const int y=226+int(i-first)*69;
         tile(c,45,y,493,62,i==row_);
-        c.Box(55,y+9,42,44,0xff102923u,5);
+        c.Surface(55,y+9,42,44,0xff102923u,5);
         c.Text(60,y+20,countText(i+1),18,i==row_?Lime:Soft,34);
         std::string name=item.name;
         TvEpisode ep;if((tab_==TvSeries||tab_==TvAnime||tab_==TvCartoon)&&tvEpisode(name,ep))name=ep.show;

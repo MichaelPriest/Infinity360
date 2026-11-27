@@ -61,6 +61,7 @@ public:
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}
     unsigned Language()const{return language_;}
+    bool AnimationsEnabled()const{return (appearanceEditor_?appearanceDraft_:appearance_).animations!=0;}
     std::string ClockLabel(int64_t epoch)const{return ClockWeather::Time(epoch,clockSettings_.offset);}
     bool TakeWeatherRequest(unsigned& city){if(!weatherPending_)return false;weatherPending_=false;city=clockSettings_.city;return city!=0;}
     bool WeatherAutoDue(int64_t now);

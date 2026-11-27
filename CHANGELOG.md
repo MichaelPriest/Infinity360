@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.22 — Transparência global
+
+- Superfícies, cards, rodapés e avisos compartilhados em Home, biblioteca, detalhes, sistema, downloads, busca e catálogo Cloud360/EPG. Capas, indicadores, vídeo e confirmações críticas preservados.
+- Tela: vidro Leve, Equilibrado, Denso ou Opaco e animações de foco opcionais; compatibilidade de leitura com perfis anteriores e restauração por categoria. Preferências aplicadas na prévia e persistidas ao salvar.
+- Testes de persistência e composição de pixels; regeneração de capturas portáteis solicitada. Sem build XEX/release.
+
 ## V0.3.21 — Central de configurações remodelada
 
 - Painel nativo de tela inteira com cinco categorias, seleção vertical e valores separados; LB/RB troca categoria, direcional altera ajustes, Y salva, X restaura a categoria, R3 abre prévia e B confirma descarte de alterações.
