@@ -9,7 +9,7 @@ struct AppearanceSettings {
     enum GlassMode { LightGlass, BalancedGlass, DenseGlass, OpaqueGlass, GlassCount };
     unsigned background=Gradient, dim=1, artwork=Both, glass=BalancedGlass, animations=1;
     static const char* GlassName(unsigned i){return i==LightGlass?"Leve":i==DenseGlass?"Densa":i==OpaqueGlass?"Opaca":"Equilibrada";}
-    unsigned Opacity(unsigned base)const{if(glass==OpaqueGlass)return 255;int n=int(base)+(glass==LightGlass?-36:glass==DenseGlass?34:0);return unsigned(n<150?150:n>255?255:n);}
+    unsigned Opacity(unsigned base)const{if(glass==OpaqueGlass)return 255;const unsigned scale=glass==LightGlass?42:glass==DenseGlass?84:65;return (base>255?255:base)*scale/100;}
     static constexpr unsigned DimCount=3;
     static unsigned Darkness(unsigned index){return index==0?60:index==2?90:75;}
     static const char* BackgroundName(unsigned i){return i==Solid?"Solido":i==Wallpaper?"Papel de parede":"Gradiente";}

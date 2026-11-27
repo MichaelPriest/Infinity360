@@ -4348,13 +4348,13 @@ void ConsoleHome::DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const{
     const bool signedIn=social_.controller>=0;
     // Real provider tile when available; neutral silhouette otherwise.
     const unsigned ink=signedIn?Lime:Muted;
-    c.Box(x+8,y+7,38,38,0xff68716du,19);
+    c.Translucent(x+8,y+7,38,38,0xff183c28u,100,19);
     const bool fullBody=profileArt_==ProfileArt::Avatar&&avatarPreview_.KnownFor(social_)&&
         c.AvatarFrame(avatarPreview_.Pixels(),avatarPreview_.Width(),avatarPreview_.Height(),x+8,y+5,38,42);
     const bool avatar=profileArt_==ProfileArt::Avatar&&(fullBody||c.ProfilePicture(social_.avatarPortrait,x+9,y+8,36));
     if(!avatar&&(profileArt_==ProfileArt::Hidden||!c.ProfilePicture(social_.gamerpic,x+9,y+8,36)))InfinityIcons::Draw(c,InfinityIcons::Avatar,x+9,y+8,36,White);
     if(avatar&&ValidGamerpic(social_.gamerpic)){
-        c.Box(x+30,y+4,18,18,0xff68716du,9);
+        c.Translucent(x+30,y+4,18,18,0xff183c28u,100,9);
         c.ProfilePicture(social_.gamerpic,x+31,y+5,16);
     }
     if(signedIn)c.Box(x+36,y+36,9,9,ink,4);
@@ -4590,12 +4590,12 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c,bool playback)const{
     c.TextFit(644,105,"Perfil e comunicação",28,White,385);
     c.SeriesTile(601,166,428,91,false,230);
     const unsigned ink=social_.controller>=0?Lime:Muted;
-    c.Box(623,184,54,54,0xff68716du,27);
+    c.Translucent(623,184,54,54,0xff183c28u,100,27);
     if(profileArt_==ProfileArt::Hidden||!c.ProfilePicture(social_.gamerpic,624,185,52))InfinityIcons::Draw(c,InfinityIcons::Avatar,624,185,52,White);
     if(social_.controller>=0)c.Box(668,226,12,12,ink,6);
     const bool avatar=profileArt_==ProfileArt::Avatar&&ValidGamerpic(social_.avatarPortrait);
     if(avatar){
-        c.Box(958,181,57,57,0xff68716du,28);
+        c.Translucent(958,181,57,57,0xff183c28u,100,28);
         c.ProfilePicture(social_.avatarPortrait,960,183,53);
         c.TextFit(951,239,"Avatar",11,Muted,76);
     }

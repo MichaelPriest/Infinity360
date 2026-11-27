@@ -386,18 +386,36 @@ void HomeCanvas::Translucent(int x,int y,int w,int h,unsigned color,unsigned opa
         }
     }
 }
+// Draw only the one-pixel rounded perimeter. Do not tint the entire interior.
+void HomeCanvas::GlassOutline(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius){
+    if(w<3||h<3)return;
+    radius=std::max(0,std::min(radius,std::min(w,h)/2));color=ThemeColor(color);
+    const auto inset=[](int row,int height,int r){
+        int cut=0;const int edge=std::min(row,height-1-row);
+        if(edge<r){const int dy=r-edge-1;while(cut<r&&(r-cut-1)*(r-cut-1)+dy*dy>r*r)++cut;}
+        return cut;
+    };
+    for(int j=std::max(0,-y);j<h&&y+j<Height;++j){
+        const int outer=inset(j,h,radius);
+        const int inner=j==0||j==h-1?w:1+inset(j-1,h-2,std::max(0,radius-1));
+        for(int i=std::max(outer,-x);i<w-outer&&x+i<Width;++i){
+            if(i>=inner&&i<w-inner)continue;
+            auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,std::min(255u,opacity));
+        }
+    }
+}
 void HomeCanvas::Surface(int x,int y,int w,int h,unsigned color,int radius,unsigned opacity){
     if(w<=0||h<=0)return;
     const unsigned alpha=appearance_.Opacity(opacity);
     if(w<12||h<12){Translucent(x,y,w,h,color,alpha,radius);return;}
-    Translucent(x,y,w,h,0xff788b81u,80,radius);
     Translucent(x+1,y+1,w-2,h-2,color,alpha,std::max(0,radius-1));
+    GlassOutline(x,y,w,h,0xff709b82u,75,radius);
 }
 void HomeCanvas::Footer(){Translucent(0,663,1280,57,0xff0b110eu,appearance_.Opacity(210));Box(28,663,1224,1,0xff414743u);}
-void HomeCanvas::NoticeSurface(int x,int y,int w,int h){Translucent(x,y,w,h,0xff102923u,242,6);}
+void HomeCanvas::NoticeSurface(int x,int y,int w,int h){Translucent(x,y,w,h,0xff102923u,std::max(128u,appearance_.Opacity(242)),6);GlassOutline(x,y,w,h,0xff709b82u,100,6);}
 void HomeCanvas::SeriesBackground(){
     if(appearance_.background!=AppearanceSettings::Gradient)return;
-    // Smooth dark graphite with three off-center green ribbons like the approved reference.
+    // Dark theme-tinted background with off-center ribbons; no neutral grey veil.
     for(int y=0;y<Height;++y)for(int x=0;x<Width;++x){
         const int waveBottom=760-x*3/11+(x-690)*(x-690)/7800;
         const int waveRight=570-(x-960)*3/4+(x-1150)*(x-1150)/2100;
@@ -406,10 +424,10 @@ void HomeCanvas::SeriesBackground(){
         const int a0=std::max(0,64-d0),a1=std::max(0,52-d1),a2=std::max(0,40-d2);
         const int glow=a0*a0/150+a1*a1/125*std::max(0,x-850)/430+a2*a2/100*std::max(0,300-x)/300;
         const int glint=std::max(0,3-d0)*8+std::max(0,2-d1)*std::max(0,x-1000)/50;
-        const unsigned base=unsigned(12+8*(Height-y)/Height);
-        const unsigned red=std::min(255u,base+unsigned(glow/7+glint/3));
-        const unsigned green=std::min(255u,base+4+unsigned(glow+glint));
-        const unsigned blue=std::min(255u,base+1+unsigned(glow/10));
+        const unsigned base=unsigned(6+5*(Height-y)/Height);
+        const unsigned red=std::min(255u,base+unsigned(glow/9+glint/4));
+        const unsigned green=std::min(255u,base+13+unsigned(glow+glint));
+        const unsigned blue=std::min(255u,base+6+unsigned(glow/10));
         frame_[y*Width+x]=ThemeColor(0xff000000u|(red<<16)|(green<<8)|blue);
     }
 }
@@ -430,23 +448,22 @@ void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
 }
 void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacity){
     if(w<12||h<12)return;
-    Translucent(x,y+5,w,h,0xff000000u,55,11);
-    Translucent(x,y,w,h,0xff8a9691u,92,11);
-    Translucent(x+1,y+1,w-2,h-2,0xff19221fu,appearance_.Opacity(opacity),10);
-    // Full-surface shading plus green reflection at lower right.
-    const unsigned highlight=ThemeColor(0xff6c7772u),reflection=ThemeColor(0xff426d42u);
+    // One tinted glass fill. A perimeter-only highlight replaces stacked grey fills.
+    Translucent(x+1,y+1,w-2,h-2,0xff081b13u,appearance_.Opacity(opacity),10);
+    GlassOutline(x,y,w,h,0xff709b82u,focused?105:72,11);
+    const unsigned highlight=ThemeColor(0xff547a60u),reflection=ThemeColor(0xff32633fu);
     for(int yy=3;yy<h-3;++yy){
         const int inset=(yy<10||yy>=h-10)?9:3;
-        const unsigned light=unsigned(43*(h-yy)/h);
+        const unsigned light=unsigned(12*(h-yy)/h);
         for(int xx=inset;xx<w-inset;++xx){
             if(x+xx<0||x+xx>=Width||y+yy<0||y+yy>=Height)continue;
             auto& dest=frame_[(y+yy)*Width+x+xx];
             dest=blend(highlight,dest,light);
-            const unsigned glow=unsigned(45*xx/w)*unsigned(yy)/unsigned(h);
+            const unsigned glow=unsigned(12*xx/w)*unsigned(yy)/unsigned(h);
             dest=blend(reflection,dest,glow);
         }
     }
-    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,50+(appearance_.animations?focusAnimation_:100)*38/100,8);SeriesFocus(x,y,w,h);}
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,24+(appearance_.animations?focusAnimation_:100)*26/100,8);SeriesFocus(x,y,w,h);}
 }
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.
@@ -455,7 +472,7 @@ void HomeCanvas::DimBackdrop(){
         for(int x=0;x<Width;++x){
             const unsigned current=frame_[y*Width+x];
             const unsigned next=frame_[y*Width+std::min(x+1,int(Width)-1)];
-            frame_[y*Width+x]=blend(0xff080b09u,blend(current,blend(prev,next,128),128),165);
+            frame_[y*Width+x]=blend(0xff040e08u,blend(current,blend(prev,next,128),128),appearance_.glass==AppearanceSettings::OpaqueGlass?165:appearance_.glass==AppearanceSettings::DenseGlass?105:appearance_.glass==AppearanceSettings::LightGlass?48:72);
             prev=current;
         }
     }

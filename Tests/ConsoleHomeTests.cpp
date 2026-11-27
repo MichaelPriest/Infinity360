@@ -204,11 +204,7 @@ static int captureScreens(const char* atlas,const char* destination) {
         for(int i=0;i<5;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Accept);
         hub.Press(ConsoleHome::Accept);ok=save("89-armazenamento-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);
-        hub.Press(ConsoleHome::Right);hub.Press(ConsoleHome::Accept);ok=save("90-rede-moderna",hub)&&ok;
-        hub.Press(ConsoleHome::PageDown);ok=save("106-udp-moderno",hub)&&ok;
-        hub.Press(ConsoleHome::Context);assert(hub.ContextOpen());hub.Press(ConsoleHome::Accept);ok=save("107-udp-opcoes-moderno",hub)&&ok;
-        hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::PageUp);hub.Press(ConsoleHome::Guide);ok=save("108-smb-moderno",hub)&&ok;
-        hub.Press(ConsoleHome::Guide);ok=save("109-smb-ip-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
+        hub.Press(ConsoleHome::Right);hub.Press(ConsoleHome::Accept);ok=save("90-rede-moderna",hub)&&ok;hub.Press(ConsoleHome::Back);
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);hub.Press(ConsoleHome::Search);ok=save("91-lua-moderno",hub)&&ok;hub.Press(ConsoleHome::Back);hub.Press(ConsoleHome::Back);
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
@@ -241,6 +237,19 @@ static int captureScreens(const char* atlas,const char* destination) {
         telemetry.Press(ConsoleHome::Guide);ok=save("101-temperaturas-moderno",telemetry)&&ok;
         telemetry.Press(ConsoleHome::PageDown);ok=save("102-refrigeracao-moderno",telemetry)&&ok;
         filesModern.Press(ConsoleHome::Back);
+    }
+    {
+        const auto netRoot=root/"NetworkModern";fs::create_directories(netRoot);
+        std::ofstream(netRoot/"aurorax-profile.txt")<<"J\t1\nM\t1\n";
+        ConsoleHome net(netRoot.string()+"/",roots);net.Load();assert(net.ApprovedHeader());
+        // From Home, enter System hub explicitly, then the network panel.
+        for(int i=0;i<5;++i)net.Press(ConsoleHome::Right);
+        net.Press(ConsoleHome::Accept);net.Press(ConsoleHome::Accept);
+        net.Press(ConsoleHome::Right);net.Press(ConsoleHome::Accept);
+        net.Press(ConsoleHome::PageDown);ok=save("106-udp-moderno",net)&&ok;
+        net.Press(ConsoleHome::Context);assert(net.ContextOpen());net.Press(ConsoleHome::Accept);ok=save("107-udp-opcoes-moderno",net)&&ok;
+        net.Press(ConsoleHome::Back);net.Press(ConsoleHome::PageUp);net.Press(ConsoleHome::Guide);ok=save("108-smb-moderno",net)&&ok;
+        net.Press(ConsoleHome::Guide);ok=save("109-smb-ip-moderno",net)&&ok;
     }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
@@ -1698,7 +1707,7 @@ int main(int argc,char** argv) {
         assert(AppearanceSettings::Parse("2:0:3:0:0",a)&&a.Encode()=="2:0:3:0:0");
         assert(!AppearanceSettings::Parse("2:0:3:4:0",a)&&a.glass==AppearanceSettings::LightGlass);
         assert(!AppearanceSettings::Parse("2:0:3:1:2",a)&&a.animations==0);
-        assert(a.Opacity(198)==162);
+        assert(a.Opacity(198)==83);
         assert(AppearanceSettings::Parse("2:0:3",a)&&a.glass==AppearanceSettings::BalancedGlass&&a.animations==1);
         HomeCanvas canvas;canvas.SetAppearance(a,"");canvas.Background();
         assert(canvas.Pixels()[0]==0xff031310u);
@@ -1709,6 +1718,16 @@ int main(int argc,char** argv) {
         const unsigned light=canvas.Pixels()[80*1280+120];
         a.glass=AppearanceSettings::OpaqueGlass;canvas.SetAppearance(a,"");canvas.Box(0,0,1280,720,0xffeeeeeeu);canvas.Surface(40,40,160,80,0xff172c28u);
         assert(canvas.Pixels()[80*1280+120]==0xff172c28u&&light!=0xff172c28u&&canvas.Pixels()[0]==0xffeeeeeeu);
+        // Actual panel interiors must retain different background colors in transparent modes.
+        for(unsigned theme=0;theme<HomeCanvas::ThemeCount;++theme){
+            canvas.SetTheme(theme);a.glass=AppearanceSettings::BalancedGlass;canvas.SetAppearance(a,"");
+            canvas.Box(0,0,1280,720,0xffa03010u);canvas.SeriesTile(40,40,160,80,false);const unsigned red=canvas.Pixels()[80*1280+120];
+            canvas.Box(0,0,1280,720,0xff1030a0u);canvas.SeriesTile(40,40,160,80,false);const unsigned blue=canvas.Pixels()[80*1280+120];
+            assert(red!=blue&&((red>>16)&255)>((blue>>16)&255));
+            a.glass=AppearanceSettings::OpaqueGlass;canvas.SetAppearance(a,"");
+            canvas.Box(0,0,1280,720,0xffa03010u);canvas.SeriesTile(40,40,160,80,false);const unsigned opaque=canvas.Pixels()[80*1280+120];
+            canvas.Box(0,0,1280,720,0xff1030a0u);canvas.SeriesTile(40,40,160,80,false);assert(canvas.Pixels()[80*1280+120]==opaque);
+        }
     }
     // Safe area: zero-copy default and explicit border/scale.
     {

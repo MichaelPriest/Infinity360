@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.33 — Vidro real, sem camada cinza
+
+- Remove o preenchimento cinza sob cards e superfícies: apenas um contorno arredondado discreto, preenchimento translúcido tingido pelo tema, reflexos suaves e foco mais leve. Ajusta o escurecimento dos modais e fundos, mantendo o modo opaco opcional e as preferências existentes.
+- Testa a contribuição do plano de fundo em cada uma das sete paletas, além do modo opaco. Corrige a fixture de capturas UDP/SMB da V0.3.32 com perfil moderno isolado. 109 capturas solicitadas novamente. Sem XEX/release.
+
 ## V0.3.32 — Comunicação e diagnósticos de rede
 
 - Guia social: cards de amigos, presença, validade da consulta, permissões e comunicação com estado do perfil visível. Mantém providers oficiais experimentais e não simula disponibilidade de mensagens/voz.

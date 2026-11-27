@@ -96,3 +96,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-27 V0.3.31 achievements, saves, artwork, disc installer, thermal, keyboard, collections and updater; 105 portable captures; no XEX.
 
 2026-11-27 V0.3.32 social guide and UDP/SMB visual refinement; 109 portable captures; no XEX.
+
+2026-11-27 V0.3.33 tinted transparent glass across all themes; rerender 109 screenshots; no XEX.
