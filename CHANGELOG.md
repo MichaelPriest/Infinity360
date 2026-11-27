@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.3 — Descoberta ampliada de fontes IPTV
+
+- Descoberta limitada de M3U/M3U8 em Listas, IPTV, Nexus, Series360, Cinema e Andromeda, incluindo subpastas; diretórios de organização no pacote.
+- Preserva seleção por fonte, caminhos relativos, EPG e limites do catálogo. Não distribui listas externas sem autorização; arquivos originais não disponíveis nesta revisão.
+- Sem nova solicitação de XEX.
+
 ## V0.3.2 — Correção de link do downmix
 
 - Substitui fmaxf por comparação de coeficientes finitos, preservando normalização e evitando dependência libm não vinculada no gate C.

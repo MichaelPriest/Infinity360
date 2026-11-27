@@ -8,3 +8,14 @@ Apps
 Emulators
 Homebrew
 Andromeda/PS1Covers
+Listas/TV
+Listas/Filmes
+Listas/Series
+Listas/Animes
+Listas/Desenhos
+Listas/Nexus
+Listas/Series360
+IPTV
+Nexus
+Series360
+Cinema

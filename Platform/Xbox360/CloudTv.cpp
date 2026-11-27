@@ -41,11 +41,18 @@ std::string localTime(int64_t timestamp) {
 void tile(HomeCanvas& c,int x,int y,int w,int h,bool focused) {
     c.SeriesTile(x,y,w,h,focused,220);
 }
-void filesIn(const std::string& dir,const std::string& prefix,std::vector<std::string>& found) {
+void filesIn(const std::string& dir,const std::string& prefix,std::vector<std::string>& found,unsigned depth=0,unsigned* remaining=nullptr) {
+    if(found.size()>=512||(remaining&&!*remaining))return;
+    if(remaining)--*remaining;
     std::vector<FolderEntry> items;if(!ReadFolder(dir+prefix,items)) return;
-    for(size_t i=0;i<items.size();++i) if(!items[i].directory &&
-        (tvEndsWith(items[i].name,".m3u") || tvEndsWith(items[i].name,".m3u8")))
-        found.push_back(prefix+items[i].name);
+    const char slash=dir.find('\\')!=std::string::npos?'\\':'/';
+    for(const auto& item:items){
+        if(found.size()>=512)break;
+        if(item.name.empty()||item.name=="."||item.name==".."||item.name.find_first_of("/\\:")!=std::string::npos)continue;
+        if(item.directory){
+            if(depth&&remaining&&*remaining)filesIn(dir,prefix+item.name+slash,found,depth-1,remaining);
+        }else if(tvEndsWith(item.name,".m3u")||tvEndsWith(item.name,".m3u8"))found.push_back(prefix+item.name);
+    }
 }
 void moveRow(size_t& row,size_t size,MenuKey key) {
     if(!size) {row=0;return;}
@@ -120,9 +127,11 @@ CloudTv::CloudTv(const std::string& dir):dir_(dir),row_(0),episodeRow_(0),season
 void CloudTv::Discover() {
     sources_.clear();filesIn(dir_,"",sources_);
     const char slash=(dir_.find('\\')!=std::string::npos)?'\\':'/';
-    filesIn(dir_,std::string("Listas")+slash,sources_);
-    filesIn(dir_,std::string("Andromeda")+slash,sources_);
+    unsigned remaining=128;
+    for(const char* folder:{"Listas","Andromeda","IPTV","Nexus","Series360","Cinema"})
+        filesIn(dir_,std::string(folder)+slash,sources_,3,&remaining);
     std::sort(sources_.begin(),sources_.end());
+    sources_.erase(std::unique(sources_.begin(),sources_.end()),sources_.end());
 }
 bool CloudTv::Load(const std::string& source) {
     if(source.empty() || !catalog_.Load(dir_+source)) {
@@ -153,7 +162,7 @@ void CloudTv::Open() {
     // Entering again must not expose an old catalogue from a disconnected device.
     if(!Load(chosen)) {
         catalog_=TvCatalog();guide_=TvGuide();source_.clear();
-        if(sources_.empty()) notice_="Copie uma lista M3U para a pasta da dashboard ou para Listas e pressione Y.";
+        if(sources_.empty()) notice_="Copie listas M3U/M3U8 autorizadas para Listas e pressione Y.";
     }
     Filter();
 }
@@ -309,7 +318,7 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     }
     if(!total) {
         c.Text(58,250,picking?c.Tr("Nenhuma lista encontrada."):c.Tr("Nenhum item nesta seção."),26,Soft,1130);
-        if(picking)c.Text(58,300,"Coloque um M3U na pasta da dashboard ou na subpasta Listas.",19,Soft,1100);
+        if(picking)c.Text(58,300,"Listas, IPTV, Nexus, Series360, Cinema e Andromeda.",19,Soft,1100);
         return;
     }
     const size_t first=row_/PageSize*PageSize;
