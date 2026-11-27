@@ -248,6 +248,7 @@ void ConsoleHome::Load() {
     ScanLibrary();
     Rebuild();
     if(layout_==DashboardLayout::TopIcons){RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();}
+    homeDiscPolled_=false;PollHomeDisc(true);
 }
 void ConsoleHome::ScanLibrary() {
     artFolders_.clear();artDirty_=true;
@@ -841,9 +842,10 @@ bool ConsoleHome::Tick() {
             headerThermal_=ThermalTelemetry::Read();thermalChanged=true;
         }
     }
+    const bool discChanged=page_==Home&&!storeActive_&&!TransferRunning()&&!quickGuideOpen_&&PollHomeDisc();
     const bool heroChanged=ApprovedCarouselTick(TransferRate::Now());
     const bool subtitleChanged=RefreshLuaSubtitlePage();
-    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged||thermalChanged||heroChanged||subtitleChanged;
+    const bool ftpChanged=ftp_.Tick()||peerChanged||smbChanged||socialChanged||thermalChanged||heroChanged||subtitleChanged||discChanged;
     if(!TransferRunning() || copyPaused_)return ftpChanged;
     if(transfer_.Status()!=FileTransfer::Running) {
         StartNextCopy();
@@ -936,7 +938,7 @@ void ConsoleHome::Enter(Section s) {
     section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;gridFilter_=false;
     collectionPicker_=false; searchActive_=false; keyboardMode_=0;
     if(s==Iptv) {tv_.Open();return;}
-    if(s==System) RefreshStorage();
+    if(s==System){RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();}
     if (s==Files) {folders_.clear();fileRoot_=0;pasteConfirm_=false;scanPathConfirm_=false;fileAction_=false;deleteConfirm_=false;folders_.push_back(fileWorkspace_.Roots()[0]);}
     Reload();
 }
@@ -1276,6 +1278,11 @@ void ConsoleHome::ToggleGlobalGuide(){
     const auto previousNotice=notice_;
     OpenProfileGuide();socialGuideFocus_=false;
     quickGuideOverlayOnly_=overlay;quickGuideReturnNotice_=previousNotice;
+}
+namespace {
+constexpr int HubGroups[5][4]={{7,2,9,-1},{0,6,-1,-1},{1,-1,-1,-1},{4,5,3,-1},{8,-1,-1,-1}};
+int HubGroup(int tab){for(int g=0;g<5;++g)for(int n:HubGroups[g])if(n==tab)return g;return 0;}
+int HubMove(int tab,int delta){const auto& group=HubGroups[HubGroup(tab)];int count=0,index=0;for(int n:group){if(n<0)break;if(n==tab)index=count;++count;}return group[(index+count+delta)%count];}
 }
 std::string ConsoleHome::Press(Key key) {
     if(key==GlobalGuide){ToggleGlobalGuide();return "";}
@@ -2177,6 +2184,7 @@ std::string ConsoleHome::Press(Key key) {
     if(key==Refresh) {
         if(ApprovedHeader()){PressApprovedHome(key);return "";}
         if(section_==System && page_!=Home) {
+            if(page_==Listing){RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();notice_="Indicadores do sistema atualizados.";return "";}
             if(systemTab_==0) {RefreshStorage();notice_="Armazenamento consultado novamente.";}
             else if(systemTab_==1) {RefreshNetwork();notice_="Diagnostico de rede atualizado.";}
             else if(systemTab_==2) {if(thermalPage_){notice_="A consulta sensores; leitura experimental manual.";}else{telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();notice_="Telemetria atualizada.";}}
@@ -2415,10 +2423,12 @@ std::string ConsoleHome::Press(Key key) {
         // Real console panels: do not invent temperature/network/FTP readings.
         if(page_==Listing) {
             if(key==Left && systemTab_>0) --systemTab_;
-            if(key==Right && systemTab_<7) ++systemTab_;
-            if(key==Up&&systemTab_%2==1)--systemTab_;
-            if(key==Down&&systemTab_%2==0)++systemTab_;
+            if(key==Right && systemTab_<9) ++systemTab_;
+            if(key==PageUp||key==PageDown)systemTab_=HubGroups[(HubGroup(systemTab_)+(key==PageDown?1:4))%5][0];
+            if(key==Up||key==Down)systemTab_=HubMove(systemTab_,key==Down?1:-1);
             if(key==Accept) {
+                if(systemTab_==8){OpenSettings(false);settingsReturnSystem_=true;return "";}
+                if(systemTab_==9){systemTab_=7;page_=Details;localMilestones_=false;saveCenter_=false;achievementsPage_=false;powerPage_=true;powerConfirm_=ConsolePower::Confirmation();return "";}
                 if(systemTab_==0)RefreshStorage();
                 else if(systemTab_==1){RefreshNetwork();networkPeer_=false;peerEditing_=false;peerOptions_=false;peerProbe_.Stop();smbPage_=false;smbEditing_=false;smbProbe_.Stop();}
                 else if(systemTab_==2){telemetry_=SystemTelemetry::Read();videoTelemetry_=VideoTelemetry::Read();telemetryVideo_=false;thermalPage_=false;coolingPage_=false;}
@@ -2433,6 +2443,10 @@ std::string ConsoleHome::Press(Key key) {
         return "";
     }
     if(page_==Home) {
+        if(layout_==DashboardLayout::TopIcons&&homeDiscKnown_&&focus_==ApprovedHome::Hero){
+            if(key==Accept){if(PowerBusy()){notice_="Conclua as operacoes ativas antes de executar o DVD.";return "";}if(PollHomeDisc(true)||!homeDiscKnown_){notice_="Disco alterado; selecione novamente.";return "";}return "dvd:/default.xex";}
+            if(key==Favorite||key==Guide){OpenHomeDiscInstall(key==Favorite);return "";}
+        }
         if(layout_==DashboardLayout::TopIcons&&PressApprovedHome(key))return "";
         static const int next[][4]={
             {0,1,0,2},{0,1,1,4},{2,3,0,6},{2,4,0,6},
@@ -3105,6 +3119,49 @@ void ConsoleHome::DrawContent(HomeCanvas& c) const {
     c.Text(48,601,recoverConfirm_||archiveTuConfirm_||restoreArchivedConfirm_||backupConfirm_||toggleTuConfirm_?"A Confirmar | B Cancelar":contentTab_==7?"A Recolocar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==6?"A Recuperar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==5?"A Copia | X Verificar SHA-256 | R3 Reinstalar TU/DLC | Y Atualizar | B Voltar":contentTab_==4?"A Instalar | X Arquivar TU | RB Backup | Y Atualizar | B Voltar":contentTab_==0?"A Caminho | X Retirar TU | START XboxUnity | RB Backup | Y Atualizar":"A Caminho | RB Backup | Y Atualizar | B Voltar",18,Lime,1175);
 }
 
+bool ConsoleHome::PollHomeDisc(bool force){
+#if defined(INFINITY_DISC_INSTALL)
+    const uint64_t now=TransferRate::Now();
+    if(!force&&homeDiscPolled_&&now>=homeDiscAt_&&now-homeDiscAt_<3000)return false;
+    homeDiscPolled_=true;homeDiscAt_=now;
+    XboxExecutionInfo info{};
+    const bool known=ContentCatalog::ReadExecutionInfo("dvd:/default.xex",info)&&info.titleId!=0;
+    if(known==homeDiscKnown_&&(!known||DiscIdentity::Same(info,homeDiscIdentity_)))return false;
+    homeDiscKnown_=known;homeDiscIdentity_=info;homeDiscName_.clear();homeDiscCover_.clear();
+    artFolders_.erase("dvd:/default.xex");artDirty_=true;
+    if(known){
+        char id[9];std::sprintf(id,"%08X",info.titleId);
+        homeDiscName_=std::string("Jogo em disco | ")+id;
+        const auto aurora=importedNames(dir_+"aurorax-aurora-names.tsv");
+        const auto nexus=importedNames(dir_+"aurorax-nexus-names.tsv");
+        const auto a=aurora.find(info.titleId),n=nexus.find(info.titleId);
+        if(a!=aurora.end())homeDiscName_=a->second;
+        else if(n!=nexus.end())homeDiscName_=n->second;
+        Game disc={homeDiscName_,"dvd:/default.xex","DVD",false};
+        homeDiscCover_=ArtPath(disc,true);
+    }
+    return true;
+#else
+    (void)force;return false;
+#endif
+}
+void ConsoleHome::OpenHomeDiscInstall(bool god){
+    if(TransferRunning()){notice_="Conclua ou cancele a copia ativa.";return;}
+    if(PollHomeDisc(true)||!homeDiscKnown_){notice_="Disco alterado ou indisponivel; selecione novamente.";return;}
+    section_=System;systemTab_=6;page_=Details;
+    discMode_=god?ConvertGod:ExtractDvd;discDestination_=0;RefreshDiscInstall();notice_.clear();
+}
+void ConsoleHome::DrawHomeDisc(HomeCanvas& c,int x,int y,int w,int h,bool focused)const{
+    c.SeriesTile(x,y,w,h,focused);
+    const int aw=std::min(124,(h-24)*2/3),ah=aw*3/2;
+    bool art=appearance_.ShowCover()&&!homeDiscCover_.empty()&&c.LocalArt(homeDiscCover_,true,x+w-aw-14,y+12,aw,ah);
+    if(!art)InfinityIcons::Draw(c,13,x+w-100,y+45,65,Lime);
+    c.TextFit(x+20,y+15,"XBOX 360 | DISCO INSERIDO",17,Lime,w-aw-44);
+    c.TextFit(x+20,y+49,homeDiscName_,30,White,w-aw-44);
+    c.TextFit(x+20,y+94,"Disco "+number(homeDiscIdentity_.discNumber)+"/"+number(homeDiscIdentity_.discCount),17,Muted,w-aw-44);
+    InfinityButtons::Strip(c,x+20,y+133,"A Executar | X Converter GOD",19,White,w-aw-30);
+    InfinityButtons::Strip(c,x+20,y+169,"START Extrair XEX | HDD / USB",18,Lime,w-aw-30);
+}
 void ConsoleHome::RefreshDiscInstall(){
     discConfirm_=false;
 #if defined(INFINITY_DISC_INSTALL)
@@ -3692,16 +3749,30 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
             "Perfis Xbox, idioma e relogio do console."
         };
         if(page_==Listing){
-            const char* groups[]={"Dispositivos e rede","Monitoramento e tarefas","Extensões e eventos","Instalação e console"};
-            for(int g=0;g<4;++g){
-                const int x=42+g*300;c.SeriesTile(x,166,289,166,false);
-                c.TextFit(x+12,176,groups[g],19,White,265);
-                for(int j=0;j<2;++j){const int i=g*2+j,y=212+j*55;
-                    c.SeriesTile(x+8,y,273,49,i==systemTab_);
-                    InfinityIcons::Draw(c,marks[i],x+18,y+10,27,i==systemTab_?Lime:White);
-                    c.TextFit(x+57,y+9,c.Tr(titles[i]),20,White,215);
-                }
-            }
+            const char* groups[]={"Console","Armazenamento","Rede","Servicos e sistema","Tela e comportamento"};
+            const int groupIcons[]={8,14,7,42,46};
+            const int selectedGroup=HubGroup(systemTab_);
+            const auto storage=std::find_if(storageVolumes_.begin(),storageVolumes_.end(),[](const StorageVolume& v){return v.available;});
+            const std::string metrics[]={storage==storageVolumes_.end()?"Indisponivel":StorageInfo::FormatBytes(storage->freeBytes),network_.ipv4.empty()?"Sem IP":network_.ipv4,ftp_.Running()?"Ligado":"Desligado",number(notifications_.UnreadCount())};
+            const char* metricNames[]={"Espaco livre (1o disco)","Rede local","FTP","Eventos nao lidos"};
+            for(int i=0;i<4;++i){const int x=45+i*299;c.SeriesTile(x,137,287,76,false);
+                c.TextFit(x+12,145,metricNames[i],15,Muted,260);c.TextFit(x+12,169,metrics[i],24,White,260);}
+            for(int g=0;g<5;++g){const int y=235+g*67;c.SeriesTile(45,y,306,59,g==selectedGroup);
+                InfinityIcons::Draw(c,groupIcons[g],59,y+14,30,g==selectedGroup?Lime:White);
+                c.TextFit(103,y+15,c.Tr(groups[g]),21,White,232);}
+            const char* names[]={"Armazenamento","Rede e FTP","Telemetria","Downloads","Plugins e Lua","Eventos","Instalador DVD","Perfis do console","Configuracoes","Energia"};
+            const char* hints[]={"HDD, USB e pastas da biblioteca","Rede local, FTP, System Link e SMB","Memoria, video e sensores","Fila e transferencias locais","Extensoes, scripts e diagnosticos","Historico e notificacoes","Extrair XEX ou converter GOD","Perfis, idioma e marcos locais","Tema, tela, transparencia e animacoes","Desligar ou reiniciar com confirmacao"};
+            const int icons[]={14,7,43,5,42,22,13,8,10,11};
+            c.SeriesTile(370,235,862,365,false,210);
+            c.TextFit(390,248,c.Tr(groups[selectedGroup]),29,White,825);
+            int n=0;for(int id:HubGroups[selectedGroup]){if(id<0)break;const int y=294+n*89;const bool selected=id==systemTab_;
+                c.SeriesTile(390,y,822,80,selected);
+                InfinityIcons::Draw(c,icons[id],406,y+17,42,selected?Lime:White);
+                c.TextFit(464,y+9,c.Tr(names[id]),24,White,710);
+                c.TextFit(464,y+43,c.Tr(hints[id]),17,Muted,710);++n;}
+            c.TextFit(390,565,"LB/RB: categorias | Cima/baixo: opcoes | A: abrir",16,Lime,815);
+            c.TextFit(45,612,"CPU "+headerThermal_.CompactCelsius(0)+" | GPU "+headerThermal_.CompactCelsius(1)+" | Plugins: consultar painel",17,Muted,1180);
+            return;
         }else{
             // A single selected category replaces eight unrelated shortcuts on details pages.
             c.SeriesTile(42,166,1196,166,false);
@@ -4220,7 +4291,9 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         return;
     }
     if(libraryPathsPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
-    if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
+    if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar | L3 Guia",19,White,1190);return;}
+    if(page_==Listing&&section_==System){InfinityButtons::Strip(c,45,674,"A Abrir | LB/RB Categoria | Y Atualizar | B Voltar | L3 Guia",19,White,1190);return;}
+    if(approved&&homeDiscKnown_&&focus_==ApprovedHome::Hero){InfinityButtons::Strip(c,45,674,"A Executar DVD | X Converter GOD | START Extrair | Y Atualizar | L3 Guia",18,White,1190);return;}
     if(contentActive_||artEditing_||discSetActive_||updateActive_||fileAction_||collectionPicker_||searchActive_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
     buttonHint(c,45,"A",importPreview_?"Importar":section_==System && page_==Details && systemTab_==3 && TransferRunning()?(copyPaused_?"Retomar":"Pausar"):"Selecionar",0xff428914u);
     if(!approved||ApprovedHome::CoverSlot(focus_))buttonHint(c,254,"B",approved?"Girar capa":"Voltar",0xffb83c28u);
@@ -4661,7 +4734,7 @@ void ConsoleHome::OpenSettings(bool returnHome){
     layoutDraft_=layout_;gridDraft_=gridPreference_;languageDraft_=language_;
     idleDraft_=idleMinutes_;safeAreaDraft_=safeArea_;
     settingsCategory_=appearanceRow_=0;settingsReturnHome_=returnHome;
-    layoutPreview_=false;appearanceEditor_=true;wallpaperDirty_=true;notice_.clear();
+    layoutPreview_=false;appearanceEditor_=true;settingsReturnSystem_=false;wallpaperDirty_=true;notice_.clear();
 }
 bool ConsoleHome::SettingsDirty()const{
     return appearanceDraft_.Encode()!=appearance_.Encode()||clockDraft_.Encode()!=clockSettings_.Encode()||
@@ -4674,7 +4747,7 @@ void ConsoleHome::PressAppearance(Key key){
         if(SettingsDirty()&&notice_!="Alteracoes nao salvas. B descarta; Y salva."){
             notice_="Alteracoes nao salvas. B descarta; Y salva.";return;
         }
-        appearanceEditor_=false;if(settingsReturnHome_)page_=Home;notice_.clear();return;
+        appearanceEditor_=false;if(settingsReturnHome_)page_=Home;else if(settingsReturnSystem_){page_=Listing;systemTab_=8;}notice_.clear();return;
     }
     if(key==Search){layoutPreview_=true;notice_.clear();return;}
     if(key==PageUp||key==PageDown){
@@ -5001,7 +5074,7 @@ bool ConsoleHome::PressApprovedHome(Key key){
     if(key!=Back)approvedReversePath_.clear();
     if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=visible)focus_=LibraryLink;
     if(key==Refresh){
-        Reload();RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();approvedPage_=0;approvedHero_=0;
+        Reload();RefreshStorage();RefreshNetwork();status_=ConsoleStatus::Read();PollHomeDisc(true);approvedPage_=0;approvedHero_=0;
         if(clockSettings_.city)weatherPending_=true;
         if(notice_.empty())notice_="Biblioteca e indicadores atualizados.";
         if(CoverSlot(focus_)&&size_t(focus_-FirstCover)>=Visible(0,ApprovedShelf().size()))focus_=LibraryLink;
@@ -5161,6 +5234,8 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
         else if(game.name!="Forza Horizon")return false;
         c.Image(sx,sy,140,64,x,y,w,h);return true;
     };
+    if(homeDiscKnown_&&!preview){DrawHomeDisc(c,hero.x,hero.y,hero.w,hero.h,active==Hero);}
+    else {
     if(!shelf.empty()&&appearance.ShowBackdrop()){
         auto bg=ArtPath(*featured,false);if(!bg.empty())art=c.LocalArt(bg,false,hero.x+2,hero.y+2,hero.w-4,hero.h-4,true,10);
     }
@@ -5180,6 +5255,7 @@ void ConsoleHome::DrawApprovedHome(HomeCanvas& c,bool preview)const{
     if(illustration)c.TextFit(hero.x+hero.w-130,hero.y+hero.h-25,"Arte ilustrativa",12,White,121);
     for(size_t i=0;i<std::min(HeroSize,shelf.size());++i)c.Box(hero.x+hero.w/2-25+int(i)*15,hero.y+hero.h-13,8,8,i==Featured(preview?0:approvedHero_,shelf.size())?accent:Muted,4);
     if(active==Hero)c.SeriesFocus(hero.x,hero.y,hero.w,hero.h);
+    }
     const char* quick[]={"Gerenciar","Rede e mídia","Perfil e serviços"};
     const char* lines[][2]={{"DVD / HDD / USB","Downloads"},{"System Link","IPTV / Rede"},{"Loja / Perfil","Conquistas"}};
     const int icons[]={14,15,8};

@@ -76,3 +76,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-26 V0.2.76 fix capture scope and request authorized XSDK Alpha build
 
 2026-11-27 V0.3.22 global glass surfaces, settings and system native captures; host renderer only, no XEX.
+
+2026-11-27 V0.3.23 native System hub redesign and Home DVD card; host screenshots only.

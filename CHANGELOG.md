@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.23 — Hub Sistema e DVD na Home
+
+- Central Sistema em cinco categorias com cards translúcidos, resumo de armazenamento, IP, FTP e eventos; LB/RB navega categorias, direcional seleciona funções e Y atualiza indicadores. Atalhos diretos para configurações e energia com confirmação existente.
+- Home Series Infinity detecta DVD com XEX legível a cada 3 segundos (somente provider XSDK), mostra Title ID ou nome importado e capa local quando disponível; A solicita execução pelo fluxo existente, X abre conversão GOD e START extração XEX com escolha HDD/USB. Revalida identidade antes das operações; sem execução ou cópia automática. Ícone nativo embutido do DVD e jogo em execução fora da dashboard ainda não integrados.
+- Capturas portáteis solicitadas; sem XEX/release. Homologação física pendente.
+
 ## V0.3.22 — Transparência global
 
 - Superfícies, cards, rodapés e avisos compartilhados em Home, biblioteca, detalhes, sistema, downloads, busca e catálogo Cloud360/EPG. Capas, indicadores, vídeo e confirmações críticas preservados.

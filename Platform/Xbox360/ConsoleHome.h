@@ -270,6 +270,14 @@ private:
     XboxExecutionInfo discIdentity_{};
     StorageVolume discVolume_{};
     void RefreshDiscInstall();
+    bool PollHomeDisc(bool force=false);
+    void OpenHomeDiscInstall(bool god);
+    void DrawHomeDisc(HomeCanvas& c,int x,int y,int w,int h,bool focused)const;
+    bool homeDiscKnown_=false,homeDiscPolled_=false;
+    uint64_t homeDiscAt_=0;
+    XboxExecutionInfo homeDiscIdentity_{};
+    std::string homeDiscName_,homeDiscCover_;
+    bool settingsReturnSystem_=false;
     NetworkSnapshot network_;
     LanPeerProbe peerProbe_;
     bool networkPeer_=false,peerEditing_=false,peerOptions_=false;
