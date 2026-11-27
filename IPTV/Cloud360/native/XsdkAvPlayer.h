@@ -54,8 +54,8 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference){
-    retryLive=false;
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played){
+    retryLive=false;upgrade=false;previousBitrate=0;played=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
     CloudAvStreamQueue timeline;
@@ -140,7 +140,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     controls.RestoreAudio(audioPreference);
 #ifdef INFINITY_AV_NETWORK
-    hls.ArmRuntimeAdaptation(userHlsCap);
+    if(allowSwitch)hls.ArmRuntimeAdaptation(allowUpgrade?userHlsCap:selectedBitrate);
 #endif
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
@@ -229,6 +229,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         ok=timeline.Pump(elapsed,video,audio);
         if(ok&&shown==before)ok=present(false);
     }
+    played=shown&&submitted;
     audioPreference=controls.Audio();
     cloud_container_close(session);
     if(audioOpen)xsdk_audio_close();
@@ -240,10 +241,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(hls.LastFailure()!=CloudHls::Failure::None){
         // Restart only a previously playing live HLS stream after transport/window failure.
         // All decoder/reader/audio objects are destroyed before restarting; never concatenate streams.
-        const bool lower=(hls.LastFailure()==CloudHls::Failure::LowerQuality||hls.LastFailure()==CloudHls::Failure::HigherQuality)&&hls.SuggestedBitrate()>0;
-        retryLive=!ok&&shown&&submitted&&hls.Live()&&(CloudHls::RecoverLive(hls.LastFailure())||lower);
-        if(retryLive&&lower)adaptiveCap=hls.SuggestedBitrate();
-        if(retryLive&&!lower&&selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
+        const bool quality=(hls.LastFailure()==CloudHls::Failure::LowerQuality||hls.LastFailure()==CloudHls::Failure::HigherQuality)&&hls.SuggestedBitrate()>0;
+        retryLive=!ok&&played&&hls.Live()&&(CloudHls::RecoverLive(hls.LastFailure())||quality);
+        if(retryLive&&quality){upgrade=hls.LastFailure()==CloudHls::Failure::HigherQuality;previousBitrate=selectedBitrate;adaptiveCap=hls.SuggestedBitrate();}
+        if(retryLive&&!quality&&selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
         return CloudHls::FailureLabel(hls.LastFailure());
     }
 #endif
@@ -252,13 +253,28 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
                         const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
     std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference audioPreference;
-    for(unsigned attempt=0;attempt<3;++attempt){
-        bool retry=false;result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference);
-        if(!retry||attempt==2||Cancelled())return Cancelled()?"Reproducao cancelada.":result;
+    unsigned normalRetries=0,rollbackCap=0;bool upgradeUsed=false;
+    // Two ordinary retries plus one opportunistic upgrade and one rollback.
+    for(unsigned attempt=0;attempt<5;++attempt){
+        bool retry=false,upgrade=false,played=false;unsigned previousBitrate=0;
+        result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference,
+            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played);
+        if(Cancelled()||result=="Reproducao cancelada.")return "Reproducao cancelada.";
+        if(rollbackCap&&!played&&!retry){
+            adaptiveCap=rollbackCap;rollbackCap=0;retry=true;
+            result="Qualidade superior indisponivel; retornando a anterior.";
+        }else{
+            rollbackCap=0;
+            if(!retry)return result;
+            if(upgrade&&!upgradeUsed){upgradeUsed=true;rollbackCap=previousBitrate;}
+            else if(normalRetries<2){++normalRetries;}
+            else return result;
+        }
+        if(attempt==4)return result;
         canvas.Background();canvas.SeriesTile(160,240,960,220,false,220);
         canvas.TextFit(190,265,"Cloud360 | Reconectando transmissao ao vivo",30,0xfff2f7f3u,900);
         canvas.TextFit(190,320,result,22,0xffb7c9c1u,900);
-        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/2"+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
+        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/4"+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
         if(!present(true))return "Falha ao apresentar reconexao IPTV.";
         const auto start=std::chrono::steady_clock::now();
         while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(500*(attempt+1))){

@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.44 — Recuperacao protegida de qualidade
+
+- Aumento oportunista de qualidade tem orcamento proprio de uma troca e uma reversao se a nova sessao nao iniciar audio/video; duas reconexoes ordinarias permanecem disponiveis. Desativa adaptacao ao esgotar reconexoes ordinarias para evitar encerrar uma transmissao por troca que nao pode ser executada. Limite total de cinco tentativas; cancelamento preservado. Teste isolado do relogio V0.3.43 passou em C++17 no host a partir de copia textual; suite integral e XSDK nao verificados. Sem XEX/release.
+
 ## V0.3.43 — Buffer adaptativo e diagnostico de rede
 
 - Relogio de leitura aumenta o alvo de pre-leitura conforme a duracao da espera (50–150 ms por evento, teto 600 ms). Observacoes rejeitadas nao avancam o ultimo timestamp. API aceita lead explicitamente utilizavel para compensacao parcial, mas o player continua conservador sem estimativa comprovada de audio de hardware. HUD mostra alvo de pre-leitura e ultima taxa HLS medida quando disponivel. Testes deterministas adicionados; execucao pendente. Sem XEX/release.
