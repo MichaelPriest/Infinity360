@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.69 — Acompanhamento e revisao de instalacao remota
+
+- Android Remote 0.12.0 Alpha: atualizacao opcional de downloads a cada 5s somente na aba Sistema em primeiro plano, sem pedidos simultaneos; resultados recentes (16 na sessao, filtrados por destino). Loja identifica pacotes locais de app/homebrew/emulador e permite abrir a ficha no console para revisao. Instalacao somente pelo fluxo fisico ja existente, sem acionar instalador pelo celular. Testes de protocolo ampliados; compilacao APK/XSDK pendente. Sem XEX/release.
+
 ## V0.3.68 — Destino e prioridade da loja remota
 
 - Android Remote 0.11.0 Alpha: consulta de armazenamento local/HDD/USB 0–2, capacidade e espaco gravavel; troca autenticada do destino preparado com fila independente, invalidacao dos cards antigos, prioridade de item existente. Preflight de espaco para pedidos remotos e inicio nativo, considerando parcial reconhecido. Nao cria pastas nem formata dispositivos; nao reserva espaco futuro. Sem XEX/release; APK e homologacao pendentes.

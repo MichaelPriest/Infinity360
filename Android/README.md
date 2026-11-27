@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.11.0 Alpha
+# INFINITY 360 Remote — Android 0.12.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -57,3 +57,7 @@ Em Sistema, use Consultar fila de downloads, Iniciar / retomar fila ou Pausar do
 ## Destino e prioridade
 
 Na Loja, Consulte HDD / USB para ver capacidade e espaço gravável dos destinos preparados. Selecione um destino com o downloader parado; cada dispositivo conserva sua fila. Consulte novamente o catálogo e a fila após trocar. Não são criadas pastas nem formatados discos. O console verifica espaço disponível antes de pedidos e início de downloads (descontando parcial reconhecido); não há reserva de espaço para a fila inteira. Em Sistema, Priorizar download move um item existente para o início da fila quando o downloader está parado. Homologação pendente.
+
+## Acompanhar e revisar instalação
+
+Em Sistema, ative a atualização automática opcional de downloads. O app consulta a cada cinco segundos enquanto a aba está visível e o app em primeiro plano, sem sobrepor consultas. Os últimos 16 resultados da sessão do console são mantidos em memória e filtrados pelo destino; reiniciar apaga esse histórico. Na Loja, pacotes locais de apps/homebrew/emuladores ainda não instalados oferecem Revisar instalação no Xbox. O pedido apenas abre a ficha; use BACK no controle físico e a confirmação existente. Não há instalação automática, execução nem alteração das verificações do instalador. Homologação pendente.

@@ -1234,6 +1234,8 @@ bool ConsoleHome::TakeNativeStoreRequest(StoreItem& item) {
     nativeStorePending_=false;item=nativeStoreItem_;return true;
 }
 void ConsoleHome::NativeStoreResult(const std::string& message,bool success) {
+    remoteStoreHistory_.insert(remoteStoreHistory_.begin(),{nativeStoreItem_.name,nativeStoreItem_.storage,success});
+    if(remoteStoreHistory_.size()>16)remoteStoreHistory_.resize(16);
     notice_=message;RecordEvent(success?"Download nativo verificado":"Download nativo interrompido");
     if(success&&store_.NativeQueued(nativeStoreItem_)&&!store_.RemoveNative(nativeStoreItem_)){
         nativeBatch_=false;notice_+=" | Falha ao salvar fila.";
@@ -1380,7 +1382,7 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
 #if defined(INFINITY_XSDK_HTTPS)
     if(request.key!=TvRemote::Key::StoreDownload&&request.key!=TvRemote::Key::StoreQueue&&
        request.key!=TvRemote::Key::StoreStart&&request.key!=TvRemote::Key::StoreRemove&&
-       request.key!=TvRemote::Key::StoreDevice&&request.key!=TvRemote::Key::StorePriority)return false;
+       request.key!=TvRemote::Key::StoreDevice&&request.key!=TvRemote::Key::StorePriority&&request.key!=TvRemote::Key::StoreInstallReview)return false;
     if(!RemoteStoreEnabled())return false;
     const bool downloadsPanel=section_==System&&page_==Details&&systemTab_==3&&storeDownloads_;
     if(!RemoteAllowed(GlobalGuide)||(!IdleEligible()&&!storeActive_&&!downloadsPanel)||quickGuideOpen_||
@@ -1408,6 +1410,20 @@ bool ConsoleHome::RemoteStoreAction(const TvRemote::Request& request){
     }
     if(!found)return false;
     const StoreItem item=*found;
+    if(request.key==TvRemote::Key::StoreInstallReview){
+        if((item.category!="app"&&item.category!="homebrew"&&item.category!="emulator")||
+           !store_.Staged(item)||store_.Installed(item)||item.storage!=store_.Storage())return false;
+        // Only open the existing details. Never set storeInstallPending_ remotely.
+        const size_t index=static_cast<size_t>(found-&store_.Items()[0]);
+        storeTab_=0;storeSource_="*";storeRow_=0;RebuildStore();
+        const auto pos=std::find(storeVisible_.begin(),storeVisible_.end(),index);
+        if(pos==storeVisible_.end())return false;
+        storeRow_=static_cast<int>(pos-storeVisible_.begin());
+        storeActive_=true;storeDetails_=true;storeConfirm_=false;
+        storeTranslationMatch_=TranslationMatches(item);
+        notice_="Celular: revise o pacote. BACK no controle fisico para instalar.";
+        return true;
+    }
     if(request.key==TvRemote::Key::StorePriority){
         if(!store_.NativeQueued(item)||!store_.PrioritizeNative(item))return false;
         if(storeDownloads_)RebuildStoreDownloads();
@@ -1456,7 +1472,8 @@ std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
             return "{\"id\":\""+remoteStoreId(item)+"\",\"name\":"+TvRemote::Quote(item.name)+
                 ",\"category\":"+TvRemote::Quote(item.category,24)+",\"version\":"+TvRemote::Quote(item.version,24)+
                 ",\"bytes\":"+std::to_string(item.bytes)+",\"queued\":"+(store_.NativeQueued(item)?"true":"false")+
-                ",\"package\":"+(!item.url.empty()&&item.bytes&&item.bytes<=512ULL*1024*1024?"true":"false")+"}";
+                ",\"package\":"+(!item.url.empty()&&item.bytes&&item.bytes<=512ULL*1024*1024?"true":"false")+
+                ",\"install_review\":"+((item.category=="app"||item.category=="homebrew"||item.category=="emulator")&&store_.Staged(item)&&!store_.Installed(item)?"true":"false")+"}";
         });
     }
     if(request.key==TvRemote::Key::Downloads){
@@ -1476,6 +1493,13 @@ std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
             if(count++)out+=",";
             out+="{\"id\":\""+remoteStoreId(item)+"\",\"name\":"+TvRemote::Quote(item.name)+",\"state\":\""+states[static_cast<unsigned>(progress.state)]+
                 "\",\"received\":"+std::to_string(progress.received)+",\"total\":"+std::to_string(item.bytes)+"}";
+        }
+        out+="],\"history\":[";
+        size_t historyCount=0;
+        for(const auto& entry:remoteStoreHistory_){
+            if(entry.storage!=store_.Storage())continue;
+            if(historyCount++)out+=",";
+            out+="{\"name\":"+TvRemote::Quote(entry.name)+",\"success\":"+(entry.success?"true":"false")+"}";
         }
         return out+"]}";
     }

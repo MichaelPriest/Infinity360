@@ -441,6 +441,8 @@ private:
     bool StartNativeStore(const StoreItem& item);
     bool NextNativeStore();
     StoreItem nativeStoreItem_;
+    struct RemoteStoreResult {std::string name,storage; bool success;};
+    std::vector<RemoteStoreResult> remoteStoreHistory_;
     void DrawStore(HomeCanvas& c) const;
     bool importPreview_;
     std::vector<std::string> importFavorites_, importHistory_;

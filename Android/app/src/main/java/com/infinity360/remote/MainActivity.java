@@ -38,10 +38,24 @@ public final class MainActivity extends Activity {
     private final Button[] tabs=new Button[5];
     private ScrollView scroll;
     private int activeScreen=0;
+    private boolean foreground=false,autoDownloads=false;
+    private final android.os.Handler pollHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable downloadPoll=new Runnable(){
+        @Override public void run(){
+            if(!foreground||!autoDownloads||activeScreen!=2)return;
+            if(!busy&&RemoteProtocol.privateIp(consoleIp.getText().toString().trim())&&RemoteProtocol.validKey(key.getText().toString().trim()))refreshDownloads();
+            pollHandler.postDelayed(this,5000);
+        }
+    };
+    private void updateDownloadPolling(){
+        pollHandler.removeCallbacks(downloadPoll);
+        if(foreground&&autoDownloads&&activeScreen==2)pollHandler.postDelayed(downloadPoll,5000);
+    }
     private void showScreen(int index){
         activeScreen=index;
         for(int i=0;i<screens.length;i++)if(screens[i]!=null){screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);tabs[i].setBackground(shape(i==index?ACCENT:PANEL));tabs[i].setTextColor(i==index?BG:TEXT);}
         if(scroll!=null)scroll.smoothScrollTo(0,0);
+        updateDownloadPolling();
     }
     private LinearLayout screen(LinearLayout root,int index){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);root.addView(panel);screens[index]=panel;return panel;}
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -81,6 +95,9 @@ public final class MainActivity extends Activity {
         label("Downloads e transferências");
         downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));downloads.setBackground(shape(PANEL));content.addView(downloads);
         content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,dp(54)));
+        Switch auto=new Switch(this);auto.setText("Atualizar downloads a cada 5 segundos");auto.setTextColor(TEXT);auto.setChecked(false);
+        auto.setOnCheckedChangeListener((view,enabled)->{autoDownloads=enabled;updateDownloadPolling();});
+        content.addView(auto);
         content.addView(button("Iniciar / retomar fila",ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Pausar download atual",PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,dp(54)));
         downloadCards=new LinearLayout(this);downloadCards.setOrientation(LinearLayout.VERTICAL);content.addView(downloadCards);
@@ -287,7 +304,13 @@ public final class MainActivity extends Activity {
                     TextView title=text(name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
                     card.addView(text(item.optString("category")+" • "+item.optString("version")+" • "+android.text.format.Formatter.formatFileSize(this,Math.max(0,item.optLong("bytes"))),14,MUTED));
                     if(item.optBoolean("queued"))card.addView(text("Na fila nativa",14,ACCENT));
-                    if(item.optBoolean("package")&&id.matches("[1-9][0-9]{0,19}")){
+                    if(item.optBoolean("install_review")&&id.matches("[1-9][0-9]{0,19}")){
+                        card.addView(text("Pacote local disponível para revisão",14,ACCENT));
+                        card.addView(button("Revisar instalação no Xbox",ACCENT,()->{
+                            if(!ip.equals(consoleIp.getText().toString().trim())||!secret.equals(key.getText().toString().trim())){status.setText("Conexão alterada. Consulte novamente.");return;}
+                            confirmQueueCommand("storeinstall/"+id,"Abrir instalação de "+name+" no Xbox?","A ficha será aberta no console. Confirme a instalação com o controle físico; o celular não executará a instalação.");
+                        }));
+                    }else if(item.optBoolean("package")&&id.matches("[1-9][0-9]{0,19}")){
                         card.addView(button("Baixar no Xbox",ACCENT,()->confirmStore(ip,secret,id,name,true)));
                         if(!item.optBoolean("queued"))card.addView(button("Adicionar à fila",PANEL,()->confirmStore(ip,secret,id,name,false)));
                     }else card.addView(text("Apenas referência ou pacote incompatível",13,MUTED));
@@ -355,6 +378,15 @@ public final class MainActivity extends Activity {
                     org.json.JSONObject row=rows.getJSONObject(i);String state=row.getString("state");
                     String label=state.equals("native_paused")?"Parcial salvo":state.equals("native_verified")||state.equals("verified")?"Verificado":state.equals("receiving")?"Último progresso":state.equals("failed")?"Falhou":"Sem registro";
                     out.append("\n\n").append(row.getString("name")).append("\n").append(label).append(" • ").append(size(row,"received")).append(" / ").append(size(row,"total"));
+                }
+                org.json.JSONArray history=obj.optJSONArray("history");
+                if(history!=null&&history.length()<=16){
+                    out.append("\n\nResultados recentes (sessão do Xbox)");
+                    if(history.length()==0)out.append("\nNenhum resultado nesta sessão.");
+                    for(int i=0;i<history.length();i++){
+                        org.json.JSONObject entry=history.getJSONObject(i);
+                        out.append("\n").append(entry.getBoolean("success")?"Verificado: ":"Interrompido: ").append(entry.getString("name"));
+                    }
                 }
                 out.append("\n\nAté 8 itens da fila carregada. Registros não equivalem a progresso em tempo real.");
                 message=out.toString();success=true;
@@ -444,7 +476,9 @@ public final class MainActivity extends Activity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":command.startsWith("storepriority/")?"Prioridade atualizada. Consulte a fila.":command.startsWith("storedevice/")?"Destino alterado. Consulte os dispositivos e a loja.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);if(command!=null&&command.startsWith("storedevice/")&&msg.startsWith("Destino alterado.")){storeCards.removeAllViews();downloadCards.removeAllViews();deviceCards.removeAllViews();storeNext=-1;storeResult.setText("Consulte o catálogo do novo destino.");downloads.setText("Consulte a fila do novo destino.");deviceStatus.setText("Consulte o destino atualizado.");}});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":command.startsWith("storepriority/")?"Prioridade atualizada. Consulte a fila.":command.startsWith("storeinstall/")?"Ficha aberta no Xbox. Confirme com o controle físico.":command.startsWith("storedevice/")?"Destino alterado. Consulte os dispositivos e a loja.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);if(command!=null&&command.startsWith("storedevice/")&&msg.startsWith("Destino alterado.")){storeCards.removeAllViews();downloadCards.removeAllViews();deviceCards.removeAllViews();storeNext=-1;storeResult.setText("Consulte o catálogo do novo destino.");downloads.setText("Consulte a fila do novo destino.");deviceStatus.setText("Consulte o destino atualizado.");}});});
     }
-    @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
+    @Override protected void onResume(){super.onResume();foreground=true;updateDownloadPolling();}
+    @Override protected void onPause(){foreground=false;pollHandler.removeCallbacks(downloadPoll);super.onPause();}
+    @Override protected void onDestroy(){pollHandler.removeCallbacks(downloadPoll);worker.shutdownNow();super.onDestroy();}
 }

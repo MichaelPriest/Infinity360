@@ -64,5 +64,9 @@ int main(){
     if(Parse(request("storedevice/usb3",key,host),host,key).key!=Key::None)return 53;
     if(Parse(request("storepriority/1",key,host),host,key).key!=Key::StorePriority)return 54;
     if(Parse(request("storepriority/1","wrong",host),host,key).key!=Key::None)return 55;
+    if(Parse(request("storeinstall/1",key,host),host,key).key!=Key::StoreInstallReview)return 56;
+    if(Parse(request("storeinstall/0",key,host),host,key).key!=Key::None)return 57;
+    if(Parse(request("storeinstall/1","wrong",host),host,key).key!=Key::None)return 58;
+    if(Parse(request("storeinstall/../x",key,host),host,key).key!=Key::None)return 59;
     return 0;
 }

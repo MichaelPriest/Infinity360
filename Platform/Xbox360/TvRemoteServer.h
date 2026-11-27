@@ -62,7 +62,7 @@ public:
             if(request_.find("\r\n\r\n")==std::string::npos)return Key::None;
             const auto parsed=Parse(request_,host_,secret_);
             const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo||parsed.key==Key::Cover||parsed.key==Key::Downloads||parsed.key==Key::Store||parsed.key==Key::StoreDevices;
-            const bool storeWrite=parsed.key==Key::StoreQueue||parsed.key==Key::StoreDownload||parsed.key==Key::StoreStart||parsed.key==Key::StorePause||parsed.key==Key::StoreRemove||parsed.key==Key::StoreDevice||parsed.key==Key::StorePriority;
+            const bool storeWrite=parsed.key==Key::StoreQueue||parsed.key==Key::StoreDownload||parsed.key==Key::StoreStart||parsed.key==Key::StorePause||parsed.key==Key::StoreRemove||parsed.key==Key::StoreDevice||parsed.key==Key::StorePriority||parsed.key==Key::StoreInstallReview;
             const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(listing?bool(catalog):parsed.key==Key::Snapshot?bool(snapshot):parsed.key==Key::Tune?bool(tune)&&tune(parsed):storeWrite?bool(storeAction)&&storeAction(parsed):!permit||permit(parsed.key)));
             if(allowed){if(parsed.key!=Key::Status&&parsed.key!=Key::Snapshot&&!listing)result=parsed.key;lastCommand_=now;}
             const bool json=allowed&&(parsed.key==Key::Snapshot||listing);
