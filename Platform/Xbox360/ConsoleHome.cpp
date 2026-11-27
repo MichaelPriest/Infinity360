@@ -1081,6 +1081,10 @@ std::string ConsoleHome::Press(Key key) {
                 const auto& home=*static_cast<const ConsoleHome*>(ctx);
                 const auto& g=home.games_[i];
                 return {&g.name,&g.device,contains(home.favorites_,g.executable),isContentPackage(g),contains(home.hidden_,g.executable),contains(home.pinned_,g.executable)};
+            },[](const void* ctx,size_t i)->InfinityLua::MetadataView{
+                const auto& g=static_cast<const ConsoleHome*>(ctx)->games_[i];
+                const auto m=ContentCatalog::DescribeTitle(g.executable,isContentPackage(g));
+                return {m.known,m.titleId,m.mediaId,m.version,m.baseVersion,m.discNumber,m.discCount,m.contentType,m.volumeType};
             }};
             notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),library);
         }

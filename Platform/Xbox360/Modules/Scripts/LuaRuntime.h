@@ -13,7 +13,11 @@ extern "C" {
 namespace InfinityLua {
 // Borrowed synchronous view: no executable paths or writable console handles.
 struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false,hidden=false,pinned=false;};
-struct Library{size_t count=0;const void* context=nullptr;GameView (*get)(const void*,size_t)=nullptr;};
+struct MetadataView{
+    bool known=false;
+    unsigned titleId=0,mediaId=0,version=0,baseVersion=0,discNumber=0,discCount=0,contentType=0,volumeType=0;
+};
+struct Library{size_t count=0;const void* context=nullptr;GameView (*get)(const void*,size_t)=nullptr;MetadataView (*metadata)(const void*,size_t)=nullptr;};
 inline bool Available(){
 #ifdef INFINITY_WITH_LUA
     return true;
@@ -22,7 +26,12 @@ inline bool Available(){
 #endif
 }
 #ifdef INFINITY_WITH_LUA
-struct Budget{size_t used=0;unsigned ticks=0;Library library{};};
+struct Budget{
+    size_t used=0;unsigned ticks=0;Library library{};
+    static constexpr size_t MaxMetadata=128;
+    struct Cached{size_t index=0;MetadataView data{};};
+    Cached cache[MaxMetadata]{};size_t cached=0;
+};
 inline void* Alloc(void* ud,void* ptr,size_t old,size_t bytes){
     auto& b=*static_cast<Budget*>(ud);
     if(!ptr)old=0;
@@ -55,6 +64,31 @@ inline int GameAt(lua_State* L){
     lua_pushinteger(L,index);lua_setfield(L,-2,"index");
     return 1;
 }
+inline void UIntField(lua_State* L,const char* key,unsigned value){
+    lua_pushinteger(L,static_cast<lua_Integer>(value));lua_setfield(L,-2,key);
+}
+inline int MetadataAt(lua_State* L){
+    void* ud=nullptr;lua_getallocf(L,&ud);
+    auto& b=*static_cast<Budget*>(ud);
+    const auto i=luaL_checkinteger(L,1);
+    if(i<=0||static_cast<unsigned long long>(i)>b.library.count||!b.library.metadata){
+        lua_pushnil(L);lua_pushliteral(L,"indisponivel");return 2;
+    }
+    const auto index=static_cast<size_t>(i-1);
+    size_t at=0;while(at<b.cached&&b.cache[at].index!=index)++at;
+    if(at==b.cached){
+        if(b.cached>=Budget::MaxMetadata){lua_pushnil(L);lua_pushliteral(L,"limite de metadados");return 2;}
+        b.cache[at].index=index;b.cache[at].data=b.library.metadata(b.library.context,index);++b.cached;
+    }
+    const auto& m=b.cache[at].data;
+    if(!m.known){lua_pushnil(L);lua_pushliteral(L,"cabecalho indisponivel");return 2;}
+    lua_createtable(L,0,8);
+    UIntField(L,"title_id",m.titleId);UIntField(L,"media_id",m.mediaId);
+    UIntField(L,"version",m.version);UIntField(L,"base_version",m.baseVersion);
+    UIntField(L,"disc_number",m.discNumber);UIntField(L,"disc_count",m.discCount);
+    UIntField(L,"content_type",m.contentType);UIntField(L,"volume_type",m.volumeType);
+    return 1;
+}
 inline int Setup(lua_State* L){
     void* ud=nullptr;lua_getallocf(L,&ud);
     const auto count=static_cast<Budget*>(ud)->library.count;
@@ -63,7 +97,8 @@ inline int Setup(lua_State* L){
     for(const auto* name:blocked){lua_pushnil(L);lua_setglobal(L,name);}
     lua_newtable(L);lua_pushinteger(L,static_cast<lua_Integer>(count));lua_setfield(L,-2,"game_count");
     lua_pushcfunction(L,GameAt);lua_setfield(L,-2,"game");
-    lua_pushinteger(L,1);lua_setfield(L,-2,"api_version");
+    lua_pushcfunction(L,MetadataAt);lua_setfield(L,-2,"metadata");
+    lua_pushinteger(L,2);lua_setfield(L,-2,"api_version");
     lua_setglobal(L,"infinity");return 0;
 }
 inline std::string Result(lua_State* L,const char* fallback){

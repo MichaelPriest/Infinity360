@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.10 — Metadados Lua
+
+- API Lua v2 acrescenta infinity.metadata(i), leitura real de cabeçalhos XEX/STFS com Title ID, Media ID, versões, discos e tipo de conteúdo. Cache por execução limitado a 128 índices distintos, sem acesso arbitrário a arquivos.
+- Testes de IDs de 32 bits, cache, limites, resultados ausentes e isolamento. Documentação da API e referência à arquitetura de scripts Aurora; compatibilidade Aurora ainda pendente.
+- Sem nova solicitação de XEX.
+
 ## V0.3.9 — Caminhos de pacotes
 
 - Gerenciador de pastas alterna XEX/pacotes com LB/RB. Raízes GOD/XBLA configuráveis e desativáveis independentemente, com estrutura TitleID/Tipo validada pelo leitor de pacotes existente. Pacotes importados continuam indexados separadamente.
