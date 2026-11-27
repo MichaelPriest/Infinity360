@@ -8,6 +8,8 @@ Interface nativa em 720p inspirada no Xbox Series, com navegação por controle,
 
 [Releases](https://github.com/MichaelPriest/Infinity360/releases) · [Changelog](CHANGELOG.md) · [Roadmap](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md)
 
+**Prioridade atual: Cloud360 IPTV e FFmpeg.** [Ordem de desenvolvimento](Platform/Xbox360/docs/ROADMAP-PRIORITIES.md).
+
 ## Interface nativa
 
 | Home | Guide |

@@ -1,12 +1,28 @@
 # Prioridades INFINITY 360
 
+## Ordem vigente — 26/11/2026
+
 | Prioridade | Escopo |
-| --- | --- |
-| P0 | Sessão, lançamento de títulos XEX e GOD/XBLA, instalação de DVD, multidisco, armazenamento e recuperação da dashboard |
-| P1 | TU/DLC, XboxUnity, Store, Cloud360 IPTV e integração com plugins |
-| P2 | SMC, energia, System Link e saves |
-| P3 | Temas, idiomas, guia e conquistas |
-| P4 | Modern UI — redesign nativo aprovado, após o desenvolvimento funcional P0–P3 |
+|---|---|
+| P0.1 | Cloud360 IPTV e FFmpeg: fontes, HLS/TS, MP4, áudio/vídeo, estabilidade e pacote único |
+| P0.2 | Store, Andromeda e catálogos externos autorizados |
+| P0.3 | Plugins e componentes nativos |
+| P0.4 | Avatar 3D, perfil e serviços sociais |
+| P1.1 | Emuladores, capas e patches |
+| P1.2 | Compilação unificada, mediante autorização |
+| P1.3 | Checklist de homologação no Xbox 360 |
+
+Esta ordem substitui a classificação histórica abaixo. Preservar funcionalidades essenciais de boot, lançamento, armazenamento e recuperação; corrigir regressões críticas quando encontradas. Não disparar build XEX/release sem autorização.
+
+### Critérios de conclusão IPTV/FFmpeg
+
+- Validar fontes públicas ou autorizadas, importação M3U, EPG e categorias; não incorporar fontes sem direitos verificados.
+- Consolidar seleção de formatos entre interface e player; HLS live/VOD, TS e MP4 local; avaliar MP4 remoto, fMP4 e limites de codec/resolução sem prometer suporte não implementado.
+- Melhorar mensagens de erro, recuperação de rede, sincronização audiovisual e controles.
+- Validar regressões portáteis e contrato do ZIP único com FFmpeg e materiais LGPL correspondentes; compilação XEX apenas quando autorizada.
+- Homologar no console posteriormente; não confundir testes de host com reprodução física.
+
+## Histórico técnico (prioridades anteriores)
 
 ## Instalação e lançamento
 

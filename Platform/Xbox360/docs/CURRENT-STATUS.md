@@ -14,4 +14,4 @@
 | HID | Não integrado |
 | DVD, FTP, SMB | Implementações com limitações e homologação pendente |
 
-Próximo marco: validar integração do presenter e dependências, executar regressões portáteis, solicitar XEX somente quando autorizado. Não confundir teste portátil com execução física.
+Próximo marco: P0.1 IPTV e FFmpeg, com validação das fontes, reprodução e empacotamento unificado. Lojas, plugins e avatar seguem nessa ordem. Solicitar XEX somente quando autorizado. Não confundir teste portátil com execução física.
