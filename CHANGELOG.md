@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.70 — FTP bidirecional Android
+
+- Android Remote 0.13.0 Alpha: gerenciador FTP independente em Sistema, porta 2121, login separado, EPSV limitado ao IP do Xbox, navegação e download com SIZE/226, upload ALLO/STOR com tamanho exato (32 MiB), seletor Android, progresso/cancelamento e arquivos temporários privados. Usa servidor existente restrito a UserFiles, sem sobrescrita, exclusão ou acesso a discos completos. Ativação física do FTP e upload permanece obrigatória. Testes Java de protocolo adicionados ao CI; APK e Xbox pendentes. Sem XEX/release.
+
 ## V0.3.69 — Acompanhamento e revisao de instalacao remota
 
 - Android Remote 0.12.0 Alpha: atualizacao opcional de downloads a cada 5s somente na aba Sistema em primeiro plano, sem pedidos simultaneos; resultados recentes (16 na sessao, filtrados por destino). Loja identifica pacotes locais de app/homebrew/emulador e permite abrir a ficha no console para revisao. Instalacao somente pelo fluxo fisico ja existente, sem acionar instalador pelo celular. Testes de protocolo ampliados; compilacao APK/XSDK pendente. Sem XEX/release.

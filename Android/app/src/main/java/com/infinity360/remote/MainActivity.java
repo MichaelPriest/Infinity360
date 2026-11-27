@@ -89,6 +89,12 @@ public final class MainActivity extends Activity {
         label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
         content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,dp(54)));
         content=screen(root,2);
+        label("Arquivos e FTP");
+        content.addView(button("Gerenciador FTP",ACCENT,()->{
+            if(busy)return;
+            android.content.Intent intent=new android.content.Intent(this,FtpActivity.class);
+            intent.putExtra("console_ip",consoleIp.getText().toString().trim());startActivity(intent);
+        }),new LinearLayout.LayoutParams(-1,dp(54)));
         label("Monitoramento do console");
         monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
         content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));

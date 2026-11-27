@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.69 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.70 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -74,3 +74,7 @@ Na pasta de dados IPTV, crie `cloud360-remote.txt` com duas linhas: IPv4 privado
 ### Aplicativo Android INFINITY 360 Remote
 
 Projeto nativo: [Android/](Android/README.md). APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla o player IPTV por rede local, não reproduz conteúdo no telefone.
+
+### FTP Android
+
+O Remote inclui gerenciador FTP bidirecional em Sistema. [Configuração e limites](Android/README.md#ftp-bidirecional). O servidor do Xbox permanece manual, restrito a UserFiles.

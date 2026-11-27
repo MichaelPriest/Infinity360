@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.12.0 Alpha
+# INFINITY 360 Remote — Android 0.13.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -61,3 +61,10 @@ Na Loja, Consulte HDD / USB para ver capacidade e espaço gravável dos destinos
 ## Acompanhar e revisar instalação
 
 Em Sistema, ative a atualização automática opcional de downloads. O app consulta a cada cinco segundos enquanto a aba está visível e o app em primeiro plano, sem sobrepor consultas. Os últimos 16 resultados da sessão do console são mantidos em memória e filtrados pelo destino; reiniciar apaga esse histórico. Na Loja, pacotes locais de apps/homebrew/emuladores ainda não instalados oferecem Revisar instalação no Xbox. O pedido apenas abre a ficha; use BACK no controle físico e a confirmação existente. Não há instalação automática, execução nem alteração das verificações do instalador. Homologação pendente.
+
+## FTP bidirecional
+
+1. No Xbox, crie `enable-ftp.txt` com `ENABLE-FTP-LAN`, e `infinity360-ftp.txt` com usuário e senha em duas linhas (usuário ASCII alfanumérico, hífen ou sublinhado; senha exclusiva de 12–64 caracteres ASCII imprimíveis, nunca anônimo).
+2. Para enviar ao Xbox, crie também `enable-ftp-upload.txt` com `ENABLE-FTP-UPLOAD`. Na dashboard, Sistema > Rede e FTP, A inicia leitura ou X inicia leitura/upload (se o servidor estiver ativo, pare antes de trocar o modo).
+3. No Android, Sistema > Gerenciador FTP, informe o IP e as credenciais FTP (não é a chave HTTP). Conectar/atualizar lista a pasta; toque em pastas para navegar, em arquivos para escolher onde salvar no Android, ou em Enviar arquivo do celular para selecionar e confirmar o nome no Xbox.
+4. A conexão usa FTP passivo EPSV na porta 2121, sem TLS; use somente rede privada confiável, nunca exponha a porta na internet. O servidor limita a raiz a UserFiles, nomes ASCII até 42 caracteres e uploads a 32 MiB; não sobrescreve, não exclui nem renomeia arquivos. Arquivos do celular são temporariamente preparados no cache privado para ALLO; downloads são recebidos e conferidos por tamanho e resposta 226 antes de copiar ao destino escolhido. Pode exigir espaço local adicional. Cancelamento encerra sockets; destino Android vazio/incompleto pode permanecer se a cópia local falhar. O app não faz transferências em segundo plano, não salva senha, não permite acesso direto a áreas de sistema/HDD/USB completos. Pare o FTP no Xbox depois de usar. Testes de protocolo no CI; validação em console e APK ainda pendentes.

@@ -18,6 +18,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: FTP client host regression
+        run: |
+          mkdir -p /tmp/infinity-ftp-tests
+          javac -d /tmp/infinity-ftp-tests Android/app/src/main/java/com/infinity360/remote/RemoteProtocol.java Android/app/src/main/java/com/infinity360/remote/XboxFtpClient.java Android/tests/XboxFtpClientTest.java
+          java -cp /tmp/infinity-ftp-tests com.infinity360.remote.XboxFtpClientTest
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
