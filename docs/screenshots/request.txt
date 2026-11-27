@@ -115,3 +115,4 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 
 2026-11-27 V0.3.75 regenerate all 113 native captures, including IPTV, network/FTP and downloads; explicitly authorized unified build.
 V0.3.77 — HD artwork rendering
+V0.3.78 — library path manager

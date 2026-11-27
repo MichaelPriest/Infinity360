@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.77 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.78 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -46,6 +46,8 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 | Personalização | Configurações em oito categorias, valores diretos, ajuda contextual e prévia em sete paletas, navegação LB/RB, prévia e edição com salvar/cancelar; sete temas, três idiomas, quatro níveis de vidro (leve, equilibrado, denso e opaco), transparência real sobre o fundo, grupos com vidro leve sem acumular opacidade, barras integradas ao tema e animações temporizadas opcionais |
 
 Implementação no código não equivale a homologação física.
+
+**Pastas de jogos:** [Gerenciador de caminhos da biblioteca](Platform/Xbox360/docs/LIBRARY-PATHS.md) — seletor dedicado de HDD/USB, status, profundidade e remoção segura de cadastros.
 
 ## Instalação e desenvolvimento
 

@@ -1396,6 +1396,22 @@ int main(int argc,char** argv) {
     assert(fs::file_size(scanUiConfig)==0);
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Favorite);
     assert(fs::file_size(packageConfig)==0&&fs::exists(scanUiExe));
+    // Dedicated library picker, no file actions or root-wide registration.
+    LegacyFixtureHome pathManager(scanUiRoot.string()+"/",noRoots);pathManager.Load();
+    pathManager.Press(ConsoleHome::Right);pathManager.Press(ConsoleHome::Down);pathManager.Press(ConsoleHome::Right);pathManager.Press(ConsoleHome::Accept); // System
+    pathManager.Press(ConsoleHome::Accept); // Console details
+    pathManager.Press(ConsoleHome::Guide); // library paths
+    pathManager.Press(ConsoleHome::Accept); // picker
+    pathManager.Press(ConsoleHome::Favorite); // reject device root
+    assert(fs::file_size(scanUiConfig)==0);
+    pathManager.Press(ConsoleHome::Accept); // CustomGames
+    pathManager.Press(ConsoleHome::Favorite); // add current folder
+    assert(fs::file_size(scanUiConfig)>0);
+    pathManager.Press(ConsoleHome::Refresh);
+    pathManager.Press(ConsoleHome::Search);pathManager.Press(ConsoleHome::Back); // cancel removal
+    assert(fs::file_size(scanUiConfig)>0);
+    pathManager.Press(ConsoleHome::Search);pathManager.Press(ConsoleHome::Accept);
+    assert(fs::file_size(scanUiConfig)==0&&fs::exists(scanUiExe));
 #ifdef INFINITY_WITH_LUA
     {
         const auto luaRoot=root/"LuaFilterFixture";

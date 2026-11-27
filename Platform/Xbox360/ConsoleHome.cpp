@@ -192,6 +192,7 @@ ConsoleHome::ConsoleHome(const std::string& dataDir,const std::vector<std::strin
 
 void ConsoleHome::Load() {
     contextOpen_=false;contextActions_.clear();contextRow_=0;
+    libraryPathsPage_=false;libraryPicker_=false;libraryRemoveConfirm_=false;libraryRescanNeeded_=false;
     LoadEvents();
     LoadScanPaths();
     if(!collections_.Load())notice_="Colecoes invalidas: edicao bloqueada para preservar o arquivo.";
@@ -427,9 +428,125 @@ void ConsoleHome::ToggleScanPath(bool packages) {
     LoadScanPaths();
     notice_=remove?"Pasta removida da busca personalizada.":packages?"Raiz de pacotes adicionada. Biblioteca atualiza ao abrir.":"Pasta XEX adicionada. Biblioteca atualiza ao abrir.";
 }
+void ConsoleHome::OpenLibraryPaths(){
+    LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;
+    libraryPicker_=false;libraryRemoveConfirm_=false;notice_.clear();RefreshLibraryPathStatus();
+}
+void ConsoleHome::RefreshLibraryPathStatus(){
+    const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    libraryRootAvailable_.clear();
+    for(const auto& path:configured)libraryRootAvailable_.push_back(fileWorkspace_.CanBrowse(path));
+    libraryUiRoots_=GameScanner::LoadRoots(savedFile(dir_+(packagePathsPage_?"infinity360-package-paths.txt":"aurorax-scanpaths-ui.txt")),{});
+}
+void ConsoleHome::RefreshLibraryPicker(){
+    libraryPickerFolders_.clear();libraryPickerRow_=0;
+    if(libraryPickerStack_.empty())return;
+    const auto& current=libraryPickerStack_.back();
+    std::vector<FolderEntry> entries;
+    if(!fileWorkspace_.CanBrowse(current)||!ReadFolder(current,entries)){notice_="Dispositivo ou pasta indisponivel.";return;}
+    for(const auto& entry:entries){
+        if(!entry.directory||entry.name=="."||entry.name==".."||entry.name.find_first_of("/\\:")!=std::string::npos)continue;
+        auto path=FileWorkspace::Join(current,entry.name);
+        if(GameScanner::ValidRoot(path).empty()||!fileWorkspace_.CanBrowse(path))continue;
+        std::string lower=entry.name;for(auto& ch:lower)ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        if(lower.compare(0,7,"axcopy-")==0)continue;
+        if(libraryPickerFolders_.size()>=512){notice_="Limite de 512 pastas nesta listagem.";break;}
+        libraryPickerFolders_.push_back(entry.name);
+    }
+}
+void ConsoleHome::SaveLibraryPath(const std::string& candidate,bool remove){
+    if(TransferRunning()||ftp_.Running()){notice_="Encerre transferencias e FTP antes de alterar caminhos.";return;}
+    const auto path=GameScanner::ValidRoot(candidate);
+    if(path.empty()){notice_="Caminho invalido.";return;}
+    const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    const auto config=dir_+(packagePathsPage_?"infinity360-package-paths.txt":"aurorax-scanpaths-ui.txt");
+    auto custom=GameScanner::LoadRoots(savedFile(config),{});
+    auto match=[&](const std::string& item){return GameScanner::SameRoot(item,path);};
+    const auto existing=std::find_if(configured.begin(),configured.end(),match);
+    auto item=std::find_if(custom.begin(),custom.end(),match);
+    if(remove){
+        if(item==custom.end()){notice_="Origem padrao ou externa: use X para desativar.";return;}
+        custom.erase(item);
+    }else{
+        if(!fileWorkspace_.CanBrowse(path)){notice_="Pasta indisponivel.";return;}
+        if(existing!=configured.end()){
+            libraryPicker_=false;libraryPathRow_=static_cast<int>(existing-configured.begin());
+            notice_="Pasta ja cadastrada. X alterna seu estado.";return;
+        }
+        if(configured.size()>=32||custom.size()>=32){notice_="Limite de 32 caminhos atingido.";return;}
+        custom.push_back(path);
+    }
+    std::ofstream out((config+".tmp").c_str(),std::ios::binary|std::ios::trunc);
+    for(const auto& entry:custom)out<<entry<<"\n";
+    out.close();
+    if(!out||!replaceSavedFile(config)){notice_="Falha ao salvar caminhos; cadastro anterior preservado.";return;}
+    libraryRescanNeeded_=true;libraryPicker_=false;libraryRemoveConfirm_=false;
+    LoadScanPaths();RefreshLibraryPathStatus();
+    const auto& updated=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    const auto selected=std::find_if(updated.begin(),updated.end(),match);
+    if(selected!=updated.end())libraryPathRow_=static_cast<int>(selected-updated.begin());
+    else clampRow(libraryPathRow_,updated.size());
+    notice_=remove?"Cadastro personalizado removido. Arquivos intactos. Y varre.":"Pasta cadastrada. Y atualiza a biblioteca.";
+}
+void ConsoleHome::PressLibraryPaths(Key key){
+    if(libraryRemoveConfirm_){
+        libraryRemoveConfirm_=false;
+        if(key==Accept){
+            const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+            if(static_cast<size_t>(libraryPathRow_)<configured.size())SaveLibraryPath(configured[libraryPathRow_],true);
+        }else notice_="Remocao cancelada.";
+        return;
+    }
+    if(libraryPicker_){
+        if(key==Back){
+            if(libraryPickerStack_.size()>1){libraryPickerStack_.pop_back();notice_.clear();RefreshLibraryPicker();}
+            else{libraryPicker_=false;notice_.clear();}
+            return;
+        }
+        if(key==PageUp||key==PageDown){
+            const auto& devices=fileWorkspace_.Roots();
+            const int count=static_cast<int>(devices.size());
+            if(count){libraryDevice_=(libraryDevice_+count+(key==PageDown?1:-1))%count;
+                libraryPickerStack_.assign(1,devices[libraryDevice_]);notice_.clear();RefreshLibraryPicker();}
+            return;
+        }
+        if(key==Up||key==Down){libraryPickerRow_+=key==Down?1:-1;clampRow(libraryPickerRow_,libraryPickerFolders_.size());return;}
+        if(key==Accept&&static_cast<size_t>(libraryPickerRow_)<libraryPickerFolders_.size()){
+            const auto path=FileWorkspace::Join(libraryPickerStack_.back(),libraryPickerFolders_[libraryPickerRow_]);
+            if(libraryPickerStack_.size()>=17){notice_="Limite de 16 niveis do navegador.";return;}
+            libraryPickerStack_.push_back(path);notice_.clear();RefreshLibraryPicker();return;
+        }
+        if(key==Favorite&&!libraryPickerStack_.empty()){
+            if(libraryPickerStack_.size()==1){notice_="Selecione uma subpasta, nao o dispositivo inteiro.";return;}
+            SaveLibraryPath(libraryPickerStack_.back(),false);return;
+        }
+        if(key==Refresh){notice_.clear();RefreshLibraryPicker();}
+        return;
+    }
+    const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
+    if(key==Back){libraryPathsPage_=false;notice_.clear();return;}
+    if(key==PageUp||key==PageDown){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();RefreshLibraryPathStatus();return;}
+    if(key==Up||key==Down){libraryPathRow_+=key==Down?1:-1;clampRow(libraryPathRow_,configured.size());return;}
+    if(key==Favorite){ToggleLibraryRoot();RefreshLibraryPathStatus();return;}
+    if(!packagePathsPage_&&(key==Left||key==Right)){ChangeLibraryDepth(key==Right?1:-1);return;}
+    if(key==Refresh&&!TransferRunning()&&!ftp_.Running()){
+        LoadScanPaths();ScanLibrary();Rebuild();libraryRescanNeeded_=false;RefreshLibraryPathStatus();
+        clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());
+        notice_="Varredura concluida: "+number(games_.size())+" itens totais.";return;
+    }
+    if(key==Search&&!TransferRunning()&&static_cast<size_t>(libraryPathRow_)<configured.size()){
+        const auto& path=configured[libraryPathRow_];
+        if(std::none_of(libraryUiRoots_.begin(),libraryUiRoots_.end(),[&](const std::string& p){return GameScanner::SameRoot(p,path);})){
+            notice_="Origem padrao ou externa: use X para desativar.";return;}
+        libraryRemoveConfirm_=true;notice_="Remover somente o cadastro? A confirma | B cancela.";return;
+    }
+    if(key==Accept&&!TransferRunning()&&!ftp_.Running()){
+        libraryPicker_=true;libraryDevice_=0;libraryPickerStack_.assign(1,fileWorkspace_.Roots()[0]);notice_.clear();RefreshLibraryPicker();
+    }
+}
 void ConsoleHome::ToggleLibraryRoot(){
     const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
-    if(configured.empty()||TransferRunning())return;
+    if(configured.empty()||TransferRunning()||ftp_.Running()||static_cast<size_t>(libraryPathRow_)>=configured.size())return;
     const auto path=configured[libraryPathRow_];
     auto next=packagePathsPage_?disabledPackageRoots_:disabledRoots_;
     next.erase(std::remove_if(next.begin(),next.end(),[&](const std::string& d){return std::none_of(configured.begin(),configured.end(),[&](const std::string& r){return GameScanner::SameRoot(d,r);});}),next.end());
@@ -442,11 +559,11 @@ void ConsoleHome::ToggleLibraryRoot(){
     for(const auto& item:next)out<<item<<"\n";
     out.close();
     if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar caminhos.";return;}
-    LoadScanPaths();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());
+    LoadScanPaths();libraryRescanNeeded_=true;clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());
     notice_=enable?"Caminho habilitado. Y atualiza biblioteca.":"Caminho desativado. Y atualiza biblioteca.";
 }
 void ConsoleHome::ChangeLibraryDepth(int delta){
-    if(configuredRoots_.empty()||TransferRunning())return;
+    if(configuredRoots_.empty()||TransferRunning()||ftp_.Running()||static_cast<size_t>(libraryPathRow_)>=configuredRoots_.size())return;
     const auto& path=configuredRoots_[libraryPathRow_];
     const auto current=GameScanner::DepthFor(scanDepths_,path);
     const auto value=static_cast<unsigned>(std::max(0,std::min(int(GameScanner::MaxDepth),int(current)+delta)));
@@ -461,7 +578,7 @@ void ConsoleHome::ChangeLibraryDepth(int delta){
     for(const auto& d:next)out<<d.levels<<"\t"<<d.path<<"\n";
     out.close();
     if(!out||!replaceSavedFile(file)){notice_="Falha ao salvar profundidade.";return;}
-    scanDepths_=next;notice_="Profundidade "+number(value)+" salva. Y atualiza biblioteca.";
+    scanDepths_=next;libraryRescanNeeded_=true;notice_="Profundidade "+number(value)+" salva. Y atualiza biblioteca.";
 }
 std::string ConsoleHome::LuaDirectory()const{
     static const char* const folders[LuaCategoryCount]={"","Filters","Sorts","Subtitles"};
@@ -1753,19 +1870,10 @@ std::string ConsoleHome::Press(Key key) {
         }
         return "";
     }
-    if(libraryPathsPage_){
-        if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
-        if(key==PageDown||key==PageUp){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();return "";}
-        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());}
-        if(key==Favorite)ToggleLibraryRoot();
-        if(!packagePathsPage_&&(key==Left||key==Right))ChangeLibraryDepth(key==Right?1:-1);
-        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
-        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;appearanceEditor_=false;layoutPreview_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
-        return "";
-    }
+    if(libraryPathsPage_){PressLibraryPaths(key);return "";}
     if(luaPage_){PressLuaScripts(key);return "";}
     if(appearanceEditor_){PressAppearance(key);return "";}
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){OpenLibraryPaths();return "";}
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=LuaUtilities;luaRepoPage_=false;luaRepoConfirm_=false;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
         const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
@@ -3846,20 +3954,51 @@ void ConsoleHome::DrawLocalMilestones(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,579,std::string(c.Tr("A Conquistas GPD offline | Sem sincronizacao Xbox Live")),19,Muted,1170);
     InfinityButtons::Strip(c,48,606,std::string(c.Tr("START Central de saves | X Aparencia | Cima/Baixo Perfis | B Voltar")),18,Lime,1170);
 }
+void ConsoleHome::DrawLibraryPicker(HomeCanvas& c)const{
+    c.TextFit(45,87,"Biblioteca | Adicionar pasta",36,White,1180);
+    const auto& devices=fileWorkspace_.Roots();
+    c.TextFit(48,143,std::string(packagePathsPage_?"Pacotes GOD/XBLA":"Jogos XEX")+"  |  Dispositivo "+number(libraryDevice_+1)+"/"+number(devices.size()),21,Lime,1180);
+    c.GroupGlass(45,180,1189,74);
+    c.TextFit(60,190,libraryPickerStack_.empty()?"":libraryPickerStack_.back(),23,White,1150);
+    c.TextFit(60,223,"LB/RB trocar dispositivo  |  A abrir subpasta  |  X cadastrar pasta atual",17,Muted,1150);
+    c.GroupGlass(45,266,1189,306);
+    const int first=(libraryPickerRow_/6)*6;
+    for(int i=first;i<first+6&&static_cast<size_t>(i)<libraryPickerFolders_.size();++i){
+        const int y=274+(i-first)*48;c.SeriesTile(55,y,1169,44,i==libraryPickerRow_);
+        InfinityIcons::Draw(c,InfinityIcons::Folder,68,y+8,27,i==libraryPickerRow_?Lime:White);
+        c.TextFit(110,y+9,libraryPickerFolders_[i],22,White,1080);
+    }
+    if(libraryPickerFolders_.empty())c.TextFit(65,310,"Nenhuma subpasta acessivel. Verifique o dispositivo ou cadastre a pasta atual.",21,Muted,1130);
+    c.TextFit(48,590,packagePathsPage_?"Escolha a pasta que contem os diretorios TitleID/Tipo (ex.: Content/0000000000000000).":"Escolha a pasta que contem seus jogos extraidos com default.xex.",18,Muted,1170);
+    InfinityButtons::Strip(c,48,619,"LB/RB Dispositivo | A Abrir | X Adicionar | Y Atualizar | B Voltar",17,Lime,1170);
+}
 void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
-    c.Text(45,93,"Biblioteca | Pastas de varredura",36,White,1180);
+    if(libraryPicker_){DrawLibraryPicker(c);return;}
+    c.TextFit(45,87,"Biblioteca | Pastas de jogos",36,White,1180);
     const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
     const auto& active=packagePathsPage_?packageRoots_:roots_;
-    c.Text(48,150,std::string(packagePathsPage_?"Pacotes GOD/XBLA":"Jogos XEX")+" | "+number(active.size())+" ativas / "+number(configured.size())+" cadastradas",21,Muted,1160);
-    const int first=(libraryPathRow_/7)*7;
-    for(int i=first;i<first+7&&size_t(i)<configured.size();++i){
-        const auto& path=configured[i];const int y=190+(i-first)*54;
+    c.SeriesTile(45,142,222,47,!packagePathsPage_);
+    c.TextFit(60,153,"Jogos XEX",23,White,190);
+    c.SeriesTile(277,142,255,47,packagePathsPage_);
+    c.TextFit(292,153,"Pacotes GOD/XBLA",23,White,225);
+    c.TextFit(548,155,number(active.size())+" ativas / "+number(configured.size())+" cadastradas"+(libraryRescanNeeded_?"  |  Varrer pendente":""),20,libraryRescanNeeded_?Lime:Muted,685);
+    c.GroupGlass(45,200,1189,370);
+    const int first=(libraryPathRow_/6)*6;
+    for(int i=first;i<first+6&&static_cast<size_t>(i)<configured.size();++i){
+        const auto& path=configured[i];const int y=209+(i-first)*58;
         const bool enabled=std::any_of(active.begin(),active.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
-        panel(c,48,y,1180,49,Panel,i==libraryPathRow_);
-        c.TextFit(62,y+8,path,21,White,735);c.Text(810,y+9,packagePathsPage_?"Title/Tipo":"Nivel "+number(GameScanner::DepthFor(scanDepths_,path)),19,White,170);c.Text(1010,y+9,enabled?"Ativa":"Desativada",20,enabled?Lime:Muted,205);
+        const bool available=static_cast<size_t>(i)<libraryRootAvailable_.size()&&libraryRootAvailable_[i];
+        const bool custom=std::any_of(libraryUiRoots_.begin(),libraryUiRoots_.end(),[&](const std::string& r){return GameScanner::SameRoot(path,r);});
+        c.SeriesTile(55,y,1169,53,i==libraryPathRow_);
+        InfinityIcons::Draw(c,InfinityIcons::Folder,67,y+11,28,i==libraryPathRow_?Lime:White);
+        c.TextFit(109,y+3,path,21,White,690);
+        c.TextFit(109,y+29,std::string(custom?"Personalizada":"Padrao / externa")+"  |  "+(available?"Acessivel":"Indisponivel"),16,Muted,680);
+        c.TextFit(810,y+14,packagePathsPage_?"Title/Tipo":"Nivel "+number(GameScanner::DepthFor(scanDepths_,path)),20,White,180);
+        c.TextFit(1008,y+14,enabled?"Ativa":"Desativada",21,enabled?Lime:Muted,205);
     }
-    c.Text(48,580,packagePathsPage_?"Raiz deve conter pastas TitleID/Tipo. Pacotes importados mantem busca propria.":"A abre o gerenciador para adicionar/remover caminhos XEX ou pacotes.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,packagePathsPage_?"LB/RB XEX | A Pastas | X Alternar | Y Varrer | B Voltar":"LB/RB Pacotes | A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer",18,Lime,1170);
+    if(configured.empty())c.TextFit(66,270,"Nenhuma pasta cadastrada. Pressione A para adicionar.",23,Muted,1140);
+    c.TextFit(48,584,libraryRemoveConfirm_?"Remover cadastro? Nenhum arquivo de jogo sera apagado.":packagePathsPage_?"Pacotes importados mantem busca propria.":"Nivel 0: pasta atual; nivel 1: subpastas diretas; nivel 16: busca profunda.",17,Muted,1180);
+    InfinityButtons::Strip(c,48,613,libraryRemoveConfirm_?"A Confirmar | B Cancelar":packagePathsPage_?"LB/RB Abas | A Adicionar | X Alternar | START Remover | Y Varrer":"LB/RB Abas | A Adicionar | X Alternar | Esq/Dir Nivel | START Remover | Y Varrer",16,Lime,1170);
 }
 void ConsoleHome::DrawLuaRepository(HomeCanvas& c)const{
     c.Text(45,93,"Scripts Lua | Repositorio",36,White,1180);
@@ -4974,7 +5113,7 @@ uint64_t ConsoleHome::VisualScene()const{
     flag(quickGuideOpen_);flag(contextOpen_);flag(approvedGroup_>=0);
     flag(friendGuideOpen_);flag(communicationGuideOpen_);flag(privilegeGuideOpen_);flag(avatarGuideOpen_);
     flag(storeActive_);flag(storeDetails_);flag(storeProviders_);flag(storeManage_);
-    flag(appearanceEditor_);flag(layoutPreview_);flag(libraryPathsPage_);
+    flag(appearanceEditor_);flag(layoutPreview_);flag(libraryPathsPage_);flag(libraryPicker_);
     flag(luaPage_);flag(luaRepoPage_);flag(contentActive_);flag(contentInstallActive_);
     flag(artEditing_);flag(searchActive_);flag(collectionPicker_);flag(fileAction_);
     flag(networkPeer_);flag(peerEditing_);flag(peerOptions_);flag(smbPage_);flag(smbEditing_);
@@ -5039,7 +5178,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
         Hint(c,B,955,674,22,"Voltar",160,White);
         return;
     }
-    if(libraryPathsPage_){InfinityButtons::Strip(c,45,674,"B Voltar",19,White,1190);return;}
+    if(libraryPathsPage_){InfinityButtons::Strip(c,45,674,libraryPicker_?"B Pasta anterior / voltar":"B Voltar",19,White,1190);return;}
     if(page_==Details&&section_==System){InfinityButtons::Strip(c,45,674,"B Voltar | L3 Guia",19,White,1190);return;}
     if(page_==Listing&&section_==System){InfinityButtons::Strip(c,45,674,"A Abrir | LB/RB Categoria | Y Atualizar | B Voltar | L3 Guia",19,White,1190);return;}
     if(page_==Home&&homeDiscKnown_&&((approved&&focus_==ApprovedHome::Hero)||(layout_>DashboardLayout::TopIcons&&focus_==DashboardLayout::DiscSlot))){InfinityButtons::Strip(c,45,674,"A Executar DVD | X Converter GOD | START Extrair | Y Atualizar | L3 Guia",18,White,1190);return;}
@@ -5601,7 +5740,7 @@ void ConsoleHome::PressAppearance(Key key){
             default:
                 if(key!=Accept)return;
                 if(SettingsDirty()){notice_="Salve com Y antes de abrir outro painel.";return;}
-                if(id==StPaths){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;return;}
+                if(id==StPaths){OpenLibraryPaths();return;}
                 appearanceEditor_=false;settingsChild_=true;
                 if(id==StPower){powerPage_=true;powerConfirm_=ConsolePower::Confirmation();return;}
                 page_=Listing;systemTab_=id==StStorage?0:id==StNetwork?1:4;

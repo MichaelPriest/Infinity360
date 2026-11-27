@@ -378,6 +378,17 @@ private:
     bool libraryPathsPage_=false,luaPage_=false,packagePathsPage_=false;
     std::vector<std::string> packageRoots_,configuredPackageRoots_,disabledPackageRoots_;
     int libraryPathRow_=0,luaRow_=0;
+    bool libraryPicker_=false,libraryRemoveConfirm_=false,libraryRescanNeeded_=false;
+    int libraryDevice_=0,libraryPickerRow_=0;
+    std::vector<std::string> libraryPickerStack_,libraryPickerFolders_;
+    std::vector<bool> libraryRootAvailable_;
+    std::vector<std::string> libraryUiRoots_;
+    void RefreshLibraryPathStatus();
+    void OpenLibraryPaths();
+    void RefreshLibraryPicker();
+    void PressLibraryPaths(Key key);
+    void SaveLibraryPath(const std::string& path,bool remove);
+    void DrawLibraryPicker(HomeCanvas& c)const;
     void DrawLibraryPaths(HomeCanvas& c)const;
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();

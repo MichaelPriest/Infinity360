@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.78 — Gerenciador de pastas de jogos
+
+- Seletor dedicado e somente leitura, sem sair da configuração; LB/RB troca dispositivo, A abre subpasta, X adiciona a atual.
+- Abas XEX/GOD/XBLA, disponibilidade de acesso, origem, estado ativo, profundidade 0–16 e indicador de varredura pendente. START remove cadastro personalizado com confirmação, nunca remove jogo.
+- Y atualiza catálogo; caminhos antigos mantidos e testes de fluxo adicionados. Sem build XEX/release.
+
 ## V0.3.77 — Arte HD em toda a dashboard
 
 - Capas frente/verso 480×720 e fundos/papel de parede 1280×720, compatíveis com arquivos RGBA legados. Importação PNG/JPEG passa a gerar HD, com interpolação de alpha premultiplicado; cache de arte limitado a 16 MiB.

@@ -214,7 +214,7 @@ std::vector<Game> GameScanner::Scan(const std::vector<Depth>& depths) const {
             for(size_t i=0;i<entries.size() && games.size()<MaxGames;++i) {
                 const FolderEntry& entry=entries[i];
                 const char separator=current.path.find('\\')!=std::string::npos?'\\':'/';
-                const std::string path=current.path+separator+entry.name;
+                const std::string path=current.path+((!current.path.empty()&&(current.path.back()=='/'||current.path.back()=='\\'))?"":std::string(1,separator))+entry.name;
                 if(path.size()>240)continue;
 #ifndef _XBOX
                 std::error_code ec;
