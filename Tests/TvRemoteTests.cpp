@@ -1,5 +1,6 @@
 #include "TvRemoteProtocol.h"
 #include "TvRemoteCatalog.h"
+#include "TvRemoteDiscovery.h"
 int main(){
     using namespace TvRemote;
     const std::string host="192.168.1.4:32161",key="0123456789abcdef0123456789abcdef";
@@ -38,5 +39,13 @@ int main(){
     if(Parse(request("cover/1","wrong",host),host,key).key!=Key::None)return 30;
     if(GameArtId("game:/a")==GameArtId("game:/b")||GameArtId("game:/a")!=GameArtId("game:/a"))return 31;
     if(CoverThumbnail("")!="{\"available\":false}")return 32;
+    if(Parse(request("downloads",key,host),host,key).key!=Key::Downloads)return 33;
+    if(Parse(request("downloads","wrong",host),host,key).key!=Key::None)return 34;
+    const std::string nonce="fedcba9876543210fedcba9876543210",ip="192.168.1.4";
+    const auto msg=DiscoveryMessage(nonce,ip);
+    if(DiscoveryReply("INFINITY360-DISCOVER/1 "+nonce,ip,key)!=msg+" "+DiscoveryMac(key,msg))return 35;
+    if(!DiscoveryReply("INFINITY360-DISCOVER/1 invalid",ip,key).empty())return 36;
+    if(DiscoveryMac(key,msg)==DiscoveryMac(key,msg+"x"))return 37;
+    if(DiscoveryMac("wrong",msg)!="")return 38;
     return 0;
 }

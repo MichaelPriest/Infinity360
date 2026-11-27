@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.7.0 Alpha
+# INFINITY 360 Remote — Android 0.8.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -41,3 +41,7 @@ Abas Controle, Catálogo, Sistema e Conexão mantêm os campos na sessão. Em um
 ## Capas e pareamento assistido
 
 Nos cards de jogos, Carregar capa solicita miniatura local de 20x30 pixels, sem baixar arte externa. Em Conexão, Identificar IP do celular lista endereços privados locais (selecione a interface da rede do Xbox). Exportar arquivo de pareamento salva `cloud360-remote.txt` pelo seletor Android; transfira o arquivo para a pasta de dados do console e apague a cópia desnecessária. A chave permanece em texto simples no arquivo exportado. Não há descoberta automática do Xbox ou QR nesta versão.
+
+## Descoberta e downloads
+
+Após configurar o arquivo de pareamento no console, selecione o IP local do celular e a mesma chave, e toque em Encontrar Xbox pareado na rede. O console com servidor remoto ativo responde ao desafio HMAC via UDP 32162; escolha o endereço encontrado. A busca não configura o pareamento inicial. Redes com isolamento de clientes/broadcast podem exigir IP manual. Em Sistema, Consultar fila de downloads exibe a transferência local e até oito itens da fila nativa carregada, com registros de progresso, não atualização ao vivo. Nenhuma instalação, exclusão ou alteração de fila é realizada por essa consulta.

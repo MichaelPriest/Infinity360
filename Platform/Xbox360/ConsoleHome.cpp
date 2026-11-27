@@ -1359,6 +1359,26 @@ bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
     }return true;
 }
 std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
+    if(request.key==TvRemote::Key::Downloads){
+        // Consult only the native queue already loaded by the dashboard.
+        // No refresh, network I/O, mutations or entire-catalog state-file scan.
+        const auto queue=store_.NativeQueue();
+        const char* states[]={"unknown","receiving","verified","failed","native_verified","native_paused"};
+        std::string out="{\"schema\":1,\"queue_valid\":"+std::string(store_.NativeQueueValid()?"true":"false")+
+            ",\"queue_total\":"+std::to_string(queue.size())+
+            ",\"local_done\":"+std::to_string(transfer_.Done())+",\"local_total\":"+std::to_string(transfer_.Total())+
+            ",\"local_paused\":"+(copyPaused_?"true":"false")+",\"local_active\":"+(TransferRunning()?"true":"false")+",\"items\":[";
+        const auto& items=store_.Items();size_t count=0;
+        for(size_t index:queue){
+            if(index>=items.size())continue;
+            if(count>=8)break;
+            const auto& item=items[index];const auto progress=store_.Progress(item);
+            if(count++)out+=",";
+            out+="{\"name\":"+TvRemote::Quote(item.name)+",\"state\":\""+states[static_cast<unsigned>(progress.state)]+
+                "\",\"received\":"+std::to_string(progress.received)+",\"total\":"+std::to_string(item.bytes)+"}";
+        }
+        return out+"]}";
+    }
     if(request.key==TvRemote::Key::Cover){
         const Game* found=nullptr;
         for(const auto& game:games_)if(!game.executable.empty()&&TvRemote::GameArtId(game.executable)==request.query){

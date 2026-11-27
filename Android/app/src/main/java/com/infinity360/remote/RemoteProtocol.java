@@ -35,6 +35,9 @@ final class RemoteProtocol {
         if(!id.matches("[1-9][0-9]{0,19}"))throw new IllegalArgumentException("ID inválido");
         return exchange(ip,key,(tv?"logo/":"cover/")+id,true);
     }
+    static String downloads(String ip,String key)throws Exception{
+        return exchange(ip,key,"downloads",true);
+    }
     static String snapshot(String ip,String key)throws Exception{
         return exchange(ip,key,"snapshot",true);
     }
@@ -44,7 +47,7 @@ final class RemoteProtocol {
     private static String exchange(String ip,String key,String command,boolean body)throws Exception{
         if(!privateIp(ip))throw new IllegalArgumentException("IPv4 privado obrigatório");
         boolean probe=command==null;
-        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels|guide|favorite|refresh|pageup|pagedown|status|snapshot|(games|tv)/[0-9]{1,6}/[a-f0-9]{0,128}|(tune|logo|cover)/[1-9][0-9]{0,19}")))throw new IllegalArgumentException("Comando ou chave inválida");
+        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels|guide|favorite|refresh|pageup|pagedown|status|snapshot|downloads|(games|tv)/[0-9]{1,6}/[a-f0-9]{0,128}|(tune|logo|cover)/[1-9][0-9]{0,19}")))throw new IllegalArgumentException("Comando ou chave inválida");
         HttpURLConnection c=(HttpURLConnection)new URL("http://"+ip+":"+PORT+(probe?"/":"/cmd/"+command)).openConnection(Proxy.NO_PROXY);
         try{
             c.setInstanceFollowRedirects(false);c.setConnectTimeout(2500);c.setReadTimeout(3500);c.setUseCaches(false);c.setRequestProperty("Connection","close");

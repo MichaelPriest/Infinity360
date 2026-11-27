@@ -1,5 +1,6 @@
 #pragma once
 #include "TvRemoteProtocol.h"
+#include "TvRemoteDiscovery.h"
 #include "LanPeerProbe.h"
 #include "SavedFile.h"
 #include "NetworkInfo.h"
@@ -8,7 +9,7 @@
 namespace TvRemote {
 class Server {
 public:
-    static constexpr unsigned Port=32161;
+    static constexpr unsigned Port=32161,DiscoveryPort=32162;
     ~Server(){Stop();}
     Server()=default;Server(const Server&)=delete;Server& operator=(const Server&)=delete;
     bool Start(const std::string& root){
@@ -27,7 +28,12 @@ public:
         if(inet_pton(AF_INET,net.ipv4.c_str(),&a.sin_addr)!=1||inet_pton(AF_INET,peer.c_str(),&peer_)!=1)return false;
         listener_=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
         if(listener_<0||!Nonblock(listener_)||bind(listener_,reinterpret_cast<sockaddr*>(&a),sizeof a)!=0||listen(listener_,1)!=0){Stop();return false;}
-        host_=net.ipv4+":"+std::to_string(Port);secret_=secret;return true;
+        host_=net.ipv4+":"+std::to_string(Port);localIp_=net.ipv4;secret_=secret;
+        // Discovery is optional: failure must not disable the authenticated HTTP server.
+        sockaddr_in d{};d.sin_family=AF_INET;d.sin_port=htons(DiscoveryPort);d.sin_addr.s_addr=htonl(INADDR_ANY);
+        discovery_=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+        if(discovery_>=0&&(!Nonblock(discovery_)||bind(discovery_,reinterpret_cast<sockaddr*>(&d),sizeof d)!=0)){close(discovery_);discovery_=-1;}
+        return true;
 #else
         return false;
 #endif
@@ -37,6 +43,7 @@ public:
 #if defined(__XSDK__) || defined(__linux__)
         if(listener_<0)return Key::None;
         const auto now=Now();
+        PollDiscovery(now);
         if(client_>=0&&now>deadline_)CloseClient();
         if(client_<0){
             sockaddr_in from{};socklen_t len=sizeof from;
@@ -54,7 +61,7 @@ public:
             if(request_.size()>2048){CloseClient();return Key::None;}
             if(request_.find("\r\n\r\n")==std::string::npos)return Key::None;
             const auto parsed=Parse(request_,host_,secret_);
-            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo||parsed.key==Key::Cover;
+            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo||parsed.key==Key::Cover||parsed.key==Key::Downloads;
             const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(listing?bool(catalog):parsed.key==Key::Snapshot?bool(snapshot):parsed.key==Key::Tune?bool(tune)&&tune(parsed):!permit||permit(parsed.key)));
             if(allowed){if(parsed.key!=Key::Status&&parsed.key!=Key::Snapshot&&!listing)result=parsed.key;lastCommand_=now;}
             const bool json=allowed&&(parsed.key==Key::Snapshot||listing);
@@ -77,16 +84,28 @@ public:
     }
     void Stop(){
 #if defined(__XSDK__) || defined(__linux__)
-        CloseClient();if(listener_>=0)close(listener_);
+        CloseClient();if(listener_>=0)close(listener_);if(discovery_>=0)close(discovery_);
 #endif
-        listener_=-1;host_.clear();secret_.clear();lastCommand_=0;
+        listener_=discovery_=-1;host_.clear();localIp_.clear();secret_.clear();lastCommand_=lastDiscovery_=0;
     }
 private:
-    int listener_=-1,client_=-1;std::string host_,secret_,request_,response_;size_t sent_=0;
-    uint64_t deadline_=0,lastCommand_=0;
+    int listener_=-1,client_=-1,discovery_=-1;std::string host_,localIp_,secret_,request_,response_;size_t sent_=0;
+    uint64_t deadline_=0,lastCommand_=0,lastDiscovery_=0;
     static uint64_t Now(){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());}
 #if defined(__XSDK__) || defined(__linux__)
     in_addr peer_{};
+    void PollDiscovery(uint64_t now){
+        if(discovery_<0)return;
+        // At most one datagram per frame; replies only to the pre-authorized IP.
+        unsigned char bytes[128];sockaddr_in from{};socklen_t length=sizeof from;
+        const auto n=recvfrom(discovery_,bytes,sizeof bytes,0,reinterpret_cast<sockaddr*>(&from),&length);
+        if(n<=0||length<sizeof from||from.sin_family!=AF_INET||from.sin_addr.s_addr!=peer_.s_addr||
+           (lastDiscovery_&&now-lastDiscovery_<500))return;
+        const auto reply=DiscoveryReply(std::string(reinterpret_cast<const char*>(bytes),static_cast<size_t>(n)),localIp_,secret_);
+        if(reply.empty())return;
+        lastDiscovery_=now;
+        sendto(discovery_,reply.data(),reply.size(),0,reinterpret_cast<sockaddr*>(&from),length);
+    }
     static bool Nonblock(int fd){const int flags=fcntl(fd,F_GETFL,0);return flags>=0&&fcntl(fd,F_SETFL,flags|O_NONBLOCK)==0;}
     void CloseClient(){if(client_>=0)close(client_);client_=-1;request_.clear();response_.clear();sent_=0;}
 #endif

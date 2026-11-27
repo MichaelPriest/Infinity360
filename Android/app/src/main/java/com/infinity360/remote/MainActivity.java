@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
-    private TextView status,monitor,catalogResult;
+    private TextView status,monitor,catalogResult,downloads;
     private LinearLayout catalogCards;
     private EditText catalogQuery;
     private boolean tvCatalog=false;
@@ -72,6 +72,9 @@ public final class MainActivity extends Activity {
         label("Monitoramento do console");
         monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
         content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));
+        label("Downloads e transferências");
+        downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));downloads.setBackground(shape(PANEL));content.addView(downloads);
+        content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,dp(54)));
         content=screen(root,1);
         label("Biblioteca e catálogo IPTV");
         catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
@@ -96,6 +99,7 @@ public final class MainActivity extends Activity {
         label("Configuração manual de pareamento");
         phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         content.addView(button("Identificar IP do celular",PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Encontrar Xbox pareado na rede",ACCENT,()->discoverConsole()),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Exportar arquivo de pareamento",PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
@@ -196,6 +200,52 @@ public final class MainActivity extends Activity {
             }catch(Exception e){result="Falha ao consultar imagem.";}
             final android.graphics.Bitmap image=bitmap;final String message=result;
             runOnUiThread(()->{if(isDestroyed())return;busy=false;if(image!=null&&target.isAttachedToWindow()){target.setImageBitmap(image);target.setVisibility(View.VISIBLE);}status.setText(message);});
+        });
+    }
+    private void refreshDownloads(){
+        if(busy)return;
+        String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira o IP e a chave.");return;}
+        busy=true;status.setText("Consultando fila...");
+        worker.execute(()->{
+            String message;boolean success=false;
+            try{
+                org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.downloads(ip,secret));
+                if(obj.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
+                StringBuilder out=new StringBuilder("Transferência local: "+(obj.getBoolean("local_paused")?"Pausada":obj.getBoolean("local_active")?"Ativa":"Sem atividade"));
+                out.append("\n").append(size(obj,"local_done")).append(" / ").append(size(obj,"local_total"));
+                out.append("\n\nFila nativa da loja (registro local): ").append(obj.getBoolean("queue_valid")?obj.getLong("queue_total"):"Indisponível");
+                org.json.JSONArray rows=obj.getJSONArray("items");
+                if(rows.length()>8)throw new java.io.IOException("Fila inválida");
+                for(int i=0;i<rows.length();i++){
+                    org.json.JSONObject row=rows.getJSONObject(i);String state=row.getString("state");
+                    String label=state.equals("native_paused")?"Parcial salvo":state.equals("native_verified")||state.equals("verified")?"Verificado":state.equals("receiving")?"Último progresso":state.equals("failed")?"Falhou":"Sem registro";
+                    out.append("\n\n").append(row.getString("name")).append("\n").append(label).append(" • ").append(size(row,"received")).append(" / ").append(size(row,"total"));
+                }
+                out.append("\n\nAté 8 itens da fila carregada. Registros não equivalem a progresso em tempo real.");
+                message=out.toString();success=true;
+            }catch(Exception e){message="Fila indisponível. Confira a conexão e a versão do console.";}
+            final String text=message;final boolean ok=success;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;downloads.setText(text);status.setText(ok?"Consulta recebida.":"Falha na consulta.");});
+        });
+    }
+    private void discoverConsole(){
+        if(busy)return;
+        String local=phoneIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(local)||!RemoteProtocol.validKey(secret)){status.setText("Identifique o IP do celular e informe a chave já configurada no Xbox.");return;}
+        busy=true;status.setText("Buscando console pareado...");
+        worker.execute(()->{
+            java.util.ArrayList<String> found=new java.util.ArrayList<>();boolean ok=false;
+            try{found=ConsoleDiscovery.find(local,secret);ok=true;}catch(Exception e){}
+            final String[] choices=found.toArray(new String[0]);final boolean success=ok;
+            runOnUiThread(()->{
+                if(isDestroyed())return;busy=false;
+                if(!phoneIp.getText().toString().trim().equals(local)||!key.getText().toString().trim().equals(secret)){status.setText("Pareamento alterado. Busque novamente.");return;}
+                if(choices.length==0){status.setText(success?"Nenhum Xbox pareado respondeu. Confira a rede e habilitação do controle remoto.":"Busca indisponível nesta interface.");return;}
+                new AlertDialog.Builder(this).setTitle("Xbox autenticado encontrado").setItems(choices,(d,w)->{
+                    consoleIp.setText(choices[w]);getPreferences(MODE_PRIVATE).edit().putString("console_ip",choices[w]).apply();status.setText("Endereço selecionado. Verifique a conexão.");
+                }).setNegativeButton("Cancelar",null).show();
+            });
         });
     }
     private void refreshMonitor(){

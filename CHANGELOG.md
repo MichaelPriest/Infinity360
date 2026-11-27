@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.65 — Descoberta autenticada e consulta de downloads
+
+- Android Remote 0.8.0 Alpha: descoberta UDP 32162 por broadcast da interface IPv4 selecionada, desafio aleatorio e resposta HMAC-SHA256 com chave ja pareada; somente IP do celular autorizado recebe resposta. Sem envio da chave no discovery; HTTP de controle continua sem criptografia. Consulta autenticada da fila nativa carregada e dos primeiros 8 registros, incluindo bytes recebidos/total e transferencia local. Consulta somente leitura; sem prometer progresso em tempo real. Testes de protocolo ampliados. APK e XSDK pendentes; sem XEX/release.
+
 ## V0.3.64 — Capas locais e pareamento assistido
 
 - Android Remote 0.7.0 Alpha: capas locais via identificador opaco da biblioteca, miniaturas 20x30 RGBA sob demanda, validação de tamanho, rejeição de ID ambiguo e ausencia de caminhos fornecidos pelo cliente. Identificação de IPv4 privado do celular com seleção em caso de múltiplas interfaces; exportação de cloud360-remote.txt pelo seletor Android com aviso sobre chave em texto simples. QR e descoberta do console ainda pendentes. Testes de protocolo ampliados, APK/XSDK pendentes. Sem XEX/release.
