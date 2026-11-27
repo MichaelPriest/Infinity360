@@ -41,5 +41,27 @@ int main(){
        !adaptive.Start(root+"master.m3u8",DefaultBitrate)||adaptive.SelectedBitrate()!=400000||high!=1||low!=1)return 6;
     size_t total=0;
     for(;;){int n=adaptive.Read(b,sizeof b);if(n<0)return 7;if(!n)break;for(int i=0;i<n;++i)if(b[i]!='l')return 8;total+=n;}
-    return total==188*400&&low==1&&adaptive.StartupThroughput()==601600?0:9;
+    if(total!=188*400||low!=1||adaptive.StartupThroughput()!=601600)return 9;
+    // Live quality reduction: a fast first segment, then three slow segments.
+    // No cross-rendition bytes may be emitted before a fresh decoder is opened.
+    uint64_t time=0;unsigned highReads=0,lowReads=0;
+    const std::string live="#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:1\n#EXTINF:2,\na.ts\n#EXTINF:2,\nb.ts\n#EXTINF:2,\nc.ts\n";
+    unsigned manifest=0;
+    VodReader<Reader> running([&](const std::string& url,bool playlist)->std::unique_ptr<Reader>{
+        if(url==root+"master.m3u8")return std::make_unique<Reader>(Reader{adaptiveMaster});
+        if(url==root+"high.m3u8"){
+            ++manifest;
+            return std::make_unique<Reader>(Reader{manifest==1?live:"#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:2\n#EXTINF:2,\nb.ts\n#EXTINF:2,\nc.ts\n#EXTINF:2,\nd.ts\n"});
+        }
+        if(url==root+"low.m3u8"){++lowReads;return {};}
+        if(!playlist){time+=(++highReads==1?100:1000);return std::make_unique<Reader>(Reader{std::string(188*400,'h')});}
+        return {};
+    },[](unsigned){return true;});
+    if(!running.EnableBufferedSegments()||!running.EnableStartupAdaptation([&](){return time;})||
+       !running.Start(root+"master.m3u8",DefaultBitrate,true)||running.SelectedBitrate()!=1800000)return 10;
+    running.ArmRuntimeAdaptation();
+    total=0;
+    for(;;){int n=running.Read(b,sizeof b);if(n<0)break;if(!n)return 11;for(int i=0;i<n;++i)if(b[i]!='h')return 12;total+=n;if(total>188*400*4)return 13;}
+    if(total!=188*400*4||running.LastFailure()!=Failure::LowerQuality||running.SuggestedBitrate()!=400000||lowReads||highReads!=4)return 14;
+    return 0;
 }

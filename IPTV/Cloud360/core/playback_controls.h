@@ -7,7 +7,10 @@
 class CloudPlaybackControls {
 public:
     enum Key : unsigned { Pause=1, Mute=2, Quieter=4, Louder=8, Backward=16, Forward=32 };
+    struct AudioPreference {int volume=100;bool muted=false;};
     explicit CloudPlaybackControls(bool local,unsigned held=0):previous_(held),local_(local){}
+    void RestoreAudio(const AudioPreference& p){volume_=std::max(0,std::min(100,p.volume));muted_=p.muted;}
+    AudioPreference Audio()const{return AudioPreference{volume_,muted_};}
     bool Update(unsigned keys,int64_t wall){
         const unsigned edges=keys&~previous_;previous_=keys;
         if(local_&&!paused_){if(edges&Backward)seek_=-1;else if(edges&Forward)seek_=1;}

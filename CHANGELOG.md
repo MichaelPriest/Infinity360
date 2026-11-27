@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.37 — Redução adaptativa de qualidade HLS
+
+- Em live HLS com master playlist, três segmentos completos e consecutivos abaixo de 120% do bitrate declarado solicitam variante inferior; prioriza a maior variante abaixo de 75% da taxa observada, ou a menor elegível. Não sobe qualidade automaticamente. A troca ocorre por nova sessão completa do decoder, dentro do orçamento de duas reconexões, sem alinhar variantes por sequência nem misturar seus bytes. VOD, segmentos grandes em streaming e playlists sem variantes não ativam a adaptação.
+- Volume e mudo preservados na reconexão; limite de bitrate do usuário mantido. Testes de sequência lenta e preferências de áudio. Ainda não é ABR contínuo sem interrupção, nem bufferização assíncrona. Sem XEX/release.
+
 ## V0.3.36 — Recuperação de HLS ao vivo
 
 - Classifica falhas de transporte, janela expirada, playlist parada, identidade inválida, segmento inválido e cancelamento. Live HLS que já reproduziu áudio/vídeo pode reiniciar a sessão completa até duas vezes em falhas recuperáveis, com aviso e cancelamento; não concatena bytes de sessões diferentes. VOD e falhas de identidade não recebem reinício automático. Volume/posição reinicializam com a nova sessão.

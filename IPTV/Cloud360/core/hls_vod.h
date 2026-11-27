@@ -166,7 +166,7 @@ inline std::string Choose(const List& list,unsigned cap){
 }
 // Sequential VOD or opt-in live TS/fMP4. A sliding window must preserve sequence
 // identity. Never replay a segment after any bytes were delivered.
-enum class Failure { None, Transport, WindowExpired, StalePlaylist, InvalidPlaylist, InvalidSegment, Cancelled };
+enum class Failure { None, Transport, WindowExpired, StalePlaylist, InvalidPlaylist, InvalidSegment, Cancelled, LowerQuality };
 inline const char* FailureLabel(Failure f){
     switch(f){
         case Failure::Transport:return "Falha de transporte HLS.";
@@ -175,6 +175,7 @@ inline const char* FailureLabel(Failure f){
         case Failure::InvalidPlaylist:return "Playlist HLS invalida ou identidade alterada.";
         case Failure::InvalidSegment:return "Segmento HLS invalido ou incompleto.";
         case Failure::Cancelled:return "Reproducao cancelada.";
+        case Failure::LowerQuality:return "Rede lenta; reduzindo qualidade HLS.";
         default:return "Fonte HLS indisponivel.";
     }
 }
@@ -186,6 +187,10 @@ public:
     using Clock=std::function<uint64_t()>; // monotonic milliseconds
     bool EnableStartupAdaptation(Clock clock){if(started_||!clock)return false;clock_=std::move(clock);return true;}
     unsigned StartupThroughput()const{return throughput_;}
+    // Arm only after playback preparation; VOD and standalone playlists remain unchanged.
+    void ArmRuntimeAdaptation(){runtime_=bool(clock_)&&Live()&&selectedBitrate_>0&&buffered_;}
+    unsigned SuggestedBitrate()const{return suggested_;}
+    unsigned RecentThroughput()const{return recentThroughput_;}
     explicit VodReader(Open open,Wait wait={}):open_(std::move(open)),wait_(std::move(wait)){}
     bool Start(const std::string& url,unsigned cap,bool allowLive=false){
         if(started_)return false;started_=true;allowLive_=allowLive;
@@ -194,6 +199,7 @@ public:
         List list;if(!FetchInitial(playlist_,list))return false;
         if(!list.variants.empty()){
             auto candidates=list.variants;
+            variants_=candidates;
             std::stable_sort(candidates.begin(),candidates.end(),[](const Variant& a,const Variant& b){return a.bandwidth>b.bandwidth;});
             bool selected=false;unsigned attempts=0;
             for(const auto& v:candidates){
@@ -241,6 +247,8 @@ public:
     unsigned RecoveredSegments()const{return recovered_;}
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
+        // Complete the buffered segment before asking the owner to reopen the decoder.
+        if(suggested_&&segment_.empty()&&!reader_&&Live())return Fail(Failure::LowerQuality);
         if(Fragmented()&&!initDone_){
             if(segment_.empty()&&!BufferSegment(list_.init,true))return Fail(segmentFailure_);
             const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
@@ -266,10 +274,15 @@ public:
             }
             if(next_<list_.sequence)return Fail(Failure::WindowExpired);
             if(buffered_&&!streamingSegment_){
-                if(segment_.empty()&&!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)])){
-                    if(!streamingSegment_)return Fail(segmentFailure_);
-                    // No bytes from this segment have reached the decoder. Reopen in streaming mode.
-                    continue;
+                if(segment_.empty()){
+                    const uint64_t before=runtime_?clock_():0;
+                    if(!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)])){
+                        if(!streamingSegment_)return Fail(segmentFailure_);
+                        slowSegments_=0;
+                        // No bytes from this segment have reached the decoder. Reopen in streaming mode.
+                        continue;
+                    }
+                    if(runtime_&&Live())ObserveSegment(before,clock_(),segment_.size());
                 }
                 const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
                 std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
@@ -296,6 +309,21 @@ public:
         }
     }
 private:
+    void ObserveSegment(uint64_t before,uint64_t after,size_t bytes){
+        if(after<=before||after-before>120000||bytes<16384){slowSegments_=0;return;}
+        recentThroughput_=static_cast<unsigned>(std::min<uint64_t>(uint64_t(bytes)*8000/(after-before),100000000));
+        // Require three consecutive samples below 120% of declared bandwidth.
+        if(uint64_t(recentThroughput_)*100>=uint64_t(selectedBitrate_)*120){slowSegments_=0;return;}
+        if(++slowSegments_<3)return;
+        const unsigned safe=static_cast<unsigned>(uint64_t(recentThroughput_)*75/100);
+        unsigned best=0,lowest=0;
+        for(const auto& v:variants_)if(v.compatible&&v.bandwidth>=MinBitrate&&v.bandwidth<selectedBitrate_){
+            if(!lowest||v.bandwidth<lowest)lowest=v.bandwidth;
+            if(v.bandwidth<=safe&&v.bandwidth>best)best=v.bandwidth;
+        }
+        // Never increase quality or exceed the original user cap.
+        suggested_=best?best:lowest;
+    }
     bool BufferSegment(const std::string& url,bool init=false){
         unsigned char block[8192];segmentFailure_=Failure::Transport;
         for(unsigned attempt=0;attempt<3;++attempt){
@@ -371,6 +399,7 @@ private:
     int Fail(Failure reason){failed_=true;failure_=reason;reader_.reset();return -1;}
     Failure failure_=Failure::None,refreshFailure_=Failure::StalePlaylist,segmentFailure_=Failure::Transport,fetchFailure_=Failure::Transport;
     Open open_;Wait wait_;Clock clock_;unsigned throughput_=0;std::unique_ptr<Reader> reader_;
+    std::vector<Variant> variants_;bool runtime_=false;unsigned suggested_=0,recentThroughput_=0,slowSegments_=0;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;

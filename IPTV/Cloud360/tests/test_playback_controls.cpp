@@ -24,5 +24,8 @@ int main(){
     combined.Update(C::Pause,200000);combined.Update(0,300000);
     combined.Update(C::Pause,1200000);
     if(clock.Elapsed(combined.Clock(1200000))!=100000)return 11;
+    C restarted(false);restarted.RestoreAudio(local.Audio());
+    if(restarted.Volume()!=10||restarted.Muted()||restarted.Clock(200)!=200)return 12;
+    restarted.RestoreAudio(C::AudioPreference{150,true});if(restarted.Volume()!=100||restarted.Gain()!=0)return 13;
     return 0;
 }

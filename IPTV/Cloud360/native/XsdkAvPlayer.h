@@ -54,7 +54,7 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive){
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference){
     retryLive=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
@@ -88,6 +88,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
                 if(!value.empty()&&value.back()=='\r')value.pop_back();
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
+            if(adaptiveCap)cap=std::min(cap,adaptiveCap);
             hls.EnableBufferedSegments(true);
             hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
             if(!hls.Start(path,cap,true))return hlsError.empty()?"Playlist HLS recusada ou indisponivel.":hlsError;
@@ -131,6 +132,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     INPUT_STATE initial{};
     CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
+    controls.RestoreAudio(audioPreference);
+#ifdef INFINITY_AV_NETWORK
+    hls.ArmRuntimeAdaptation();
+#endif
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
@@ -208,6 +213,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         ok=timeline.Pump(elapsed,video,audio);
         if(ok&&shown==before)ok=present(false);
     }
+    audioPreference=controls.Audio();
     cloud_container_close(session);
     if(audioOpen)xsdk_audio_close();
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
@@ -217,7 +223,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(hls.LastFailure()!=CloudHls::Failure::None){
         // Restart only a previously playing live HLS stream after transport/window failure.
         // All decoder/reader/audio objects are destroyed before restarting; never concatenate streams.
-        retryLive=!ok&&shown&&submitted&&hls.Live()&&CloudHls::RecoverLive(hls.LastFailure());
+        const bool lower=hls.LastFailure()==CloudHls::Failure::LowerQuality&&hls.SuggestedBitrate()>0;
+        retryLive=!ok&&shown&&submitted&&hls.Live()&&(CloudHls::RecoverLive(hls.LastFailure())||lower);
+        if(retryLive&&lower)adaptiveCap=hls.SuggestedBitrate();
+        if(retryLive&&!lower&&selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
         return CloudHls::FailureLabel(hls.LastFailure());
     }
 #endif
@@ -225,14 +234,14 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
                         const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
-    std::string result;
+    std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference audioPreference;
     for(unsigned attempt=0;attempt<3;++attempt){
-        bool retry=false;result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry);
+        bool retry=false;result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference);
         if(!retry||attempt==2||Cancelled())return Cancelled()?"Reproducao cancelada.":result;
         canvas.Background();canvas.SeriesTile(160,240,960,220,false,220);
         canvas.TextFit(190,265,"Cloud360 | Reconectando transmissao ao vivo",30,0xfff2f7f3u,900);
         canvas.TextFit(190,320,result,22,0xffb7c9c1u,900);
-        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/2 | B Cancelar",20,0xff9dec31u,900);
+        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/2"+(adaptiveCap?" | Ate "+std::to_string(adaptiveCap/1000)+" kbps":"")+" | B Cancelar",20,0xff9dec31u,900);
         if(!present(true))return "Falha ao apresentar reconexao IPTV.";
         const auto start=std::chrono::steady_clock::now();
         while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(500*(attempt+1))){
