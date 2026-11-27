@@ -10,6 +10,13 @@ class CloudAvStreamQueue {
 public:
     using Video=CloudAvTimeline::Video;
     using Audio=CloudAvTimeline::Audio;
+    enum class PumpFailure { None, Clock, AudioLate, AudioSink, VideoSink };
+    PumpFailure LastPumpFailure()const{return pumpFailure_;}
+    // Software queue only: excludes samples already submitted to the audio device.
+    int64_t BufferedAhead(int64_t elapsed)const{
+        if(!ready_||elapsed<0||video_.empty()||(audio_.empty()&&!pcmCount_))return 0;
+        return std::max<int64_t>(0,std::min(lastVideo_+videoPeriod_,audioEnd_)-origin_-elapsed);
+    }
     static constexpr size_t MaxBytes=32u*1024u*1024u;
     static constexpr int64_t AudioLead=20000, MaxDuration=21600000000LL;
     static int Capture(void* user,const AVFrame* frame,int video,int64_t pts){
@@ -74,7 +81,8 @@ public:
     void EndInput(){eof_=true;}
     template<class V,class A>
     bool Pump(int64_t elapsed,V video,A audio){
-        if(!ready_||elapsed<lastClock_||elapsed<0)return false;
+        pumpFailure_=PumpFailure::None;
+        if(!ready_||elapsed<lastClock_||elapsed<0){pumpFailure_=PumpFailure::Clock;return false;}
         lastClock_=elapsed;
         unsigned sent=0;
         // Keep partial audio samples across decoder frames. Only pad the final
@@ -85,7 +93,7 @@ public:
                 pcmPts_=audio_.front().pts+int64_t(offset_)*1000000/48000-origin_;
             }
             if(pcmPts_>elapsed+AudioLead)break;
-            if(elapsed-pcmPts_>250000)return false;
+            if(elapsed-pcmPts_>250000){pumpFailure_=PumpFailure::AudioLate;return false;}
             while(pcmCount_<256&&!audio_.empty()){
                 auto& a=audio_.front();
                 unsigned count=std::min(256u-pcmCount_,a.samples-offset_);
@@ -97,14 +105,14 @@ public:
             }
             if(pcmCount_<256&&!eof_)break;
             if(!pcmCount_)break;
-            if(!audio(pcm_,pcmCount_))return false;
+            if(!audio(pcm_,pcmCount_)){pumpFailure_=PumpFailure::AudioSink;return false;}
             pcmCount_=0;++sent;
         }
         while(video_.size()>1&&video_[1].pts-origin_<=elapsed){
             used_-=video_.front().rgb.size();video_.pop_front();++dropped_;
         }
         if(!video_.empty()&&video_.front().pts-origin_<=elapsed){
-            if(!video(video_.front()))return false;
+            if(!video(video_.front())){pumpFailure_=PumpFailure::VideoSink;return false;}
             used_-=video_.front().rgb.size();video_.pop_front();
         }
         return true;
@@ -117,6 +125,7 @@ public:
     size_t Peak()const{return peak_;}
     size_t Dropped()const{return dropped_;}
 private:
+    PumpFailure pumpFailure_=PumpFailure::None;
     CloudAudioRate rate_;
     std::deque<Video> video_;
     std::deque<Audio> audio_;

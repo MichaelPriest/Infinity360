@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.46 — Recuperacao de audio e sincronizacao IPTV
+
+- HLS ao vivo apresenta quadros/amostras ja vencidos antes de leituras potencialmente bloqueantes. Fila classifica falha de relogio, audio atrasado, sink de audio e sink de video. Em HLS previamente reproduzido, atraso severo ou falha de audio solicita nova sessao limpa dentro do orcamento ordinario, mantendo volume/mudo e teto de bitrate. HUD informa lead A/V da fila de software, nao latencia do hardware. Testes de classificacao e atraso adicionados; execucao e homologacao XSDK pendentes. Sem XEX/release.
+
 ## V0.3.45 — Qualidade manual no IPTV
 
 - Y alterna Auto e tetos de bitrate das variantes HLS ao vivo compativeis, dentro do teto configurado. A troca recria a sessao, preserva volume e mudo, e reverte ao modo anterior se a nova sessao nao iniciar. Manual desativa adaptacao automatica, mas pode selecionar variante inferior disponivel; nao garante resolucao. Ate quatro trocas manuais por reproducao, com reversao; Guide, VOD e playlists sem variantes preservados. Testes de ordenacao e limites adicionados; execucao e XSDK pendentes. Sem XEX/release.

@@ -153,11 +153,12 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
     unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     bool lastHud=true;
+    bool liveAudioFailure=false;
     auto overlay=[&](){
         guide.Restore(canvas);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
         const auto info=state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(sourceWidth>1280||sourceHeight>720?" | "+std::to_string(sourceWidth)+"x"+std::to_string(sourceHeight)+" > 720p":"")+(duration>0?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):"");
-        std::string bufferInfo=remoteSource?(" | Fila "+std::to_string(timeline.Bytes()/1024)+" KiB | Alvo "+std::to_string(playbackClock.Ahead()/1000)+" ms"):"";
+        std::string bufferInfo=remoteSource?(" | Fila "+std::to_string(timeline.Bytes()/1024)+" KiB | AV "+std::to_string(timeline.BufferedAhead(playbackClock.Elapsed(controls.Clock(wall())))/1000)+" ms | Alvo "+std::to_string(playbackClock.Ahead()/1000)+" ms"):"";
 #ifdef INFINITY_AV_NETWORK
         if(remoteSource&&hls.RecentThroughput())bufferInfo+=" | Rede "+std::to_string(hls.RecentThroughput()/1000)+" kbps";
         if(selectedBitrate)bufferInfo+=manualCap?(" | Manual ate "+std::to_string(manualCap/1000)+" kbps"):" | Auto";
@@ -229,6 +230,10 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         auto elapsed=playbackClock.Elapsed(controls.Clock(wall()));
         if(timeline.Finished(elapsed))break;
         if(elapsed>CloudAvStreamQueue::MaxDuration+1000000){ok=false;break;}
+        // Present already-due frames before any potentially blocking network read.
+#ifdef INFINITY_AV_NETWORK
+        if(hls.Live()&&!timeline.Pump(elapsed,video,audio)){ok=false;break;}
+#endif
         unsigned budget=4;
         while(rc>0&&timeline.WantsInput(elapsed,playbackClock.Ahead())&&budget--){
             const auto beforeRead=controls.Clock(wall());
@@ -244,6 +249,9 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(ok&&shown==before)ok=present(false);
     }
     played=shown&&submitted;
+    const auto pumpFailure=timeline.LastPumpFailure();
+    liveAudioFailure=pumpFailure==CloudAvStreamQueue::PumpFailure::AudioLate||pumpFailure==CloudAvStreamQueue::PumpFailure::AudioSink;
+    xsdk_log_write("Cloud360 AV pump failure=%u",static_cast<unsigned>(pumpFailure));
     audioPreference=controls.Audio();
     cloud_container_close(session);
     if(audioOpen)xsdk_audio_close();
@@ -261,6 +269,13 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(retryLive&&quality){upgrade=hls.LastFailure()==CloudHls::Failure::HigherQuality;previousBitrate=selectedBitrate;adaptiveCap=hls.SuggestedBitrate();}
         if(retryLive&&!quality&&selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
         return CloudHls::FailureLabel(hls.LastFailure());
+    }
+    // Recover only a previously playing live HLS source, through a clean
+    // decoder/audio session. The outer loop enforces the existing retry budget.
+    if(!ok&&played&&hls.Live()&&liveAudioFailure){
+        retryLive=true;
+        if(selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
+        return "Audio atrasado ou indisponivel; resincronizando transmissao.";
     }
 #endif
     return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
