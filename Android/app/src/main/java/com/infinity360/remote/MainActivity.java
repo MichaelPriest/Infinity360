@@ -60,7 +60,7 @@ public final class MainActivity extends AppCompatActivity {
         for(int i=0;i<screens.length;i++)if(screens[i]!=null)screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);
         RemoteNavigation.select(navigation,index);
         if(index==5)updateHomeConsole();
-        if(scroll!=null)scroll.smoothScrollTo(0,0);
+        if(scroll!=null){scroll.scrollTo(0,0);scroll.post(()->scroll.scrollTo(0,0));}
         updateDownloadPolling();
     }
     private LinearLayout screen(LinearLayout root,int index){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);root.addView(panel);screens[index]=panel;return panel;}
@@ -79,6 +79,7 @@ public final class MainActivity extends AppCompatActivity {
         setContentView(outer);NativeUi.insets(outer);
         NativeUi.brand(this,outer,getString(R.string.remote_title));
         Button connection=NativeUi.button(this,getString(R.string.nav_connection),PANEL,()->showScreen(3));
+        connection.setId(R.id.remote_connection_button);
         outer.addView(connection,new LinearLayout.LayoutParams(-1,-2));
         navigation=RemoteNavigation.create(this);
         scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
@@ -93,7 +94,9 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.verify_connection),PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,2);
         label(getString(R.string.files_ftp));
-        content.addView(button(getString(R.string.ftp_title),ACCENT,this::openFtp),new LinearLayout.LayoutParams(-1,-2));
+        Button ftpButton=button(getString(R.string.ftp_title),ACCENT,this::openFtp);
+        ftpButton.setId(R.id.remote_ftp_button);
+        content.addView(ftpButton,new LinearLayout.LayoutParams(-1,-2));
         label(getString(R.string.monitor));
         monitor=text(getString(R.string.no_readings),15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(monitor);
         content.addView(button(getString(R.string.query_metrics),PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,-2));
@@ -126,12 +129,12 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.next_page),PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,-2));
         content.addView(button(getString(R.string.follow_downloads),PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,0);
-        label(getString(R.string.general_nav));
+        content=controlPanel(R.string.general_nav);
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"LB","↓","RB"},new String[]{"pageup","down","pagedown"});
         row(new String[]{"Voltar","Favorito"},new String[]{"back","favorite"});
-        label(getString(R.string.iptv_controls));
+        content=screens[0];content=controlPanel(R.string.iptv_controls);
         row(new String[]{"Canais","↑","Qualidade"},new String[]{"channels","up","quality"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
@@ -155,8 +158,16 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.copy_config),PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
         content=screen(root,5);buildHome();
-        content=root;showScreen(5);
+        content=root;
+        int initial=saved==null?5:saved.getInt("active_screen",5);
+        showScreen(initial>=0&&initial<screens.length?initial:5);
         navigation.setOnItemSelectedListener(item->{int index=RemoteNavigation.index(item.getItemId());if(index<0)return false;if(index!=activeScreen)showScreen(index);return true;});
+        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true){
+            @Override public void handleOnBackPressed(){if(activeScreen!=5)showScreen(5);else finish();}
+        });
+    }
+    @Override protected void onSaveInstanceState(Bundle out){
+        super.onSaveInstanceState(out);out.putInt("active_screen",activeScreen);
     }
     private void openFtp(){
         if(busy)return;
@@ -179,6 +190,12 @@ public final class MainActivity extends AppCompatActivity {
         TextView name=text(getString(title),16,TEXT);name.setPadding(0,dp(10),0,0);inside.addView(name);
         card.addView(inside);card.setClickable(true);card.setFocusable(true);card.setContentDescription(getString(title));card.setOnClickListener(v->action.run());
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);lp.setMargins(dp(4),dp(4),dp(4),dp(4));row.addView(card,lp);
+    }
+    private LinearLayout controlPanel(int title){
+        com.google.android.material.card.MaterialCardView card=NativeUi.card(this);
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(10),dp(10),dp(10),dp(10));
+        TextView heading=text(getString(title),18,TEXT);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(dp(4),dp(2),0,dp(8));panel.addView(heading);
+        card.addView(panel);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,dp(8));content.addView(card,lp);return panel;
     }
     private void buildHome(){
         TextView heading=text(getString(R.string.nav_home),28,TEXT);heading.setTypeface(null,Typeface.BOLD);content.addView(heading);
