@@ -38,3 +38,5 @@ START em Scripts Lua abre o repositório local. A instala e X remove com confirm
 V0.3.17: catálogo V2 permite baixar fontes HTTPS ausentes ou inválidas por entrada confirmada. Reutiliza HTTPS da Store (host exato, TLS, CA e tamanho/SHA-256). Não sobrescreve destino existente. Y relê manifesto local; sincronização de novos manifestos pendente.
 
 V0.3.18: R3 no repositório sincroniza um manifesto fixado em source.tsv, com confirmação, TLS e SHA-256. Cache remoto separado; catálogo local de fallback. Para novas versões do catálogo, configure um novo pin confiável. Nenhuma instalação automática.
+
+V0.3.19: A atualiza scripts gerenciados com recibo SHA-256 e backup da primeira versão. LB restaura a original com confirmação. Scripts modificados ou antigos sem recibo não são sobrescritos; X remove apenas correspondência exata ao catálogo e seu backup gerenciado. Sem execução automática.

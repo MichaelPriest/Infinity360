@@ -104,20 +104,84 @@ inline bool ReadVerified(const std::string& path,const Entry& e,std::string& dat
     data.resize(e.bytes);in.seekg(0);if(!in.read(&data[0],e.bytes))return false;
     return Verify(e,data);
 }
+// Receipt and original backup live beside the script but never have a .lua
+// suffix. A pending hash makes a failed receipt finalization recoverable.
+inline std::string Hash(const std::string& data){
+    StoreSha256 h;h.Update(reinterpret_cast<const unsigned char*>(data.data()),data.size());return h.Finish();
+}
+inline bool Digest(const std::string& s){return s.size()==64&&s.find_first_not_of("0123456789abcdef")==std::string::npos;}
+struct Receipt{std::string current,original="-",pending="-";};
+inline bool ReadReceipt(const std::string& dest,Receipt& r){
+    std::string data,extra;std::istringstream in;
+    if(!ReadBounded(savedFile(dest+".r"),256,data))return false;
+    in.str(data);
+    return bool(std::getline(in,r.current)&&std::getline(in,r.original)&&std::getline(in,r.pending))
+        &&!std::getline(in,extra)&&Digest(r.current)&&(r.original=="-"||Digest(r.original))&&(r.pending=="-"||Digest(r.pending));
+}
+inline bool AtomicWrite(const std::string& path,const std::string& data){
+    const auto tmp=path+".tmp";if(fileExists(tmp))return false;
+    std::ofstream out(tmp.c_str(),std::ios::binary|std::ios::trunc);
+    out.write(data.data(),data.size());out.close();
+    if(!out||!replaceSavedFile(path)){std::remove(tmp.c_str());return false;}
+    return true;
+}
+inline bool WriteReceipt(const std::string& dest,const Receipt& r){
+    return AtomicWrite(dest+".r",r.current+"\n"+r.original+"\n"+r.pending+"\n");
+}
+inline bool Managed(const std::string& dest,Receipt& r,std::string& current){
+    if(!ReadReceipt(dest,r)||!ReadBounded(dest,65536,current)||current.empty())return false;
+    const auto hash=Hash(current);
+    if(hash!=r.current&&hash!=r.pending)return false;
+    if(r.original!="-"){
+        std::string original;
+        if(!ReadBounded(dest+".old",65536,original)||Hash(original)!=r.original)return false;
+    }
+    return true;
+}
+inline bool UpdateAvailable(const std::string& root,const Entry& e){
+    if(!Valid(e))return false;
+    Receipt r;std::string current;
+    return Managed(Destination(root,e),r,current)&&Hash(current)!=e.sha;
+}
+inline bool CanRestore(const std::string& root,const Entry& e){
+    if(!Valid(e))return false;
+    Receipt r;std::string current;
+    return Managed(Destination(root,e),r,current)&&r.original!="-"&&Hash(current)!=r.original;
+}
 inline std::string Status(const std::string& root,const Entry& e){
     if(!Valid(e))return "Invalido";
     std::string data;
     const auto dest=Destination(root,e);
-    if(fileExists(dest))return ReadVerified(dest,e,data)?"Instalado":"Local diferente";
+    if(fileExists(dest))return ReadVerified(dest,e,data)?"Instalado":UpdateAvailable(root,e)?"Atualizacao":"Local diferente";
     return ReadVerified(Source(root,e),e,data)?"Disponivel":!e.url.empty()?"Online":"Fonte invalida";
 }
 inline std::string InstallData(const std::string& root,const Entry& e,const std::string& data){
     if(!Verify(e,data))return "Fonte ausente ou SHA-256 invalido.";
     const auto dest=Destination(root,e),tmp=dest+".tmp";
-    if(fileExists(dest))return "Destino existente; arquivo preservado.";
-    if(fileExists(tmp))return "Temporario existente; arquivo preservado.";
+    if(fileExists(dest)){
+        Receipt r;std::string current;
+        if(!Managed(dest,r,current))return "Destino existente; arquivo preservado.";
+        const auto active=Hash(current);
+        if(active==e.sha)return "Script ja instalado.";
+        // Keep the first managed version; later updates do not replace it.
+        if(r.original=="-"){
+            if(fileExists(dest+".old")){
+                std::string backup;
+                if(!ReadBounded(dest+".old",65536,backup)||Hash(backup)!=active)return "Backup existente; arquivo preservado.";
+            }else if(!AtomicWrite(dest+".old",current))return "Falha ao preservar backup.";
+            r.original=active;
+        }
+        r.current=active;r.pending=e.sha;
+        if(!WriteReceipt(dest,r))return "Falha ao registrar atualizacao.";
+        if(!AtomicWrite(dest,data))return "Falha ao atualizar; backup preservado.";
+        r.current=e.sha;r.pending="-";
+        WriteReceipt(dest,r); // Pending hash remains valid if finalization fails.
+        return "Script atualizado.";
+    }
+    if(fileExists(tmp)||fileExists(dest+".bak")||fileExists(savedFile(dest+".r"))||fileExists(dest+".old"))return "Dados anteriores existentes; arquivo preservado.";
+    if(!WriteReceipt(dest,Receipt{e.sha,"-","-"}))return "Falha ao registrar instalacao.";
     std::ofstream out(tmp.c_str(),std::ios::binary|std::ios::trunc);out.write(data.data(),data.size());out.close();
-    if(!out||fileExists(dest)||std::rename(tmp.c_str(),dest.c_str())){std::remove(tmp.c_str());return "Falha ao instalar script.";}
+    if(!out||fileExists(dest)||std::rename(tmp.c_str(),dest.c_str())){std::remove(tmp.c_str());std::remove((dest+".r").c_str());return "Falha ao instalar script.";}
     return "Script instalado.";
 }
 inline std::string Install(const std::string& root,const Entry& e){
@@ -126,10 +190,24 @@ inline std::string Install(const std::string& root,const Entry& e){
     if(!ReadVerified(Source(root,e),e,data))return "Fonte ausente ou SHA-256 invalido.";
     return InstallData(root,e,data);
 }
+inline std::string Restore(const std::string& root,const Entry& e){
+    if(!Valid(e))return "Entrada invalida.";
+    const auto dest=Destination(root,e);
+    Receipt r;std::string current,original;
+    if(!Managed(dest,r,current)||r.original=="-"||Hash(current)==r.original||
+       !ReadBounded(dest+".old",65536,original)||Hash(original)!=r.original)return "Backup indisponivel ou arquivo local alterado.";
+    r.current=Hash(current);r.pending=r.original;
+    if(!WriteReceipt(dest,r)||!AtomicWrite(dest,original))return "Falha ao restaurar; backup preservado.";
+    r.current=r.original;r.pending="-";WriteReceipt(dest,r);
+    return "Script restaurado.";
+}
 inline std::string Remove(const std::string& root,const Entry& e){
     if(!Valid(e))return "Entrada invalida.";
     std::string data;const auto dest=Destination(root,e);
     if(!ReadVerified(dest,e,data))return "Script ausente ou alterado; preservado.";
-    return std::remove(dest.c_str())?"Falha ao remover script.":"Script removido.";
+    Receipt r;std::string current;const bool managed=Managed(dest,r,current);
+    if(std::remove(dest.c_str()))return "Falha ao remover script.";
+    if(managed){std::remove((dest+".r").c_str());std::remove((dest+".r.bak").c_str());if(r.original!="-")std::remove((dest+".old").c_str());}
+    return "Script removido.";
 }
 }

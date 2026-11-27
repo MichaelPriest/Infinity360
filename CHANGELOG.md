@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.19 — Atualização e restauração Lua
+
+- Instalações gerenciadas registram SHA-256; A atualiza somente arquivos reconhecidos, com fonte local ou HTTPS verificada. Preserva a primeira versão instalada em .old; LB confirma restauração. Arquivos modificados ou sem recibo não são sobrescritos. X remove apenas o arquivo correspondente ao catálogo; remoção gerenciada elimina o backup associado.
+- Recibo registra hash pendente durante a atualização; testes de duas atualizações, restauração e recusa de alterações locais. Instalações anteriores sem recibo precisam ser removidas/reinstaladas para receber atualizações. Sem XEX solicitado.
+
 ## V0.3.18 — Sincronização de catálogo Lua
 
 - R3 no repositório confirma download de manifesto fixado em source.tsv (URL HTTPS, tamanho e SHA-256). Valida formato integral antes de salvar catalog-remote.tsv; cache anterior preservado em falhas e catálogo local permanece como fallback. Não instala nem executa scripts.

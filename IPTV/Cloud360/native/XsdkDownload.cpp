@@ -233,12 +233,12 @@ std::string XsdkLuaDownload(const InfinityLuaRepo::Entry& entry,const std::strin
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){
     success=false;
     if(!InfinityLuaRepo::Valid(entry)||entry.url.empty())return "Entrada Lua remota invalida.";
-    if(fileExists(InfinityLuaRepo::Destination(root,entry)))return "Destino existente; arquivo preservado.";
+    if(fileExists(InfinityLuaRepo::Destination(root,entry))&&!InfinityLuaRepo::UpdateAvailable(root,entry))return "Destino existente; arquivo preservado.";
     std::string data;bool fetched=false;
     const auto error=fetchMetadata(entry.url,entry.bytes,true,root,progress,data,fetched,30);
     if(!fetched)return error;
     const auto result=InfinityLuaRepo::InstallData(root,entry,data);
-    success=result=="Script instalado.";return result;
+    success=result=="Script instalado."||result=="Script atualizado.";return result;
 }
 std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success){

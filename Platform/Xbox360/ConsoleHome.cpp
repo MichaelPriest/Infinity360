@@ -552,8 +552,9 @@ void ConsoleHome::PressLuaRepository(Key key){
         if(key!=Accept){notice_="Operacao cancelada.";return;}
         if(TransferRunning()||ftp_.Running()||luaRepoEntries_.empty())return;
         const auto& item=luaRepoEntries_[luaRepoRow_];
-        if(luaRepoRemove_)notice_=InfinityLuaRepo::Remove(dir_,item);
-        else if(fileExists(InfinityLuaRepo::Destination(dir_,item)))notice_="Destino existente; arquivo preservado.";
+        if(luaRepoRestore_)notice_=InfinityLuaRepo::Restore(dir_,item);
+        else if(luaRepoRemove_)notice_=InfinityLuaRepo::Remove(dir_,item);
+        else if(fileExists(InfinityLuaRepo::Destination(dir_,item))&&!InfinityLuaRepo::UpdateAvailable(dir_,item))notice_="Destino existente; arquivo preservado.";
         else{
             std::string data;
             if(InfinityLuaRepo::ReadVerified(InfinityLuaRepo::Source(dir_,item),item,data))notice_=InfinityLuaRepo::InstallData(dir_,item,data);
@@ -575,10 +576,10 @@ void ConsoleHome::PressLuaRepository(Key key){
         luaManifestConfirm_=true;notice_="A confirma sincronizacao do manifesto fixado; B cancela.";return;
     }
     if(key==Up||key==Down){luaRepoRow_=std::max(0,luaRepoRow_+(key==Down?1:-1));clampRow(luaRepoRow_,luaRepoEntries_.size());return;}
-    if((key==Accept||key==Favorite)&&!luaRepoEntries_.empty()){
+    if((key==Accept||key==Favorite||key==PageUp)&&!luaRepoEntries_.empty()){
         if(TransferRunning()||ftp_.Running()){notice_="Encerre FTP e transferencias.";return;}
-        luaRepoRemove_=key==Favorite;luaRepoConfirm_=true;
-        notice_=luaRepoRemove_?"A confirma remocao do script verificado; B cancela.":"A confirma instalacao do script verificado; B cancela.";
+        luaRepoRemove_=key==Favorite;luaRepoRestore_=key==PageUp;luaRepoConfirm_=true;
+        notice_=luaRepoRestore_?"A confirma restauracao da versao original; B cancela.":luaRepoRemove_?"A confirma remocao do script verificado; B cancela.":InfinityLuaRepo::UpdateAvailable(dir_,luaRepoEntries_[luaRepoRow_])?"A confirma atualizacao com backup; B cancela.":"A confirma instalacao do script verificado; B cancela.";
     }
 }
 void ConsoleHome::PressLuaScripts(Key key){
@@ -3315,7 +3316,7 @@ void ConsoleHome::DrawLuaRepository(HomeCanvas& c)const{
         c.TextFit(850,y+10,status,18,Lime,350);
     }
     if(luaRepoEntries_.empty())c.Text(48,245,"Nenhum script no catalogo local.",22,Muted,1170);
-    c.TextFit(48,580,"R3 Sincronizar manifesto HTTPS | Nenhum script instalado ou executado na sincronizacao.",17,Muted,1180);
+    c.TextFit(48,580,"A Instalar/atualizar | LB Restaurar original | R3 Sincronizar manifesto HTTPS",17,Muted,1180);
 }
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     if(luaRepoPage_){DrawLuaRepository(c);return;}
@@ -4179,7 +4180,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     if(homeEditing_||appearanceEditor_){InfinityButtons::Strip(c,45,674,"X Restaurar | Y Salvar | B Cancelar",19,White,1190);return;}
     if(importPreview_){InfinityButtons::Strip(c,45,674,"A Importar | B Cancelar",19,White,1190);return;}
     if(luaPage_){
-        if(luaRepoPage_){InfinityButtons::Strip(c,45,674,(luaRepoConfirm_||luaManifestConfirm_)?"A Confirmar | B Cancelar":"A Instalar | X Remover | Y Reler | R3 Sincronizar | B Voltar",19,White,1190);return;}
+        if(luaRepoPage_){InfinityButtons::Strip(c,45,674,(luaRepoConfirm_||luaManifestConfirm_)?"A Confirmar | B Cancelar":"A Instalar/atualizar | X Remover | LB Restaurar | Y Reler | B Voltar",19,White,1190);return;}
         using namespace InfinityButtons;
         Hint(c,A,45,674,22,luaCategory_==LuaUtilities?"Executar":"Aplicar",150,White);
         Hint(c,X,245,674,22,luaCategory_==LuaUtilities?"Limpar filtro":"Limpar",175,White);
