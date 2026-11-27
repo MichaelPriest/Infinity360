@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.89 — Recuperação inicial HLS
+
+- Até três tentativas de abertura do manifesto inicial com espera cancelável de 250/500 ms; sem repetir segmentos parcialmente entregues.
+- Aceita tags informativas de horário HLS e início preferencial (sem implementar seek). Testes de abertura, cancelamento e metadados.
+- Sem XEX nesta revisão.
+
 ## V0.2.88 — Ciclo de vida do avatar XDK
 
 - Controlador opcional de sessão do avatar oficial: troca de conta invalida a textura, atualização limitada por quadro, gesto explícito e fallback sem avatar de outra conta.

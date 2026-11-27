@@ -133,6 +133,8 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
         }else if(line.compare(0,11,"#EXT-X-KEY:")==0){
             if(line!="#EXT-X-KEY:METHOD=NONE")return false;
         }else if(line[0]=='#'){
+            // These tags describe presentation/time, not segment decoding.
+            if(line.compare(0,24,"#EXT-X-PROGRAM-DATE-TIME:")==0||line.compare(0,13,"#EXT-X-START:")==0)continue;
             if(line.compare(0,7,"#EXT-X-")==0&&
                line.compare(0,15,"#EXT-X-VERSION:")!=0&&
                line.compare(0,22,"#EXT-X-TARGETDURATION:")!=0&&
@@ -169,7 +171,7 @@ public:
         if(started_)return false;started_=true;allowLive_=allowLive;
         if(!Extension(url,".m3u8"))return false;
         playlist_=url;
-        List list;if(!Fetch(playlist_,list))return false;
+        List list;if(!FetchInitial(playlist_,list))return false;
         if(!list.variants.empty()){
             auto candidates=list.variants;
             std::stable_sort(candidates.begin(),candidates.end(),[](const Variant& a,const Variant& b){return a.bandwidth>b.bandwidth;});
@@ -232,6 +234,13 @@ private:
         for(uint64_t seq=updated.sequence;seq<overlapEnd;++seq)
             if(list_.segments[static_cast<size_t>(seq-list_.sequence)]!=updated.segments[static_cast<size_t>(seq-updated.sequence)])return false;
         list_=std::move(updated);return true;
+    }
+    bool FetchInitial(const std::string& url,List& list){
+        for(unsigned attempt=0;attempt<3;++attempt){
+            if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
+            if(Fetch(url,list))return true;
+        }
+        return false;
     }
     bool Fetch(const std::string& url,List& list){
         auto reader=open_(url,true);if(!reader)return false;

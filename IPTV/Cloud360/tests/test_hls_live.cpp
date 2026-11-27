@@ -46,6 +46,18 @@ int main(){
     };
     if(!failure(Playlist(15,{"f","g"}),false)||!failure(Playlist(11,{"changed","c","d"}),false)||
        !failure(first,false)||!failure(second,true))return 1;
+    // Retry startup only before media is delivered; cancellation is terminal.
+    unsigned startup=0,delays=0;
+    VodReader<Reader> retry([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+        if(playlist){if(++startup<3)return {};return std::make_unique<Reader>(Reader{first});}
+        return std::make_unique<Reader>(Reader{std::string(188,'x')});
+    },[&](unsigned ms){++delays;return ms==250||ms==500;});
+    if(!retry.Start(base,2000000,true)||startup!=3||delays!=2||retry.Read(block,sizeof block)!=97)return 1;
+    unsigned cancelled=0;
+    VodReader<Reader> stop([&](const std::string&,bool)->std::unique_ptr<Reader>{++cancelled;return {};},[](unsigned){return false;});
+    if(stop.Start(base,2000000,true)||cancelled!=1)return 1;
+    const auto dated="#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:10\n#EXT-X-PROGRAM-DATE-TIME:2026-11-26T20:00:00Z\n#EXTINF:2,\na.ts\n";
+    if(!Parse(base,dated,l,true)||l.segments.size()!=1)return 1;
     std::puts("live sequence, retry, overlap, stale window and partial failure passed");
     return 0;
 }
