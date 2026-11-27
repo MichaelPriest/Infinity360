@@ -10,7 +10,8 @@ import java.util.regex.Pattern;
 /** Client for the console's bounded passive FTP service, not a general FTP proxy. */
 final class XboxFtpClient implements Closeable {
     static final int PORT=2121;
-    static final long UPLOAD_LIMIT=32L*1024*1024;
+    static final long UPLOAD_LIMIT=32L*1024*1024, MAX_UPLOAD=512L*1024*1024;
+    private long serverUploadLimit=UPLOAD_LIMIT;
     static final int LIST_LIMIT=65536;
     static final class Entry {
         final String name; final boolean directory; final long size;
@@ -52,6 +53,16 @@ final class XboxFtpClient implements Closeable {
         if(!credentials(user,password))throw new IOException("Credenciais FTP inválidas");
         Socket socket=open(PORT,true);input=socket.getInputStream();output=socket.getOutputStream();
         expect(readReply(),220);expect(command("USER "+user),331);expect(command("PASS "+password),230);expect(command("TYPE I"),200);
+        String reply=command("XMAX");
+        if(reply.startsWith("213 "))serverUploadLimit=parseUploadLimit(reply);
+        else if(!reply.startsWith("502 ")&&!reply.startsWith("500 "))throw new IOException("Limite FTP indisponível");
+    }
+    long uploadLimit(){return serverUploadLimit;}
+    static long parseUploadLimit(String reply)throws IOException{
+        if(!reply.matches("213 [0-9]{1,9}"))throw new IOException("Limite FTP inválido");
+        long limit=Long.parseLong(reply.substring(4));
+        if(limit>MAX_UPLOAD)throw new IOException("Limite FTP excede capacidade do app");
+        return limit;
     }
     private String readReply()throws IOException{
         ByteArrayOutputStream line=new ByteArrayOutputStream();
@@ -116,7 +127,7 @@ final class XboxFtpClient implements Closeable {
         expect(readReply(),226);if(done!=expected)throw new IOException("Download incompleto");destination.flush();
     }
     void upload(String path,InputStream source,long expected,Progress progress)throws IOException{
-        if(!validPath(path)||path.equals("/")||expected<0||expected>UPLOAD_LIMIT)throw new IOException("Upload excede limite de 32 MiB");
+        if(!validPath(path)||path.equals("/")||expected<0||serverUploadLimit==0||expected>serverUploadLimit)throw new IOException("Upload desabilitado ou acima do limite do servidor");
         expect(command("ALLO "+expected),200);long done=0;progress.update(0,expected);
         try(Socket channel=passive()){
             expect(command("STOR "+path),150);

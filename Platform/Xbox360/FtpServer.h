@@ -9,7 +9,7 @@ public:
     explicit FtpServer(const FileWorkspace& workspace);
     ~FtpServer();
     bool Start(const std::string& root,const std::string& address,unsigned port,
-               const std::string& user,const std::string& password,bool allowUpload=false);
+               const std::string& user,const std::string& password,bool allowUpload=false,unsigned long long uploadLimit=32ULL*1024*1024);
     void Stop();
     bool Tick();
     bool Running() const;

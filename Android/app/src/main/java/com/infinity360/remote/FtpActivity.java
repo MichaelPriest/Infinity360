@@ -97,7 +97,7 @@ public final class FtpActivity extends Activity {
                     String title=(entry.directory?"[Pasta] ":"[Arquivo] ")+entry.name+(entry.directory?"":" • "+android.text.format.Formatter.formatFileSize(this,entry.size));
                     addButton(rows,title,()->{if(busy)return;try{String target=XboxFtpClient.child(directory,entry.name);if(entry.directory)browse(target);else pickDownload(target,entry);}catch(IllegalArgumentException e){status.setText("Caminho inválido ou muito longo.");}});
                 }
-            });return entries.size()+" itens. Conexão encerrada após consulta.";
+            });return entries.size()+" itens. "+(client.uploadLimit()==0?"Somente leitura.":"Limite de envio: "+android.text.format.Formatter.formatFileSize(this,client.uploadLimit())+".");
         });
     }
     private void pickUpload(){
@@ -111,6 +111,15 @@ public final class FtpActivity extends Activity {
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/octet-stream").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,entry.name);
         try{startActivityForResult(intent,PICK_DOWNLOAD);}catch(Exception e){pendingDownload="";status.setText("Seletor de destino indisponível.");}
     }
+    private long sourceSize(Uri uri){
+        try(android.content.res.AssetFileDescriptor descriptor=getContentResolver().openAssetFileDescriptor(uri,"r")){
+            if(descriptor!=null&&descriptor.getLength()>=0)return descriptor.getLength();
+        }catch(Exception ignored){}
+        try(Cursor cursor=getContentResolver().query(uri,new String[]{OpenableColumns.SIZE},null,null,null)){
+            if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))return cursor.getLong(0);
+        }catch(Exception ignored){}
+        return -1;
+    }
     private String filename(Uri uri){
         try(Cursor c=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){
             if(c!=null&&c.moveToFirst())return c.getString(0);
@@ -123,20 +132,18 @@ public final class FtpActivity extends Activity {
         if(request==PICK_UPLOAD){
             EditText name=new EditText(this);name.setSingleLine(true);String original=filename(uri);name.setText(XboxFtpClient.validName(original)?original:"arquivo.bin");
             final String folder=directory;
-            new AlertDialog.Builder(this).setTitle("Enviar para "+folder).setMessage("Nome no Xbox (até 42 caracteres ASCII). Limite de 32 MiB; arquivos existentes não serão sobrescritos.")
+            new AlertDialog.Builder(this).setTitle("Enviar para "+folder).setMessage("Nome no Xbox (até 42 caracteres ASCII). O limite depende do servidor (até 512 MiB); arquivos existentes não serão sobrescritos.")
                 .setView(name).setNegativeButton("Cancelar",null).setPositiveButton("Enviar",(d,w)->{
                     String target;try{target=XboxFtpClient.child(folder,name.getText().toString());}catch(IllegalArgumentException e){status.setText("Nome inválido. Selecione novamente.");return;}
                     runJob("Preparando arquivo...",client->{
-                        File temp=File.createTempFile("ftp-upload-",".part",getCacheDir());
-                        try{
-                            long count=0;
-                            try(InputStream source=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(temp)){
-                                if(source==null)throw new IOException("Arquivo local indisponível");byte[] buffer=new byte[32768];int n;
-                                while((n=source.read(buffer))!=-1){check();if(n>XboxFtpClient.UPLOAD_LIMIT-count)throw new IOException("Arquivo excede 32 MiB");out.write(buffer,0,n);count+=n;}
-                            }
-                            try(InputStream in=new FileInputStream(temp)){client.upload(target,in,count,this::progress);}
-                            return "Upload concluído. Atualize a pasta do Xbox.";
-                        }finally{temp.delete();}
+                        long count=sourceSize(uri);
+                        if(count<0)throw new IOException("O provedor Android não informou o tamanho. Escolha um arquivo local.");
+                        if(client.uploadLimit()==0||count>client.uploadLimit())throw new IOException("Envio desabilitado ou acima do limite do Xbox.");
+                        try(InputStream in=getContentResolver().openInputStream(uri)){
+                            if(in==null)throw new IOException("Arquivo local indisponível");
+                            client.upload(target,in,count,this::progress);
+                        }
+                        return "Upload concluído. Atualize a pasta do Xbox.";
                     });
                 }).show();
         }else if(request==PICK_DOWNLOAD&&!pendingDownload.isEmpty()){

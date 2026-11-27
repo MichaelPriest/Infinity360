@@ -80,6 +80,7 @@ with tempfile.TemporaryDirectory() as directory:
             reject(lambda:ftp.storbinary("STOR excess.bin",io.BytesIO(b"abc")))
             ftp.voidcmd("ALLO 3")
             reject(lambda:ftp.storbinary("STOR ../private.txt",io.BytesIO(b"abc")))
+            assert ftp.sendcmd("XMAX")=="213 33554432"
             reject(lambda:ftp.sendcmd("ALLO 33554433"))
             ftp.voidcmd("ALLO 3")
             reject(lambda:ftp.storbinary("STOR link.txt",io.BytesIO(b"abc")))
@@ -87,6 +88,18 @@ with tempfile.TemporaryDirectory() as directory:
             assert not (personal/"excess.bin").exists()
             assert not list(personal.glob("AXCOPY-FTP-*.part"))
             assert (root/"private.txt").read_text()=="private"
+            ftp.quit()
+    finally:
+        proc.terminate();proc.wait(timeout=5)
+    proc=subprocess.Popen([sys.argv[1],str(root),"large"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+    try:
+        proc.stdin.write(password+"\n");proc.stdin.flush()
+        port=int(proc.stdout.readline())
+        with ftplib.FTP() as ftp:
+            ftp.connect("127.0.0.1",port,timeout=5);ftp.login("owner",password)
+            assert ftp.sendcmd("XMAX")=="213 536870912"
+            ftp.voidcmd("ALLO 536870912")
+            reject(lambda:ftp.sendcmd("ALLO 536870913"))
             ftp.quit()
     finally:
         proc.terminate();proc.wait(timeout=5)

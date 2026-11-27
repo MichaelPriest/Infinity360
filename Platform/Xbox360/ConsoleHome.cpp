@@ -929,8 +929,28 @@ void ConsoleHome::ToggleFtp(bool allowUpload) {
     }
     if(!user.empty()&&user[user.size()-1]=='\r')user.erase(user.size()-1);
     if(!password.empty()&&password[password.size()-1]=='\r')password.erase(password.size()-1);
-    const bool started=ftp_.Start(FileWorkspace::Join(dir_,"UserFiles"),network_.ipv4,2121,user,password,allowUpload);
-    notice_=started?(allowUpload?"FTP LAN leitura/upload (ALLO) iniciado.":"FTP LAN somente leitura iniciado."):ftp_.Error();
+    std::string root=FileWorkspace::Join(dir_,"UserFiles"),label="Local";
+    unsigned long long limit=32ULL*1024*1024;
+#ifdef __XSDK__
+    // A locally configured single workspace. FTP cannot select other mounts.
+    std::ifstream selection((dir_+"infinity360-ftp-root.txt").c_str(),std::ios::binary);
+    if(selection){
+        char value[16]{};
+        if(!selection.getline(value,sizeof value)||selection.peek()!=std::char_traits<char>::eof()){
+            notice_="Destino FTP invalido.";return;
+        }
+        std::string id=value;if(!id.empty()&&id.back()=='\r')id.pop_back();
+        if(id=="local")id.clear();
+        if(!StoreStorage::Valid(id)){notice_="Destino FTP invalido.";return;}
+        root=StoreStorage::Personal(dir_,id);label=StoreStorage::Label(id);
+    }
+    std::ifstream large((dir_+"enable-ftp-large-upload.txt").c_str());
+    std::string signatureLarge;
+    if(std::getline(large,signatureLarge)&&signatureLarge=="ENABLE-FTP-LARGE-UPLOAD")limit=512ULL*1024*1024;
+#endif
+    if(!fileWorkspace_.CanWrite(root)){notice_="Prepare o workspace FTP selecionado.";return;}
+    const bool started=ftp_.Start(root,network_.ipv4,2121,user,password,allowUpload,limit);
+    notice_=started?(allowUpload?"FTP "+label+" | Upload ate "+StorageInfo::FormatBytes(limit):"FTP "+label+" | Somente leitura"):ftp_.Error();
     RecordEvent(started?"FTP iniciado":"Falha ao iniciar FTP");
 #endif
 }

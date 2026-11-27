@@ -1,5 +1,6 @@
 #include "FtpServer.h"
 #include "FtpSession.h"
+#include "StorageInfo.h"
 #include <fstream>
 #include <sstream>
 #include <cstdio>
@@ -256,13 +257,13 @@ private:
 #endif
 };
 #endif
-bool parseUploadSize(const std::string& text,unsigned long long& result) {
+bool parseUploadSize(const std::string& text,unsigned long long& result,unsigned long long limit) {
     result=0;
-    if(text.empty()||text.size()>8)return false;
+    if(text.empty()||text.size()>9)return false;
     for(size_t i=0;i<text.size();++i) {
         if(text[i]<'0'||text[i]>'9')return false;
         result=result*10+static_cast<unsigned>(text[i]-'0');
-        if(result>32ULL*1024*1024)return false;
+        if(result>limit)return false;
     }
     return true;
 }
@@ -295,7 +296,7 @@ struct FtpServer::Impl {
     unsigned long address,peer;
     unsigned port,last,disconnected;
     bool network,sockets,binary,closing,transferring,listing,uploadEnabled,uploading,allocated;
-    unsigned long long uploadSize,restartOffset;
+    unsigned long long uploadSize,restartOffset,uploadLimit;
     bool restartPending;
     Upload upload;
     FtpSession* session;
@@ -305,7 +306,7 @@ struct FtpServer::Impl {
     const FileWorkspace& workspace;
     explicit Impl(const FileWorkspace& ws):server(Invalid),control(Invalid),passive(Invalid),data(Invalid),address(0),peer(0),
         port(0),last(0),disconnected(0),network(false),sockets(false),binary(false),closing(false),
-        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),restartOffset(0),restartPending(false),session(0),offset(0),workspace(ws){}
+        transferring(false),listing(false),uploadEnabled(false),uploading(false),allocated(false),uploadSize(0),restartOffset(0),uploadLimit(32ULL*1024*1024),restartPending(false),session(0),offset(0),workspace(ws){}
     void clearData() {
         closeSock(passive);closeSock(data);file.close();file.clear();
         payload.clear();offset=0;transferring=false;listing=false;uploading=false;upload.Cancel();
@@ -363,8 +364,9 @@ struct FtpServer::Impl {
             restartOffset=n;restartPending=true;
             respond("350 Restart position accepted for next RETR");return;
         }
+        if(verb=="XMAX"&&arg.empty()){respond("213 "+num(uploadEnabled?uploadLimit:0));return;}
         if(verb=="ALLO"&&uploadEnabled) {
-            allocated=parseUploadSize(arg,uploadSize);
+            allocated=parseUploadSize(arg,uploadSize,uploadLimit);
             respond(allocated?"200 Exact size reserved":"552 Invalid size or limit exceeded");return;
         }
         if(verb=="STOR"&&uploadEnabled) {
@@ -373,6 +375,13 @@ struct FtpServer::Impl {
             if(!valid||passive==Invalid) {
                 clearData();respond("550 Binary upload requires ALLO and passive mode");return;
             }
+            const size_t slash=arg.find_last_of('/');
+            std::string parent;
+            if(!session->DataDirectory(slash==std::string::npos?".":slash==0?"/":arg.substr(0,slash),parent)){
+                clearData();respond("550 Invalid destination");return;
+            }
+            const auto space=StorageInfo::Read(parent);
+            if(!space.available||uploadSize>space.writableBytes){clearData();respond("452 Insufficient confirmed storage");return;}
             if(!upload.Open(*session,arg,uploadSize)) {
                 clearData();respond("550 Invalid or occupied destination");return;
             }
@@ -456,9 +465,9 @@ bool FtpServer::Connected()const{return impl_&&impl_->control!=Invalid;}
 bool FtpServer::UploadEnabled()const{return impl_&&impl_->uploadEnabled;}
 unsigned FtpServer::Port()const{return impl_?impl_->port:0;}
 bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned port,
-                      const std::string& user,const std::string& password,bool allowUpload) {
+                      const std::string& user,const std::string& password,bool allowUpload,unsigned long long uploadLimit) {
     Stop();error_.clear();
-    if(!workspace_.CanWrite(root)||!FtpSession::ValidCredentials(user,password)||port>65535) {
+    if(!workspace_.CanWrite(root)||!FtpSession::ValidCredentials(user,password)||port>65535||uploadLimit==0||uploadLimit>512ULL*1024*1024) {
         error_="Workspace ou credenciais invalidos.";return false;
     }
 #ifdef __XSDK__
@@ -479,7 +488,7 @@ bool FtpServer::Start(const std::string& root,const std::string& addr,unsigned p
     if(WSAStartup(MAKEWORD(2,2),&wsa)!=0){delete p;error_="Winsock indisponivel.";return false;}
     p->sockets=true;
 #endif
-    p->address=ip;p->root=root;p->user=user;p->password=password;p->uploadEnabled=allowUpload;
+    p->address=ip;p->root=root;p->user=user;p->password=password;p->uploadEnabled=allowUpload;p->uploadLimit=uploadLimit;
     p->server=listener(ip,port,p->port);
     if(p->server==Invalid){delete p;error_="Nao foi possivel abrir porta FTP.";return false;}
     p->disconnected=ticks()-2000;impl_=p;return true;
@@ -524,7 +533,7 @@ bool FtpServer::Tick() {
 #else
 FtpServer::FtpServer(const FileWorkspace& workspace):impl_(0),workspace_(workspace){}
 FtpServer::~FtpServer(){}
-bool FtpServer::Start(const std::string&,const std::string&,unsigned,const std::string&,const std::string&,bool){
+bool FtpServer::Start(const std::string&,const std::string&,unsigned,const std::string&,const std::string&,bool,unsigned long long){
     error_="Provider FTP indisponivel nesta plataforma.";return false;
 }
 void FtpServer::Stop(){}

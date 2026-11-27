@@ -12,6 +12,10 @@ public final class XboxFtpClientTest {
         require(XboxFtpClient.parseListing("").isEmpty());
         try{XboxFtpClient.parseListing("-r--r--r-- 1 owner owner 2 Jan 01 2000 ../x\r\n");throw new AssertionError();}catch(java.io.IOException expected){}
         require(XboxFtpClient.credentials("infinity","long-password")&&!XboxFtpClient.credentials("anonymous","long-password"));
+        require(XboxFtpClient.parseUploadLimit("213 0")==0);
+        require(XboxFtpClient.parseUploadLimit("213 33554432")==33554432L);
+        require(XboxFtpClient.parseUploadLimit("213 536870912")==536870912L);
+        try{XboxFtpClient.parseUploadLimit("213 536870913");throw new AssertionError();}catch(java.io.IOException expected){}
         System.out.println("FTP parser and bounds OK");
     }
 }

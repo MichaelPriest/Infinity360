@@ -107,7 +107,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND Python3_Interpreter_FOUND)
-    add_executable(ftp_server_probe Tests/FtpServerProbe.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/FileWorkspace.cpp)
+    add_executable(ftp_server_probe Tests/FtpServerProbe.cpp Platform/Xbox360/FtpSession.cpp Platform/Xbox360/FtpServer.cpp Platform/Xbox360/FileWorkspace.cpp Platform/Xbox360/StorageInfo.cpp)
     target_include_directories(ftp_server_probe PRIVATE Platform/Xbox360)
     add_test(NAME ftp_server COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/FtpServerTest.py $<TARGET_FILE:ftp_server_probe>)
     set_tests_properties(ftp_server PROPERTIES TIMEOUT 30)
