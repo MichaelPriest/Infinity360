@@ -74,7 +74,7 @@ public:
         return true;
     }
 };
-inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool(bool)>& present,bool local=false){
+inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::function<bool(bool)>& present,bool local=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
     Output output(canvas);MpegPlayback player(reader,output);
     if(!player.Open())return player.Error();
     output.SetAspect(player.PixelAspect());
@@ -82,18 +82,25 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
     using Clock=std::chrono::steady_clock;
     auto last=Clock::now();double elapsed=0;
     bool paused=false,muted=false;
-    PlaybackHud hud;const auto started=Clock::now();
+    PlaybackHud hud;PlaybackGuideOverlay guide(drawGuide);const auto started=Clock::now();
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-started).count();};hud.Reveal(0);
     bool lastHud=true;
-    auto overlay=[&](){lastHud=hud.Visible(wall(),paused);hud.Draw(canvas,wall(),paused,"Cloud360 IPTV | MPEG",std::string(paused?"Pausado":"Reproduzindo")+(muted?" | Mudo":""),local?"A Pausa | X Mudo | B Sair":"X Mudo | B Sair");};
+    auto overlay=[&](){guide.Restore(canvas);lastHud=hud.Visible(wall(),paused);hud.Draw(canvas,wall(),paused,"Cloud360 IPTV | MPEG",std::string(paused?"Pausado":"Reproduzindo")+(muted?" | Mudo":""),local?"A Pausa | X Mudo | B Sair":"X Mudo | B Sair");guide.Draw(canvas);};
     INPUT_STATE initial{};unsigned previous=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     while(!Cancelled()){
         INPUT_STATE input{};bool refresh=false;
         if(XamInputGetState(0,0,&input)==ERROR_SUCCESS){
             const unsigned buttons=input.gamepad.buttons,edge=buttons&~previous;previous=buttons;
-            if(edge&INPUT_GAMEPAD_LEFT_THUMB){hud.Toggle(wall());refresh=true;}
-            if(edge&INPUT_GAMEPAD_X){muted=!muted;output.SetMuted(muted);hud.Reveal(wall());refresh=true;}
-            if(local&&(edge&INPUT_GAMEPAD_A)){paused=!paused;last=Clock::now();hud.Reveal(wall());refresh=true;}
+            const bool wasGuide=guide.Active();
+            if((edge&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available()){guide.Toggle();refresh=true;}
+            if(guide.Active()){
+                if(edge&INPUT_GAMEPAD_DPAD_UP){guide.Move(-1);refresh=true;}
+                if(edge&INPUT_GAMEPAD_DPAD_DOWN){guide.Move(1);refresh=true;}
+            }else if(!wasGuide){
+                if(edge&INPUT_GAMEPAD_START){hud.Toggle(wall());refresh=true;}
+                if(edge&INPUT_GAMEPAD_X){muted=!muted;output.SetMuted(muted);hud.Reveal(wall());refresh=true;}
+                if(local&&(edge&INPUT_GAMEPAD_A)){paused=!paused;last=Clock::now();hud.Reveal(wall());refresh=true;}
+            }
         }
         if(lastHud!=hud.Visible(wall(),paused))refresh=true;
         if(refresh)overlay();
@@ -105,21 +112,21 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
         if(delta<0.025){if(!present(refresh))return "Falha GPU.";continue;}
         last=now;elapsed=std::min(0.1,delta);
         const bool running=player.Advance(elapsed);
-        if(output.dirty){hud.Frame(canvas);overlay();}
+        if(output.dirty){guide.NewFrame();hud.Frame(canvas);overlay();}
         if(!present(output.dirty||refresh))return "Falha GPU.";
         output.dirty=false;
         if(!running)return player.Error().empty()?"Reproducao encerrada.":player.Error();
     }
     return "Reproducao cancelada.";
 }
-inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,const std::function<bool(bool)>& present){
+inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,const std::function<bool(bool)>& present,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
     std::ifstream marker((root+"enable-iptv-playback.txt").c_str());std::string enabled;
     if(!std::getline(marker,enabled)||enabled!="ENABLE-IPTV-PLAYBACK")return "Habilite enable-iptv-playback.txt.";
     MediaUrl url;
     if(url.Parse(path)){
 #ifdef INFINITY_XSDK_HTTPS
         RemoteReader reader;if(!reader.Open(path,root))return "Fonte MPEG-PS nao autorizada ou indisponivel.";
-        return PlayReader(reader,canvas,present);
+        return PlayReader(reader,canvas,present,false,drawGuide);
 #else
         return "Transporte de rede indisponivel.";
 #endif
@@ -127,6 +134,6 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     const auto local=XsdkPaths::Normalize(path);
     if(local.empty()||(!tvEndsWith(local,".mpg")&&!tvEndsWith(local,".mpeg")&&!tvEndsWith(local,".ps")))return "Use MPEG-1/MP2 em MPEG-PS; WMV nao suportado neste XSDK.";
     LocalReader reader(local);if(!reader.Ready())return "Arquivo local indisponivel.";
-    return PlayReader(reader,canvas,present,true);
+    return PlayReader(reader,canvas,present,true,drawGuide);
 }
 }

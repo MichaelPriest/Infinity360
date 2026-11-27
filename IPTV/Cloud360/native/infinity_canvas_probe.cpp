@@ -355,10 +355,11 @@ int main(){
                 canvas.Text(45,80,"Cloud360 | Abrindo midia",32,WHITE,1180);
                 if(!p.Show(canvas,true)){ok=false;break;}
                 auto presentMovie=[&](bool upload){if(!p.Show(canvas,upload)){presentFailed=true;return false;}return true;};
+                auto drawGuide=[&](HomeCanvas& frame,int row){menu.DrawPlaybackGuide(frame,row);};
 #ifdef INFINITY_MENU_FFMPEG
-                const auto result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie):XsdkMpeg::Play(movie,dir,canvas,presentMovie);
+                const auto result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #else
-                const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie);
+                const auto result=XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
 #endif
                 menu.PlayerMessage(result);dirty=true;
                 if(presentFailed){ok=false;break;}

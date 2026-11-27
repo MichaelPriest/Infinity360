@@ -70,6 +70,8 @@ public:
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
     bool ContextOpen()const{return contextOpen_;}
+    // Read-only playback overlay: no native social or module requests are queued.
+    void DrawPlaybackGuide(HomeCanvas& c,int row)const;
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
         const auto previous=social_;
@@ -214,7 +216,7 @@ private:
     int quickGuideEditStartRow_=0;
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);
-    void DrawQuickGuide(HomeCanvas& c)const;
+    void DrawQuickGuide(HomeCanvas& c,int playbackRow=-1)const;
     struct ContextAction { const char* label; Key key; };
     std::vector<ContextAction> ContextActions()const;
     void DrawContext(HomeCanvas& c)const;
@@ -222,7 +224,7 @@ private:
     size_t contextRow_=0;
     std::vector<ContextAction> contextActions_;
     void DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const;
-    void DrawSocialGuide(HomeCanvas& c)const;
+    void DrawSocialGuide(HomeCanvas& c,bool playback=false)const;
     InfinitySocial::Header social_;
     InfinitySocial::SessionEvents socialEvents_;
     InfinitySocial::CounterEvents socialCounters_;

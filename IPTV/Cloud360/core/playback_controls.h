@@ -28,6 +28,7 @@ public:
     int64_t Clock(int64_t wall)const{
         return std::max<int64_t>(0,(paused_?pausedAt_:wall)-pausedTotal_);
     }
+    void SynchronizeKeys(unsigned keys){previous_=keys;seek_=0;}
     int TakeSeek(){int result=seek_;seek_=0;return result;}
     void ResetClock(){paused_=false;pausedAt_=pausedTotal_=0;}
     bool Paused()const{return paused_;}

@@ -1614,6 +1614,9 @@ int main(int argc,char** argv) {
         assert(shaded!=before);assert(hud.Draw(player,1000,false,"Cloud360","Teste","B Sair",42));assert(player.Pixels()[640*1280+640]==shaded);
         assert(hud.Draw(player,5000000,false,"Cloud360","Teste","B Sair"));assert(player.Pixels()[640*1280+640]==before);
         hud.Toggle(5000000);assert(hud.Visible(10000000,false));hud.Toggle(10000000);assert(!hud.Visible(10000000,false));
+        PlaybackGuideOverlay overlay([](HomeCanvas& c,int row){c.Box(0,0,1280,720,0xff000000u+unsigned(row));});
+        overlay.Toggle();overlay.Move(1);overlay.Draw(player);assert(player.Pixels()[0]==0xff000001u);
+        overlay.Restore(player);assert(player.Pixels()[640*1280+640]==before);overlay.Draw(player);overlay.Toggle();overlay.Restore(player);assert(player.Pixels()[640*1280+640]==before&&!overlay.Active());
         unsigned p=0;assert(GameGrid::Parse("2",p)&&GameGrid::Enabled(p,0));
         assert(!GameGrid::Parse("3",p)&&p==2);
         assert(!GameGrid::Enabled(GameGrid::List,1));

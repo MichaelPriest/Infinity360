@@ -1294,9 +1294,9 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
         updateActive_||discSetActive_||discConfirm_||powerPage_||saveCenter_||achievementsPage_||
         artArchiveConfirm_||contentInstallActive_||backupConfirm_||recoverConfirm_||archiveTuConfirm_||
         restoreArchivedConfirm_||toggleTuConfirm_||unityActive_||storeProviders_||storeManage_||storeConfirm_||
-        luaRepoConfirm_||luaManifestConfirm_||peerEditing_||peerOptions_||smbEditing_||smbConfirm_)return a;
+        luaRepoConfirm_||luaManifestConfirm_||peerEditing_||peerOptions_||smbEditing_)return a;
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
-    if(smbUi_!=SmbClosed)return a;
+    if(smbUi_!=SmbClosed||smbConfirm_)return a;
 #endif
     if(appearanceEditor_){
         if(!layoutPreview_){add("Previa da Home",Search);add("Salvar configuracoes",Refresh);add("Restaurar categoria",Favorite);}
@@ -4323,7 +4323,7 @@ void ConsoleHome::DrawAvatarGuide(HomeCanvas& c)const{
     c.TextFit(608,523,"X Editar perfil | Y Atualizar | B Voltar",16,White,412);
     c.TextFit(608,563,"A Editor oficial (confirmar saida da dashboard)",14,Muted,412);
 }
-void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
+void ConsoleHome::DrawSocialGuide(HomeCanvas& c,bool playback)const{
     using namespace InfinitySocial;
     c.SeriesTile(580,87,470,552,false,244);
     approvedIcon(c,8,606,110,30,White);
@@ -4353,16 +4353,17 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     for(int row=0;row<GuideSocialCount;++row){
         const int y=315+row*30;
         const auto kind=GuideSocialAction(row);
-        const bool selected=socialGuideFocus_&&socialGuideRow_==row;
+        const bool selected=!playback&&socialGuideFocus_&&socialGuideRow_==row;
         if(selected)c.SeriesTile(601,y-1,428,29,true,225);
         approvedIcon(c,icons[row],611,y+3,21,White);
         c.TextFit(649,y,labels[row],16,White,365);
         const bool avatar=kind==NativeAction::AvatarEditor;
-        c.TextFit(649,y+15,CanRequestNative(kind,social_)?
+        c.TextFit(649,y+15,playback?"Disponivel apos sair do player":CanRequestNative(kind,social_)?
             (avatar?(avatarExitConfirm_.Matches(social_)?"A confirma saída":"Sai da dashboard — requer confirmação"):"Interface nativa experimental"):
             (row==0||avatar?"Requer perfil ativo no console":"Requer perfil online no console"),12,Muted,365);
         if(row<GuideSocialCount-1)c.Box(611,y+28,403,1,0xff414743u);
     }
+    if(playback){c.SeriesTile(601,500,428,122,false,215);c.TextFit(617,514,"Perfil e atalhos: somente consulta",19,White,396);c.TextFit(617,551,"Saia do player para abrir outras funcoes.",16,Muted,396);c.TextFit(617,585,"L3: voltar ao video",18,Lime,396);return;}
     c.SeriesTile(601,500,428,57,false,215);
     InfinityButtons::Draw(c,InfinityButtons::LB,616,513,30);
     c.TextFit(678,506,"Selecionar perfil Xbox",19,White,336);
@@ -4376,17 +4377,19 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
     c.TextFit(678,571,"Conquistas",19,White,336);
     c.TextFit(678,597,"Perfil ativo e copia GPD offline.",13,Muted,336);
 }
-void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
-    const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
+void ConsoleHome::DrawPlaybackGuide(HomeCanvas& c,int row)const{DrawQuickGuide(c,std::max(0,std::min(QuickGuide::Count-1,row)));}
+void ConsoleHome::DrawQuickGuide(HomeCanvas& c,int playbackRow)const{
+    const bool playback=playbackRow>=0;
+    const auto& order=!playback&&quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
     c.DimBackdrop();
     c.SeriesTile(235,87,332,552,false,221);
     approvedIcon(c,24,260,111,30,White);
-    c.TextFit(301,105,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rápido"),28,White,250);
+    c.TextFit(301,105,c.Tr(!playback&&quickGuideEditing_?"Personalizar guia":"Guia rápido"),28,White,250);
     const int icons[]={23,20,21,3,22,5,10,4};
     for(int i=0;i<QuickGuide::Count;++i){
         const unsigned action=static_cast<unsigned>(order[i]-'0');
         const int y=165+i*46;
-        const bool focused=i==quickGuideRow_&&(!socialGuideFocus_||quickGuideEditing_);
+        const bool focused=playback?i==playbackRow:i==quickGuideRow_&&(!socialGuideFocus_||quickGuideEditing_);
         c.SeriesTile(255,y,292,41,focused,focused?225:190);
         approvedIcon(c,icons[action],269,y+9,23,White);
         c.TextFit(306,y+6,c.Tr(QuickGuide::Label(action)),18,White,207);
@@ -4396,6 +4399,7 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
             c.TextFit(509,y+7,number(transfer_.Percent())+"%",15,Lime,34);
     }
     c.Box(255,545,292,1,0xff414743u);
+    if(playback){InfinityButtons::Strip(c,259,551,"L3 Fechar | B Sair do video",15,White,284);c.TextFit(259,588,"Consulta durante reproducao",15,Muted,284);DrawSocialGuide(c,true);return;}
     if(quickGuideEditing_)InfinityButtons::Strip(c,259,551,"LB/RB Mover | X Padrão | Y Salvar",13,White,284);
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Y Avatar | A Abrir | Esq Atalhos":"Direita: perfil e amigos"),15,Muted,284);

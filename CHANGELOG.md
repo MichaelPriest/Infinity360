@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.29 — Correção portátil e Guide na reprodução
+
+- Corrige referência a confirmação SMB fora da flag experimental, que impedia a compilação portátil da V0.3.28.
+- Guide de consulta durante IPTV nos players FFmpeg/MPEG XSDK: L3 abre/fecha, direcional percorre atalhos, exibe perfil e contadores existentes; não dispara operações sociais, lançamentos ou troca de módulos durante decode. START fixa/oculta HUD, B mantém saída. Proteção de input e restauração do framebuffer, buffer extra de 3,52 MiB somente com Guide aberto.
+- Testes portáteis de composição; regressão e galeria solicitadas novamente. Guia em títulos externos e player XDK legado ainda não integrados. Sem XEX/release.
+
 ## V0.3.28 — Opções contextuais sem R3 obrigatório
 
 - BACK abre menu contextual com ações nomeadas, A seleciona, B fecha; R3 físico deixa de disparar funções diretamente nos presenters XSDK e XDK. L3 mantém Guide da dashboard; combinação L3+R3 permanece captura no XSDK. BACK deixa de sair diretamente do menu.
