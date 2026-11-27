@@ -11,11 +11,27 @@
 #include <vector>
 namespace XsdkMpeg {
 inline bool RemoteCancelled(){INPUT_STATE input{};return XamInputGetState(0,0,&input)==ERROR_SUCCESS&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));}
-// Single-threaded pull reader. Pause the libcurl transfer before the bounded buffer fills.
+// Cooperative pull reader. The presenter may advance the transfer without waiting for bytes.
+// One 128 KiB bounded buffer per reader; no worker thread or extra segment allocation.
 class RemoteReader:public MediaReader {
     CURL* easy_=nullptr;CURLM* multi_=nullptr;bool global_=false,added_=false,paused_=false,ended_=false,failed_=false;
     std::vector<unsigned char> buffer_;
-    size_t read_=0;
+    size_t read_=0,peak_=0;
+    bool Advance(){
+        if(ended_||failed_)return !failed_;
+        if(RemoteCancelled()){error_="Reproducao cancelada.";failed_=true;return false;}
+        if(paused_){
+            if(buffer_.size()-read_>96*1024)return true;
+            paused_=false;if(curl_easy_pause(easy_,CURLPAUSE_CONT)!=CURLE_OK){failed_=true;error_="Falha ao retomar buffer IPTV.";return false;}
+        }
+        int running=0;if(curl_multi_perform(multi_,&running)!=CURLM_OK){failed_=true;error_="Falha de transporte IPTV.";return false;}
+        int left=0;while(auto* msg=curl_multi_info_read(multi_,&left)){
+            if(msg->msg==CURLMSG_DONE){ended_=true;failed_=msg->data.result!=CURLE_OK;
+                if(failed_){long status=0;curl_easy_getinfo(easy_,CURLINFO_RESPONSE_CODE,&status);
+                    error_=status==401||status==403?"Servidor recusou autorizacao IPTV.":status==404?"Recurso IPTV nao encontrado.":msg->data.result==CURLE_OPERATION_TIMEDOUT?"Tempo limite de rede IPTV.":"Falha de transporte IPTV.";}}
+        }
+        return !failed_;
+    }
     const char* error_="Falha ao iniciar rede IPTV.";
     static size_t Body(char* p,size_t s,size_t n,void* opaque){
         auto& self=*static_cast<RemoteReader*>(opaque);
@@ -24,11 +40,14 @@ class RemoteReader:public MediaReader {
         if(status!=200)return 0;
         if(self.buffer_.size()-self.read_+n>128*1024){self.paused_=true;return CURL_WRITEFUNC_PAUSE;}
         if(self.read_){self.buffer_.erase(self.buffer_.begin(),self.buffer_.begin()+self.read_);self.read_=0;}
-        self.buffer_.insert(self.buffer_.end(),p,p+n);return n;
+        self.buffer_.insert(self.buffer_.end(),p,p+n);self.peak_=std::max(self.peak_,self.buffer_.size());return n;
     }
     static int Progress(void*,curl_off_t,curl_off_t,curl_off_t,curl_off_t){return RemoteCancelled()?1:0;}
 public:
     const char* Error()const{return error_;}
+    size_t Buffered()const{return buffer_.size()-read_;}
+    size_t Peak()const{return peak_;}
+    bool Prefetch(){return added_&&Advance();}
     ~RemoteReader(){
         if(added_)curl_multi_remove_handle(multi_,easy_);
         if(easy_)curl_easy_cleanup(easy_);
@@ -69,17 +88,12 @@ public:
         if(!ok)return false;error_="Falha ao registrar transferencia IPTV.";added_=curl_multi_add_handle(multi_,easy_)==CURLM_OK;return added_;
     }
     int Read(unsigned char* data,unsigned cap) override{
+        if(!data||!cap||!added_)return -1;
         const auto start=std::chrono::steady_clock::now();
         while(read_==buffer_.size()&&!ended_&&!failed_){
             if(RemoteCancelled()){error_="Reproducao cancelada.";return -1;}
             if(std::chrono::steady_clock::now()-start>std::chrono::seconds(15)){error_="Tempo limite de leitura IPTV.";return -1;}
-            if(paused_){paused_=false;if(curl_easy_pause(easy_,CURLPAUSE_CONT)!=CURLE_OK)return -1;}
-            int running=0;if(curl_multi_perform(multi_,&running)!=CURLM_OK)return -1;
-            int left=0;while(auto* msg=curl_multi_info_read(multi_,&left)){
-                if(msg->msg==CURLMSG_DONE){ended_=true;failed_=msg->data.result!=CURLE_OK;
-                    if(failed_){long status=0;curl_easy_getinfo(easy_,CURLINFO_RESPONSE_CODE,&status);
-                        error_=status==401||status==403?"Servidor recusou autorizacao IPTV.":status==404?"Recurso IPTV nao encontrado.":msg->data.result==CURLE_OPERATION_TIMEDOUT?"Tempo limite de rede IPTV.":"Falha de transporte IPTV.";}}
-            }
+            if(!Advance())return -1;
             if(read_==buffer_.size()&&!ended_){int activity=0;if(curl_multi_poll(multi_,nullptr,0,50,&activity)!=CURLM_OK)return -1;}
         }
         if(RemoteCancelled()||failed_)return -1;

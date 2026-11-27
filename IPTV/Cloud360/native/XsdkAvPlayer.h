@@ -90,6 +90,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
             hls.EnableBufferedSegments(true);
+            hls.EnablePrefetch([](XsdkMpeg::RemoteReader& r){return r.Prefetch();});
             hls.EnableStartupAdaptation([](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());});
             if(!hls.Start(path,cap,true))return hlsError.empty()?"Playlist HLS recusada ou indisponivel.":hlsError;
             selectedBitrate=hls.SelectedBitrate();
@@ -196,6 +197,11 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             continue;
         }
         if(controls.Paused()){if(!present(false)){ok=false;break;}continue;}
+#ifdef INFINITY_AV_NETWORK
+        // Advance existing network transfers cooperatively while A/V frames are queued.
+        // The callback never calls curl_multi_poll or waits for media data.
+        if(remoteSource){hls.Prefetch();if(!hls.Live()&&!selectedBitrate)remote.Prefetch();}
+#endif
         auto elapsed=playbackClock.Elapsed(controls.Clock(wall()));
         if(timeline.Finished(elapsed))break;
         if(elapsed>CloudAvStreamQueue::MaxDuration+1000000){ok=false;break;}
@@ -220,6 +226,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     xsdk_log_write("Cloud360 read stalls=%u compensated_ms=%u ahead_ms=%u",playbackClock.Stalls(),static_cast<unsigned>(playbackClock.Stalled()/1000),static_cast<unsigned>(playbackClock.Ahead()/1000));
     if(cancelled||Cancelled())return "Reproducao cancelada.";
 #ifdef INFINITY_AV_NETWORK
+    xsdk_log_write("Cloud360 prefetched HLS segments=%u remote_peak=%u",hls.PrefetchedSegments(),static_cast<unsigned>(remote.Peak()));
     if(hls.LastFailure()!=CloudHls::Failure::None){
         // Restart only a previously playing live HLS stream after transport/window failure.
         // All decoder/reader/audio objects are destroyed before restarting; never concatenate streams.

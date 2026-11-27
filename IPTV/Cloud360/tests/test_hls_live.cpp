@@ -131,6 +131,32 @@ int main(){
        reason(first)!=Failure::StalePlaylist||
        !RecoverLive(Failure::Transport)||!RecoverLive(Failure::WindowExpired)||!RecoverLive(Failure::StalePlaylist)||
        RecoverLive(Failure::InvalidPlaylist)||RecoverLive(Failure::InvalidSegment)||RecoverLive(Failure::Cancelled))return 1;
-    std::puts("live sequence, retry, overlap, stale window and partial failure passed");
+    // Cooperative prefetch opens at most one known segment and reuses its reader.
+    std::map<std::string,unsigned> prefHits;unsigned polls=0;
+    VodReader<Reader> pref([&](const std::string& url,bool playlist)->std::unique_ptr<Reader>{
+        if(playlist)return std::make_unique<Reader>(Reader{Playlist(1,{"a","b","c"},true)});
+        const auto name=url.substr(url.find_last_of('/')+1);++prefHits[name];
+        return std::make_unique<Reader>(Reader{std::string(188,name[0])});
+    },[](unsigned){return true;});
+    if(!pref.EnableBufferedSegments()||!pref.EnablePrefetch([&](Reader&){++polls;return true;})||!pref.Start(base,2000000))return 1;
+    pref.Prefetch();pref.Prefetch();
+    if(prefHits["a.ts"]!=1||prefHits["b.ts"]||polls!=2)return 1;
+    std::string output;
+    for(unsigned i=0;i<20;++i){
+        const int n=pref.Read(block,sizeof block);if(n<0)return 1;if(!n)break;
+        output.append(reinterpret_cast<char*>(block),n);pref.Prefetch();
+    }
+    if(output!=std::string(188,'a')+std::string(188,'b')+std::string(188,'c')||
+       prefHits["a.ts"]!=1||prefHits["b.ts"]!=1||prefHits["c.ts"]!=1||pref.PrefetchedSegments()!=3)return 1;
+    // Failed speculative transfer falls back to the normal atomic read, without duplicate bytes.
+    unsigned opened=0;
+    VodReader<Reader> fallback([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+        if(playlist)return std::make_unique<Reader>(Reader{Playlist(1,{"a"},true)});
+        ++opened;return std::make_unique<Reader>(Reader{std::string(188,'x')});
+    });
+    if(!fallback.EnableBufferedSegments()||!fallback.EnablePrefetch([](Reader&){return false;})||!fallback.Start(base,2000000))return 1;
+    fallback.Prefetch();fallback.Prefetch();if(opened!=1)return 1;
+    if(fallback.Read(block,sizeof block)!=97||fallback.Read(block,sizeof block)!=91||fallback.Read(block,sizeof block)!=0||opened!=2||fallback.PrefetchedSegments())return 1;
+    std::puts("live sequence, retry, overlap, stale window, cooperative prefetch and partial failure passed");
     return 0;
 }

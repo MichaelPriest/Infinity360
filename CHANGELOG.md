@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.38 — Pré-leitura cooperativa IPTV
+
+- Transporte curl_multi avança sem espera explícita no loop de reprodução; leitor HLS pode adiantar um único segmento conhecido, reutilizando o mesmo handle e buffer de até 128 KiB. Não aloca outro segmento completo, não abre novas playlists especulativamente e não cria threads. Falha especulativa retorna ao fluxo normal; não publica bytes duplicados.
+- Pré-leitura preserva amostras diretas periódicas para adaptação de qualidade e mantém a política de origem/TLS. Testes portáteis de ordem, reutilização, fallback e limite de uma abertura especulativa. Ainda não é rede/decoder em workers independentes; DNS e chamadas de biblioteca podem bloquear. Sem XEX/release.
+
 ## V0.3.37 — Redução adaptativa de qualidade HLS
 
 - Em live HLS com master playlist, três segmentos completos e consecutivos abaixo de 120% do bitrate declarado solicitam variante inferior; prioriza a maior variante abaixo de 75% da taxa observada, ou a menor elegível. Não sobe qualidade automaticamente. A troca ocorre por nova sessão completa do decoder, dentro do orçamento de duas reconexões, sem alinhar variantes por sequência nem misturar seus bytes. VOD, segmentos grandes em streaming e playlists sem variantes não ativam a adaptação.

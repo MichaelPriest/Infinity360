@@ -106,3 +106,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-27 V0.3.36 HLS live recovery and diagnostics; 113 portable captures; no XEX.
 
 2026-11-27 V0.3.37 adaptive live bitrate reduction and audio continuity; 113 portable captures; no XEX.
+
+2026-11-27 V0.3.38 cooperative IPTV prefetch; 113 portable captures; no XEX.

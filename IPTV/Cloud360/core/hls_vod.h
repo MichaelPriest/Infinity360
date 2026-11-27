@@ -185,6 +185,25 @@ public:
     using Open=std::function<std::unique_ptr<Reader>(const std::string&,bool)>;
     using Wait=std::function<bool(unsigned)>; // milliseconds; false cancels
     using Clock=std::function<uint64_t()>; // monotonic milliseconds
+    using Poll=std::function<bool(Reader&)>;
+    bool EnablePrefetch(Poll poll){if(started_||!poll)return false;poll_=std::move(poll);return true;}
+    unsigned PrefetchedSegments()const{return prefetched_;}
+    // Only open one known, next segment. No playlist refresh, sleeps or decoder calls here.
+    void Prefetch(){
+        if(!poll_||!valid_||failed_||suggested_||!buffered_||streamingSegment_||(Fragmented()&&!initDone_))return;
+        const uint64_t seq=next_+(segment_.empty()?0:1);
+        if(seq<list_.sequence||seq>=list_.sequence+list_.segments.size())return;
+        // Keep three consecutive direct samples after a slow one, or every fourth sequence,
+        // so cooperative prefetch cannot suppress the adaptive quality decision.
+        if(runtime_&&(slowSegments_||seq%4==0))return;
+        if(prefetch_&&prefetchSeq_!=seq){prefetch_.reset();prefetchUrl_.clear();}
+        if(!prefetch_){
+            if(prefetchTried_&&prefetchSeq_==seq)return;
+            prefetchTried_=true;prefetchSeq_=seq;prefetchUrl_=list_.segments[static_cast<size_t>(seq-list_.sequence)];
+            prefetch_=open_(prefetchUrl_,false);
+        }
+        if(prefetch_&&!poll_(*prefetch_)){prefetch_.reset();prefetchUrl_.clear();}
+    }
     bool EnableStartupAdaptation(Clock clock){if(started_||!clock)return false;clock_=std::move(clock);return true;}
     unsigned StartupThroughput()const{return throughput_;}
     // Arm only after playback preparation; VOD and standalone playlists remain unchanged.
@@ -275,6 +294,9 @@ public:
             if(next_<list_.sequence)return Fail(Failure::WindowExpired);
             if(buffered_&&!streamingSegment_){
                 if(segment_.empty()){
+                    // Include time spent prefetching when measuring throughput; the bounded cache may pause while full.
+                    // A prefetched sample is not a reliable throughput measurement, so retain the previous estimate.
+                    const bool anticipated=prefetch_&&prefetchSeq_==next_;
                     const uint64_t before=runtime_?clock_():0;
                     if(!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)])){
                         if(!streamingSegment_)return Fail(segmentFailure_);
@@ -282,7 +304,7 @@ public:
                         // No bytes from this segment have reached the decoder. Reopen in streaming mode.
                         continue;
                     }
-                    if(runtime_&&Live())ObserveSegment(before,clock_(),segment_.size());
+                    if(runtime_&&Live()&&!anticipated)ObserveSegment(before,clock_(),segment_.size());
                 }
                 const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
                 std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
@@ -331,7 +353,10 @@ private:
             if(attempt&&!wait_(250u*attempt)){segmentFailure_=Failure::Cancelled;segment_.clear();return false;}
             segment_.clear();segmentOffset_=0;
             if(segment_.capacity()<MaxBufferedSegment)segment_.reserve(MaxBufferedSegment);
-            auto reader=open_(url,false);if(!reader){segmentFailure_=Failure::Transport;continue;}
+            std::unique_ptr<Reader> reader;
+            if(!init&&!attempt&&prefetch_&&prefetchSeq_==next_&&prefetchUrl_==url){reader=std::move(prefetch_);prefetchUrl_.clear();++prefetched_;}
+            else reader=open_(url,false);
+            if(!reader){segmentFailure_=Failure::Transport;continue;}
             for(;;){
                 const int n=reader->Read(block,sizeof block);
                 if(n<0){segmentFailure_=Failure::Transport;break;}
@@ -396,10 +421,11 @@ private:
         for(;;){int n=reader->Read(block,sizeof block);if(n<0)return false;if(n>int(sizeof block)||size_t(n)>MaxPlaylist-text.size()){fetchFailure_=Failure::InvalidPlaylist;return false;}if(!n)break;text.append(reinterpret_cast<char*>(block),n);}
         if(!Parse(url,text,list,allowLive_)){fetchFailure_=Failure::InvalidPlaylist;return false;}return true;
     }
-    int Fail(Failure reason){failed_=true;failure_=reason;reader_.reset();return -1;}
+    int Fail(Failure reason){failed_=true;failure_=reason;reader_.reset();prefetch_.reset();return -1;}
     Failure failure_=Failure::None,refreshFailure_=Failure::StalePlaylist,segmentFailure_=Failure::Transport,fetchFailure_=Failure::Transport;
     Open open_;Wait wait_;Clock clock_;unsigned throughput_=0;std::unique_ptr<Reader> reader_;
     std::vector<Variant> variants_;bool runtime_=false;unsigned suggested_=0,recentThroughput_=0,slowSegments_=0;
+    Poll poll_;std::unique_ptr<Reader> prefetch_;std::string prefetchUrl_;uint64_t prefetchSeq_=0;bool prefetchTried_=false;unsigned prefetched_=0;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;

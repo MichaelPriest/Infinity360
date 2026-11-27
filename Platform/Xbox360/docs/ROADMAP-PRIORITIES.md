@@ -14,6 +14,10 @@
 
 Esta ordem substitui a classificação histórica abaixo. Preservar funcionalidades essenciais de boot, lançamento, armazenamento e recuperação; corrigir regressões críticas quando encontradas. Não disparar build XEX/release sem autorização.
 
+### V0.3.38 — Pré-leitura cooperativa
+
+curl_multi é avançado no loop A/V e até um segmento HLS conhecido recebe pré-leitura limitada a 128 KiB, sem segundo buffer de segmento completo. Testes portáteis solicitados. Bufferização em worker independente, latência real, ABR contínuo e homologação Xbox permanecem pendentes.
+
 ### V0.3.37 — Redução adaptativa live HLS
 
 Três amostras lentas consecutivas em segmentos completos permitem reiniciar com variante inferior elegível, mantendo preferências de áudio e teto configurado. Sem troca contínua de variante no mesmo demuxer; sem ABR ascendente ou bufferização assíncrona. Validação física pendente.
