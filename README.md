@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.57 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.58 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -70,3 +70,7 @@ O projeto não distribui jogos comerciais, ROMs, chaves, firmware proprietário 
 ### Controle remoto IPTV experimental
 
 Na pasta de dados IPTV, crie `cloud360-remote.txt` com duas linhas: IPv4 privado do celular autorizado e uma chave hexadecimal aleatoria de 32 caracteres (128 bits). Gere a chave em um computador confiavel, por exemplo com `python -c "import secrets; print(secrets.token_hex(16))"`. Inicie uma midia FFmpeg de rede; no celular autorizado, abra `http://IP_DO_XBOX:32161` e informe a chave. O endereco aparece nos detalhes tecnicos do HUD. Nao encaminhe a porta no roteador; HTTP sem criptografia, use somente LAN confiavel. Remova o arquivo (inclusive .bak, se existir) para desativar. O servidor fecha ao sair da sessao, nao transmite video e nao controla a dashboard fora do player. Homologacao XSDK pendente.
+
+### Aplicativo Android INFINITY 360 Remote
+
+Projeto nativo: [Android/](Android/README.md). APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla o player IPTV por rede local, não reproduz conteúdo no telefone.

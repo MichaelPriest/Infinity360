@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.58 — INFINITY 360 Remote para Android
+
+- Projeto Android nativo em `Android/`, controle Cloud360 via protocolo HTTP LAN da V0.3.57. Interface escura, comandos, verificação de disponibilidade, geração de chave aleatória e cópia de configuração para pareamento manual. Não guarda chave em disco; aceita apenas IPv4 privado e não segue redirecionamentos. Workflow separado gera APK debug para testes; nenhuma build XEX ou release. SDK Android e console ainda não homologados.
+
 ## V0.3.57 — Controle remoto IPTV pelo navegador (experimental)
 
 - Servidor HTTP local durante sessao FFmpeg de rede, porta 32161, opt-in por cloud360-remote.txt (IPv4 privado do celular e chave aleatoria hexadecimal de 32 caracteres, uma linha cada). Controle web responsivo servido pelo console; comandos limitados aos botoes IPTV. Valida IP, Host, chave, tamanho, formato e taxa; sem CORS, arquivos ou comandos genericos. HTTP sem criptografia, apenas LAN confiavel. Endereco no HUD de diagnostico. Poll cooperativo, indisponivel durante chamadas bloqueantes. Teste de protocolo registrado; XSDK e navegador no console pendentes. Sem XEX/release.
