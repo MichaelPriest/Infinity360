@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.41 — Recuperacao gradual HLS
+
+- Live HLS pode solicitar a proxima variante elegivel apos oito amostras diretas com margem de 60% sobre o bitrate alvo e pelo menos 30 segundos desde a ativacao. Respeita o teto do usuario e reinicia o decoder sem misturar variantes. Mantem o orcamento total de duas reconexoes; nao altera VOD nem a fila de 32 MiB. Validacao de compilacao e teste fisico pendentes. Sem XEX/release.
+
 ## V0.3.40 — Entrada Full HD experimental
 
 - Decoder aceita fontes até 1920×1080, com limite de pixels alinhados; conversão YUV420→RGB reduz diretamente à resolução máxima de 1280×720 preservando proporção, sem alocar RGB em 1080p. Fila mantém teto de 32 MiB. HUD informa a resolução da fonte quando superior à saída. HLS automático continua limitado a 720p; `MenuPreview/enable-iptv-1080p.txt` com `ENABLE-IPTV-1080P` libera variantes Full HD dentro do bitrate configurado.

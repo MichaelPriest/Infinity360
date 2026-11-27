@@ -69,5 +69,6 @@ int main(){
     total=0;
     for(;;){int n=running.Read(b,sizeof b);if(n<0)break;if(!n)return 11;for(int i=0;i<n;++i)if(b[i]!='h')return 12;total+=n;if(total>188*400*4)return 13;}
     if(total!=188*400*4||running.LastFailure()!=Failure::LowerQuality||running.SuggestedBitrate()!=400000||lowReads||highReads!=4)return 14;
+    if(std::string(FailureLabel(Failure::HigherQuality)).empty()||RecoverLive(Failure::HigherQuality))return 18;
     return 0;
 }

@@ -65,7 +65,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 #ifdef INFINITY_AV_NETWORK
     XsdkMpeg::RemoteReader remote;
     XsdkMpeg::RangeReader ranged;
-    std::string hlsError;
+    std::string hlsError;unsigned userHlsCap=CloudHls::DefaultBitrate;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
         if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4"),!playlist&&CloudHls::Extension(url,".m4s"))){hlsError=r->Error();return std::unique_ptr<XsdkMpeg::RemoteReader>{};}
@@ -88,6 +88,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
                 if(!value.empty()&&value.back()=='\r')value.pop_back();
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
+            userHlsCap=cap;
             if(adaptiveCap)cap=std::min(cap,adaptiveCap);
             // Keep automatic HLS selection at 720p unless explicitly enabled.
             std::ifstream fullHd((root+"enable-iptv-1080p.txt").c_str(),std::ios::binary);
@@ -139,7 +140,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     controls.RestoreAudio(audioPreference);
 #ifdef INFINITY_AV_NETWORK
-    hls.ArmRuntimeAdaptation();
+    hls.ArmRuntimeAdaptation(userHlsCap);
 #endif
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
@@ -235,7 +236,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(hls.LastFailure()!=CloudHls::Failure::None){
         // Restart only a previously playing live HLS stream after transport/window failure.
         // All decoder/reader/audio objects are destroyed before restarting; never concatenate streams.
-        const bool lower=hls.LastFailure()==CloudHls::Failure::LowerQuality&&hls.SuggestedBitrate()>0;
+        const bool lower=(hls.LastFailure()==CloudHls::Failure::LowerQuality||hls.LastFailure()==CloudHls::Failure::HigherQuality)&&hls.SuggestedBitrate()>0;
         retryLive=!ok&&shown&&submitted&&hls.Live()&&(CloudHls::RecoverLive(hls.LastFailure())||lower);
         if(retryLive&&lower)adaptiveCap=hls.SuggestedBitrate();
         if(retryLive&&!lower&&selectedBitrate)adaptiveCap=adaptiveCap?std::min(adaptiveCap,selectedBitrate):selectedBitrate;
