@@ -19,3 +19,18 @@ return g.name .. " | Title ID decimal: " .. m.title_id
 Referência para compatibilidade futura: [XboxUnity/AuroraScripts](https://github.com/XboxUnity/AuroraScripts), categorias Filters, Sorts, Subtitles e UtilityScripts.
 Não implementamos ainda as funções Script, Aurora, FileSystem, SQL ou interfaces de filtro/ordenação do Aurora.
 Não copie scripts de terceiros para o pacote distribuído sem verificar a licença. Não há compatibilidade geral com Aurora/Freestyle nesta revisão.
+
+## Filtros da biblioteca (V0.3.11)
+
+Copie um filtro para `MenuPreview/Scripts/Filters`. Em Sistema > Plugins > R3, LB/RB alterna Utilitários/Filtros. A aplica e abre a biblioteca. X limpa o filtro ativo. Retorne uma tabela densa de índices únicos válidos, a partir de 1. O resultado é uma seleção, não uma ordenação. Uma tabela vazia é um filtro válido. Erros preservam o filtro anterior. O snapshot por caminho permanece durante a sessão, inclusive após nova varredura; reexecute para incluir jogos novos ou refletir mudanças de favoritos. Categorias, ocultos e busca continuam sendo respeitados.
+
+```lua
+local result = {}
+for i = 1, infinity.game_count do
+    local g = infinity.game(i)
+    if g.favorite and not g.hidden then result[#result+1] = i end
+end
+return result
+```
+
+Não é a API de filtros do Aurora. Os limites de memória e instruções continuam aplicáveis.

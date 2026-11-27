@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <cstddef>
+#include <vector>
 #ifdef INFINITY_WITH_LUA
 extern "C" {
 #include "lua.h"
@@ -18,6 +19,7 @@ struct MetadataView{
     unsigned titleId=0,mediaId=0,version=0,baseVersion=0,discNumber=0,discCount=0,contentType=0,volumeType=0;
 };
 struct Library{size_t count=0;const void* context=nullptr;GameView (*get)(const void*,size_t)=nullptr;MetadataView (*metadata)(const void*,size_t)=nullptr;};
+struct FilterResult{bool ok=false;std::vector<size_t> indices;std::string message;};
 inline bool Available(){
 #ifdef INFINITY_WITH_LUA
     return true;
@@ -124,6 +126,50 @@ inline std::string RunText(const std::string& code,const Library& library){
 #endif
 }
 inline std::string RunText(const std::string& code,size_t count){return RunText(code,Library{count});}
+inline FilterResult FilterText(const std::string& code,const Library& library){
+    FilterResult result;
+    if(code.size()>65536||library.count>32768){result.message="Limite de filtro excedido.";return result;}
+#ifdef INFINITY_WITH_LUA
+    Budget b;b.library=library;lua_State* L=lua_newstate(Alloc,&b);
+    if(!L){result.message="Memoria Lua indisponivel.";return result;}
+    lua_pushcfunction(L,Setup);int rc=lua_pcall(L,0,0,0);
+    if(rc==LUA_OK)rc=luaL_loadbufferx(L,code.data(),code.size(),"filter","t");
+    if(rc==LUA_OK){lua_sethook(L,Limit,LUA_MASKCOUNT,1000);rc=lua_pcall(L,0,1,0);}
+    if(rc!=LUA_OK)result.message="Lua erro: "+Result(L,"filtro recusado.");
+    else if(lua_type(L,-1)!=LUA_TTABLE)result.message="Filtro deve retornar uma lista de indices.";
+    else{
+        const auto n=lua_rawlen(L,-1);bool valid=n<=library.count;
+        std::vector<unsigned char> seen(library.count,0);
+        size_t entries=0;
+        if(valid){
+            lua_pushnil(L);
+            while(lua_next(L,-2)){
+                if(!lua_isinteger(L,-2)||!lua_isinteger(L,-1)){valid=false;lua_pop(L,2);break;}
+                const auto key=lua_tointeger(L,-2),value=lua_tointeger(L,-1);
+                if(key<1||static_cast<unsigned long long>(key)>n||value<1||static_cast<unsigned long long>(value)>library.count||seen[static_cast<size_t>(value-1)]){
+                    valid=false;lua_pop(L,2);break;
+                }
+                seen[static_cast<size_t>(value-1)]=1;++entries;lua_pop(L,1);
+            }
+        }
+        if(valid&&entries==n){
+            for(size_t i=0;i<seen.size();++i)if(seen[i])result.indices.push_back(i);
+            result.ok=true;result.message="Filtro aplicado: "+std::to_string(result.indices.size())+" jogos.";
+        }else result.message="Filtro invalido: indices unicos, inteiros e lista sem lacunas.";
+    }
+    lua_close(L);
+#else
+    (void)library;result.message="Runtime Lua nao incluido nesta build.";
+#endif
+    return result;
+}
+inline FilterResult FilterFile(const std::string& path,const Library& library){
+    std::ifstream f(path.c_str(),std::ios::binary|std::ios::ate);
+    if(!f||f.tellg()<0||f.tellg()>65536)return {false,{},"Script ausente ou acima de 64 KiB."};
+    const auto n=static_cast<size_t>(f.tellg());std::string code(n,'\0');f.seekg(0);
+    if(n&&!f.read(&code[0],n))return {false,{},"Falha de leitura do script."};
+    return FilterText(code,library);
+}
 inline std::string RunFile(const std::string& path,const Library& library){
     std::ifstream f(path.c_str(),std::ios::binary|std::ios::ate);
     if(!f||f.tellg()<0||f.tellg()>65536)return "Script ausente ou acima de 64 KiB.";

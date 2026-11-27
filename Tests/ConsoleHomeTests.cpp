@@ -1267,6 +1267,22 @@ int main(int argc,char** argv) {
     assert(fs::file_size(scanUiConfig)==0);
     scanUi.Press(ConsoleHome::Left);scanUi.Press(ConsoleHome::Favorite);
     assert(fs::file_size(packageConfig)==0&&fs::exists(scanUiExe));
+#ifdef INFINITY_WITH_LUA
+    {
+        const auto luaRoot=root/"LuaFilterFixture";
+        fs::create_directories(luaRoot/"Games"/"Alpha");fs::create_directories(luaRoot/"Games"/"Beta");
+        fs::create_directories(luaRoot/"Scripts"/"Filters");
+        std::ofstream(luaRoot/"Games"/"Alpha"/"default.xex")<<"fixture";
+        std::ofstream(luaRoot/"Games"/"Beta"/"default.xex")<<"fixture";
+        std::ofstream(luaRoot/"Scripts"/"Filters"/"Beta.lua")<<"local r={} for i=1,infinity.game_count do if infinity.game(i).name=='Beta' then r[#r+1]=i end end return r";
+        LegacyFixtureHome luaHome(luaRoot.string()+"/",{(luaRoot/"Games").string()});luaHome.Load();
+        luaHome.Press(ConsoleHome::Right);luaHome.Press(ConsoleHome::Down);luaHome.Press(ConsoleHome::Right);luaHome.Press(ConsoleHome::Accept);
+        for(int i=0;i<4;++i)luaHome.Press(ConsoleHome::Right);
+        luaHome.Press(ConsoleHome::Accept);luaHome.Press(ConsoleHome::Search);luaHome.Press(ConsoleHome::PageDown);luaHome.Press(ConsoleHome::Accept);
+        luaHome.Press(ConsoleHome::Accept);
+        assert(luaHome.Press(ConsoleHome::Accept)==(luaRoot/"Games"/"Beta"/"default.xex").string());
+    }
+#endif
     // Native explorer context actions: confirmed deletion, cancel and cut/paste.
     const fs::path actionRoot=root/"FileActionsFixture";
     fs::create_directories(actionRoot/"UserFiles"/"Dest");

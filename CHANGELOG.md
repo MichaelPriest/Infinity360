@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.11 — Filtros Lua da biblioteca
+
+- Scripts/Filters permite selecionar índices por Lua, com validação de lista densa, inteiros, duplicidades e limites. Aplica seleção temporária por caminho à biblioteca e mantém categorias/busca existentes. X limpa filtro no gerenciador de scripts. Sem mutação de arquivos ou favoritos.
+- Testes de runtime e fluxo real de controle. API própria; compatibilidade Aurora pendente. Sem nova solicitação XEX.
+
 ## V0.3.10 — Metadados Lua
 
 - API Lua v2 acrescenta infinity.metadata(i), leitura real de cabeçalhos XEX/STFS com Title ID, Media ID, versões, discos e tipo de conteúdo. Cache por execução limitado a 128 índices distintos, sem acesso arbitrário a arquivos.

@@ -33,4 +33,12 @@ int main(){
     assert(InfinityLua::RunText("for i=1,128 do infinity.metadata(i) end; local m,e=infinity.metadata(129); return e",meta)=="Lua: limite de metadados");
     assert(reads==128);
     assert(InfinityLua::RunText("local m,e=infinity.metadata(0); return e",meta)=="Lua: indisponivel");
+    auto filtered=InfinityLua::FilterText("return {3,1}",InfinityLua::Library{3});
+    assert(filtered.ok&&filtered.indices==std::vector<size_t>({0,2}));
+    auto none=InfinityLua::FilterText("return {}",library);assert(none.ok&&none.indices.empty());
+    for(const auto* code:{"return {1,1}","return {0}","return {4}","return {1.5}","return {[1]=1,[3]=2}","return {1, extra=2}","return true","while true do end"}){
+        auto bad=InfinityLua::FilterText(code,InfinityLua::Library{3});assert(!bad.ok&&bad.indices.empty());
+    }
+    auto chosen=InfinityLua::FilterText("local r={}; for i=1,infinity.game_count do if infinity.game(i).favorite then r[#r+1]=i end end; return r",library);
+    assert(chosen.ok&&chosen.indices==std::vector<size_t>({0}));
 }

@@ -330,6 +330,9 @@ private:
     void DrawLibraryPaths(HomeCanvas& c)const;
     void DrawLuaScripts(HomeCanvas& c)const;
     void RefreshLuaScripts();
+    bool luaFiltersPage_=false;
+    std::string luaActiveFilter_;
+    std::set<std::string> luaFilterPaths_;
     void ToggleLibraryRoot();
     std::vector<GameScanner::Depth> scanDepths_;
     void ChangeLibraryDepth(int delta);

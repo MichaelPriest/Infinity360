@@ -349,7 +349,7 @@ void ConsoleHome::Rebuild() {
                                subtab_==6?neverOpened:
                               subtab_==5?inCollection:
                               libraryTabMatch(games_[i],subtab_)));
-            if(allowed && matchesLibraryQuery(games_[i],searchTerm_))
+            if(allowed && (luaActiveFilter_.empty()||luaFilterPaths_.count(games_[i].executable)) && matchesLibraryQuery(games_[i],searchTerm_))
                 visible_.push_back(&games_[i]);
         }
         if(subtab_==8) {
@@ -451,7 +451,8 @@ void ConsoleHome::ChangeLibraryDepth(int delta){
 }
 void ConsoleHome::RefreshLuaScripts(){
     luaScripts_.clear();std::vector<FolderEntry> items;
-    if(ReadFolder(FileWorkspace::Join(dir_,"Scripts"),items)){
+    const auto root=FileWorkspace::Join(dir_,"Scripts");
+    if(ReadFolder(luaFiltersPage_?FileWorkspace::Join(root,"Filters"):root,items)){
         for(const auto& item:items){
             if(luaScripts_.size()>=128)break;
             if(!item.directory&&item.name.size()<=128&&item.name.find_first_of("/\\:")==std::string::npos&&tvEndsWith(item.name,".lua"))luaScripts_.push_back(item.name);
@@ -1075,6 +1076,8 @@ std::string ConsoleHome::Press(Key key) {
     if(luaPage_){
         if(key==Back){luaPage_=false;notice_.clear();return "";}
         if(key==Up||key==Down){luaRow_=std::max(0,luaRow_+(key==Down?1:-1));clampRow(luaRow_,luaScripts_.size());}
+        if(key==PageUp||key==PageDown){luaFiltersPage_=!luaFiltersPage_;luaRow_=0;RefreshLuaScripts();notice_.clear();return "";}
+        if(key==Favorite){luaActiveFilter_.clear();luaFilterPaths_.clear();notice_="Filtro Lua removido.";return "";}
         if(key==Refresh)RefreshLuaScripts();
         if(key==Accept&&!TransferRunning()&&!ftp_.Running()&&!luaScripts_.empty()){
             InfinityLua::Library library{games_.size(),this,[](const void* ctx,size_t i)->InfinityLua::GameView{
@@ -1086,12 +1089,20 @@ std::string ConsoleHome::Press(Key key) {
                 const auto m=ContentCatalog::DescribeTitle(g.executable,isContentPackage(g));
                 return {m.known,m.titleId,m.mediaId,m.version,m.baseVersion,m.discNumber,m.discCount,m.contentType,m.volumeType};
             }};
-            notice_=InfinityLua::RunFile(FileWorkspace::Join(FileWorkspace::Join(dir_,"Scripts"),luaScripts_[luaRow_]),library);
+            const auto root=FileWorkspace::Join(dir_,"Scripts");
+            if(luaFiltersPage_){
+                const auto result=InfinityLua::FilterFile(FileWorkspace::Join(FileWorkspace::Join(root,"Filters"),luaScripts_[luaRow_]),library);
+                if(!result.ok){notice_=result.message;return "";}
+                std::set<std::string> selected;
+                for(const auto i:result.indices)selected.insert(games_[i].executable);
+                luaFilterPaths_.swap(selected);luaActiveFilter_=luaScripts_[luaRow_];
+                luaPage_=false;Enter(Library);notice_=result.message;
+            }else notice_=InfinityLua::RunFile(FileWorkspace::Join(root,luaScripts_[luaRow_]),library);
         }
         return "";
     }
     if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaFiltersPage_=false;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
     if(approvedGroup_>=0){
         const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
         const int count=actions[3]<0?3:4;
@@ -3124,16 +3135,16 @@ void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,605,packagePathsPage_?"LB/RB XEX | A Pastas | X Alternar | Y Varrer | B Voltar":"LB/RB Pacotes | A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer",18,Lime,1170);
 }
 void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
-    c.Text(45,93,"Scripts Lua",36,White,1180);
+    c.Text(45,93,luaFiltersPage_?"Scripts Lua | Filtros":"Scripts Lua | Utilitarios",36,White,1180);
     c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execucao manual isolada":"Runtime Lua nao incluido nesta build",21,Muted,1160);
     const int first=(luaRow_/7)*7;
     for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
         const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
         c.TextFit(62,y+8,luaScripts_[i],22,White,1145);
     }
-    if(luaScripts_.empty())c.Text(48,245,"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
-    c.Text(48,580,"Sem acesso direto a arquivos, rede, memoria do jogo ou plugins nativos.",17,Muted,1180);
-    InfinityButtons::Strip(c,48,605,"A Executar | Y Atualizar | B Voltar",18,Lime,1170);
+    if(luaScripts_.empty())c.Text(48,245,luaFiltersPage_?"Copie filtros .lua para MenuPreview/Scripts/Filters.":"Copie scripts .lua para MenuPreview/Scripts.",22,Muted,1170);
+    c.TextFit(48,580,luaActiveFilter_.empty()?"Sem filtro Lua ativo.":"Filtro ativo: "+luaActiveFilter_,17,Muted,1180);
+    InfinityButtons::Strip(c,48,605,luaFiltersPage_?"A Aplicar | X Limpar filtro | LB/RB Utilitarios | Y Atualizar | B Voltar":"A Executar | X Limpar filtro | LB/RB Filtros | Y Atualizar | B Voltar",18,Lime,1170);
 }
 void ConsoleHome::DrawStorage(HomeCanvas& c) const {
     c.Text(45,349,c.Tr("Dispositivos e espaco disponivel"),27,White,1170);
@@ -3391,7 +3402,8 @@ void ConsoleHome::DrawSection(HomeCanvas& c) const {
     if(contentActive_) {DrawContent(c);return;}
     const int sectionIcons[]={23,3,2,1,InfinityIcons::Folder,10,20,21};
     InfinityIcons::Draw(c,sectionIcons[section_],46,91,32,White);
-    c.TextFit(91,78,c.Tr(labels[section_]),40,White,1140);
+    c.TextFit(91,78,c.Tr(labels[section_]),40,White,section_==Library&&!luaActiveFilter_.empty()?480:1140);
+    if(section_==Library&&!luaActiveFilter_.empty())c.TextFit(600,94,"Filtro Lua: "+luaActiveFilter_,20,Lime,620);
     if(section_==Files && page_==Listing && fileAction_) {DrawFileActions(c);return;}
     if((section_==Library || section_==Files) && page_==Listing && searchActive_) {
         c.Text(45,139,keyboardMode_==1?"Nova colecao":

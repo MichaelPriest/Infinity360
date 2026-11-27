@@ -20,3 +20,4 @@ Nexus
 Series360
 Cinema
 Scripts
+Scripts/Filters
