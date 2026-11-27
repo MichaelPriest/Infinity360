@@ -4,7 +4,7 @@
 #include "HomeCanvas.h"
 
 enum MenuKey { MenuLeft, MenuRight, MenuUp, MenuDown, MenuAccept, MenuBack, MenuFavorite,
-               MenuRefresh, MenuPageUp, MenuPageDown, MenuGuide, MenuSearch };
+               MenuRefresh, MenuPageUp, MenuPageDown, MenuGuide, MenuSearch, MenuGroups, MenuClearHistory };
 class CloudTv {
 public:
     explicit CloudTv(const std::string& dir);
@@ -24,10 +24,18 @@ public:
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
     bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
+    bool CanClearHistory()const{return view_==Browse&&tab_==TvHistory&&!history_.empty();}
 private:
-    enum View { Browse, Guide, Details, Episodes, Search };
+    enum View { Browse, Guide, Details, Episodes, Search, Groups, ClearHistory };
     std::string dir_,source_,notice_,pending_,show_,query_,edit_;
     std::vector<std::string> sources_;
+    std::string groupFilter_;
+    struct GroupRow {std::string name;size_t count;};
+    std::vector<GroupRow> groups_;
+    size_t groupRow_=0;
+    void OpenGroups();
+    void DrawGroups(HomeCanvas& c)const;
+    bool SaveHistory()const;
     std::vector<size_t> rows_,episodes_;
     std::vector<unsigned> seasons_;
     TvCatalog catalog_;

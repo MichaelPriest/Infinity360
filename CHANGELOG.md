@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.54 — Grupos e gerenciamento de fontes IPTV
+
+- Menu BACK/Opcoes oferece filtro exato de grupo combinado com busca e categoria, contagem de itens e ate 512 grupos por categoria; layouts moderno e classico exibem o filtro. Filtro reinicia ao trocar categoria/lista e e preservado ao atualizar a mesma lista. Fontes exibem estado XMLTV e contagem da lista ativa. Historico pode ser limpo por confirmacao, com reversao em caso de falha na gravacao. Favoritos e listas preservados. Testes de integracao e XSDK pendentes; sem XEX/release.
+
 ## V0.3.53 — Seletor de canais, logos e progresso EPG
 
 - START abre seletor de canais live em janela limitada de ate 129 linhas da lista filtrada, cima/baixo navega, A confirma e START fecha; Guide fecha o seletor. Confirma somente destinos autorizados por movieTarget. HUD mostra nome/grupo do candidato, barra de progresso do programa baseada no XMLTV e logo RGBA local carregado uma vez por canal, sem downloads ou framebuffer adicional. Ultimo canal passa a ser registrado apos reproducao A/V, nao mera selecao; refiltro de favoritos/historico apos sair evita detalhes obsoletos. Testes de cursor incluidos; execucao XSDK e capturas pendentes. Sem XEX/release.

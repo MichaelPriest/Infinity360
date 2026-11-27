@@ -1313,7 +1313,8 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
         else if((contentTab_==0||contentTab_==1||contentTab_==4)&&contentKnown_&&!detailMetadata_.package)add("Instalar TU/DLC local",Search);
         add("Atualizar inventario",Refresh);
     }else if(page_!=Home&&section_==Iptv){
-        if(tv_.CanSearch())add("Buscar canais, filmes e series",Search);
+        if(tv_.CanSearch()){add("Buscar canais, filmes e series",Search);add("Filtrar por grupo",TvGroups);}
+        if(tv_.CanClearHistory())add("Limpar historico IPTV",TvClearHistory);
     }else if(page_==Home){
         add("Guia rapido",GlobalGuide);add("Atualizar biblioteca",Refresh);
         if(!homeDiscKnown_){add("Personalizar Home",Guide);}

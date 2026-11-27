@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <ctime>
 #include <set>
+#include <map>
 #include <sstream>
 
 namespace {
@@ -137,7 +138,7 @@ bool CloudTv::Load(const std::string& source) {
     if(source.empty() || !catalog_.Load(dir_+source)) {
         notice_="Não foi possível abrir a lista. Confira o dispositivo e as fontes.";return false;
     }
-    lastLive_=activeLive_=static_cast<size_t>(-1);
+    lastLive_=activeLive_=static_cast<size_t>(-1);groupFilter_.clear();groups_.clear();
     source_=source; const size_t dot=source.find_last_of('.');
     const std::string paired=source.substr(0,dot)+".xml";
     const TvGuide::Status state=guide_.Load(dir_+(fileExists(dir_+paired)?paired:"guide.xml"));
@@ -150,7 +151,7 @@ bool CloudTv::Load(const std::string& source) {
     return true;
 }
 void CloudTv::Open() {
-    row_=0;tab_=TvAll;view_=Browse;pending_.clear();notice_.clear();query_.clear();guideOffset_=0;
+    row_=0;tab_=TvAll;view_=Browse;pending_.clear();notice_.clear();query_.clear();groupFilter_.clear();groups_.clear();guideOffset_=0;
     LoadHistory();
     favorites_.count=0;cloud_favorites_load(&favorites_,savedFile(dir_+"favorites.txt").c_str());
     Discover();
@@ -184,10 +185,45 @@ void CloudTv::RecordPlayed(){
     if(!id||(!history_.empty()&&history_.front()==id))return;
     history_.erase(std::remove(history_.begin(),history_.end(),id),history_.end());
     history_.insert(history_.begin(),id);if(history_.size()>64)history_.resize(64);
+    SaveHistory();
+}
+bool CloudTv::SaveHistory()const{
     const std::string file=dir_+"cloud360-history.txt";
     std::ofstream out((file+".tmp").c_str());
     for(auto value:history_)out<<value<<"\n";
-    out.close();if(out)replaceSavedFile(file);
+    out.close();return bool(out)&&replaceSavedFile(file);
+}
+void CloudTv::OpenGroups(){
+    groups_.clear();groupRow_=0;
+    // Count groups from the current category, independent of text search.
+    std::map<std::string,size_t> counts;
+    std::set<uint64_t> marked;
+    if(tab_==TvFavorites)marked.insert(favorites_.ids,favorites_.ids+favorites_.count);
+    if(tab_==TvHistory)marked.insert(history_.begin(),history_.end());
+    size_t total=0;
+    for(const auto& item:catalog_.Items()){
+        if((tab_==TvFavorites||tab_==TvHistory)?!marked.count(item.id):tab_!=TvAll&&item.category!=tab_)continue;
+        ++total;
+        if(item.group.empty())continue;
+        auto it=counts.find(item.group);
+        if(it!=counts.end())++it->second;
+        else if(counts.size()<512)counts.emplace(item.group,1);
+    }
+    groups_.push_back({"",total});
+    for(const auto& item:counts){if(item.first==groupFilter_)groupRow_=groups_.size();groups_.push_back({item.first,item.second});}
+    view_=Groups;
+}
+void CloudTv::DrawGroups(HomeCanvas& c)const{
+    c.TextFit(45,78,"Grupos do catalogo",38,Ink,1160);
+    c.TextFit(46,130,"Combine um grupo com a busca e a categoria atuais.",20,Soft,1160);
+    const size_t base=groupRow_/PageSize*PageSize;
+    for(size_t i=base;i<groups_.size()&&i<base+PageSize;++i){
+        const int y=177+int(i-base)*82;tile(c,46,y,1188,70,i==groupRow_);
+        c.TextFit(64,y+16,groups_[i].name.empty()?"Todos os grupos":groups_[i].name,25,Ink,900);
+        c.TextFit(1010,y+20,countText(groups_[i].count)+" itens",20,Lime,196);
+    }
+    c.TextFit(46,603,countText(groupRow_+1)+" / "+countText(groups_.size()),18,Soft,1180);
+    c.Footer();InfinityButtons::Strip(c,46,675,"A Aplicar | B Cancelar | LB/RB Pagina | X Todos",18,Ink,1180);
 }
 void CloudTv::Filter() {
     rows_.clear();std::set<std::string> shows;
@@ -199,6 +235,7 @@ void CloudTv::Filter() {
         if(tab_==TvHistory)marked.insert(history_.begin(),history_.end());
         for(size_t i=0;i<items.size();++i) {
             if((tab_==TvFavorites||tab_==TvHistory) ? marked.count(items[i].id)==0 : tab_!=TvAll && items[i].category!=tab_) continue;
+            if(!groupFilter_.empty()&&items[i].group!=groupFilter_)continue;
             if(!needle.empty() && searchText(items[i].name).find(needle)==std::string::npos &&
                searchText(items[i].group).find(needle)==std::string::npos) continue;
             if(tab_==TvSeries || tab_==TvAnime || tab_==TvCartoon) {
@@ -346,6 +383,19 @@ std::vector<unsigned char> CloudTv::PlayingLogo()const{
 }
 bool CloudTv::Press(MenuKey key) {
     notice_.clear();
+    if(view_==ClearHistory){
+        if(key==MenuAccept){const auto old=history_;history_.clear();if(!SaveHistory()){history_=old;notice_="Falha ao limpar historico no dispositivo.";}else notice_="Historico limpo.";view_=Browse;row_=0;Filter();}
+        else if(key==MenuBack)view_=Browse;
+        return true;
+    }
+    if(view_==Groups){
+        if(key==MenuBack){view_=Browse;return true;}
+        moveRow(groupRow_,groups_.size(),key);
+        if(key==MenuAccept||key==MenuFavorite){groupFilter_=key==MenuFavorite?std::string{}:groups_[groupRow_].name;row_=0;view_=Browse;Filter();}
+        return true;
+    }
+    if(key==MenuGroups&&CanSearch()){OpenGroups();return true;}
+    if(key==MenuClearHistory&&CanClearHistory()){view_=ClearHistory;return true;}
     if(view_==Search) {SearchKey(key);return true;}
     if(key==MenuSearch && view_==Browse && tab_!=TvSources) {
         edit_=query_;letter_=0;view_=Search;return true;
@@ -366,11 +416,11 @@ bool CloudTv::Press(MenuKey key) {
         return true;
     }
     if(key==MenuRefresh) {
-        const TvCategory last=tab_;const std::string query=query_;Open();tab_=last;query_=query;Filter();return true;
+        const TvCategory last=tab_;const std::string query=query_,group=groupFilter_,source=source_;Open();tab_=last;query_=query;if(source==source_)groupFilter_=group;Filter();return true;
     }
     if(key==MenuGuide && (view_==Browse || view_==Guide)) {
         if(view_==Guide) view_=Browse;
-        else {if(tab_!=TvLive) row_=0;tab_=TvLive;view_=Guide;guideOffset_=0;Filter();}
+        else {if(tab_!=TvLive){row_=0;groupFilter_.clear();}tab_=TvLive;view_=Guide;guideOffset_=0;Filter();}
         return true;
     }
     if(view_==Details) {
@@ -394,7 +444,7 @@ bool CloudTv::Press(MenuKey key) {
     }
     if(key==MenuLeft || key==MenuRight) {
         if(view_==Guide) guideOffset_=std::max(-24,std::min(48,guideOffset_+(key==MenuLeft?-1:1)));
-        else {tab_=static_cast<TvCategory>((tab_+(key==MenuLeft?TvTabCount-1:1))%TvTabCount);row_=0;Filter();}
+        else {tab_=static_cast<TvCategory>((tab_+(key==MenuLeft?TvTabCount-1:1))%TvTabCount);row_=0;groupFilter_.clear();Filter();}
         return true;
     }
     const size_t count=tab_==TvSources?sources_.size():rows_.size();
@@ -476,7 +526,8 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
         c.Text(649,302,sources_[row_],23,Lime,552);
         c.Text(649,373,InfinityIptv::OpenMode(dir_)?"Rede: Livre (X alterna)":"Rede: Restrita (X alterna)",20,Soft,552);
         c.Text(649,429,"Guia XMLTV",21,Ink,550);
-        c.Text(649,471,"Use um XML com o nome da lista ou guide.xml.",19,Soft,552);
+        c.TextFit(649,471,sources_[row_]==source_?(guide_.State()==TvGuide::Ready?"XMLTV carregado":guide_.State()==TvGuide::Limited?"XMLTV parcial":guide_.State()==TvGuide::Invalid?"XMLTV invalido":"XMLTV ausente"):"Selecione a lista para verificar o XMLTV.",19,Soft,552);
+        if(sources_[row_]==source_)c.TextFit(649,515,countText(Count())+" itens na lista ativa",19,Lime,552);
     } else {
         const size_t index=rows_[row_];const TvItem& item=catalog_.Items()[index];
         DrawArt(c,index,636,221,585,202);
@@ -490,7 +541,7 @@ void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
             c.Text(650,553,next?"A seguir   "+localTime(next->start)+"   "+next->title:"A seguir   Sem programação",17,Soft,548);
         } else c.Text(650,535,protocol(item,dir_+source_),19,Soft,550);
     }
-    c.Text(48,602,countText(row_+1)+" / "+countText(total),15,Soft,300);
+    c.TextFit(48,602,countText(row_+1)+" / "+countText(total)+(groupFilter_.empty()?"":" | Grupo: "+groupFilter_),15,Soft,1150);
 }
 void CloudTv::DrawGuide(HomeCanvas& c,int64_t now) const {
     c.Text(45,78,c.Tr("Guia de programação"),40,Ink,720);
@@ -551,6 +602,12 @@ void CloudTv::DrawEpisodes(HomeCanvas& c) const {
 }
 void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     if(view_==Search) {DrawSearch(c);return;}
+    if(view_==Groups){DrawGroups(c);return;}
+    if(view_==ClearHistory){
+        c.GroupGlass(160,224,960,230);c.TextFit(190,255,"Limpar historico IPTV?",32,Ink,900);
+        c.TextFit(190,315,"Remove apenas os registros recentes. Favoritos e listas sao preservados.",20,Soft,900);
+        InfinityButtons::Strip(c,190,391,"A Confirmar | B Cancelar",20,Ink,900);return;
+    }
     if(view_==Guide) DrawGuide(c,now);
     else if(view_==Episodes) DrawEpisodes(c);
     else if(view_==Details) DrawDetails(c,now);
@@ -614,7 +671,7 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
         InfinityIcons::Draw(c,icons[i],65,y+11,24,i==tab_?Lime:Ink);
         c.TextFit(101,y+12,c.Tr(tabs[i]),19,Ink,187);
     }
-    c.TextFit(326,145,!query_.empty()&&!picking?c.Tr("Busca")+std::string(": ")+query_:source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,19,Soft,901);
+    c.TextFit(326,145,!groupFilter_.empty()&&!picking?"Grupo: "+groupFilter_+(query_.empty()?"":" | Busca: "+query_):!query_.empty()&&!picking?c.Tr("Busca")+std::string(": ")+query_:source_.empty()?c.Tr("Nenhuma lista encontrada."):source_,19,Soft,901);
     if(!total){
         tile(c,325,186,910,402,false);
         c.TextFit(345,240,c.Tr("Nenhum item nesta seção."),26,Ink,865);
@@ -640,7 +697,8 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
         c.TextFit(778,257,sources_[row_],20,Lime,438);
         c.TextFit(778,316,InfinityIptv::OpenMode(dir_)?"Rede: Livre (X alterna)":"Rede: Restrita (X alterna)",18,Soft,438);
         c.TextFit(778,363,"Guia XMLTV",21,Ink,438);
-        c.TextFit(778,401,"Use XML com o nome da lista ou guide.xml.",17,Soft,438);
+        c.TextFit(778,401,sources_[row_]==source_?(guide_.State()==TvGuide::Ready?"XMLTV carregado":guide_.State()==TvGuide::Limited?"XMLTV parcial":guide_.State()==TvGuide::Invalid?"XMLTV invalido":"XMLTV ausente"):"Selecione a lista para verificar o XMLTV.",17,Soft,438);
+        if(sources_[row_]==source_)c.TextFit(778,445,countText(Count())+" itens na lista ativa",19,Lime,438);
     }else{
         const size_t index=rows_[row_];const auto& item=catalog_.Items()[index];
         DrawArt(c,index,772,198,451,179);
