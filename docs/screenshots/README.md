@@ -4,7 +4,7 @@
 
 <!-- NATIVE-GALLERY-BEGIN -->
 
-**93 capturas nativas** — commit [2e7b45d7ae27](https://github.com/MichaelPriest/Infinity360/commit/2e7b45d7ae2726b62272d49b5828253ba940f027).
+**98 capturas nativas** — commit [b5a853afec7a](https://github.com/MichaelPriest/Infinity360/commit/b5a853afec7af63d5d127bbb40f3fe7c5caefa0c).
 
 As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam dados de teste; diagnósticos, perfis e integrações indisponíveis não demonstram funcionamento físico.
 
@@ -160,6 +160,17 @@ As legendas descrevem o conteúdo exibido e o modo de acesso. As capturas usam d
 | --- | --- |
 | ![Menu de opções da biblioteca — BACK](93-opcoes-contextuais.png) |  |
 | **Menu de opções da biblioteca — BACK** |  |
+
+### Conteúdo, arquivos e diagnósticos — interface moderna
+
+| Tela | Tela |
+| --- | --- |
+| ![Conteúdo do jogo — Title Updates](94-conteudo-moderno.png) | ![Conteúdo do jogo — DLC](95-dlc-moderno.png) |
+| **Conteúdo do jogo — Title Updates** | **Conteúdo do jogo — DLC** |
+| ![Gerenciador de arquivos — lista e ações](96-arquivos-moderno.png) | ![Notificações — filtros e detalhe](97-notificacoes-moderno.png) |
+| **Gerenciador de arquivos — lista e ações** | **Notificações — filtros e detalhe** |
+| ![Telemetria — memória e sensores](98-telemetria-moderno.png) |  |
+| **Telemetria — memória e sensores** |  |
 
 
 <!-- NATIVE-GALLERY-END -->
