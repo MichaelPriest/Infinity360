@@ -32,7 +32,7 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
           cd Android
-          gradle --no-daemon :app:assembleDebug
+          gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -47,7 +47,13 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: adb install Android/app/build/outputs/apk/debug/app-debug.apk && python3 Android/tools/capture_screenshots.py "${{ runner.temp }}/android-captures"
+          script: bash Android/tools/capture_instrumented.sh "${{ runner.temp }}/android-captures"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: infinity360-android-diagnostics
+          path: ${{ runner.temp }}/android-captures/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: infinity360-android-screenshots

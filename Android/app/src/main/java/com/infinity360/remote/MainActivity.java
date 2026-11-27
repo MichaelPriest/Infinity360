@@ -36,7 +36,13 @@ public final class MainActivity extends AppCompatActivity {
     private String activeQuery="";
     private LinearLayout content;
     private final LinearLayout[] screens=new LinearLayout[6];
-    private TextView homeConsole,homeMetrics;
+    private TextView homeConsole,homeMetrics,screenTitle,connectionState;
+    private ProgressBar requestProgress;
+    private LinearLayout generalPad,iptvPad;
+    private Button xboxMode,iptvMode;
+    private boolean tvControls=false;
+    private long verifiedAt=0;
+    private String verifiedHost="",verifiedKey="";
     private boolean metricReady=false;
     private String metricHost="",metricKey="";
     private BottomNavigationView navigation;
@@ -59,11 +65,13 @@ public final class MainActivity extends AppCompatActivity {
         activeScreen=index;
         for(int i=0;i<screens.length;i++)if(screens[i]!=null)screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);
         RemoteNavigation.select(navigation,index);
+        if(screenTitle!=null)screenTitle.setText(getString(new int[]{R.string.nav_control,R.string.nav_catalog,R.string.nav_system,R.string.nav_connection,R.string.nav_store,R.string.nav_home}[index]));
+        updateConnectionState();
         if(index==5)updateHomeConsole();
         if(scroll!=null){scroll.scrollTo(0,0);scroll.post(()->scroll.scrollTo(0,0));}
         updateDownloadPolling();
     }
-    private LinearLayout screen(LinearLayout root,int index){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);root.addView(panel);screens[index]=panel;return panel;}
+    private LinearLayout screen(LinearLayout root,int index){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setId(new int[]{R.id.screen_control,R.id.screen_catalog,R.id.screen_system,R.id.screen_connection,R.id.screen_store,R.id.screen_home}[index]);root.addView(panel);screens[index]=panel;return panel;}
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private boolean busy=false;
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -71,27 +79,40 @@ public final class MainActivity extends AppCompatActivity {
     private void label(String s){TextView v=text(s,14,MUTED);v.setPadding(0,dp(12),0,dp(4));content.addView(v);}
     private EditText field(String hint,int type){EditText v=NativeUi.field(this,hint,type);content.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;}
     private Button button(String label,int role,Runnable action){return NativeUi.button(this,label,role,action);}
-    private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
+    private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));if(b instanceof Button){Button control=(Button)b;control.setMinHeight(dp(56));control.setTextSize(cmd.equals("accept")||cmd.equals("back")?20:14);if(cmd.equals("accept")||cmd.equals("back")){int tint=Color.parseColor(cmd.equals("accept")?"#107C10":"#B92D35");control.setBackgroundTintList(android.content.res.ColorStateList.valueOf(tint));control.setTextColor(Color.WHITE);}if(cmd.equals("up")||cmd.equals("down")||cmd.equals("left")||cmd.equals("right"))control.setContentDescription(getString(cmd.equals("up")?R.string.direction_up:cmd.equals("down")?R.string.direction_down:cmd.equals("left")?R.string.direction_left:R.string.direction_right));}LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
     @Override public void onCreate(Bundle saved){
         RemoteNavigation.applyTheme(this);
         super.onCreate(saved);
         LinearLayout outer=new LinearLayout(this);outer.setOrientation(LinearLayout.VERTICAL);
         setContentView(outer);NativeUi.insets(outer);
-        NativeUi.brand(this,outer,getString(R.string.remote_title));
-        Button connection=NativeUi.button(this,getString(R.string.nav_connection),PANEL,()->showScreen(3));
-        connection.setId(R.id.remote_connection_button);
-        outer.addView(connection,new LinearLayout.LayoutParams(-1,-2));
+        NativeUi.appHeader(this,outer,getString(R.string.remote_title),()->showScreen(3));
+        LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.HORIZONTAL);info.setGravity(Gravity.CENTER_VERTICAL);info.setPadding(dp(16),dp(5),dp(16),dp(4));
+        screenTitle=text("",22,TEXT);screenTitle.setTypeface(null,Typeface.BOLD);info.addView(screenTitle,new LinearLayout.LayoutParams(0,-2,1));
+        connectionState=text(getString(R.string.session_offline),12,MUTED);info.addView(connectionState);connectionState.setOnClickListener(v->showScreen(3));outer.addView(info);
+        status=text(getString(R.string.connect_hint),12,MUTED);status.setPadding(dp(16),dp(3),dp(16),dp(5));status.setMaxLines(3);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);outer.addView(status);
+        requestProgress=new com.google.android.material.progressindicator.LinearProgressIndicator(this);requestProgress.setIndeterminate(true);requestProgress.setVisibility(View.GONE);outer.addView(requestProgress,new LinearLayout.LayoutParams(-1,dp(4)));
+        status.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){requestProgress.setVisibility(busy?View.VISIBLE:View.GONE);}
+            public void afterTextChanged(android.text.Editable e){}
+        });
         navigation=RemoteNavigation.create(this);
         scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         outer.addView(navigation,new LinearLayout.LayoutParams(-1,-2));
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(16),dp(8),dp(16),dp(24));scroll.addView(content);
         final LinearLayout root=content;
-        status=text(getString(R.string.connect_hint),14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
+        root.setFocusableInTouchMode(true);root.requestFocus();
         content=screen(root,3);
         label(getString(R.string.xbox_ip));consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         consoleIp.setText(getPreferences(MODE_PRIVATE).getString("console_ip",""));
         label(getString(R.string.pair_key));key=field(getString(R.string.hex_key),InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
-        content.addView(button(getString(R.string.verify_connection),PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.verify_connection),ACCENT,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.session_disconnect),PANEL,this::disconnectSession),new LinearLayout.LayoutParams(-1,-2));
+        android.text.TextWatcher credentialWatcher=new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){verifiedAt=0;verifiedHost="";verifiedKey="";metricReady=false;metricHost="";metricKey="";updateConnectionState();updateHomeConsole();}
+            public void afterTextChanged(android.text.Editable e){}
+        };consoleIp.addTextChangedListener(credentialWatcher);key.addTextChangedListener(credentialWatcher);
         content=screen(root,2);
         label(getString(R.string.files_ftp));
         Button ftpButton=button(getString(R.string.ftp_title),ACCENT,this::openFtp);
@@ -112,8 +133,11 @@ public final class MainActivity extends AppCompatActivity {
         content=screen(root,1);
         label(getString(R.string.library));
         catalogQuery=field(getString(R.string.search_catalog),InputType.TYPE_CLASS_TEXT);
-        content.addView(button(getString(R.string.query_games),PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,-2));
-        content.addView(button(getString(R.string.query_channels),PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout catalogTabs=new LinearLayout(this);catalogTabs.setOrientation(LinearLayout.HORIZONTAL);
+        Button games=button(getString(R.string.query_games),ACCENT,()->{tvCatalog=false;loadCatalog(false,true);});
+        Button channels=button(getString(R.string.query_channels),PANEL,()->{tvCatalog=true;loadCatalog(true,true);});
+        catalogTabs.addView(games,new LinearLayout.LayoutParams(0,-2,1));catalogTabs.addView(channels,new LinearLayout.LayoutParams(0,-2,1));content.addView(catalogTabs);
+        searchAction(catalogQuery,()->loadCatalog(tvCatalog,true));
         catalogResult=text(getString(R.string.no_query),15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(catalogResult);
         catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
         content.addView(button(getString(R.string.next_page),PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,-2));
@@ -124,22 +148,31 @@ public final class MainActivity extends AppCompatActivity {
         deviceCards=new LinearLayout(this);deviceCards.setOrientation(LinearLayout.VERTICAL);content.addView(deviceCards);
         storeQuery=field("Buscar nome ou categoria (game, xbla, homebrew...)",InputType.TYPE_CLASS_TEXT);
         content.addView(button(getString(R.string.query_store),ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,-2));
+        searchAction(storeQuery,()->loadStore(true));
         storeResult=text("Catálogo autorizado do console. Nenhum pacote é baixado no celular.",14,MUTED);content.addView(storeResult);
         storeCards=new LinearLayout(this);storeCards.setOrientation(LinearLayout.VERTICAL);content.addView(storeCards);
         content.addView(button(getString(R.string.next_page),PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,-2));
         content.addView(button(getString(R.string.follow_downloads),PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,0);
-        content=controlPanel(R.string.general_nav);
-        row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
-        row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
-        row(new String[]{"LB","↓","RB"},new String[]{"pageup","down","pagedown"});
-        row(new String[]{"Voltar","Favorito"},new String[]{"back","favorite"});
-        content=screens[0];content=controlPanel(R.string.iptv_controls);
-        row(new String[]{"Canais","↑","Qualidade"},new String[]{"channels","up","quality"});
-        row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
-        row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
-        row(new String[]{"Mudo"},new String[]{"mute"});
-        Button exit=button("Encerrar reprodução",PANEL,()->new MaterialAlertDialogBuilder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout modes=new LinearLayout(this);modes.setOrientation(LinearLayout.HORIZONTAL);
+        xboxMode=button(getString(R.string.mode_xbox),ACCENT,()->setControlMode(false));
+        iptvMode=button(getString(R.string.mode_iptv),PANEL,()->setControlMode(true));
+        modes.addView(xboxMode,new LinearLayout.LayoutParams(0,-2,1));modes.addView(iptvMode,new LinearLayout.LayoutParams(0,-2,1));content.addView(modes);
+        generalPad=new LinearLayout(this);generalPad.setOrientation(LinearLayout.VERTICAL);content.addView(generalPad);
+        iptvPad=new LinearLayout(this);iptvPad.setOrientation(LinearLayout.VERTICAL);content.addView(iptvPad);
+        content=generalPad;content=controlPanel(R.string.general_nav);
+        row(new String[]{"LB",getString(R.string.guide_action),"RB"},new String[]{"pageup","guide","pagedown"});
+        row(new String[]{null,"▲",null},new String[]{null,"up",null});
+        row(new String[]{"◀","A","▶"},new String[]{"left","accept","right"});
+        row(new String[]{null,"▼",null},new String[]{null,"down",null});
+        row(new String[]{"B",getString(R.string.favorite_action),getString(R.string.refresh_action)},new String[]{"back","favorite","refresh"});
+        content=iptvPad;content=controlPanel(R.string.iptv_controls);
+        row(new String[]{getString(R.string.channels_action),"▲",getString(R.string.quality_action)},new String[]{"channels","up","quality"});
+        row(new String[]{"◀","A","▶"},new String[]{"left","accept","right"});
+        row(new String[]{"Vol −","▼","Vol +"},new String[]{"quieter","down","louder"});
+        row(new String[]{getString(R.string.mute_action)},new String[]{"mute"});
+        Button exit=button(getString(R.string.exit_iptv),PANEL,()->new MaterialAlertDialogBuilder(this).setTitle(R.string.exit_iptv).setMessage(R.string.exit_iptv_message).setNegativeButton(getString(R.string.cancel),null).setPositiveButton(R.string.exit_confirm,(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
+        setControlMode(false);
         content=screens[3];
         label(getString(R.string.preferences_title));
         content.addView(button(getString(R.string.home_theme),PANEL,()->{if(!busy)new MaterialAlertDialogBuilder(this).setTitle(R.string.home_theme).setItems(new String[]{getString(R.string.system_default),getString(R.string.theme_dark),getString(R.string.theme_light)},(d,w)->RemoteNavigation.theme(this,w)).show();}));
@@ -157,17 +190,55 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.new_key),PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,-2));
         content.addView(button(getString(R.string.copy_config),PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
+        content.addView(button(getString(R.string.about_remote),PANEL,this::aboutRemote),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,5);buildHome();
         content=root;
         int initial=saved==null?5:saved.getInt("active_screen",5);
         showScreen(initial>=0&&initial<screens.length?initial:5);
+        setControlMode(saved!=null&&saved.getBoolean("tv_controls",false));
         navigation.setOnItemSelectedListener(item->{int index=RemoteNavigation.index(item.getItemId());if(index<0)return false;if(index!=activeScreen)showScreen(index);return true;});
         getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true){
             @Override public void handleOnBackPressed(){if(activeScreen!=5)showScreen(5);else finish();}
         });
     }
     @Override protected void onSaveInstanceState(Bundle out){
-        super.onSaveInstanceState(out);out.putInt("active_screen",activeScreen);
+        super.onSaveInstanceState(out);out.putInt("active_screen",activeScreen);out.putBoolean("tv_controls",tvControls);
+    }
+    private void searchAction(EditText field,Runnable action){
+        field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        field.setOnEditorActionListener((v,id,event)->{if(id!=android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH)return false;
+            ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(v.getWindowToken(),0);v.clearFocus();action.run();return true;});
+    }
+    private void setControlMode(boolean tv){
+        tvControls=tv;if(generalPad==null)return;
+        generalPad.setVisibility(tv?View.GONE:View.VISIBLE);iptvPad.setVisibility(tv?View.VISIBLE:View.GONE);
+        xboxMode.setSelected(!tv);iptvMode.setSelected(tv);
+        xboxMode.setEnabled(tv);iptvMode.setEnabled(!tv);
+    }
+    private boolean sessionMatches(String host,String secret){
+        return consoleIp!=null&&key!=null&&host.equals(consoleIp.getText().toString().trim())&&secret.equals(key.getText().toString().trim());
+    }
+    private void updateConnectionState(){
+        if(connectionState==null||consoleIp==null||key==null)return;
+        boolean verified=verifiedAt>0&&sessionMatches(verifiedHost,verifiedKey);
+        boolean configured=RemoteProtocol.privateIp(consoleIp.getText().toString().trim())&&RemoteProtocol.validKey(key.getText().toString().trim());
+        connectionState.setText(getString(verified?R.string.session_verified:configured?R.string.session_configured:R.string.session_offline));
+        connectionState.setTextColor(NativeUi.themeColor(this,verified?com.google.android.material.R.attr.colorPrimary:com.google.android.material.R.attr.colorOnSurfaceVariant));
+    }
+    private void recordVerification(String host,String secret,boolean success){
+        if(!sessionMatches(host,secret))return;
+        verifiedAt=success?android.os.SystemClock.elapsedRealtime():0;verifiedHost=success?host:"";verifiedKey=success?secret:"";updateConnectionState();
+    }
+    private void disconnectSession(){
+        if(busy)return;
+        key.setText("");phoneIp.setText("");metricReady=false;verifiedAt=0;verifiedHost="";verifiedKey="";metricHost="";metricKey="";
+        catalogNext=-1;storeNext=-1;catalogCards.removeAllViews();storeCards.removeAllViews();deviceCards.removeAllViews();downloadCards.removeAllViews();
+        catalogResult.setText(R.string.no_query);storeResult.setText(R.string.no_query);downloads.setText(R.string.no_query);monitor.setText(R.string.no_readings);deviceStatus.setText(R.string.no_query);
+        status.setText(R.string.session_disconnected);updateConnectionState();updateHomeConsole();
+    }
+    private void aboutRemote(){
+        String version="";try{version=getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception ignored){}
+        new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.remote_title)).setMessage("V"+version+"\n\n"+getString(R.string.about_remote_message)).setPositiveButton(android.R.string.ok,null).show();
     }
     private void openFtp(){
         if(busy)return;
@@ -198,7 +269,7 @@ public final class MainActivity extends AppCompatActivity {
         card.addView(panel);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,dp(8));content.addView(card,lp);return panel;
     }
     private void buildHome(){
-        TextView heading=text(getString(R.string.nav_home),28,TEXT);heading.setTypeface(null,Typeface.BOLD);content.addView(heading);
+        TextView heading=text(getString(R.string.home_subtitle),14,MUTED);heading.setPadding(0,0,0,dp(8));content.addView(heading);
         com.google.android.material.card.MaterialCardView device=NativeUi.card(this);
         LinearLayout inside=new LinearLayout(this);inside.setOrientation(LinearLayout.VERTICAL);inside.setPadding(dp(16),dp(16),dp(16),dp(16));
         inside.addView(text("Xbox 360",23,TEXT));homeConsole=text("",14,ACCENT);inside.addView(homeConsole);
@@ -209,8 +280,8 @@ public final class MainActivity extends AppCompatActivity {
         }));device.addView(inside);content.addView(device,new LinearLayout.LayoutParams(-1,-2));
         label(getString(R.string.home_shortcuts));
         LinearLayout row1=new LinearLayout(this),row2=new LinearLayout(this),row3=new LinearLayout(this);
-        homeTile(row1,R.drawable.nav_control,R.string.nav_control,()->showScreen(0));
-        homeTile(row1,R.drawable.nav_tv,R.string.home_iptv,()->{showScreen(1);loadCatalog(true,true);});
+        homeTile(row1,R.drawable.nav_control,R.string.nav_control,()->{showScreen(0);setControlMode(false);});
+        homeTile(row1,R.drawable.nav_tv,R.string.home_iptv,()->{showScreen(0);setControlMode(true);});
         homeTile(row2,R.drawable.nav_catalog,R.string.home_library,()->{showScreen(1);loadCatalog(false,true);});
         homeTile(row2,R.drawable.nav_store,R.string.nav_store,()->showScreen(4));
         homeTile(row3,R.drawable.nav_folder,R.string.ftp_title,this::openFtp);
@@ -498,7 +569,7 @@ public final class MainActivity extends AppCompatActivity {
             try{result=formatSnapshot(RemoteProtocol.snapshot(ip,secret));ok=true;}
             catch(Exception e){result="Não foi possível obter uma leitura autenticada. Confira a conexão e a versão da dashboard.";ok=false;}
             final String message=result;final boolean success=ok;
-            runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");metricReady=success;metricHost=ip;metricKey=secret;updateHomeConsole();if(success&&ip.equals(consoleIp.getText().toString().trim())&&secret.equals(key.getText().toString().trim())&&homeMetrics!=null)homeMetrics.setText(message);});
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");metricReady=success;metricHost=ip;metricKey=secret;updateHomeConsole();recordVerification(ip,secret,success);if(success&&sessionMatches(ip,secret)&&homeMetrics!=null)homeMetrics.setText(message);});
         });
     }
     private static final int EXPORT_PAIRING=301;
@@ -551,7 +622,7 @@ public final class MainActivity extends AppCompatActivity {
         if(!RemoteProtocol.privateIp(ip)||(command!=null&&!RemoteProtocol.validKey(secret))){status.setText("Confira o IP privado e a chave de pareamento.");return;}
         getPreferences(MODE_PRIVATE).edit().putString("console_ip",ip).apply();
         busy=true;status.setText("Comunicando com o Xbox...");
-        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":command.startsWith("storepriority/")?"Prioridade atualizada. Consulte a fila.":command.startsWith("storeinstall/")?"Ficha aberta no Xbox. Confirme com o controle físico.":command.startsWith("storedevice/")?"Destino alterado. Consulte os dispositivos e a loja.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);if(command!=null&&command.startsWith("storedevice/")&&msg.startsWith("Destino alterado.")){storeCards.removeAllViews();downloadCards.removeAllViews();deviceCards.removeAllViews();storeNext=-1;storeResult.setText("Consulte o catálogo do novo destino.");downloads.setText("Consulte a fila do novo destino.");deviceStatus.setText("Consulte o destino atualizado.");}});});
+        worker.execute(()->{String message;try{int code=RemoteProtocol.request(ip,secret,command);message=code==200?(command==null?"Servidor disponível. Chave ainda não verificada.":command.equals("status")?"Pareamento confirmado.":command.startsWith("storedownload/")?"Download solicitado ao Xbox. Consulte a fila.":command.startsWith("storequeue/")?"Item adicionado à fila do Xbox.":command.equals("storestart")?"Início da fila solicitado. Consulte os downloads.":command.equals("storepause")?"Pausa solicitada. Consulte o estado do parcial.":command.startsWith("storeremove/")?"Item removido da fila. Atualize a consulta.":command.startsWith("storepriority/")?"Prioridade atualizada. Consulte a fila.":command.startsWith("storeinstall/")?"Ficha aberta no Xbox. Confirme com o controle físico.":command.startsWith("storedevice/")?"Destino alterado. Consulte os dispositivos e a loja.":"Comando aceito pelo servidor."):"Comando recusado (HTTP "+code+"). Confira a chave ou use o controle físico nesta tela.";}catch(Exception e){message="Console indisponível. Confira a rede e o controle remoto."; } final String msg=message;runOnUiThread(()->{if(isDestroyed())return;busy=false;status.setText(msg);if("status".equals(command))recordVerification(ip,secret,msg.equals("Pareamento confirmado."));if(command!=null&&command.startsWith("storedevice/")&&msg.startsWith("Destino alterado.")){storeCards.removeAllViews();downloadCards.removeAllViews();deviceCards.removeAllViews();storeNext=-1;storeResult.setText("Consulte o catálogo do novo destino.");downloads.setText("Consulte a fila do novo destino.");deviceStatus.setText("Consulte o destino atualizado.");}});});
     }
     @Override protected void onResume(){super.onResume();foreground=true;updateDownloadPolling();}
     @Override protected void onPause(){foreground=false;pollHandler.removeCallbacks(downloadPoll);super.onPause();}

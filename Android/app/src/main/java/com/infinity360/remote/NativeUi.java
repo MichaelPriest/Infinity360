@@ -47,6 +47,12 @@ final class NativeUi {
     static EditText field(Context c,String hint,int type){
         EditText e=new TextInputEditText(c);e.setSingleLine(true);e.setInputType(type);e.setHint(hint);e.setSaveEnabled(false);e.setMinHeight(dp(c,48));return e;
     }
+    static void appHeader(Context c,LinearLayout parent,String title,Runnable connection){
+        parent.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{themeColor(c,android.R.attr.colorBackground),themeColor(c,com.google.android.material.R.attr.colorSurface)}));
+        LinearLayout bar=new LinearLayout(c);bar.setGravity(android.view.Gravity.CENTER_VERTICAL);bar.setPadding(dp(c,12),dp(c,6),dp(c,12),dp(c,6));
+        ImageView logo=new ImageView(c);logo.setImageResource(R.drawable.infinity_official_logo);logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setContentDescription(title);bar.addView(logo,new LinearLayout.LayoutParams(0,dp(c,48),1));
+        MaterialButton button=new MaterialButton(c,null,com.google.android.material.R.attr.materialButtonOutlinedStyle);button.setId(R.id.remote_connection_button);button.setIconResource(R.drawable.nav_connection);button.setIconPadding(0);button.setContentDescription(c.getString(R.string.nav_connection));button.setMinWidth(0);button.setInsetTop(0);button.setInsetBottom(0);button.setPadding(dp(c,12),0,dp(c,12),0);button.setOnClickListener(v->connection.run());bar.addView(button,new LinearLayout.LayoutParams(dp(c,52),dp(c,48)));parent.addView(bar);
+    }
     static void brand(Context c,LinearLayout parent,String subtitle){
         parent.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{themeColor(c,android.R.attr.colorBackground),themeColor(c,com.google.android.material.R.attr.colorSurface)}));
         ImageView logo=new ImageView(c);logo.setImageResource(R.drawable.infinity_official_logo);

@@ -69,4 +69,27 @@
     <string name="home_theme">Aparência</string>
     <string name="theme_dark">Grafite Xbox</string>
     <string name="theme_light">Claro</string>
+    <string name="session_offline">Sem pareamento</string>
+    <string name="session_configured">Chave informada</string>
+    <string name="session_verified">Verificação anterior</string>
+    <string name="session_disconnect">Encerrar sessão</string>
+    <string name="session_disconnected">Chave e consultas locais removidas. O Xbox não foi desligado.</string>
+    <string name="mode_xbox">Xbox 360</string>
+    <string name="mode_iptv">Cloud360 IPTV</string>
+    <string name="guide_action">Guide</string>
+    <string name="favorite_action">Favorito</string>
+    <string name="refresh_action">Atualizar</string>
+    <string name="channels_action">Canais</string>
+    <string name="quality_action">Qualidade</string>
+    <string name="mute_action">Mudo</string>
+    <string name="exit_iptv">Encerrar IPTV</string>
+    <string name="exit_iptv_message">A reprodução no Xbox será encerrada.</string>
+    <string name="exit_confirm">Encerrar</string>
+    <string name="about_remote">Sobre o Remote</string>
+    <string name="about_remote_message">Controle local da INFINITY 360. Use uma rede Wi-Fi confiável. A chave não é armazenada. Algumas funções dependem da versão da dashboard e de habilitação no console.</string>
+    <string name="home_subtitle">Seu Xbox, em um só lugar.</string>
+    <string name="direction_up">Acima</string>
+    <string name="direction_down">Abaixo</string>
+    <string name="direction_left">Esquerda</string>
+    <string name="direction_right">Direita</string>
 </resources>

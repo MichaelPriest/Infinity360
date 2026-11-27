@@ -1,5 +1,12 @@
 # Histórico de versões — INFINITY 360
 
+## Android Remote V0.22.0 Alpha — Remote integrado
+
+- Cabeçalho compacto, título da seção, estado da última verificação e indicador de atividade sempre visíveis.
+- Controle Xbox/IPTV separado, D-pad e A/B coloridos; busca via teclado e encerramento local de sessão.
+- Traduções dos novos controles em PT/EN/ES; About com versão instalada.
+- Captura Android migra para instrumentação com verificação das seções e diagnóstico de falhas. APK e galeria dependem do CI; nenhuma nova XEX.
+
 ## Android Remote V0.21.0 Alpha — Controle e galeria Android
 
 - Controle geral e Cloud360 IPTV agrupados em cards Material 3, preservando o protocolo e as ações existentes.
