@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.96 — HLS fMP4 ao vivo experimental
+
+- Permite janelas live fMP4 com inicialização fixa, buffer atômico e atualização por sequência. Bloqueia troca de mapa e mudança de formato durante a sessão.
+- Reutiliza demux MP4 existente no player, sem replay da inicialização. Teste de sequência e rejeição de mapa alterado.
+- CI específico FFmpeg V0.2.95 aprovado; nova revisão aguarda CI. Sem XEX.
+
 ## V0.2.95 — HLS fMP4 VOD experimental
 
 - Aceita mapa inicial fixo MP4 e fragmentos m4s/MP4 de mesma origem em VOD, com validação estrutural de caixas e buffer de 2 MiB por recurso.

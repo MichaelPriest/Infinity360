@@ -1,4 +1,4 @@
-# Status V0.2.95
+# Status V0.2.96
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -29,3 +29,5 @@ V0.2.93: API seekable MP4 por callbacks no core, com testes de acesso aleatório
 V0.2.94: HTTP Range experimental integrado ao player, com ETag forte obrigatório, cache de 256 KiB e fallback sequencial quando a abertura Range falha. Parser portátil em CI; transporte físico ainda não validado.
 
 V0.2.95: HLS fMP4 VOD experimental com init fixo e fragmentos limitados a 2 MiB, integrado ao caminho MP4 sequencial. Live fMP4 e ABR pendentes. Sem XEX.
+
+V0.2.96: HLS fMP4 live experimental com mapa fixo e janela por sequência; troca de mapa e fragmentos grandes continuam bloqueados. ABR pendente. CI FFmpeg V0.2.95 aprovado.

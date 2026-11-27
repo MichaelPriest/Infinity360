@@ -129,7 +129,7 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
             if(result.target||duration||!result.segments.empty()||!Number(line.substr(22),120,value)||!value)return false;
             result.target=static_cast<unsigned>(value);
         }else if(line.compare(0,16,"#EXT-X-MAP:URI=\"")==0){
-            if(!result.init.empty()||!result.segments.empty()||!result.variants.empty()||variant.bandwidth||duration||line.back()!='"')return false;
+            if(line.size()<18||!result.init.empty()||!result.segments.empty()||!result.variants.empty()||variant.bandwidth||duration||line.back()!='"')return false;
             const auto uri=line.substr(16,line.size()-17);
             if(!Resolve(base,uri,result.init)||!Extension(result.init,".mp4"))return false;
         }else if(line=="#EXT-X-ENDLIST"){
@@ -164,7 +164,7 @@ inline std::string Choose(const List& list,unsigned cap){
     for(const auto& v:list.variants)if(v.compatible&&v.bandwidth<=cap&&(!best||v.bandwidth>best->bandwidth))best=&v;
     return best?best->url:"";
 }
-// Sequential VOD or opt-in live TS. A sliding window must preserve sequence
+// Sequential VOD or opt-in live TS/fMP4. A sliding window must preserve sequence
 // identity. Never replay a segment after any bytes were delivered.
 template<class Reader> class VodReader {
 public:
@@ -185,14 +185,14 @@ public:
                 if(++attempts>3)break;
                 List media;
                 if(!Fetch(v.url,media)||!media.variants.empty()||media.segments.empty()||
-                    (!media.ended&&(!allowLive_||!wait_)))continue;
+                    (!media.ended&&(!allowLive_||!wait_))||(!media.init.empty()&&!buffered_))continue;
                 playlist_=v.url;list=std::move(media);selectedBitrate_=v.bandwidth;selected=true;break;
             }
             if(!selected)return false;
         }
         if(list.segments.empty()||(!list.ended&&(!allowLive_||!wait_)))return false;
-        // Fragmented MP4 initially restricted to VOD with one fixed init map.
-        if(!list.init.empty()&&(!list.ended||!buffered_))return false;
+        // Fragmented MP4 requires atomic buffering and a fixed init map.
+        if(!list.init.empty()&&!buffered_)return false;
         next_=list.sequence;
         if(!list.ended&&list.segments.size()>3)next_+=list.segments.size()-3;
         list_=std::move(list);valid_=true;return true;
@@ -302,7 +302,7 @@ private:
         return main&&(init||media);
     }
     bool Accept(List& updated){
-        if(!updated.variants.empty()||updated.segments.empty()||!updated.hasSequence||
+        if(updated.init!=list_.init||!updated.variants.empty()||updated.segments.empty()||!updated.hasSequence||
            updated.sequence<list_.sequence||updated.sequence>next_||
            updated.sequence+updated.segments.size()<next_)return false;
         const uint64_t overlapEnd=std::min(list_.sequence+list_.segments.size(),updated.sequence+updated.segments.size());

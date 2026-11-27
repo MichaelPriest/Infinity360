@@ -86,6 +86,36 @@ int main(){
         for(int i=0;i<n;++i)if(bulk[i]!=(total+size_t(i)<largeSize?'b':'c'))return 1;
         total+=size_t(n);}
     if(total!=largeSize+188||largeOpens!=3)return 1;
+    // fMP4 sliding window: initialization emitted once; map changes fail.
+    const auto mp4List=[](unsigned seq,const std::vector<std::string>& names,bool ended,const std::string& map){
+        std::string p="#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:"+std::to_string(seq)+"\n#EXT-X-MAP:URI=\""+map+"\"\n";
+        for(const auto& n:names)p+="#EXTINF:2,\n"+n+".m4s\n";
+        if(ended)p+="#EXT-X-ENDLIST\n";return p;
+    };
+    const auto box=[](const std::string& type,char payload){
+        std::string b(4,'\0');b[3]=9;return b+type+payload;
+    };
+    const auto init=box("ftyp",'i')+box("moov",'i');
+    const auto frag=[&](char ch){return box("moof",ch)+box("mdat",ch);};
+    auto liveMp4=[&](bool changed){
+        unsigned manifests=0,inits=0;
+        VodReader<Reader> v([&](const std::string& url,bool playlist)->std::unique_ptr<Reader>{
+            if(playlist)return std::make_unique<Reader>(Reader{++manifests==1?mp4List(1,{"a","b"},false,"init.mp4"):mp4List(2,{"b","c"},true,changed?"other.mp4":"init.mp4")});
+            auto name=url.substr(url.find_last_of('/')+1);
+            if(name=="init.mp4"){++inits;return std::make_unique<Reader>(Reader{init});}
+            return std::make_unique<Reader>(Reader{frag(name[0])});
+        },[](unsigned){return true;});
+        if(!v.EnableBufferedSegments()||!v.Start(base,2000000,true)||!v.Fragmented())return false;
+        std::string delivered;
+        for(unsigned i=0;i<30;++i){
+            const int n=v.Read(block,sizeof block);
+            if(n<0)return changed&&inits==1&&delivered==init+frag('a')+frag('b');
+            if(!n)return !changed&&inits==1&&delivered==init+frag('a')+frag('b')+frag('c');
+            delivered.append(reinterpret_cast<char*>(block),n);
+        }
+        return false;
+    };
+    if(!liveMp4(false)||!liveMp4(true))return 1;
     std::puts("live sequence, retry, overlap, stale window and partial failure passed");
     return 0;
 }
