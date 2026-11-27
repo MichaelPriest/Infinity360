@@ -136,10 +136,11 @@ public final class MainActivity extends AppCompatActivity {
         Button exit=button("Encerrar reprodução",PANEL,()->new MaterialAlertDialogBuilder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
         content=screens[3];
         label(getString(R.string.preferences_title));
+        content.addView(text(getString(R.string.language_note),13,MUTED));
         content.addView(button(getString(R.string.language),PANEL,()->{
             if(busy)return;
             new MaterialAlertDialogBuilder(this).setTitle(R.string.language)
-                .setMessage(R.string.language_note).setItems(new String[]{getString(R.string.system_default),"Português","English","Español"},(d,w)->RemoteNavigation.locale(w)).show();
+                .setItems(new String[]{getString(R.string.system_default),"Português","English","Español"},(d,w)->RemoteNavigation.locale(w)).show();
         }),new LinearLayout.LayoutParams(-1,-2));
         label(getString(R.string.manual_pair));
         phoneIp=field(getString(R.string.phone_ip),InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);

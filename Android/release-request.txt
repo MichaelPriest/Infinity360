@@ -1,2 +1,2 @@
 Remote 0.19.0-alpha
-Android-only: Material 3, bottom navigation, Kotlin, AppCompat and locale resources.
+Android-only: Material 3, bottom navigation, Kotlin, AppCompat and locale resources; locale selection dialog corrected.
