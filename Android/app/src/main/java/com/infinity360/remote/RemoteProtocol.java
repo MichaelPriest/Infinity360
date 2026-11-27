@@ -24,15 +24,29 @@ final class RemoteProtocol {
         for(byte b:random){result.append(Character.forDigit((b>>4)&15,16));result.append(Character.forDigit(b&15,16));}
         return result.toString();
     }
+    static String snapshot(String ip,String key)throws Exception{
+        return exchange(ip,key,"snapshot",true);
+    }
     static int request(String ip,String key,String command)throws Exception{
+        return Integer.parseInt(exchange(ip,key,command,false));
+    }
+    private static String exchange(String ip,String key,String command,boolean body)throws Exception{
         if(!privateIp(ip))throw new IllegalArgumentException("IPv4 privado obrigatório");
         boolean probe=command==null;
-        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels|guide|favorite|refresh|pageup|pagedown|status")))throw new IllegalArgumentException("Comando ou chave inválida");
+        if(!probe&&(!validKey(key)||!command.matches("up|down|left|right|accept|back|mute|quality|quieter|louder|channels|guide|favorite|refresh|pageup|pagedown|status|snapshot")))throw new IllegalArgumentException("Comando ou chave inválida");
         HttpURLConnection c=(HttpURLConnection)new URL("http://"+ip+":"+PORT+(probe?"/":"/cmd/"+command)).openConnection(Proxy.NO_PROXY);
         try{
             c.setInstanceFollowRedirects(false);c.setConnectTimeout(2500);c.setReadTimeout(3500);c.setUseCaches(false);c.setRequestProperty("Connection","close");
             if(!probe){c.setRequestMethod("POST");c.setRequestProperty("X-Infinity-Key",key);c.setDoOutput(true);c.setFixedLengthStreamingMode(0);c.getOutputStream().close();}
-            return c.getResponseCode();
+            int code=c.getResponseCode();
+            if(!body)return Integer.toString(code);
+            if(code!=200)throw new java.io.IOException("HTTP "+code);
+            if(c.getContentType()==null||!c.getContentType().startsWith("application/json"))throw new java.io.IOException("Resposta incompatível");
+            try(java.io.InputStream in=c.getInputStream();java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream()){
+                byte[] buffer=new byte[1024];int n;
+                while((n=in.read(buffer))!=-1){if(bytes.size()+n>8192)throw new java.io.IOException("Resposta grande demais");bytes.write(buffer,0,n);}
+                return new String(bytes.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
+            }
         }finally{c.disconnect();}
     }
 }

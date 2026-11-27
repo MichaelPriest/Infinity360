@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.60 — Monitoramento remoto do console
+
+- Android Remote 0.3.0 Alpha: consulta autenticada de indicadores, biblioteca, apps, fila local, notificacoes nao lidas, RAM e sensores CPU/GPU/EDRAM/chassi (apenas amostra de ate 30s). Armazenamento usa ultima leitura da dashboard, explicitamente identificado como cache. Snapshot JSON limitado a 8 KiB, sem URLs, gamertags, caminhos ou credenciais. Disponivel no menu e no player FFmpeg; consulta manual, sem acesso de escrita. Testes de protocolo ampliados; APK/XSDK pendentes. Sem XEX/release.
+
 ## V0.3.59 — Controle remoto da dashboard e IPTV
 
 - Android Remote 0.2.0 Alpha: comandos de navegacao geral, Guide, favoritos, atualizar, LB/RB e teste autenticado. Servidor compartilhado com IPTV, opcional na dashboard via enable-dashboard-remote.txt (ENABLE-DASHBOARD-REMOTE). Acoes restritas por tela e prioridade do controle fisico; lancamento XEX/GOD exige confirmacao fisica. Bloqueia editores, instalacoes, operacoes de arquivo e desligamento pelo remoto. Sem XEX/release; APK de teste via workflow Android, homologacao pendente.

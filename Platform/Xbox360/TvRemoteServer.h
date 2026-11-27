@@ -33,7 +33,7 @@ public:
 #endif
     }
     std::string Address()const{return listener_>=0?"http://"+host_:"";}
-    Key Poll(const std::function<bool(Key)>& permit={}){
+    Key Poll(const std::function<bool(Key)>& permit={},const std::function<std::string()>& snapshot={}){
 #if defined(__XSDK__) || defined(__linux__)
         if(listener_<0)return Key::None;
         const auto now=Now();
@@ -54,10 +54,12 @@ public:
             if(request_.size()>2048){CloseClient();return Key::None;}
             if(request_.find("\r\n\r\n")==std::string::npos)return Key::None;
             const auto parsed=Parse(request_,host_,secret_);
-            const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||!permit||permit(parsed.key));
-            if(allowed){if(parsed.key!=Key::Status)result=parsed.key;lastCommand_=now;}
-            const std::string body=parsed.page?Page():allowed?"OK":"Recusado";
-            response_=std::string("HTTP/1.1 ")+(parsed.page||allowed?"200 OK":"403 Forbidden")+"\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: "+(parsed.page?"text/html; charset=utf-8":"text/plain; charset=utf-8")+"\r\nContent-Length: "+std::to_string(body.size())+"\r\n\r\n"+body;
+            const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(parsed.key==Key::Snapshot?bool(snapshot):!permit||permit(parsed.key)));
+            if(allowed){if(parsed.key!=Key::Status&&parsed.key!=Key::Snapshot)result=parsed.key;lastCommand_=now;}
+            const bool json=allowed&&parsed.key==Key::Snapshot;
+            std::string body=parsed.page?Page():json?snapshot():allowed?"OK":"Recusado";
+            if(json&&(body.empty()||body.size()>8192))body="{}";
+            response_=std::string("HTTP/1.1 ")+(parsed.page||allowed?"200 OK":"403 Forbidden")+"\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: "+(parsed.page?"text/html; charset=utf-8":json?"application/json; charset=utf-8":"text/plain; charset=utf-8")+"\r\nContent-Length: "+std::to_string(body.size())+"\r\n\r\n"+body;
         }
         const auto left=response_.size()-sent_;
 #ifdef __XSDK__

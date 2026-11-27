@@ -60,6 +60,7 @@ public:
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
     bool RemoteAllowed(Key key)const;
+    std::string RemoteSnapshot(bool playback=false)const;
     static bool RemoteKey(TvRemote::Key command,Key& key);
     unsigned SafeArea()const{return safeArea_;}
     unsigned IdleMinutes()const{return idleMinutes_;}

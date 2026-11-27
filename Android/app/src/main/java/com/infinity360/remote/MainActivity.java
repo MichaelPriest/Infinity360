@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
-    private TextView status;
+    private TextView status,monitor;
     private LinearLayout content;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private boolean busy=false;
@@ -47,6 +47,9 @@ public final class MainActivity extends Activity {
         label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
         content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,dp(54)));
         status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);content.addView(status);
+        label("Monitoramento do console");
+        monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
+        content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
@@ -63,6 +66,43 @@ public final class MainActivity extends Activity {
         content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
+    }
+    private String size(org.json.JSONObject data,String name)throws org.json.JSONException{
+        if(data.isNull(name))return "Indisponível";
+        long value=data.getLong(name);if(value<0)return "Indisponível";
+        return android.text.format.Formatter.formatFileSize(this,value);
+    }
+    private String formatSnapshot(String raw)throws Exception{
+        org.json.JSONObject data=new org.json.JSONObject(raw);
+        if(data.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
+        StringBuilder out=new StringBuilder(data.optString("mode").equals("iptv")?"Modo IPTV":"Modo dashboard");
+        out.append("\nJogos: ").append(data.getLong("games")).append("  |  Apps: ").append(data.getLong("apps"));
+        out.append("\nNotificações não lidas: ").append(data.getLong("notifications"));
+        out.append("\nTransferências: ").append(data.getBoolean("transfer_active")?"Ativas":"Sem atividade");
+        out.append("\nEtapas na fila local: ").append(data.getLong("queue_steps"));
+        out.append("\nRAM física: ").append(size(data,"memory_total"));
+        out.append("\nRAM disponível ao título: ").append(size(data,"memory_title_free"));
+        org.json.JSONArray temps=data.getJSONArray("temperatures");String[] names={"CPU","GPU","EDRAM","Chassi"};
+        for(int i=0;i<4;i++){out.append("\n").append(names[i]).append(": ");
+            if(temps.isNull(i))out.append("Indisponível");
+            else{int reading=temps.getInt(i);out.append(reading>=10&&reading<=1250?String.format(java.util.Locale.getDefault(),"%.1f °C",reading/10.0):"Indisponível");}}
+        org.json.JSONArray disks=data.getJSONArray("storage_cached");
+        out.append("\n\nArmazenamento (última consulta da dashboard)");
+        if(disks.length()==0)out.append("\nSem leitura");
+        for(int i=0;i<Math.min(16,disks.length());i++){org.json.JSONObject d=disks.getJSONObject(i);out.append("\nUnidade ").append(d.getInt("slot")).append(": ").append(size(d,"free")).append(" livres / ").append(size(d,"capacity"));}
+        return out.toString();
+    }
+    private void refreshMonitor(){
+        if(busy)return;
+        String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira o IP e a chave.");return;}
+        busy=true;status.setText("Consultando indicadores...");
+        worker.execute(()->{String result;boolean ok;
+            try{result=formatSnapshot(RemoteProtocol.snapshot(ip,secret));ok=true;}
+            catch(Exception e){result="Não foi possível obter uma leitura autenticada. Confira a conexão e a versão da dashboard.";ok=false;}
+            final String message=result;final boolean success=ok;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");});
+        });
     }
     private void copyConfig(){
         String phone=phoneIp.getText().toString().trim(),secret=key.getText().toString().trim();

@@ -1357,6 +1357,31 @@ bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
     default:return false;
     }return true;
 }
+std::string ConsoleHome::RemoteSnapshot(bool playback)const{
+    // Numeric, bounded, read-only snapshot. No gamertags, paths, filenames,
+    // channel URLs, keys or other private account data leave the console.
+    const auto stamp=TransferRate::Now();
+    const bool thermalCurrent=headerThermalSampled_&&stamp>=headerThermalAt_&&stamp-headerThermalAt_<=30000;
+    const auto memory=SystemTelemetry::Read();
+    std::string out="{\"schema\":1,\"mode\":\""+std::string(playback?"iptv":"dashboard")+"\",\"games\":"+std::to_string(games_.size())+
+        ",\"apps\":"+std::to_string(tools_.size())+",\"notifications\":"+std::to_string(UnreadNotifications())+
+        ",\"transfer_active\":"+(TransferRunning()?"true":"false")+",\"queue_steps\":"+std::to_string(copyQueue_.size())+
+        ",\"memory_total\":"+(memory.available?std::to_string(memory.physical):"null")+
+        ",\"memory_title_free\":"+(memory.available?std::to_string(memory.titleAvailable):"null")+",\"temperatures\":[";
+    for(unsigned i=0;i<4;++i){
+        if(i)out+=",";
+        out+=thermalCurrent&&headerThermal_.available[i]?std::to_string((unsigned(headerThermal_.raw[i])*10+128)/256):"null";
+    }
+    out+="],\"storage_cached\":[";
+    const auto count=std::min<size_t>(storageVolumes_.size(),16);
+    for(size_t i=0;i<count;++i){
+        if(i)out+=",";
+        const auto& volume=storageVolumes_[i];
+        out+="{\"slot\":"+std::to_string(i+1)+",\"capacity\":"+(volume.available?std::to_string(volume.capacity):"null")+
+            ",\"free\":"+(volume.available?std::to_string(volume.freeBytes):"null")+"}";
+    }
+    out+="]}";return out;
+}
 bool ConsoleHome::RemoteAllowed(Key key)const{
     const bool direction=key==Left||key==Right||key==Up||key==Down;
     const bool paging=key==PageUp||key==PageDown;

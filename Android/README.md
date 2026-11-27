@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.2.0 Alpha
+# INFINITY 360 Remote — Android 0.3.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -21,3 +21,7 @@ Saída: app/build/outputs/apk/debug/app-debug.apk. Assinatura de debug, não é 
 ## Controle da dashboard
 
 Para habilitar a navegação geral, crie `enable-dashboard-remote.txt` na mesma pasta de dados com a linha `ENABLE-DASHBOARD-REMOTE` e reinicie a dashboard. Use o mesmo IP e chave. O serviço fica ativo durante a dashboard e compartilha a conexão com o IPTV. Navegação Home, biblioteca, apps, emuladores, loja (consulta), arquivos (pastas), sistema (consulta) e Guide. O controle remoto não confirma execução de jogos, instalações, operações destrutivas, editores ou desligamento. Use o controle físico para essas ações. Remova o marcador (inclusive backup) e reinicie para retornar ao modo IPTV apenas. Teste autenticado com o botão Verificar conexão e chave. XSDK ainda não homologado.
+
+## Monitoramento
+
+Use **Consultar indicadores** após configurar IP e chave. A consulta autenticada apresenta contagens de jogos/apps, notificações, atividade e etapas de transferências locais, RAM, temperaturas disponíveis e armazenamento em cache. Leituras térmicas ausentes ou com mais de 30 segundos aparecem indisponíveis; armazenamento corresponde à última consulta da dashboard. Não há controle térmico nem alteração de arquivos por esta tela. A atualização é manual.

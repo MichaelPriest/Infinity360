@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 namespace TvRemote {
-enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status };
+enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot };
 inline bool ValidSecret(const std::string& s){
     if(s.size()!=32)return false;
     for(char c:s)if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;
@@ -12,8 +12,8 @@ inline bool SameSecret(const std::string& a,const std::string& b){
     unsigned diff=0;for(size_t i=0;i<32;++i)diff|=static_cast<unsigned char>(a[i]^b[i]);return diff==0;
 }
 inline Key Command(const std::string& s){
-    const char* names[]={"up","down","left","right","accept","back","mute","quality","quieter","louder","channels","guide","favorite","refresh","pageup","pagedown","status"};
-    for(unsigned i=0;i<17;++i)if(s==names[i])return static_cast<Key>(i+1);
+    const char* names[]={"up","down","left","right","accept","back","mute","quality","quieter","louder","channels","guide","favorite","refresh","pageup","pagedown","status","snapshot"};
+    for(unsigned i=0;i<18;++i)if(s==names[i])return static_cast<Key>(i+1);
     return Key::None;
 }
 struct Request {bool page=false;Key key=Key::None;};

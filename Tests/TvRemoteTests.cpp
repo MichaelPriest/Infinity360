@@ -15,5 +15,7 @@ int main(){
     if(Parse(request("guide",key,host),host,key).key!=Key::Guide)return 10;
     if(Parse(request("favorite",key,host),host,key).key!=Key::Favorite)return 11;
     if(Parse(request("power",key,host),host,key).key!=Key::None)return 12;
+    if(Parse(request("snapshot",key,host),host,key).key!=Key::Snapshot)return 13;
+    if(Parse(request("snapshot","wrong",host),host,key).key!=Key::None)return 14;
     return 0;
 }

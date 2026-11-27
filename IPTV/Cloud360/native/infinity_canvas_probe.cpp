@@ -289,7 +289,7 @@ int main(){
             const auto now=TransferRate::Now();
             if(dashboardRemote.Address().empty()&&(!remoteRetry||now>=remoteRetry)){dashboardRemote.Start(dir);remoteRetry=now+5000;}
             ConsoleHome::Key remoteKey=ConsoleHome::Back;
-            const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);});
+            const auto command=dashboardRemote.Poll([&](TvRemote::Key cmd){return !systemUiOpen&&!buttons&&pendingLaunch.empty()&&ConsoleHome::RemoteKey(cmd,remoteKey)&&menu.RemoteAllowed(remoteKey);},[&](){return menu.RemoteSnapshot();});
             if(command!=TvRemote::Key::None){
                 if(remoteKey==ConsoleHome::GlobalGuide)edge|=INPUT_GAMEPAD_LEFT_THUMB;
                 else if(static_cast<unsigned>(remoteKey)<11)edge|=keys[static_cast<unsigned>(remoteKey)];
@@ -388,7 +388,7 @@ int main(){
                     std::string next;
                     std::function<bool(int)> zap;
                     if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
-                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();},[&](){return menu.TvChannelChoices();},[&](size_t row){next=menu.ChooseTvChannel(row);return !next.empty();},menu.PlayingTvLogo(),[&](){return remoteControl.Poll([](TvRemote::Key key){return XsdkAv::RemoteButtons(key)!=0;});},remoteControl.Address()):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();},[&](){return menu.TvChannelChoices();},[&](size_t row){next=menu.ChooseTvChannel(row);return !next.empty();},menu.PlayingTvLogo(),[&](){return remoteControl.Poll([](TvRemote::Key key){return XsdkAv::RemoteButtons(key)!=0;},[&](){return menu.RemoteSnapshot(true);});},remoteControl.Address()):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
