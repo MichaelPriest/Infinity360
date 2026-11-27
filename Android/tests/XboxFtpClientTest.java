@@ -16,6 +16,8 @@ public final class XboxFtpClientTest {
         require(XboxFtpClient.parseUploadLimit("213 33554432")==33554432L);
         require(XboxFtpClient.parseUploadLimit("213 536870912")==536870912L);
         try{XboxFtpClient.parseUploadLimit("213 536870913");throw new AssertionError();}catch(java.io.IOException expected){}
+        require(XboxFtpClient.child("/Batch","Save").equals("/Batch/Save"));
+        require(!XboxFtpClient.validPath("/Batch/../Escape"));
         System.out.println("FTP parser and bounds OK");
     }
 }

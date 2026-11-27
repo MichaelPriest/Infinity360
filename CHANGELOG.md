@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.72 — FTP em lote, pastas e seletor no console
+
+- Android Remote 0.15.0 Alpha: seleção de até 32 arquivos, validação prévia dos nomes e tamanhos, envio sequencial na mesma sessão, progresso agregado, velocidade média e ETA estimado. MKD autenticado somente no modo upload e dentro do workspace. Dashboard permite alternar destino FTP preparado com BACK no painel Rede/FTP, servidor parado, sem editar arquivo manualmente. Sem sobrescrita, exclusão ou envio recursivo. Testes ampliados; APK/XSDK pendentes. Sem XEX/release.
+
 ## V0.3.71 — FTP em HDD/USB e uploads maiores
 
 - Android Remote 0.14.0 Alpha: seleção local de workspace FTP (local, HDD, USB 0–2), upload opcional até 512 MiB via marcador local, consulta autenticada XMAX, compatibilidade com servidor anterior (32 MiB), preflight de espaço gravável, envio direto de arquivo Android com tamanho conhecido sem cópia temporária. Mantém uma raiz por sessão, publicação exclusiva e sem sobrescrita. Testes de limites ampliados; APK/XSDK pendentes. Sem XEX/release.

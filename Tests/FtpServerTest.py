@@ -46,6 +46,7 @@ with tempfile.TemporaryDirectory() as directory:
             buf=io.BytesIO()
             ftp.retrbinary("RETR sample.bin",buf.write)
             assert buf.getvalue()==payload
+            reject(lambda:ftp.sendcmd("MKD NoWrite"))
             reject(lambda:ftp.sendcmd("STOR new.bin"))
             reject(lambda:ftp.sendcmd("DELE sample.bin"))
             reject(lambda:ftp.sendcmd("PORT 127,0,0,1,1,1"))
@@ -64,6 +65,11 @@ with tempfile.TemporaryDirectory() as directory:
         port=int(proc.stdout.readline())
         with ftplib.FTP() as ftp:
             ftp.connect("127.0.0.1",port,timeout=5);ftp.login("owner",password)
+            ftp.mkd("Batch")
+            assert (personal/"Batch").is_dir()
+            reject(lambda:ftp.mkd("Batch"))
+            reject(lambda:ftp.mkd("../Escape"))
+            reject(lambda:ftp.mkd("AXCOPY-hidden"))
             reject(lambda:ftp.storbinary("STOR missing-allo.bin",io.BytesIO(b"x")))
             ftp.voidcmd("ALLO "+str(len(payload)))
             ftp.storbinary("STOR new.bin",io.BytesIO(payload))

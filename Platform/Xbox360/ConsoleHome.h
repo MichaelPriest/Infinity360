@@ -263,6 +263,8 @@ private:
     FileWorkspace fileWorkspace_;
     FtpServer ftp_;
     void ToggleFtp(bool allowUpload=false);
+    std::string FtpRootId()const;
+    void CycleFtpRoot();
     FileTransfer transfer_;
     TransferRate copyRate_;
     std::vector<WorkspaceCopyStep> copyQueue_;

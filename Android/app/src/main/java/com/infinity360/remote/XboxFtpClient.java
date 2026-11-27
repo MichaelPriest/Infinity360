@@ -110,6 +110,10 @@ final class XboxFtpClient implements Closeable {
         }finally{data=null;}
         expect(readReply(),226);return parseListing(new String(bytes.toByteArray(),StandardCharsets.US_ASCII));
     }
+    void mkdir(String path)throws IOException{
+        if(!validPath(path)||path.equals("/")||serverUploadLimit==0)throw new IOException("Criação de pasta indisponível");
+        expect(command("MKD "+path),257);
+    }
     long size(String path)throws IOException{
         if(!validPath(path)||path.equals("/"))throw new IOException("Arquivo inválido");
         String reply=command("SIZE "+path);expect(reply,213);

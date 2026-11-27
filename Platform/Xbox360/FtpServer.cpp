@@ -365,6 +365,19 @@ struct FtpServer::Impl {
             respond("350 Restart position accepted for next RETR");return;
         }
         if(verb=="XMAX"&&arg.empty()){respond("213 "+num(uploadEnabled?uploadLimit:0));return;}
+        if(verb=="MKD"&&uploadEnabled){
+            // Create exactly one directory within the authenticated workspace.
+            // No implicit parents, overwrite, deletion or absolute drive paths.
+            const size_t slash=arg.find_last_of('/');
+            const auto name=slash==std::string::npos?arg:arg.substr(slash+1);
+            std::string parent;
+            if(arg.size()>200||!FileWorkspace::ValidName(name)||
+               !session->DataDirectory(slash==std::string::npos?".":slash==0?"/":arg.substr(0,slash),parent)||
+               !workspace.Create(parent,name)){
+                respond("550 Cannot create directory");return;
+            }
+            respond("257 Directory created");return;
+        }
         if(verb=="ALLO"&&uploadEnabled) {
             allocated=parseUploadSize(arg,uploadSize,uploadLimit);
             respond(allocated?"200 Exact size reserved":"552 Invalid size or limit exceeded");return;

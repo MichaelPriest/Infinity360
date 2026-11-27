@@ -29,7 +29,8 @@ public final class FtpActivity extends Activity {
     private boolean busy;
     private String directory="/",pendingDownload="",pendingName="";
     private long pendingSize,lastFinish;
-    private long lastProgress;
+    private long lastProgress,transferStarted;
+    private static final int MAX_BATCH=32;
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
     private TextView label(String value,int size,int color){TextView text=new TextView(this);text.setText(value);text.setTextColor(color);text.setTextSize(size);text.setPadding(0,dp(5),0,dp(5));return text;}
     private Button button(String value,Runnable action){Button button=new Button(this);button.setAllCaps(false);button.setText(value);button.setTextColor(TEXT);button.setBackgroundColor(PANEL);button.setOnClickListener(v->action.run());return button;}
@@ -51,7 +52,8 @@ public final class FtpActivity extends Activity {
         addButton(root,"Conectar / atualizar",()->browse(directory));
         location=label("/",16,ACCENT);root.addView(location);
         addButton(root,"Voltar uma pasta",()->{if(!busy){int i=directory.lastIndexOf('/');browse(i<=0?"/":directory.substring(0,i));}});
-        addButton(root,"Enviar arquivo do celular",()->pickUpload());
+        addButton(root,"Enviar arquivos do celular",()->pickUpload());
+        addButton(root,"Criar pasta no Xbox",()->createFolder());
         addButton(root,"Cancelar transferência",()->cancelTransfer());
         bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);root.addView(bar,new LinearLayout.LayoutParams(-1,dp(14)));
         status=label("Servidor FTP: porta 2121.",14,MUTED);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
@@ -66,8 +68,12 @@ public final class FtpActivity extends Activity {
     private void check()throws IOException{if(cancelled||Thread.currentThread().isInterrupted())throw new InterruptedIOException("Cancelado");}
     private void progress(long done,long total)throws IOException{
         check();long now=SystemClock.elapsedRealtime();if(done!=total&&now-lastProgress<250)return;lastProgress=now;
+        final double elapsed=Math.max(0.001,(now-transferStarted)/1000.0);
+        final long speed=(long)(done/elapsed);
+        final String rate=speed>0?android.text.format.Formatter.formatFileSize(this,speed)+"/s":"--";
+        final String eta=speed>0?Math.max(0,(total-done)/speed)+" s restantes":"--";
         int percent=total>0?(int)Math.min(100,100.0*done/total):0;
-        runOnUiThread(()->{if(!isDestroyed()&&busy&&!cancelled){bar.setProgress(percent);status.setText(android.text.format.Formatter.formatFileSize(this,done)+" / "+android.text.format.Formatter.formatFileSize(this,total));}});
+        runOnUiThread(()->{if(!isDestroyed()&&busy&&!cancelled){bar.setProgress(percent);status.setText(android.text.format.Formatter.formatFileSize(this,done)+" / "+android.text.format.Formatter.formatFileSize(this,total)+" • "+rate+" • "+eta);}});
     }
     interface Job{String run(XboxFtpClient client)throws Exception;}
     private void runJob(String message,Job job){
@@ -100,9 +106,18 @@ public final class FtpActivity extends Activity {
             });return entries.size()+" itens. "+(client.uploadLimit()==0?"Somente leitura.":"Limite de envio: "+android.text.format.Formatter.formatFileSize(this,client.uploadLimit())+".");
         });
     }
+    private void createFolder(){
+        if(busy||connection()==null)return;
+        final String folder=directory;
+        EditText name=new EditText(this);name.setSingleLine(true);name.setHint("Nome da pasta");
+        new AlertDialog.Builder(this).setTitle("Criar pasta em "+folder).setView(name).setNegativeButton("Cancelar",null).setPositiveButton("Criar",(d,w)->{
+            String target;try{target=XboxFtpClient.child(folder,name.getText().toString());}catch(IllegalArgumentException e){status.setText("Nome inválido.");return;}
+            runJob("Criando pasta...",client->{client.mkdir(target);return "Pasta criada. Atualize a listagem.";});
+        }).show();
+    }
     private void pickUpload(){
         if(busy||connection()==null)return;
-        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
         try{startActivityForResult(intent,PICK_UPLOAD);}catch(Exception e){status.setText("Seletor de arquivos indisponível.");}
     }
     private void pickDownload(String path,XboxFtpClient.Entry entry){
@@ -127,8 +142,16 @@ public final class FtpActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
-        if(result!=RESULT_OK||data==null||data.getData()==null){pendingDownload="";return;}
-        final Uri uri=data.getData();
+        if(result!=RESULT_OK||data==null){pendingDownload="";return;}
+        if(request==PICK_UPLOAD&&data.getClipData()!=null&&data.getClipData().getItemCount()>1){
+            final android.content.ClipData clip=data.getClipData();
+            if(clip.getItemCount()>MAX_BATCH){status.setText("Selecione até 32 arquivos por lote.");return;}
+            final ArrayList<Uri> files=new ArrayList<>();
+            for(int i=0;i<clip.getItemCount();i++){Uri entry=clip.getItemAt(i).getUri();if(entry==null){status.setText("Seleção inválida.");return;}files.add(entry);}
+            uploadBatch(files);return;
+        }
+        final Uri uri=data.getData()!=null?data.getData():data.getClipData()!=null&&data.getClipData().getItemCount()==1?data.getClipData().getItemAt(0).getUri():null;
+        if(uri==null){pendingDownload="";return;}
         if(request==PICK_UPLOAD){
             EditText name=new EditText(this);name.setSingleLine(true);String original=filename(uri);name.setText(XboxFtpClient.validName(original)?original:"arquivo.bin");
             final String folder=directory;
@@ -141,7 +164,7 @@ public final class FtpActivity extends Activity {
                         if(client.uploadLimit()==0||count>client.uploadLimit())throw new IOException("Envio desabilitado ou acima do limite do Xbox.");
                         try(InputStream in=getContentResolver().openInputStream(uri)){
                             if(in==null)throw new IOException("Arquivo local indisponível");
-                            client.upload(target,in,count,this::progress);
+                            transferStarted=SystemClock.elapsedRealtime();client.upload(target,in,count,this::progress);
                         }
                         return "Upload concluído. Atualize a pasta do Xbox.";
                     });
@@ -153,7 +176,7 @@ public final class FtpActivity extends Activity {
                 if(size>getCacheDir().getUsableSpace())throw new IOException("Espaço temporário insuficiente no celular.");
                 File temp=File.createTempFile("ftp-download-",".part",getCacheDir());
                 try{
-                    try(OutputStream out=new FileOutputStream(temp)){client.download(target,out,size,this::progress);}
+                    try(OutputStream out=new FileOutputStream(temp)){transferStarted=SystemClock.elapsedRealtime();client.download(target,out,size,this::progress);}
                     check();
                     try(InputStream in=new FileInputStream(temp);OutputStream out=getContentResolver().openOutputStream(uri,"wt")){
                         if(out==null)throw new IOException("Destino indisponível");byte[] buffer=new byte[32768];int n;long copied=0;
@@ -164,6 +187,31 @@ public final class FtpActivity extends Activity {
                 }finally{temp.delete();}
             });
         }
+    }
+    private void uploadBatch(ArrayList<Uri> files){
+        final String folder=directory;
+        new AlertDialog.Builder(this).setTitle("Enviar "+files.size()+" arquivos?")
+            .setMessage("Destino: "+folder+". Nomes originais; sem sobrescrita. O lote para na primeira falha e preserva os arquivos concluídos.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Enviar",(d,w)->runJob("Validando lote...",client->{
+                ArrayList<String> names=new ArrayList<>();ArrayList<Long> sizes=new ArrayList<>();
+                java.util.HashSet<String> seen=new java.util.HashSet<>();long total=0;
+                for(Uri uri:files){check();String name=filename(uri);long size=sourceSize(uri);
+                    if(!XboxFtpClient.validName(name)||!seen.add(name.toLowerCase(java.util.Locale.ROOT)))throw new IOException("Nome inválido ou duplicado: "+name);
+                    if(size<0||client.uploadLimit()==0||size>client.uploadLimit())throw new IOException("Tamanho indisponível ou acima do limite: "+name);
+                    names.add(XboxFtpClient.child(folder,name));sizes.add(size);total+=size;
+                }
+                final long all=total;
+                long completed=0;int count=0;transferStarted=SystemClock.elapsedRealtime();
+                for(int i=0;i<files.size();i++){
+                    final long previous=completed;
+                    try(InputStream in=getContentResolver().openInputStream(files.get(i))){
+                        if(in==null)throw new IOException("Arquivo indisponível");
+                        client.upload(names.get(i),in,sizes.get(i),(done,ignored)->progress(previous+done,all));
+                    }catch(IOException e){throw new IOException(count+" arquivos concluídos; lote interrompido: "+e.getMessage());}
+                    completed+=sizes.get(i);count++;
+                }
+                return count+" arquivos enviados. Atualize a pasta.";
+            })).show();
     }
     private void cancelTransfer(){if(!busy)return;cancelled=true;XboxFtpClient client=active;if(client!=null)client.close();status.setText("Cancelamento solicitado...");}
     @Override protected void onStop(){if(busy)cancelTransfer();super.onStop();}

@@ -895,6 +895,37 @@ void ConsoleHome::RefreshResidentPlugins() {
     residentConfigs_=residentInventory(paths);residentSource_=0;
     for(size_t i=0;i<residentConfigs_.size();++i)if(residentConfigs_[i].path==previous){residentSource_=i;break;}
 }
+std::string ConsoleHome::FtpRootId()const{
+    const auto path=dir_+"infinity360-ftp-root.txt";
+    std::ifstream selection(savedFile(path).c_str(),std::ios::binary);
+    if(!selection)return fileExists(path)?"invalid":"";
+    char value[16]{};
+    if(!selection.getline(value,sizeof value)||selection.peek()!=std::char_traits<char>::eof())return "invalid";
+    std::string id=value;if(!id.empty()&&id.back()=='\r')id.pop_back();
+    if(id=="local")id.clear();
+    return StoreStorage::Valid(id)?id:"invalid";
+}
+void ConsoleHome::CycleFtpRoot(){
+#ifdef __XSDK__
+    if(ftp_.Running()||TransferRunning()){notice_="Encerre FTP e transferencias antes de trocar destino.";return;}
+    const std::vector<std::string> ids={"","hdd","usb0","usb1","usb2"};
+    const auto current=std::find(ids.begin(),ids.end(),FtpRootId());
+    const size_t start=current==ids.end()?ids.size()-1:static_cast<size_t>(current-ids.begin());
+    for(size_t step=1;step<=ids.size();++step){
+        const auto& id=ids[(start+step)%ids.size()];
+        const auto root=StoreStorage::Personal(dir_,id);
+        if(!fileWorkspace_.CanWrite(root)||!StorageInfo::Read(root).available)continue;
+        const auto path=dir_+"infinity360-ftp-root.txt";
+        std::ofstream out((path+".tmp").c_str(),std::ios::binary|std::ios::trunc);
+        out<<(id.empty()?"local":id)<<"\n";out.close();
+        if(!out||!replaceSavedFile(path)){notice_="Falha ao salvar destino FTP.";return;}
+        notice_="Destino FTP: "+StoreStorage::Label(id);return;
+    }
+    notice_="Nenhum workspace FTP preparado.";
+#else
+    notice_="Selecao HDD/USB disponivel no Xbox XSDK.";
+#endif
+}
 void ConsoleHome::ToggleFtp(bool allowUpload) {
     if(ftp_.Running()){ftp_.Stop();notice_="FTP encerrado.";RecordEvent("FTP encerrado");return;}
 #if !defined(_XBOX) && !defined(__XSDK__)
@@ -933,17 +964,9 @@ void ConsoleHome::ToggleFtp(bool allowUpload) {
     unsigned long long limit=32ULL*1024*1024;
 #ifdef __XSDK__
     // A locally configured single workspace. FTP cannot select other mounts.
-    std::ifstream selection((dir_+"infinity360-ftp-root.txt").c_str(),std::ios::binary);
-    if(selection){
-        char value[16]{};
-        if(!selection.getline(value,sizeof value)||selection.peek()!=std::char_traits<char>::eof()){
-            notice_="Destino FTP invalido.";return;
-        }
-        std::string id=value;if(!id.empty()&&id.back()=='\r')id.pop_back();
-        if(id=="local")id.clear();
-        if(!StoreStorage::Valid(id)){notice_="Destino FTP invalido.";return;}
-        root=StoreStorage::Personal(dir_,id);label=StoreStorage::Label(id);
-    }
+    const auto id=FtpRootId();
+    if(!StoreStorage::Valid(id)){notice_="Destino FTP invalido.";return;}
+    root=StoreStorage::Personal(dir_,id);label=StoreStorage::Label(id);
     std::ifstream large((dir_+"enable-ftp-large-upload.txt").c_str());
     std::string signatureLarge;
     if(std::getline(large,signatureLarge)&&signatureLarge=="ENABLE-FTP-LARGE-UPLOAD")limit=512ULL*1024*1024;
@@ -2617,6 +2640,7 @@ std::string ConsoleHome::Press(Key key) {
             if(pages)storagePage_=(storagePage_+pages+(key==PageDown?1:pages-1))%pages;
             return "";
         }
+        if(page_==Details&&systemTab_==1&&!networkPeer_&&!smbPage_&&key==Search){CycleFtpRoot();return "";}
         if(page_==Details&&systemTab_==1&&!networkPeer_&&key==Guide){
             smbPage_=true;smbEditing_=false;notice_.clear();return "";
         }
@@ -4078,7 +4102,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         for(int i=0;i<3;++i){c.SeriesTile(621,yy[i],600,87,false);InfinityIcons::Draw(c,icons[i],635,yy[i]+13,32,i==0&&ftp_.Running()?Lime:White);
             c.TextFit(683,yy[i]+7,labels[i],23,White,520);c.TextFit(683,yy[i]+38,details[i],17,Muted,520);
             InfinityButtons::Strip(c,683,yy[i]+60,i==0?(ftp_.Running()?"A/X Parar":"A Leitura | X Upload (ALLO)"):i==1?"LB/RB Abrir":"START Abrir",15,Lime,520);}
-        c.TextFit(625,505,ftp_.Running()?"Porta "+number(ftp_.Port())+(ftp_.UploadEnabled()?" | Leitura/upload":" | Somente leitura"):"FTP exige ativacao manual.",17,Muted,575);
+        c.TextFit(625,505,ftp_.Running()?"Porta "+number(ftp_.Port())+(ftp_.UploadEnabled()?" | Leitura/upload":" | Somente leitura"):"BACK Destino FTP: "+StoreStorage::Label(FtpRootId()),17,Muted,575);
         InfinityButtons::Strip(c,45,607,"A FTP | X Upload | LB/RB UDP | START SMB | Y Atualizar | B Voltar",18,White,1170);return;
     }
     c.Text(45,349,c.Tr("Rede 1/2 | Diagnostico de rede local"),27,White,1170);
@@ -4093,7 +4117,7 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Surface(644,391,594,190,Panel,10);
     c.Text(660,404,c.Tr("Servicos de rede"),25,White,558);
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?std::string(c.Tr("FTP: cliente conectado")):std::string(c.Tr("FTP: aguardando cliente"))):std::string(c.Tr("FTP: desligado")),21,ftp_.Running()?Lime:Muted,558);
-    c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string(c.Tr("A Leitura | X Leitura/upload (ALLO)")),20,Muted,558);
+    c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string("BACK Destino: ")+StoreStorage::Label(FtpRootId()),20,Muted,558);
     c.Text(660,534,std::string(c.Tr("Internet e Xbox Live: nao testados")),19,Muted,558);
     InfinityButtons::Strip(c,45,607,std::string(c.Tr("A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar")),18,Muted,1180);
 }
