@@ -15,6 +15,7 @@
 #include <functional>
 #if defined(INFINITY_CONTAINER_NETWORK_PROBE) || defined(INFINITY_XSDK_HTTPS)
 #include "XsdkRemoteReader.h"
+#include "XsdkRangeReader.h"
 #include "hls_vod.h"
 #define INFINITY_AV_NETWORK 1
 #endif
@@ -61,6 +62,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     unsigned selectedBitrate=0;
 #ifdef INFINITY_AV_NETWORK
     XsdkMpeg::RemoteReader remote;
+    XsdkMpeg::RangeReader ranged;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
         if(!r->Open(url,root,!playlist,playlist))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
@@ -89,9 +91,14 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
             session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);},&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             const bool mp4=CloudHls::Extension(path,".mp4");
+            if(mp4&&ranged.Open(path,root)){
+                session=cloud_container_open_mp4_seekable(XsdkMpeg::RangeReader::ReadCallback,XsdkMpeg::RangeReader::SeekCallback,ranged.Length(),&ranged,CloudAvStreamQueue::Capture,&timeline);
+            }else{
+            if(Cancelled())return "Reproducao cancelada.";
             if(!remote.Open(path,root,!mp4,false,mp4))return "Fonte de video remoto nao autorizada.";
             auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
             session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
+            }
         }
     }else
 #endif
@@ -113,14 +120,14 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     CloudReadClock playbackClock;
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     INPUT_STATE initial{};
-    CloudPlaybackControls controls(!remoteSource,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
+    CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     auto position=[&](){return std::max<int64_t>(0,timeline.Origin()-mediaStart+playbackClock.Elapsed(controls.Clock(wall())));};
     auto timeLabel=[](int64_t us){const auto seconds=us/1000000;return std::to_string(seconds/60)+":"+(seconds%60<10?"0":"")+std::to_string(seconds%60);};
     auto overlay=[&](){
         canvas.Box(30,620,1220,72,0xff172c28u,6);
         const std::string state=controls.Paused()?"Pausado":remoteSource?"Rede":"Arquivo local";
         canvas.Text(46,630,state+" | Volume "+std::to_string(controls.Volume())+"%"+(controls.Muted()?" (Mudo)":"")+(selectedBitrate?" | HLS "+std::to_string(selectedBitrate/1000)+" kbps":"")+(duration?" | "+timeLabel(std::min(duration,position()))+" / "+timeLabel(duration):""),22,0xfff2f7f3u,1160);
-        canvas.Text(46,657,remoteSource?"X Mudo | LB/RB Volume | B Sair":duration?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
+        canvas.Text(46,657,remoteSource&&!duration?"X Mudo | LB/RB Volume | B Sair":duration?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",19,0xffb7c9c1u,1160);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
         canvas.VideoRgb(v.rgb.data(),v.width,v.height,v.aspect);

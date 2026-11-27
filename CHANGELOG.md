@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.94 — HTTP Range MP4 experimental
+
+- Leitor nativo por janelas de 256 KiB, resposta 206 estrita, Content-Range e ETag forte estáveis; If-Range, TLS e política de fontes existentes. Sem redirects.
+- MP4 remoto seekable integrado ao FFmpeg, pausa e busca por quadro-chave quando duração conhecida. Fallback sequencial se servidor não oferecer contrato Range.
+- Teste portátil do parser de cabeçalhos; transporte XSDK ainda não compilado nem homologado. V0.2.93 passou nos gates portáteis.
+
 ## V0.2.93 — MP4 com acesso aleatório
 
 - API AVIO seekable por callbacks de leitura e posição absoluta, tamanho conhecido até 8 GiB e orçamento de leitura existente; rejeita EOF prematuro e seek inconsistente.
