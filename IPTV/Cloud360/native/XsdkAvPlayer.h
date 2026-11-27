@@ -65,7 +65,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     XsdkMpeg::RangeReader ranged;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
-        if(!r->Open(url,root,!playlist,playlist))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
+        if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4")))return std::unique_ptr<XsdkMpeg::RemoteReader>{};
         return r;
     },[](unsigned ms){
         if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;
@@ -88,7 +88,8 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
             hls.EnableBufferedSegments(true);
             if(!hls.Start(path,cap,true))return "Playlist HLS recusada ou indisponivel.";
             selectedBitrate=hls.SelectedBitrate();
-            session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);},&hls,CloudAvStreamQueue::Capture,&timeline);
+            auto readHls=[](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);};
+            session=hls.Fragmented()?cloud_container_open_mp4(readHls,&hls,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(readHls,&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             const bool mp4=CloudHls::Extension(path,".mp4");
             if(mp4&&ranged.Open(path,root)){

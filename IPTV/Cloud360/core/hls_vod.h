@@ -11,7 +11,7 @@
 namespace CloudHls {
 constexpr size_t MaxPlaylist=128*1024,MaxSegments=4096,MaxSegment=32*1024*1024,MaxBufferedSegment=2*1024*1024;
 struct Variant {std::string url;unsigned bandwidth=0,width=0,height=0;bool compatible=true;};
-struct List {std::vector<Variant> variants;std::vector<std::string> segments;bool ended=false,hasSequence=false;uint64_t sequence=0;unsigned target=0;};
+struct List {std::string init;std::vector<Variant> variants;std::vector<std::string> segments;bool ended=false,hasSequence=false;uint64_t sequence=0;unsigned target=0;};
 inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Extension(const std::string& url,const std::string& ext){
     MediaUrl m;if(!m.Parse(url))return false;
@@ -128,6 +128,10 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
             uint64_t value=0;
             if(result.target||duration||!result.segments.empty()||!Number(line.substr(22),120,value)||!value)return false;
             result.target=static_cast<unsigned>(value);
+        }else if(line.compare(0,16,"#EXT-X-MAP:URI=\"")==0){
+            if(!result.init.empty()||!result.segments.empty()||!result.variants.empty()||variant.bandwidth||duration||line.back()!='"')return false;
+            const auto uri=line.substr(16,line.size()-17);
+            if(!Resolve(base,uri,result.init)||!Extension(result.init,".mp4"))return false;
         }else if(line=="#EXT-X-ENDLIST"){
             if(variant.bandwidth||duration||!result.variants.empty())return false;result.ended=true;
         }else if(line.compare(0,11,"#EXT-X-KEY:")==0){
@@ -147,7 +151,7 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
                 if(result.variants.size()>=32||!Extension(url,".m3u8"))return false;
                 variant.url=url;result.variants.push_back(variant);variant=Variant{};
             }else if(duration){
-                if(result.segments.size()>=MaxSegments||!Extension(url,".ts"))return false;
+                if(result.segments.size()>=MaxSegments||(result.init.empty()?!Extension(url,".ts"):(!Extension(url,".m4s")&&!Extension(url,".mp4"))))return false;
                 result.segments.push_back(url);duration=false;
             }else return false;
         }
@@ -187,16 +191,26 @@ public:
             if(!selected)return false;
         }
         if(list.segments.empty()||(!list.ended&&(!allowLive_||!wait_)))return false;
+        // Fragmented MP4 initially restricted to VOD with one fixed init map.
+        if(!list.init.empty()&&(!list.ended||!buffered_))return false;
         next_=list.sequence;
         if(!list.ended&&list.segments.size()>3)next_+=list.segments.size()-3;
         list_=std::move(list);valid_=true;return true;
     }
+    bool Fragmented()const{return valid_&&!list_.init.empty();}
     unsigned SelectedBitrate()const{return selectedBitrate_;}
     // Optional atomic delivery for short TS segments; larger segments are rejected in this mode.
     bool EnableBufferedSegments(bool allowLargeStreaming=false){if(started_)return false;buffered_=true;largeStreaming_=allowLargeStreaming;return true;}
     unsigned RecoveredSegments()const{return recovered_;}
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
+        if(Fragmented()&&!initDone_){
+            if(segment_.empty()&&!BufferSegment(list_.init,true))return Fail();
+            const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
+            std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
+            if(segmentOffset_==segment_.size()){segment_.clear();segmentOffset_=0;initDone_=true;}
+            return static_cast<int>(n);
+        }
         unsigned refreshes=0,attempts=0;
         for(;;){
             const uint64_t end=list_.sequence+list_.segments.size();
@@ -240,7 +254,7 @@ public:
         }
     }
 private:
-    bool BufferSegment(const std::string& url){
+    bool BufferSegment(const std::string& url,bool init=false){
         unsigned char block[8192];
         for(unsigned attempt=0;attempt<3;++attempt){
             if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
@@ -251,7 +265,7 @@ private:
                 const int n=reader->Read(block,sizeof block);
                 if(n<0)break;
                 if(n==0){
-                    if(!segment_.empty()&&segment_.size()%188==0){
+                    if(!segment_.empty()&&(Fragmented()?ValidBoxes(segment_,init):segment_.size()%188==0)){
                         if(attempt)++recovered_;return true;
                     }
                     break;
@@ -259,13 +273,33 @@ private:
                 if(n>static_cast<int>(sizeof block)){segment_.clear();return false;}
                 if(static_cast<size_t>(n)>MaxBufferedSegment-segment_.size()){
                     std::vector<unsigned char>().swap(segment_);
-                    if(largeStreaming_)streamingSegment_=true;
+                    if(largeStreaming_&&!Fragmented())streamingSegment_=true;
                     return false;
                 }
                 segment_.insert(segment_.end(),block,block+n);
             }
         }
         segment_.clear();return false;
+    }
+    static bool ValidBoxes(const std::vector<unsigned char>& data,bool init){
+        size_t off=0;bool main=false,media=false;
+        while(off<data.size()){
+            if(data.size()-off<8)return false;
+            const auto* p=data.data()+off;
+            uint32_t size=(uint32_t(p[0])<<24)|(uint32_t(p[1])<<16)|(uint32_t(p[2])<<8)|p[3];
+            if(size<8||size>data.size()-off)return false;
+            const std::string type(reinterpret_cast<const char*>(p+4),4);
+            if(init){
+                if(type=="moov")main=true;
+                else if(type!="ftyp"&&type!="free"&&type!="skip")return false;
+            }else{
+                if(type=="moof")main=true;
+                else if(type=="mdat"){if(!main)return false;media=true;}
+                else if(type!="styp"&&type!="sidx"&&type!="free"&&type!="emsg"&&type!="prft")return false;
+            }
+            off+=size;
+        }
+        return main&&(init||media);
     }
     bool Accept(List& updated){
         if(!updated.variants.empty()||updated.segments.empty()||!updated.hasSequence||
@@ -295,6 +329,6 @@ private:
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;
     std::vector<unsigned char> segment_;size_t segmentOffset_=0;unsigned recovered_=0;
-    bool largeStreaming_=false,streamingSegment_=false;
+    bool largeStreaming_=false,streamingSegment_=false,initDone_=false;
 };
 }

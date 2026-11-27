@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.95 — HLS fMP4 VOD experimental
+
+- Aceita mapa inicial fixo MP4 e fragmentos m4s/MP4 de mesma origem em VOD, com validação estrutural de caixas e buffer de 2 MiB por recurso.
+- Encaminha o fluxo ao demux MOV/MP4 sem seek no player XSDK. Live fMP4, byte ranges, mudança de mapa, DRM e fragmentos maiores não são suportados.
+- Fixture HLS original gerada por FFmpeg e teste de decodificação; CI da V0.2.94 aprovado, nova revisão aguarda CI.
+
 ## V0.2.94 — HTTP Range MP4 experimental
 
 - Leitor nativo por janelas de 256 KiB, resposta 206 estrita, Content-Range e ETag forte estáveis; If-Range, TLS e política de fontes existentes. Sem redirects.
