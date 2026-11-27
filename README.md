@@ -28,7 +28,7 @@ Capturas do renderizador C++ com dados de teste, não fotografias do console. A 
 
 | Módulo | Estado no código |
 | --- | --- |
-| Home e Guide | Menu horizontal, transparências, atalhos agrupados, acesso direto ao perfil pelo grupo social, relógio e clima |
+| Home e Guide | Menu horizontal, cards translúcidos e foco animado; L3 abre/fecha o Guide em todas as telas do menu, com retorno à tela anterior; atalhos agrupados, perfil, relógio e clima |
 | Biblioteca | XEX/GOD/XBLA, recentes, favoritos, capas frente/verso e multidisco. Filtros, ordenação e legendas em [Lua](Platform/Xbox360/docs/LUA-API.md) |
 | Perfil Xbox | Seleção, Gamerpic, retrato e imagem estática de corpo inteiro do avatar (atualização opcional), diagnóstico de componentes e memória de assets, Gamerscore e conquistas por título via XAM experimental |
 | Social | Cartão próprio/de amigos, lista de amigos/presença e amigos por título, jogadores recentes, edição de perfil, composição oficial de mensagens, central de comunicação/Party, consulta de permissões, chat e editor de avatar via XAM experimental; painel de avatar e leitor de geometria oficial e rasterização diagnóstica CPU e adaptador XAvatar/D3D9 e pass para textura opcionais (não integrados ao presenter XSDK), preferência visual Avatar/Gamerpic/Oculto |

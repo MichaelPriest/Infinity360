@@ -4,6 +4,8 @@
 
 - Painel nativo de tela inteira com cinco categorias, seleção vertical e valores separados; LB/RB troca categoria, direcional altera ajustes, Y salva, X restaura a categoria, R3 abre prévia e B confirma descarte de alterações.
 - Home e Guia Rápido abrem o mesmo editor. Inclui idioma, UTC, clima, margem segura, protetor de tela e atalhos para pastas, discos, rede, plugins/Lua e energia. Reutiliza persistência de perfil e confirmação de energia; não inicia serviços automaticamente.
+- L3 abre/fecha o Guia Rápido como sobreposição também em biblioteca, IPTV (catálogo), sistema e editores; nas telas secundárias os atalhos que trocam de módulo são bloqueados para preservar a tela e operações. R3 mantém funções locais; captura L3+R3 tem prioridade. Reprodução e operações síncronas externas não interceptam o Guide.
+- Cards com transparência mais leve, contornos de foco e transição curta de três quadros nos presenters XDK/XSDK. Teste portátil de abertura/retorno do Guide adicionado, execução pendente.
 - Prévia de tema e idioma durante edição; margem segura e protetor aplicados ao salvar. Falha de gravação restaura valores anteriores. Sem XEX ou release solicitados; compilação, capturas nativas e homologação pendentes.
 
 ## V0.3.20 — Múltiplos repositórios Lua

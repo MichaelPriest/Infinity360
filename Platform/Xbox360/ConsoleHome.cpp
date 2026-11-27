@@ -1246,6 +1246,7 @@ bool ConsoleHome::TranslationMatches(const StoreItem& item) const {
     return false;
 }
 void ConsoleHome::OpenQuickGuideAction(unsigned action){
+    if(quickGuideOverlayOnly_){notice_="Feche a tela atual para trocar de modulo pelo guia.";return;}
     quickGuideOpen_=false;quickGuideEditing_=false;notice_.clear();
     switch(action){
         case QuickGuide::Games:Enter(Library);break;
@@ -1264,33 +1265,20 @@ void ConsoleHome::OpenQuickGuideAction(unsigned action){
         default:break;
     }
 }
+void ConsoleHome::CloseQuickGuide(){
+    quickGuideOpen_=false;quickGuideEditing_=false;
+    notice_=quickGuideOverlayOnly_?quickGuideReturnNotice_:std::string();
+    quickGuideOverlayOnly_=false;quickGuideReturnNotice_.clear();
+}
+void ConsoleHome::ToggleGlobalGuide(){
+    if(quickGuideOpen_){CloseQuickGuide();return;}
+    const bool overlay=page_!=Home||!IdleEligible();
+    const auto previousNotice=notice_;
+    OpenProfileGuide();socialGuideFocus_=false;
+    quickGuideOverlayOnly_=overlay;quickGuideReturnNotice_=previousNotice;
+}
 std::string ConsoleHome::Press(Key key) {
-    if(libraryPathsPage_){
-        if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
-        if(key==PageDown||key==PageUp){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();return "";}
-        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());}
-        if(key==Favorite)ToggleLibraryRoot();
-        if(!packagePathsPage_&&(key==Left||key==Right))ChangeLibraryDepth(key==Right?1:-1);
-        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
-        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;appearanceEditor_=false;layoutPreview_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
-        return "";
-    }
-    if(luaPage_){PressLuaScripts(key);return "";}
-    if(appearanceEditor_){PressAppearance(key);return "";}
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
-    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=LuaUtilities;luaRepoPage_=false;luaRepoConfirm_=false;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
-    if(approvedGroup_>=0){
-        const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
-        const int count=actions[3]<0?3:4;
-        if(key==Back){approvedGroup_=-1;notice_.clear();return "";}
-        if(key==Up||key==Down)approvedGroupRow_=std::max(0,std::min(count-1,approvedGroupRow_+(key==Up?-1:1)));
-        if(key==Accept){const int action=actions[approvedGroupRow_];approvedGroup_=-1;OpenApprovedAction(action);}
-        return "";
-    }
-    if(weatherPanel_){if(key==Back){weatherPanel_=false;notice_.clear();}else if((key==Refresh||key==Accept)&&clockSettings_.city)weatherPending_=true;return "";}
-#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
-    if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
-#endif
+    if(key==GlobalGuide){ToggleGlobalGuide();return "";}
     if(quickGuideOpen_){
         if(communicationGuideOpen_){PressCommunicationGuide(key);return "";}
         if(avatarGuideOpen_){
@@ -1369,7 +1357,7 @@ std::string ConsoleHome::Press(Key key) {
                 if(key==Favorite){socialGuideFocus_=false;notice_.clear();return "";}
             }
         }
-        if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();quickGuideRow_=quickGuideEditStartRow_;}else quickGuideOpen_=false;notice_.clear();return "";}
+        if(key==Back){if(quickGuideEditing_){quickGuideEditing_=false;quickGuideDraft_.clear();quickGuideRow_=quickGuideEditStartRow_;}else {CloseQuickGuide();return "";}notice_.clear();return "";}
         if(key==Up&&quickGuideRow_>0)--quickGuideRow_;
         if(key==Down&&quickGuideRow_<QuickGuide::Count-1)++quickGuideRow_;
         if(quickGuideEditing_){
@@ -1391,17 +1379,44 @@ std::string ConsoleHome::Press(Key key) {
                 return "";
             }
             if(key==PageDown){
+                if(quickGuideOverlayOnly_){notice_="Feche a tela atual para abrir conquistas.";return "";}
                 if(TransferRunning()){notice_="Conclua ou cancele as copias antes de abrir conquistas.";return "";}
                 quickGuideOpen_=false;quickGuideEditing_=false;
                 OpenApprovedAction(ApprovedHome::Achievements);
                 return "";
             }
-            if(key==Search){quickGuideOpen_=false;notice_.clear();}
+            if(key==Search){CloseQuickGuide();return "";}
             if(key==Favorite){quickGuideDraft_=quickGuideOrder_;quickGuideEditStartRow_=quickGuideRow_;quickGuideEditing_=true;notice_.clear();}
             if(key==Accept)OpenQuickGuideAction(static_cast<unsigned>(quickGuideOrder_[quickGuideRow_]-'0'));
         }
         return "";
     }
+    if(libraryPathsPage_){
+        if(key==Back){libraryPathsPage_=false;notice_.clear();return "";}
+        if(key==PageDown||key==PageUp){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();return "";}
+        if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());}
+        if(key==Favorite)ToggleLibraryRoot();
+        if(!packagePathsPage_&&(key==Left||key==Right))ChangeLibraryDepth(key==Right?1:-1);
+        if(key==Refresh&&!TransferRunning()){LoadScanPaths();ScanLibrary();Rebuild();clampRow(libraryPathRow_,(packagePathsPage_?configuredPackageRoots_:configuredRoots_).size());notice_="Varredura concluida: "+number(games_.size())+" itens.";}
+        if(key==Accept&&!TransferRunning()){libraryPathsPage_=false;appearanceEditor_=false;layoutPreview_=false;Enter(Files);notice_="Abra a raiz; Esquerda, depois A XEX ou X Pacotes.";}
+        return "";
+    }
+    if(luaPage_){PressLuaScripts(key);return "";}
+    if(appearanceEditor_){PressAppearance(key);return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==0&&key==Guide){LoadScanPaths();libraryPathRow_=0;packagePathsPage_=false;libraryPathsPage_=true;notice_.clear();return "";}
+    if(!quickGuideOpen_&&section_==System&&page_==Details&&systemTab_==4&&key==Search){luaRow_=0;luaCategory_=LuaUtilities;luaRepoPage_=false;luaRepoConfirm_=false;RefreshLuaScripts();luaPage_=true;notice_.clear();return "";}
+    if(approvedGroup_>=0){
+        const auto actions=ApprovedHome::GroupActions(approvedGroup_,approvedShortcuts_);
+        const int count=actions[3]<0?3:4;
+        if(key==Back){approvedGroup_=-1;notice_.clear();return "";}
+        if(key==Up||key==Down)approvedGroupRow_=std::max(0,std::min(count-1,approvedGroupRow_+(key==Up?-1:1)));
+        if(key==Accept){const int action=actions[approvedGroupRow_];approvedGroup_=-1;OpenApprovedAction(action);}
+        return "";
+    }
+    if(weatherPanel_){if(key==Back){weatherPanel_=false;notice_.clear();}else if((key==Refresh||key==Accept)&&clockSettings_.city)weatherPending_=true;return "";}
+#if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
+    if(smbUi_!=SmbClosed){PressSmbSession(key);return "";}
+#endif
     if(updateActive_){
         if(key==Back){if(updateConfirm_)updateConfirm_=false;else updateActive_=false;notice_.clear();return "";}
         if(key==Refresh){RefreshDashboardUpdate();return "";}
@@ -2624,7 +2639,7 @@ std::string ConsoleHome::Press(Key key) {
 namespace {
 const unsigned White=0xfff2f7f3u, Muted=0xffb7c9c1u, Lime=0xff9dec31u, Panel=0xff172c28u;
 void panel(HomeCanvas& c,int x,int y,int w,int h,unsigned bg,bool active) {
-    c.SeriesTile(x,y,w,h,active,220);
+    c.SeriesTile(x,y,w,h,active,active?215:184);
     if(bg!=Panel&&w>20&&h>20)c.Translucent(x+3,y+3,w-6,h-6,bg,34,8);
 }
 void buttonHint(HomeCanvas& c,int x,const char* key,const char* action,unsigned color) {
@@ -4128,7 +4143,7 @@ void ConsoleHome::DrawSocialGuide(HomeCanvas& c)const{
 void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     const auto& order=quickGuideEditing_?quickGuideDraft_:quickGuideOrder_;
     c.DimBackdrop();
-    c.SeriesTile(235,87,332,552,false,244);
+    c.SeriesTile(235,87,332,552,false,221);
     approvedIcon(c,24,260,111,30,White);
     c.TextFit(301,105,c.Tr(quickGuideEditing_?"Personalizar guia":"Guia rápido"),28,White,250);
     const int icons[]={23,20,21,3,22,5,10,4};
@@ -4149,7 +4164,8 @@ void ConsoleHome::DrawQuickGuide(HomeCanvas& c)const{
     else {InfinityButtons::Draw(c,InfinityButtons::A,260,561,20);c.Text(286,558,"Abrir",15,White,59);InfinityButtons::Draw(c,InfinityButtons::X,350,561,20);c.Text(376,558,"Editar",15,White,58);InfinityButtons::Draw(c,InfinityButtons::B,439,561,20);c.Text(465,558,"Fechar",15,White,78);}
     c.TextFit(259,588,c.Tr(quickGuideEditing_?"B Cancelar edição":socialGuideFocus_?"Y Avatar | A Abrir | Esq Atalhos":"Direita: perfil e amigos"),15,Muted,284);
     if(!quickGuideEditing_){if(communicationGuideOpen_)DrawCommunicationGuide(c);else if(avatarGuideOpen_)DrawAvatarGuide(c);else if(friendGuideOpen_)DrawFriendGuide(c);else DrawSocialGuide(c);}
-    if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,250);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
+    if(quickGuideOverlayOnly_&&notice_.empty()){c.TextFit(580,644,"L3: fechar guia e retornar a tela atual",16,White,470);}
+    if(!notice_.empty()){c.SeriesTile(580,644,470,36,false,235);c.TextFit(592,648,c.Tr(notice_.c_str()),14,White,446);}
 }
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
@@ -4168,11 +4184,13 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     c.TextFit(1166,38,ClockWeather::Zone(clockSettings_.offset),12,Muted,79);
     if(page_!=Home && section_==Iptv) {
         tv_.Draw(c,stamp,true);
+        if(quickGuideOpen_)DrawQuickGuide(c);
         return;
     }
     if(page_==Home) DrawHome(c); else DrawSection(c);
-    if(approvedGroup_>=0){DrawApprovedGroup(c);return;}
+    if(approvedGroup_>=0)DrawApprovedGroup(c);
     if(quickGuideOpen_){DrawQuickGuide(c);return;}
+    if(approvedGroup_>=0)return;
     if(TransferRunning() && !(section_==System && page_==Details && systemTab_==3)) {
         c.Text(690,71,(copyPaused_?std::string("Fila pausada"):std::string("Copia ")+number(transfer_.Percent())+"%")+
                " | "+number(copyQueue_.size())+" aguardando",16,Lime,540);

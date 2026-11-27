@@ -55,7 +55,7 @@ namespace InfinityLua { struct Library; struct SubtitleResult; }
 class ConsoleHome {
 public:
     enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
-               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch };
+               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, GlobalGuide=100 };
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
     unsigned SafeArea()const{return safeArea_;}
@@ -176,6 +176,10 @@ private:
     std::string dir_, notice_;
     LaunchStatistics launchStats_;
     bool quickGuideOpen_=false,quickGuideEditing_=false;
+    bool quickGuideOverlayOnly_=false;
+    std::string quickGuideReturnNotice_;
+    void ToggleGlobalGuide();
+    void CloseQuickGuide();
     int quickGuideRow_=0;
     bool socialGuideFocus_=false;
     int socialGuideRow_=0;

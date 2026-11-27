@@ -1538,6 +1538,12 @@ int main(int argc,char** argv) {
         const auto dir=guideRoot.string()+"/";
         LegacyFixtureHome guide(dir,{});guide.Load();guide.Press(ConsoleHome::Search);
         assert(guide.QuickGuideOpen()&&!guide.IdleEligible());
+        guide.Press(ConsoleHome::GlobalGuide);assert(!guide.QuickGuideOpen());
+        guide.Press(ConsoleHome::Accept); // library
+        guide.Press(ConsoleHome::GlobalGuide);assert(guide.QuickGuideOpen());
+        guide.Press(ConsoleHome::Accept);assert(guide.QuickGuideOpen()); // do not switch underlying module
+        guide.Press(ConsoleHome::GlobalGuide);assert(!guide.QuickGuideOpen());
+        guide.Press(ConsoleHome::Back);guide.Press(ConsoleHome::Search);assert(guide.QuickGuideOpen());
         guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Back);
         assert(guide.QuickGuideOrder()=="01234567");
         guide.Press(ConsoleHome::Favorite);guide.Press(ConsoleHome::PageDown);guide.Press(ConsoleHome::Refresh);

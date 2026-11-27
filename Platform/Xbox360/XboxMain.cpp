@@ -311,6 +311,7 @@ int main() {
     WORD previous=buttons();
     DWORD heldSince=GetTickCount(),lastRepeat=heldSince;
     int minute=-1;
+    unsigned focusFrames=0;
     for(;;) {
         WORD b=buttons(), edge=b&~previous;
         const WORD directions=b&15;
@@ -319,6 +320,8 @@ int main() {
         else if(directions && now-heldSince>380 && now-lastRepeat>110) {edge|=directions;lastRepeat=now;}
         previous=b;
         if(edge&XINPUT_GAMEPAD_BACK) break;
+        if(edge&XINPUT_GAMEPAD_LEFT_THUMB){menu.Press(ConsoleHome::GlobalGuide);edge=0;focusFrames=3;}
+        if(edge)focusFrames=3;
         for(size_t i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(edge&keys[i]) {
             std::string path=menu.Press(static_cast<ConsoleHome::Key>(i));
             if(!path.empty()) { menu.StopFtp(); XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
@@ -342,7 +345,10 @@ int main() {
         }
         const bool transferChanged=menu.Tick();
         SYSTEMTIME time; GetLocalTime(&time);
-        if(edge || transferChanged || minute!=time.wMinute) {
+        const bool animate=focusFrames!=0;
+        if(animate){canvas.SetFocusAnimation((4-focusFrames)*100/3);--focusFrames;}
+        else canvas.SetFocusAnimation(100);
+        if(edge || animate || transferChanged || minute!=time.wMinute) {
             char clock[12]; std::sprintf(clock,"%02u:%02u",unsigned(time.wHour),unsigned(time.wMinute));
             minute=time.wMinute; menu.Draw(canvas,clock);
             if(!video.Show(canvas)) return 3;

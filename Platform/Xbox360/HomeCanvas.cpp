@@ -340,7 +340,7 @@ void HomeCanvas::Shade(int x,int y,int w,int h,unsigned color,unsigned a,unsigne
             auto& p=frame_[(y+j)*Width+x+i];p=blend(color,p,alpha);
         }
 }
-void HomeCanvas::Glass(int x,int y,int w,int h,bool focused){SeriesTile(x,y,w,h,focused,220);}
+void HomeCanvas::Glass(int x,int y,int w,int h,bool focused){SeriesTile(x,y,w,h,focused,focused?215:190);}
 void HomeCanvas::NeonBackground(){
     // Respect explicit solid/wallpaper preferences; default gradient becomes
     // graphite with luminous curved ribbons, computed without external art.
@@ -403,14 +403,14 @@ void HomeCanvas::SeriesFocus(int x,int y,int w,int h){
             const float d=std::sqrt(dx*dx+dy*dy);
             const float outer=std::max(0.0f,std::min(1.0f,float(radius)+0.5f-d));
             const float inner=std::max(0.0f,std::min(1.0f,float(radius)-2.0f-d));
-            const unsigned alpha=unsigned(std::max(0.0f,outer-inner)*255+0.5f);
+            const unsigned alpha=unsigned(std::max(0.0f,outer-inner)*255+0.5f)*(75+focusAnimation_/4)/100;
             if(alpha){auto& p=frame_[yy*Width+xx];p=blend(accent,p,alpha);}
         }
 }
 void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacity){
     if(w<12||h<12)return;
     Translucent(x,y+5,w,h,0xff000000u,55,11);
-    Translucent(x,y,w,h,0xff8a9691u,135,11);
+    Translucent(x,y,w,h,0xff8a9691u,92,11);
     Translucent(x+1,y+1,w-2,h-2,0xff19221fu,opacity,10);
     // Full-surface shading plus green reflection at lower right.
     const unsigned highlight=ThemeColor(0xff6c7772u),reflection=ThemeColor(0xff426d42u);
@@ -425,7 +425,7 @@ void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacit
             dest=blend(reflection,dest,glow);
         }
     }
-    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,66,8);SeriesFocus(x,y,w,h);}
+    if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,38+focusAnimation_*28/100,8);SeriesFocus(x,y,w,h);}
 }
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.
