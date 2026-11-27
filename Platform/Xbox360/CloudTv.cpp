@@ -445,7 +445,7 @@ void CloudTv::Draw(HomeCanvas& c,int64_t now,bool modern) const {
     InfinityButtons::Hint(c,InfinityButtons::Y,567,675,22,c.Tr("Atualizar"),125,Ink);
     if(view_!=Details && view_!=Episodes)InfinityButtons::Hint(c,InfinityButtons::Start,764,675,22,c.Tr("Guia"),105,Ink);
     if(view_!=Details){InfinityButtons::Draw(c,InfinityButtons::LB,908,675,22);InfinityButtons::Hint(c,InfinityButtons::RB,943,675,22,c.Tr("Página"),80,Ink);}
-    if(view_==Browse && tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::R3,1092,675,22,c.Tr("Buscar"),120,Ink);
+    if(view_==Browse && tab_!=TvSources)InfinityButtons::Hint(c,InfinityButtons::Back,1092,675,22,c.Tr("Opcoes"),120,Ink);
 }
 void CloudTv::SearchKey(MenuKey key) {
     if(key==MenuBack) {view_=Browse;return;}

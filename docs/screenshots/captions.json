@@ -416,5 +416,14 @@
         "caption": "Perfis — avatar e controles conectados"
       }
     ]
+  },
+  {
+    "title": "Navegacao contextual",
+    "images": [
+      {
+        "stem": "93-opcoes-contextuais",
+        "caption": "Menu de opções da biblioteca — BACK"
+      }
+    ]
   }
 ]

@@ -14,6 +14,7 @@ public:
     std::string TakeMovie();
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
+    bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
 private:
     enum View { Browse, Guide, Details, Episodes, Search };
     std::string dir_,source_,notice_,pending_,show_,query_,edit_;

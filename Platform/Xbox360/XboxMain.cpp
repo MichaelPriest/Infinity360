@@ -307,7 +307,7 @@ int main() {
     ConsoleHome menu("game:\\",GameScanner::DefaultRoots()); menu.Load();
     const WORD keys[]={XINPUT_GAMEPAD_DPAD_LEFT,XINPUT_GAMEPAD_DPAD_RIGHT,XINPUT_GAMEPAD_DPAD_UP,
         XINPUT_GAMEPAD_DPAD_DOWN,XINPUT_GAMEPAD_A,XINPUT_GAMEPAD_B,XINPUT_GAMEPAD_X,XINPUT_GAMEPAD_Y,
-        XINPUT_GAMEPAD_LEFT_SHOULDER,XINPUT_GAMEPAD_RIGHT_SHOULDER,XINPUT_GAMEPAD_START,XINPUT_GAMEPAD_RIGHT_THUMB};
+        XINPUT_GAMEPAD_LEFT_SHOULDER,XINPUT_GAMEPAD_RIGHT_SHOULDER,XINPUT_GAMEPAD_START,XINPUT_GAMEPAD_BACK};
     WORD previous=buttons();
     DWORD heldSince=GetTickCount(),lastRepeat=heldSince;
     int minute=-1;
@@ -319,11 +319,11 @@ int main() {
         if(directions!=(previous&15)) heldSince=lastRepeat=now;
         else if(directions && now-heldSince>380 && now-lastRepeat>110) {edge|=directions;lastRepeat=now;}
         previous=b;
-        if(edge&XINPUT_GAMEPAD_BACK) break;
+        // BACK is the contextual options menu, not an immediate exit.
         if(edge&XINPUT_GAMEPAD_LEFT_THUMB){menu.Press(ConsoleHome::GlobalGuide);edge=0;focusFrames=3;}
         if(edge)focusFrames=3;
         for(size_t i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(edge&keys[i]) {
-            std::string path=menu.Press(static_cast<ConsoleHome::Key>(i));
+            std::string path=menu.Press(i==11?ConsoleHome::Context:static_cast<ConsoleHome::Key>(i));
             if(!path.empty()) { menu.StopFtp(); XLaunchNewImage(path.c_str(),0); menu.LaunchFailed(); }
             StoreItem download;
             if(menu.TakeNativeStoreRequest(download)) {

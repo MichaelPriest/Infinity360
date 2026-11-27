@@ -210,6 +210,13 @@ static int captureScreens(const char* atlas,const char* destination) {
         for(int i=0;i<3;++i)hub.Press(ConsoleHome::Right);
         hub.Press(ConsoleHome::Accept);ok=save("92-perfis-moderno",hub)&&ok;
     }
+    {
+        ConsoleHome context(dir,roots);context.Load();context.Press(ConsoleHome::Right);context.Press(ConsoleHome::Accept);
+        context.Press(ConsoleHome::Context);assert(context.ContextOpen());ok=save("93-opcoes-contextuais",context)&&ok;
+        context.Press(ConsoleHome::Back);assert(!context.ContextOpen());
+        context.Press(ConsoleHome::Context);context.Press(ConsoleHome::GlobalGuide);assert(!context.ContextOpen()&&context.QuickGuideOpen());
+        context.Press(ConsoleHome::GlobalGuide);assert(!context.QuickGuideOpen());
+    }
     // The actual settings editor (not the old console-status panel), all seven palettes.
     {
         ConsoleHome themed(dir,roots);themed.Load();
@@ -1566,6 +1573,8 @@ int main(int argc,char** argv) {
         assert(guide.QuickGuideOpen()&&!guide.IdleEligible());
         guide.Press(ConsoleHome::GlobalGuide);assert(!guide.QuickGuideOpen());
         guide.Press(ConsoleHome::Accept); // library
+        guide.Press(ConsoleHome::Context);assert(guide.ContextOpen());guide.Press(ConsoleHome::Down);guide.Press(ConsoleHome::Accept);assert(!guide.ContextOpen());
+        guide.Press(ConsoleHome::Back); // leave search
         guide.Press(ConsoleHome::GlobalGuide);assert(guide.QuickGuideOpen());
         guide.Press(ConsoleHome::Accept);assert(guide.QuickGuideOpen()); // do not switch underlying module
         guide.Press(ConsoleHome::GlobalGuide);assert(!guide.QuickGuideOpen());

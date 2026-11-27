@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.28 — Opções contextuais sem R3 obrigatório
+
+- BACK abre menu contextual com ações nomeadas, A seleciona, B fecha; R3 físico deixa de disparar funções diretamente nos presenters XSDK e XDK. L3 mantém Guide da dashboard; combinação L3+R3 permanece captura no XSDK. BACK deixa de sair diretamente do menu.
+- Busca, ordenação, fontes de loja, instalação, importação de arte, seleção multidisco, scripts e sincronização Lua, configurações, atualização, rede, prioridade de downloads e renomeação acessíveis pelo menu. Reutiliza handlers e confirmações originais; ações indisponíveis continuam bloqueadas.
+- Captura adicional e regressões portáteis solicitadas; Guide global durante reprodução e títulos externos continua pendente. Sem XEX/release.
+
 ## V0.3.27 — Sistema e navegação contextual
 
 - Painéis modernos de armazenamento, rede, scripts Lua e perfis com cards, ações explícitas e leitura real de capacidade, conexão, estado do FTP e dados de perfil disponíveis. Sem simulação de conexão, avatar ou status de plugins.

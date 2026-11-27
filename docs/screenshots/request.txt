@@ -86,3 +86,5 @@ Baseline a10be49825ebb64442cc2ab13747ec63742f8a53
 2026-11-27 V0.3.26 library rail, details and player HUD portable checks; 88 captures, no XEX.
 
 2026-11-27 V0.3.27 modern storage, network, Lua and profiles; 92 native portable captures, no XEX.
+
+2026-11-27 V0.3.28 contextual BACK menu, remove direct physical R3, 93 portable captures; no XEX.

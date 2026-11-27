@@ -257,7 +257,7 @@ int main(){
     const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
         INPUT_GAMEPAD_DPAD_UP,INPUT_GAMEPAD_DPAD_DOWN,INPUT_GAMEPAD_A,
         INPUT_GAMEPAD_B,INPUT_GAMEPAD_X,INPUT_GAMEPAD_Y,0x0100,0x0200,
-        INPUT_GAMEPAD_START,0x0080};
+        INPUT_GAMEPAD_START,INPUT_GAMEPAD_BACK};
     uint16_t previous=0;
     bool ok=true,dirty=true,systemExit=false;
     unsigned focusFrames=0;
@@ -288,7 +288,7 @@ int main(){
             menu.Press(ConsoleHome::GlobalGuide);edge=0;dirty=true;focusFrames=3;
         }
         if(edge)focusFrames=3;
-        if(edge&INPUT_GAMEPAD_BACK){if(menu.TransferRunning()){launchNotice="Conclua ou cancele as copias antes de sair.";dirty=true;}else break;}
+        // BACK opens contextual options; R3 alone is not a command.
         if(!pendingLaunch.empty()){
             if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
             else if(edge&INPUT_GAMEPAD_A){
@@ -333,7 +333,7 @@ int main(){
             }
         }else for(unsigned i=0;i<sizeof keys/sizeof keys[0];++i)if(edge&keys[i]){
             launchNotice.clear();
-            const std::string launch=menu.Press(static_cast<ConsoleHome::Key>(i));
+            const std::string launch=menu.Press(i==11?ConsoleHome::Context:static_cast<ConsoleHome::Key>(i));
             if(!launch.empty()){
                 const std::string path=XexLaunchCheck::Path(launch);
                 pendingPackage=false;

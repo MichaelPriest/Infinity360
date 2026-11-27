@@ -55,7 +55,7 @@ namespace InfinityLua { struct Library; struct SubtitleResult; }
 class ConsoleHome {
 public:
     enum Key { Left=MenuLeft, Right=MenuRight, Up=MenuUp, Down=MenuDown, Accept=MenuAccept, Back=MenuBack,
-               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, GlobalGuide=100 };
+               Favorite=MenuFavorite, Refresh=MenuRefresh, PageUp=MenuPageUp, PageDown=MenuPageDown, Guide=MenuGuide, Search=MenuSearch, GlobalGuide=100, Context=101 };
     ConsoleHome(const std::string& dataDir, const std::vector<std::string>& gameRoots, unsigned initialLayout=1);
     void Load();
     unsigned SafeArea()const{return safeArea_;}
@@ -69,6 +69,7 @@ public:
     void WeatherResult(const ClockWeather::Reading& reading,const std::string& message){if(reading.valid&&reading.city==clockSettings_.city)weather_=reading;lastWeatherAttempt_=std::time(nullptr);notice_=message;}
     size_t UnreadNotifications()const{return notifications_.UnreadCount();}
     bool QuickGuideOpen()const{return quickGuideOpen_;}
+    bool ContextOpen()const{return contextOpen_;}
     // Console provider or explicitly marked host test fixture.
     void SetSocialSnapshot(const InfinitySocial::Snapshot& snapshot,int preferred=-1){
         const auto previous=social_;
@@ -127,7 +128,7 @@ public:
     bool TakeSigninRequest(){const bool pending=signinPending_;signinPending_=false;return pending;}
     void SigninResult(bool accepted){nativeSocialQueue_.Clear();socialPolled_=false;socialArtPolled_=false;privileges_.Clear();avatarPreview_.Clear();avatarRefresh_.Clear();avatarManifest_={};avatarBudget_={};notice_=accepted?"Selecao de perfil solicitada ao Xbox.":"O Xbox nao abriu a selecao de perfil.";}
     const std::string& QuickGuideOrder()const{return quickGuideOrder_;}
-    bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
+    bool IdleEligible()const{return page_==Home&&approvedGroup_<0&&!weatherPanel_&&!quickGuideOpen_&&!contextOpen_&&!homeEditing_&&!importPreview_&&!storeActive_&&!searchActive_&&!TransferRunning()&&!ftp_.Running()&&!peerProbe_.Running();}
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
@@ -214,6 +215,12 @@ private:
     std::string quickGuideOrder_=QuickGuide::Default(),quickGuideDraft_;
     void OpenQuickGuideAction(unsigned action);
     void DrawQuickGuide(HomeCanvas& c)const;
+    struct ContextAction { const char* label; Key key; };
+    std::vector<ContextAction> ContextActions()const;
+    void DrawContext(HomeCanvas& c)const;
+    bool contextOpen_=false;
+    size_t contextRow_=0;
+    std::vector<ContextAction> contextActions_;
     void DrawSocialHeader(HomeCanvas& c,int x,int y,int w)const;
     void DrawSocialGuide(HomeCanvas& c)const;
     InfinitySocial::Header social_;
