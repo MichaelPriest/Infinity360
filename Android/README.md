@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.3.0 Alpha
+# INFINITY 360 Remote — Android 0.4.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -25,3 +25,7 @@ Para habilitar a navegação geral, crie `enable-dashboard-remote.txt` na mesma 
 ## Monitoramento
 
 Use **Consultar indicadores** após configurar IP e chave. A consulta autenticada apresenta contagens de jogos/apps, notificações, atividade e etapas de transferências locais, RAM, temperaturas disponíveis e armazenamento em cache. Leituras térmicas ausentes ou com mais de 30 segundos aparecem indisponíveis; armazenamento corresponde à última consulta da dashboard. Não há controle térmico nem alteração de arquivos por esta tela. A atualização é manual.
+
+## Biblioteca e IPTV
+
+Use Consultar jogos ou Consultar canais ao vivo, com busca opcional e Próxima página. A lista IPTV precisa ter sido carregada no console. Mostra favoritos e programação XMLTV atual/próxima quando disponível. Consultas somente leitura, sem capas, campos de URLs ou execução direta; busca textual ignora maiúsculas ASCII. Páginas podem vir vazias quando há poucos resultados; avance se houver próxima página.

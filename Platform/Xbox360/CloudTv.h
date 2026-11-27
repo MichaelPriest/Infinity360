@@ -23,6 +23,7 @@ public:
     std::vector<unsigned char> PlayingLogo()const;
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
+    std::string RemoteCatalog(unsigned offset,const std::string& query,int64_t now)const;
     size_t Count() const { return catalog_.Items().size(); }
     bool CanSearch()const{return view_==Browse&&tab_!=TvSources;}
     bool RemoteAllowed(MenuKey key)const{

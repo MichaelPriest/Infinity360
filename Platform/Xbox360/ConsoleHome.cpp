@@ -1,4 +1,5 @@
 ﻿#include "ConsoleHome.h"
+#include "TvRemoteCatalog.h"
 #include "Modules/Scripts/LuaRuntime.h"
 #include "Modules/Emulators/ToolRoots.h"
 #include "Modules/Emulators/Ps1CoverIndex.h"
@@ -1356,6 +1357,15 @@ bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
     case TvRemote::Key::Channels:key=Guide;break;
     default:return false;
     }return true;
+}
+std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
+    if(request.key==TvRemote::Key::TvCatalog)return tv_.RemoteCatalog(request.offset,request.query,std::time(nullptr));
+    if(request.key!=TvRemote::Key::Games)return "{}";
+    return TvRemote::CatalogPage(games_.size(),request.offset,[&](size_t i)->std::string{
+        const auto& game=games_[i];if(!TvRemote::Matches(game.name,request.query))return "";
+        return "{\"name\":"+TvRemote::Quote(game.name)+",\"favorite\":"+
+            (std::find(favorites_.begin(),favorites_.end(),game.executable)!=favorites_.end()?"true":"false")+"}";
+    });
 }
 std::string ConsoleHome::RemoteSnapshot(bool playback)const{
     // Numeric, bounded, read-only snapshot. No gamertags, paths, filenames,

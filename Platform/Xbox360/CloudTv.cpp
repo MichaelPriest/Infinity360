@@ -1,4 +1,5 @@
 ﻿#include "CloudTv.h"
+#include "TvRemoteCatalog.h"
 #include "InfinityIcons.h"
 #include "ControllerButtons.h"
 #include "GameScanner.h"
@@ -193,6 +194,19 @@ bool CloudTv::SaveHistory()const{
     std::ofstream out((file+".tmp").c_str());
     for(auto value:history_)out<<value<<"\n";
     out.close();return bool(out)&&replaceSavedFile(file);
+}
+std::string CloudTv::RemoteCatalog(unsigned offset,const std::string& query,int64_t now)const{
+    const auto& items=catalog_.Items();
+    return TvRemote::CatalogPage(items.size(),offset,[&](size_t i)->std::string{
+        const auto& item=items[i];
+        if(item.category!=TvLive||(!TvRemote::Matches(item.name,query)&&!TvRemote::Matches(item.group,query)))return "";
+        const auto& schedule=guide_.For(item.channel,item.name);
+        const auto* current=TvGuide::Current(schedule,now);
+        const auto* next=TvGuide::Next(schedule,now);
+        return "{\"name\":"+TvRemote::Quote(item.name)+",\"group\":"+TvRemote::Quote(item.group)+
+            ",\"current\":"+TvRemote::Quote(current?current->title:"")+",\"next\":"+TvRemote::Quote(next?next->title:"")+
+            ",\"favorite\":"+(cloud_favorite_has_id(&favorites_,item.id)?"true":"false")+"}";
+    });
 }
 void CloudTv::OpenGroups(){
     groups_.clear();groupRow_=0;

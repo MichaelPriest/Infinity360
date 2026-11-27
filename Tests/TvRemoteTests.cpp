@@ -1,4 +1,5 @@
 #include "TvRemoteProtocol.h"
+#include "TvRemoteCatalog.h"
 int main(){
     using namespace TvRemote;
     const std::string host="192.168.1.4:32161",key="0123456789abcdef0123456789abcdef";
@@ -17,5 +18,13 @@ int main(){
     if(Parse(request("power",key,host),host,key).key!=Key::None)return 12;
     if(Parse(request("snapshot",key,host),host,key).key!=Key::Snapshot)return 13;
     if(Parse(request("snapshot","wrong",host),host,key).key!=Key::None)return 14;
+    const auto page=Parse(request("tv/16/6162",key,host),host,key);
+    if(page.key!=Key::TvCatalog||page.offset!=16||page.query!="ab")return 15;
+    if(Parse(request("games/0/ffx",key,host),host,key).key!=Key::None)return 16;
+    if(Parse(request("games/0/", "wrong",host),host,key).key!=Key::None)return 17;
+    if(Quote("a\"b\\c")!="\"a\\\"b\\\\c\"")return 18;
+    const auto list=CatalogPage(20,0,[](size_t){return std::string("{}");});
+    if(list.find("\"next\":16")==std::string::npos)return 19;
+    if(!Matches("ABC","ab"))return 20;
     return 0;
 }

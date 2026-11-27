@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.61 — Catalogos remotos paginados
+
+- Android Remote 0.4.0 Alpha: biblioteca de jogos e canais live da lista IPTV carregada, busca por titulo/grupo, favoritos e EPG atual/proximo. Consultas autenticadas somente leitura, 16 resultados por pagina, 1024 entradas examinadas por consulta, JSON limitado a 8 KiB, nomes limitados e UTF-8 validado; nenhum campo de caminho de executavel ou URI de midia enviado. Busca ASCII sem distinguir maiusculas; sem capas ou lancamento direto. Testes ampliados, APK/XSDK pendentes. Sem XEX/release.
+
 ## V0.3.60 — Monitoramento remoto do console
 
 - Android Remote 0.3.0 Alpha: consulta autenticada de indicadores, biblioteca, apps, fila local, notificacoes nao lidas, RAM e sensores CPU/GPU/EDRAM/chassi (apenas amostra de ate 30s). Armazenamento usa ultima leitura da dashboard, explicitamente identificado como cache. Snapshot JSON limitado a 8 KiB, sem URLs, gamertags, caminhos ou credenciais. Disponivel no menu e no player FFmpeg; consulta manual, sem acesso de escrita. Testes de protocolo ampliados; APK/XSDK pendentes. Sem XEX/release.

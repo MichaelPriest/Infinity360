@@ -21,7 +21,11 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
     private EditText consoleIp,phoneIp,key;
-    private TextView status,monitor;
+    private TextView status,monitor,catalogResult;
+    private EditText catalogQuery;
+    private boolean tvCatalog=false;
+    private int catalogNext=-1;
+    private String activeQuery="";
     private LinearLayout content;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private boolean busy=false;
@@ -50,6 +54,12 @@ public final class MainActivity extends Activity {
         label("Monitoramento do console");
         monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
         content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));
+        label("Biblioteca e catálogo IPTV");
+        catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
+        content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Consultar canais ao vivo",PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,dp(54)));
+        catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));catalogResult.setBackground(shape(PANEL));content.addView(catalogResult);
+        content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
@@ -91,6 +101,35 @@ public final class MainActivity extends Activity {
         if(disks.length()==0)out.append("\nSem leitura");
         for(int i=0;i<Math.min(16,disks.length());i++){org.json.JSONObject d=disks.getJSONObject(i);out.append("\nUnidade ").append(d.getInt("slot")).append(": ").append(size(d,"free")).append(" livres / ").append(size(d,"capacity"));}
         return out.toString();
+    }
+    private void loadCatalog(boolean tv,boolean reset){
+        if(busy)return;
+        String ip=consoleIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(ip)||!RemoteProtocol.validKey(secret)){status.setText("Confira o IP e a chave.");return;}
+        if(!reset&&catalogNext<0){status.setText("Fim da consulta. Faça uma nova busca.");return;}
+        final int offset=reset?0:catalogNext;
+        final String query=reset?catalogQuery.getText().toString().trim():activeQuery;
+        if(query.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>64){status.setText("Busca limitada a 64 bytes.");return;}
+        busy=true;status.setText("Consultando catálogo...");
+        worker.execute(()->{
+            String result;int next=-1;boolean success=false;
+            try{
+                org.json.JSONObject page=new org.json.JSONObject(RemoteProtocol.catalog(ip,secret,tv,offset,query));
+                if(page.optInt("schema")!=1)throw new java.io.IOException("Versão incompatível");
+                org.json.JSONArray rows=page.getJSONArray("items");if(rows.length()>16)throw new java.io.IOException("Página inválida");
+                StringBuilder out=new StringBuilder(tv?"TV ao vivo":"Biblioteca de jogos");
+                for(int i=0;i<rows.length();i++){
+                    org.json.JSONObject item=rows.getJSONObject(i);
+                    out.append("\n\n").append(item.optBoolean("favorite")?"★ ":"").append(item.getString("name"));
+                    if(tv){out.append("\n").append(item.optString("group"));if(!item.optString("current").isEmpty())out.append("\nAgora: ").append(item.optString("current"));if(!item.optString("next").isEmpty())out.append("\nA seguir: ").append(item.optString("next"));}
+                }
+                if(!page.isNull("next")){next=page.getInt("next");if(next<=offset||next>999999)throw new java.io.IOException("Cursor inválido");}
+                if(rows.length()==0)out.append("\nNenhum resultado nesta página.");
+                result=out.toString();success=true;
+            }catch(Exception e){result="Consulta indisponível. Confira a conexão e a versão da dashboard.";}
+            final String message=result;final int cursor=next;final boolean ok=success;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;catalogResult.setText(message);catalogNext=ok?cursor:-1;tvCatalog=tv;activeQuery=query;status.setText(ok?(cursor<0?"Fim da consulta.":"Página recebida."):"Falha na consulta.");});
+        });
     }
     private void refreshMonitor(){
         if(busy)return;

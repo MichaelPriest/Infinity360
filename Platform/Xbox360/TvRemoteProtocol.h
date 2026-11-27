@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 namespace TvRemote {
-enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot };
+enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog };
 inline bool ValidSecret(const std::string& s){
     if(s.size()!=32)return false;
     for(char c:s)if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;
@@ -16,7 +16,20 @@ inline Key Command(const std::string& s){
     for(unsigned i=0;i<18;++i)if(s==names[i])return static_cast<Key>(i+1);
     return Key::None;
 }
-struct Request {bool page=false;Key key=Key::None;};
+struct Request {bool page=false;Key key=Key::None;unsigned offset=0;std::string query;};
+inline Request CatalogRequest(const std::string& command){
+    const bool games=command.compare(0,6,"games/")==0,tv=command.compare(0,3,"tv/")==0;
+    if(!games&&!tv)return {};
+    const size_t start=games?6:3,sep=command.find('/',start);
+    if(sep==std::string::npos||sep==start||sep-start>6)return {};
+    unsigned offset=0;
+    for(size_t i=start;i<sep;++i){char c=command[i];if(c<'0'||c>'9')return {};offset=offset*10+unsigned(c-'0');}
+    const auto encoded=command.substr(sep+1);if(encoded.size()>128||encoded.size()%2)return {};
+    std::string query;
+    auto digit=[](char c)->int{return c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:-1;};
+    for(size_t i=0;i<encoded.size();i+=2){const int a=digit(encoded[i]),b=digit(encoded[i+1]);if(a<0||b<0)return {};const unsigned char ch=a*16+b;if(ch<32||ch==127)return {};query+=char(ch);}
+    return {false,games?Key::Games:Key::TvCatalog,offset,query};
+}
 inline Request Parse(const std::string& request,const std::string& host,const std::string& secret){
     if(request.size()>2048||!ValidSecret(secret))return {};
     const auto first=request.find("\r\n"),end=request.find("\r\n\r\n");
@@ -40,7 +53,9 @@ inline Request Parse(const std::string& request,const std::string& host,const st
     if(line=="GET / HTTP/1.1")return {true,Key::None};
     const std::string prefix="POST /cmd/",suffix=" HTTP/1.1";
     if(line.size()<=prefix.size()+suffix.size()||line.compare(0,prefix.size(),prefix)||line.compare(line.size()-suffix.size(),suffix.size(),suffix)||!SameSecret(token,secret))return {};
-    return {false,Command(line.substr(prefix.size(),line.size()-prefix.size()-suffix.size()))};
+    const auto command=line.substr(prefix.size(),line.size()-prefix.size()-suffix.size());
+    const auto catalog=CatalogRequest(command);if(catalog.key!=Key::None)return catalog;
+    return {false,Command(command)};
 }
 inline const char* Page(){return R"HTML(<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>INFINITY 360 IPTV</title><style>
 *{box-sizing:border-box}body{margin:0;background:#101c16;color:#eef6ef;font:16px system-ui;padding:20px}main{max-width:440px;margin:auto}h1{color:#a8ff00;font-size:24px}input,button{font:inherit;border:1px solid #47634f;border-radius:12px;background:#20382b;color:white;padding:14px;min-height:52px}input{width:100%;margin:8px 0 16px}section{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}button:active{background:#426b36}p{color:#bbcec0;font-size:14px}button{touch-action:manipulation}
