@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## Android Remote V0.18.0 Alpha — Interface SDK nativa
+
+- Tema Material diurno/noturno, controles, campos, diálogos e navegação padrão. Logo oficial PNG nos cabeçalhos Remote/FTP.
+- Atualização apenas Android, preserva funcionalidades e protocolos. Dashboard Xbox permanece V0.3.76. Validação visual em aparelho pendente.
+
 ## V0.3.76 — Correções de compilação da release
 
 - Corrige macros C99 de limites long long ausentes no XSDK usando os limites do compilador GCC, compartilhados entre Lua C e consumidores C++; mantém ABI Lua de 64 bits.

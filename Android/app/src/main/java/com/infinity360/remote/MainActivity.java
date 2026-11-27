@@ -7,7 +7,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Build;
 import android.text.InputType;
@@ -19,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
-    private static final int BG=0xff101b15, PANEL=0xff20382b, ACCENT=0xffa8ff00, TEXT=0xffeff7f0, MUTED=0xffb1c8bb;
+    private static final int PANEL=NativeUi.NORMAL, ACCENT=NativeUi.EMPHASIS, TEXT=NativeUi.NORMAL, MUTED=NativeUi.SECONDARY;
     private EditText consoleIp,phoneIp,key;
     private TextView status,monitor,catalogResult,downloads,storeResult;
     private LinearLayout downloadCards,deviceCards;
@@ -35,7 +34,7 @@ public final class MainActivity extends Activity {
     private String activeQuery="";
     private LinearLayout content;
     private final LinearLayout[] screens=new LinearLayout[5];
-    private final Button[] tabs=new Button[5];
+    private Spinner navigation;
     private ScrollView scroll;
     private int activeScreen=0;
     private boolean foreground=false,autoDownloads=false;
@@ -53,7 +52,8 @@ public final class MainActivity extends Activity {
     }
     private void showScreen(int index){
         activeScreen=index;
-        for(int i=0;i<screens.length;i++)if(screens[i]!=null){screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);tabs[i].setBackground(shape(i==index?ACCENT:PANEL));tabs[i].setTextColor(i==index?BG:TEXT);}
+        for(int i=0;i<screens.length;i++)if(screens[i]!=null)screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);
+        if(navigation!=null&&navigation.getSelectedItemPosition()!=index)navigation.setSelection(index);
         if(scroll!=null)scroll.smoothScrollTo(0,0);
         updateDownloadPolling();
     }
@@ -61,71 +61,70 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private boolean busy=false;
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
-    private GradientDrawable shape(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(14));return d;}
-    private TextView text(String s,int size,int color){TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);return v;}
-    private void label(String s){TextView v=text(s,13,MUTED);v.setPadding(0,dp(10),0,dp(4));content.addView(v);}
-    private EditText field(String hint,int type){EditText v=new EditText(this);v.setSingleLine(true);v.setInputType(type);v.setHint(hint);v.setTextColor(TEXT);v.setHintTextColor(MUTED);v.setPadding(dp(14),dp(10),dp(14),dp(10));v.setBackground(shape(PANEL));v.setSaveEnabled(false);content.addView(v,new LinearLayout.LayoutParams(-1,dp(56)));return v;}
-    private Button button(String label,int color,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextColor(color==ACCENT?BG:TEXT);b.setTextSize(16);b.setBackground(shape(color));b.setMinHeight(dp(52));b.setOnClickListener(v->action.run());return b;}
-    private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(61),1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
+    private TextView text(String s,int size,int role){return NativeUi.text(this,s,size,role);}
+    private void label(String s){TextView v=text(s,14,MUTED);v.setPadding(0,dp(12),0,dp(4));content.addView(v);}
+    private EditText field(String hint,int type){EditText v=NativeUi.field(this,hint,type);content.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;}
+    private Button button(String label,int role,Runnable action){return NativeUi.button(this,label,action);}
+    private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
     @Override public void onCreate(Bundle saved){
-        super.onCreate(saved);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
-        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
-        content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(18),dp(18),dp(18),dp(24));scroll.addView(content);setContentView(scroll);
+        super.onCreate(saved);
+        LinearLayout outer=new LinearLayout(this);outer.setOrientation(LinearLayout.VERTICAL);
+        setContentView(outer);NativeUi.insets(outer);
+        NativeUi.brand(this,outer,"Remote");
+        LinearLayout nav=new LinearLayout(this);nav.setOrientation(LinearLayout.VERTICAL);nav.setPadding(dp(16),dp(4),dp(16),dp(4));
+        nav.addView(text("Seção",13,MUTED));
+        navigation=new Spinner(this,Spinner.MODE_DROPDOWN);navigation.setContentDescription("Seção do controle remoto");
+        String[] names={"Controle","Catálogo","Sistema","Conexão","Loja"};
+        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,names);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        navigation.setAdapter(adapter);navigation.setMinimumHeight(dp(48));nav.addView(navigation,new LinearLayout.LayoutParams(-1,-2));outer.addView(nav);
+        scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(16),dp(8),dp(16),dp(24));scroll.addView(content);
         final LinearLayout root=content;
-        scroll.setOnApplyWindowInsetsListener((view,insets)->{
-            if(Build.VERSION.SDK_INT>=30){android.graphics.Insets safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(dp(18)+safe.left,dp(18)+safe.top,dp(18)+safe.right,dp(24)+safe.bottom);}
-            return insets;
-        });
-        TextView brand=text("∞  INFINITY 360",29,ACCENT);brand.setTypeface(null,Typeface.BOLD);content.addView(brand);
-        content.addView(text("REMOTE  •  DASHBOARD & IPTV",13,MUTED));
-        LinearLayout nav=new LinearLayout(this);String[] names={"Controle","Catálogo","Sistema","Conexão","Loja"};
-        for(int i=0;i<5;i++){final int index=i;tabs[i]=button(names[i],PANEL,()->showScreen(index));tabs[i].setTextSize(12);tabs[i].setPadding(dp(2),0,dp(2),0);
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(52),1);lp.setMargins(dp(2),dp(8),dp(2),dp(8));nav.addView(tabs[i],lp);}
-        root.addView(nav);
         status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
         content=screen(root,3);
         label("IP do Xbox 360");consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         consoleIp.setText(getPreferences(MODE_PRIVATE).getString("console_ip",""));
         label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
-        content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,2);
         label("Arquivos e FTP");
         content.addView(button("Gerenciador FTP",ACCENT,()->{
             if(busy)return;
             android.content.Intent intent=new android.content.Intent(this,FtpActivity.class);
             intent.putExtra("console_ip",consoleIp.getText().toString().trim());startActivity(intent);
-        }),new LinearLayout.LayoutParams(-1,dp(54)));
+        }),new LinearLayout.LayoutParams(-1,-2));
         label("Monitoramento do console");
-        monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
-        content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));
+        monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(monitor);
+        content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,-2));
         label("Downloads e transferências");
-        downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));downloads.setBackground(shape(PANEL));content.addView(downloads);
-        content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,dp(54)));
-        Switch auto=new Switch(this);auto.setText("Atualizar downloads a cada 5 segundos");auto.setTextColor(TEXT);auto.setChecked(false);
+        downloads=text("Nenhuma consulta.",14,TEXT);downloads.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(downloads);
+        content.addView(button("Consultar fila de downloads",PANEL,()->refreshDownloads()),new LinearLayout.LayoutParams(-1,-2));
+        Switch auto=new Switch(this);auto.setText("Atualizar downloads a cada 5 segundos");auto.setChecked(false);
         auto.setOnCheckedChangeListener((view,enabled)->{autoDownloads=enabled;updateDownloadPolling();});
         content.addView(auto);
-        content.addView(button("Iniciar / retomar fila",ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Pausar download atual",PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Iniciar / retomar fila",ACCENT,()->confirmQueueCommand("storestart","Iniciar ou retomar a fila do Xbox?","Os pacotes autorizados serão processados pelo downloader nativo. A fila para em caso de falha ou pausa.")),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Pausar download atual",PANEL,()->confirmQueueCommand("storepause","Pausar o download atual?","O console tentará preservar o arquivo parcial para retomar depois.")),new LinearLayout.LayoutParams(-1,-2));
         downloadCards=new LinearLayout(this);downloadCards.setOrientation(LinearLayout.VERTICAL);content.addView(downloadCards);
         content=screen(root,1);
         label("Biblioteca e catálogo IPTV");
         catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
-        content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Consultar canais ao vivo",PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,dp(54)));
-        catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));catalogResult.setBackground(shape(PANEL));content.addView(catalogResult);
+        content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Consultar canais ao vivo",PANEL,()->loadCatalog(true,true)),new LinearLayout.LayoutParams(-1,-2));
+        catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(catalogResult);
         catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
-        content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,4);
         label("INFINITY Store");
         deviceStatus=text("Destino: consulte os dispositivos do Xbox.",14,MUTED);content.addView(deviceStatus);
-        content.addView(button("Consultar HDD / USB",PANEL,()->loadDevices()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Consultar HDD / USB",PANEL,()->loadDevices()),new LinearLayout.LayoutParams(-1,-2));
         deviceCards=new LinearLayout(this);deviceCards.setOrientation(LinearLayout.VERTICAL);content.addView(deviceCards);
         storeQuery=field("Buscar nome ou categoria (game, xbla, homebrew...)",InputType.TYPE_CLASS_TEXT);
-        content.addView(button("Consultar loja",ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Consultar loja",ACCENT,()->loadStore(true)),new LinearLayout.LayoutParams(-1,-2));
         storeResult=text("Catálogo autorizado do console. Nenhum pacote é baixado no celular.",14,MUTED);content.addView(storeResult);
         storeCards=new LinearLayout(this);storeCards.setOrientation(LinearLayout.VERTICAL);content.addView(storeCards);
-        content.addView(button("Próxima página",PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Acompanhar downloads",PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Próxima página",PANEL,()->loadStore(false)),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Acompanhar downloads",PANEL,()->{showScreen(2);refreshDownloads();}),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,0);
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
@@ -137,17 +136,21 @@ public final class MainActivity extends Activity {
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
         row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
         row(new String[]{"Mudo"},new String[]{"mute"});
-        Button exit=button("Encerrar reprodução",0xff702e34,()->new AlertDialog.Builder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton("Cancelar",null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,dp(56)));
+        Button exit=button("Encerrar reprodução",PANEL,()->new AlertDialog.Builder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton("Cancelar",null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
         content=screens[3];
         label("Configuração manual de pareamento");
         phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
-        content.addView(button("Identificar IP do celular",PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Encontrar Xbox pareado na rede",ACCENT,()->discoverConsole()),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Exportar arquivo de pareamento",PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
-        content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Identificar IP do celular",PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Encontrar Xbox pareado na rede",ACCENT,()->discoverConsole()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Exportar arquivo de pareamento",PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
         content=root;showScreen(consoleIp.getText().toString().isEmpty()?3:0);
+        navigation.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){if(position!=activeScreen)showScreen(position);}
+            @Override public void onNothingSelected(AdapterView<?> parent){}
+        });
     }
     private String size(org.json.JSONObject data,String name)throws org.json.JSONException{
         if(data.isNull(name))return "Indisponível";
@@ -201,7 +204,7 @@ public final class MainActivity extends Activity {
         catalogCards.removeAllViews();if(!ok)return;
         for(int i=0;i<items.length();i++){
             org.json.JSONObject item=items.optJSONObject(i);if(item==null)continue;
-            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);NativeUi.separated(this,card);card.setPadding(dp(12),dp(12),dp(12),dp(12));
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);catalogCards.addView(card,lp);
             final String name=item.optString("name"),id=item.optString("id");
             TextView title=text((item.optBoolean("favorite")?"★ ":"")+name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
@@ -265,7 +268,7 @@ public final class MainActivity extends Activity {
                     org.json.JSONObject item=data.optJSONObject(i);if(item==null)continue;
                     final String id=item.optString("id"),label=item.optString("label");
                     if(!id.matches("local|hdd|usb[012]"))continue;
-                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);NativeUi.separated(this,card);card.setPadding(dp(12),dp(12),dp(12),dp(12));
                     LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);deviceCards.addView(card,lp);
                     card.addView(text(label+(id.equals(current)?" • Selecionado":""),16,TEXT));
                     if(item.optBoolean("available")){
@@ -305,7 +308,7 @@ public final class MainActivity extends Activity {
                 if(success)for(int i=0;i<data.length();i++){
                     org.json.JSONObject item=data.optJSONObject(i);if(item==null)continue;
                     final String id=item.optString("id"),name=item.optString("name");
-                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+                    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);NativeUi.separated(this,card);card.setPadding(dp(12),dp(12),dp(12),dp(12));
                     LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);storeCards.addView(card,lp);
                     TextView title=text(name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
                     card.addView(text(item.optString("category")+" • "+item.optString("version")+" • "+android.text.format.Formatter.formatFileSize(this,Math.max(0,item.optLong("bytes"))),14,MUTED));
@@ -348,7 +351,7 @@ public final class MainActivity extends Activity {
             org.json.JSONObject row=rows.optJSONObject(i);if(row==null)continue;
             final String id=row.optString("id"),name=row.optString("name");
             if(!id.matches("[1-9][0-9]{0,19}"))continue;
-            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(shape(PANEL));card.setPadding(dp(12),dp(12),dp(12),dp(12));
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);NativeUi.separated(this,card);card.setPadding(dp(12),dp(12),dp(12),dp(12));
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);downloadCards.addView(card,lp);
             card.addView(text(name,16,TEXT));
             long total=row.optLong("total"),done=row.optLong("received");

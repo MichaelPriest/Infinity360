@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.17.0 Alpha
+# INFINITY 360 Remote — Android 0.18.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -88,3 +88,7 @@ Marque exatamente um item e use Renomear item selecionado (modo upload). Sem sob
 ## Release unificada
 
 O workflow de distribuição Xbox inclui o job Android e só publica a prerelease se os builds e gates passarem. O APK `Infinity360-Remote-debug.apk` é assinado para teste, com checksum SHA-256; não é uma distribuição de produção. A galeria da dashboard é produzida pelo renderizador nativo C++ e não demonstra homologação física.
+
+## Interface Android nativa
+
+Tema Material do Android SDK, claro/escuro conforme configuração do sistema. Componentes Button, EditText, Spinner, Switch, CheckBox, ProgressBar e diálogos padrão. Navegação fixa entre Controle, Catálogo, Sistema, Conexão e Loja. Cabeçalho Remote/FTP utiliza o PNG oficial da dashboard, sem redesenhar a marca. O ícone de instalação Remote existente é preservado. Validação visual em aparelho pendente.

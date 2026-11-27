@@ -1,0 +1,37 @@
+name: INFINITY 360 Android release
+on:
+  push:
+    branches: [main]
+    paths: [Android/release-request.txt]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    uses: ./.github/workflows/android-remote.yml
+  publish:
+    needs: apk
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: infinity360-remote-debug
+          path: release
+      - name: Verify and publish Android-only prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" Android/app/build.gradle)"
+          test -n "$version"
+          cd release
+          sha256sum -c Infinity360-Remote-debug.apk.sha256
+          unzip -t Infinity360-Remote-debug.apk
+          tag="remote-v$version-${GITHUB_SHA:0:12}"
+          if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
+          gh release create "$tag" Infinity360-Remote-debug.apk Infinity360-Remote-debug.apk.sha256 --target "$GITHUB_SHA" --title "INFINITY 360 Remote $version" --prerelease --latest=false --notes "APK debug com interface Material nativa, tema claro/escuro e logo oficial. Dashboard V0.3.76; sem nova XEX. Teste em aparelho pendente. Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <application android:label="INFINITY 360 Remote" android:icon="@drawable/ic_remote" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="true" android:supportsRtl="true">
+    <application android:label="INFINITY 360 Remote" android:icon="@drawable/ic_remote" android:theme="@style/InfinityRemoteTheme" android:allowBackup="false" android:usesCleartextTraffic="true" android:supportsRtl="true">
         <activity android:name=".FtpActivity" android:exported="false"/>
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>

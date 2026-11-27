@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 
 /** User-selected Android files only. No broad storage permission. */
 public final class FtpActivity extends Activity {
-    private static final int BG=0xff101b15,PANEL=0xff20382b,ACCENT=0xffa8ff00,TEXT=0xffeff7f0,MUTED=0xffb1c8bb;
+    private static final int ACCENT=NativeUi.EMPHASIS,TEXT=NativeUi.NORMAL,MUTED=NativeUi.SECONDARY;
     private static final int PICK_UPLOAD=701,PICK_DOWNLOAD=702,PICK_UPLOAD_TREE=703,PICK_DOWNLOAD_TREE=704;
     private EditText ip,user,password;
     private TextView location,status;
@@ -45,18 +45,16 @@ public final class FtpActivity extends Activity {
     private long resumeSize;
     private String jobHost,jobUser;
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
-    private TextView label(String value,int size,int color){TextView text=new TextView(this);text.setText(value);text.setTextColor(color);text.setTextSize(size);text.setPadding(0,dp(5),0,dp(5));return text;}
-    private Button button(String value,Runnable action){Button button=new Button(this);button.setAllCaps(false);button.setText(value);button.setTextColor(TEXT);button.setBackgroundColor(PANEL);button.setOnClickListener(v->action.run());return button;}
-    private void addButton(LinearLayout parent,String value,Runnable action){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(50));lp.setMargins(0,dp(4),0,dp(4));parent.addView(button(value,action),lp);}
-    private EditText field(String hint,int type){EditText field=new EditText(this);field.setSingleLine(true);field.setHint(hint);field.setTextColor(TEXT);field.setHintTextColor(MUTED);field.setInputType(type);field.setSaveEnabled(false);root.addView(field);return field;}
+    private TextView label(String value,int size,int role){TextView text=NativeUi.text(this,value,size,role);text.setPadding(0,dp(5),0,dp(5));return text;}
+    private Button button(String value,Runnable action){return NativeUi.button(this,value,action);}
+    private void addButton(LinearLayout parent,String value,Runnable action){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(4),0,dp(4));parent.addView(button(value,action),lp);}
+    private EditText field(String hint,int type){EditText field=NativeUi.field(this,hint,type);root.addView(field);return field;}
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
-        ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(BG);
-        root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(28),dp(18),dp(24));scroll.addView(root);setContentView(scroll);
-        if(android.os.Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener((view,insets)->{
-            android.graphics.Insets safe=insets.getInsets(android.view.WindowInsets.Type.systemBars()|android.view.WindowInsets.Type.displayCutout());
-            root.setPadding(dp(18)+safe.left,dp(18)+safe.top,dp(18)+safe.right,dp(24)+safe.bottom);return insets;});
-        root.addView(label("∞ INFINITY 360 • FTP",25,ACCENT));
+        LinearLayout outer=new LinearLayout(this);outer.setOrientation(LinearLayout.VERTICAL);
+        setContentView(outer);NativeUi.insets(outer);NativeUi.brand(this,outer,"Gerenciador FTP");
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(8),dp(16),dp(24));scroll.addView(root);
         root.addView(label("FTP local sem criptografia. Use apenas Wi-Fi confiável. Ative o servidor em Sistema > Rede e FTP no Xbox. Para enviar arquivos, habilite upload.",14,MUTED));
         ip=field("IP do Xbox",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         ip.setText(getIntent().getStringExtra("console_ip"));
@@ -123,7 +121,7 @@ public final class FtpActivity extends Activity {
                     CheckBox choose=new CheckBox(this);choose.setContentDescription("Selecionar "+entry.name);choose.setOnCheckedChangeListener((view,checked)->{
                         if(checked){if(selected.size()>=MAX_BATCH){view.setChecked(false);status.setText("Selecione até 32 itens.");return;}selected.add(entry);}else selected.remove(entry);
                     });line.addView(choose,new LinearLayout.LayoutParams(dp(48),dp(50)));
-                    line.addView(button(title,()->{if(busy)return;try{String target=XboxFtpClient.child(directory,entry.name);if(entry.directory)browse(target);else pickDownload(target,entry);}catch(IllegalArgumentException e){status.setText("Caminho inválido ou muito longo.");}}),new LinearLayout.LayoutParams(0,dp(50),1));
+                    line.addView(button(title,()->{if(busy)return;try{String target=XboxFtpClient.child(directory,entry.name);if(entry.directory)browse(target);else pickDownload(target,entry);}catch(IllegalArgumentException e){status.setText("Caminho inválido ou muito longo.");}}),new LinearLayout.LayoutParams(0,-2,1));
                     rows.addView(line);
                 }
             });return entries.size()+" itens. "+(client.uploadLimit()==0?"Somente leitura.":"Limite de envio: "+android.text.format.Formatter.formatFileSize(this,client.uploadLimit())+".");
