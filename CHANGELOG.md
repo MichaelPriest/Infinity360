@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.36 — Recuperação de HLS ao vivo
+
+- Classifica falhas de transporte, janela expirada, playlist parada, identidade inválida, segmento inválido e cancelamento. Live HLS que já reproduziu áudio/vídeo pode reiniciar a sessão completa até duas vezes em falhas recuperáveis, com aviso e cancelamento; não concatena bytes de sessões diferentes. VOD e falhas de identidade não recebem reinício automático. Volume/posição reinicializam com a nova sessão.
+- Fragmentos .m4s passam por autorização explícita do leitor HLS, mantendo restrições de origem, TLS, tamanho e formato. Diagnóstico de HTTP e timeout aprimorado; teste de classificação de falhas. Sem ABR durante reprodução, XEX ou release.
+
 ## V0.3.35 — Animações temporizadas e transições leves
 
 - Substitui a animação de três quadros por interpolação baseada no tempo: foco em 150 ms, entrada de página em 220 ms, linha de destaque e escurecimento gradual dos modais. Sem buffer de tela adicional; respeita a desativação das animações e não redesenha continuamente após a transição.

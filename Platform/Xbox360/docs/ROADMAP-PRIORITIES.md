@@ -14,6 +14,10 @@
 
 Esta ordem substitui a classificação histórica abaixo. Preservar funcionalidades essenciais de boot, lançamento, armazenamento e recuperação; corrigir regressões críticas quando encontradas. Não disparar build XEX/release sem autorização.
 
+### V0.3.36 — Recuperação live HLS
+
+Recuperação limitada (duas novas sessões) após playback iniciado, apenas falhas de transporte/janela/playlist parada. Sem emendar dados de sessões ou aceitar identidade alterada; preserva política de fontes e validação TLS. HLS fMP4 usa autorização explícita de fragmentos. Testes portáteis solicitados; ABR durante reprodução, recuperação assíncrona e homologação física pendentes.
+
 ### Critérios de conclusão IPTV/FFmpeg
 
 - Validar fontes públicas ou autorizadas, importação M3U, EPG e categorias; não incorporar fontes sem direitos verificados.

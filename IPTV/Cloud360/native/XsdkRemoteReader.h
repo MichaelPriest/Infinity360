@@ -35,11 +35,15 @@ public:
         if(multi_)curl_multi_cleanup(multi_);
         if(global_)curl_global_cleanup();
     }
-    bool Open(const std::string& address,const std::string& root,bool transportStream=false,bool playlist=false,bool mp4=false){
+    bool Open(const std::string& address,const std::string& root,bool transportStream=false,bool playlist=false,bool mp4=false,bool fragment=false){
         MediaUrl url;
         error_="Endereco IPTV invalido.";
         if(!url.Parse(address)||address.find('#')!=std::string::npos)return false;
         error_="Formato remoto nao suportado.";
+        const auto extPath=StoreHostPolicy::lower(url.target.substr(0,url.target.find('?')));
+        const bool isFragment=extPath.size()>=4&&extPath.substr(extPath.size()-4)==".m4s";
+        if(isFragment&&!fragment)return false;
+        if(fragment&&!isFragment)return false;
         if(url.NeedsConverter()){
             const auto path=StoreHostPolicy::lower(url.target.substr(0,url.target.find('?')));
             if(!(transportStream&&path.size()>=3&&path.substr(path.size()-3)==".ts")&&!(playlist&&path.size()>=5&&path.substr(path.size()-5)==".m3u8")&&!(mp4&&path.size()>=4&&path.substr(path.size()-4)==".mp4"))return false;
@@ -67,11 +71,14 @@ public:
     int Read(unsigned char* data,unsigned cap) override{
         const auto start=std::chrono::steady_clock::now();
         while(read_==buffer_.size()&&!ended_&&!failed_){
-            if(RemoteCancelled()||std::chrono::steady_clock::now()-start>std::chrono::seconds(15))return -1;
+            if(RemoteCancelled()){error_="Reproducao cancelada.";return -1;}
+            if(std::chrono::steady_clock::now()-start>std::chrono::seconds(15)){error_="Tempo limite de leitura IPTV.";return -1;}
             if(paused_){paused_=false;if(curl_easy_pause(easy_,CURLPAUSE_CONT)!=CURLE_OK)return -1;}
             int running=0;if(curl_multi_perform(multi_,&running)!=CURLM_OK)return -1;
             int left=0;while(auto* msg=curl_multi_info_read(multi_,&left)){
-                if(msg->msg==CURLMSG_DONE){ended_=true;failed_=msg->data.result!=CURLE_OK;}
+                if(msg->msg==CURLMSG_DONE){ended_=true;failed_=msg->data.result!=CURLE_OK;
+                    if(failed_){long status=0;curl_easy_getinfo(easy_,CURLINFO_RESPONSE_CODE,&status);
+                        error_=status==401||status==403?"Servidor recusou autorizacao IPTV.":status==404?"Recurso IPTV nao encontrado.":msg->data.result==CURLE_OPERATION_TIMEDOUT?"Tempo limite de rede IPTV.":"Falha de transporte IPTV.";}}
             }
             if(read_==buffer_.size()&&!ended_){int activity=0;if(curl_multi_poll(multi_,nullptr,0,50,&activity)!=CURLM_OK)return -1;}
         }

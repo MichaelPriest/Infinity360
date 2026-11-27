@@ -166,6 +166,19 @@ inline std::string Choose(const List& list,unsigned cap){
 }
 // Sequential VOD or opt-in live TS/fMP4. A sliding window must preserve sequence
 // identity. Never replay a segment after any bytes were delivered.
+enum class Failure { None, Transport, WindowExpired, StalePlaylist, InvalidPlaylist, InvalidSegment, Cancelled };
+inline const char* FailureLabel(Failure f){
+    switch(f){
+        case Failure::Transport:return "Falha de transporte HLS.";
+        case Failure::WindowExpired:return "Janela HLS avancou alem do segmento esperado.";
+        case Failure::StalePlaylist:return "Playlist ao vivo nao avancou.";
+        case Failure::InvalidPlaylist:return "Playlist HLS invalida ou identidade alterada.";
+        case Failure::InvalidSegment:return "Segmento HLS invalido ou incompleto.";
+        case Failure::Cancelled:return "Reproducao cancelada.";
+        default:return "Fonte HLS indisponivel.";
+    }
+}
+inline bool RecoverLive(Failure f){return f==Failure::Transport||f==Failure::WindowExpired||f==Failure::StalePlaylist;}
 template<class Reader> class VodReader {
 public:
     using Open=std::function<std::unique_ptr<Reader>(const std::string&,bool)>;
@@ -220,6 +233,8 @@ public:
         list_=std::move(list);valid_=true;return true;
     }
     bool Fragmented()const{return valid_&&!list_.init.empty();}
+    bool Live()const{return valid_&&!list_.ended;}
+    Failure LastFailure()const{return failure_;}
     unsigned SelectedBitrate()const{return selectedBitrate_;}
     // Optional atomic delivery for short TS segments; larger segments are rejected in this mode.
     bool EnableBufferedSegments(bool allowLargeStreaming=false){if(started_)return false;buffered_=true;largeStreaming_=allowLargeStreaming;return true;}
@@ -227,7 +242,7 @@ public:
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
         if(Fragmented()&&!initDone_){
-            if(segment_.empty()&&!BufferSegment(list_.init,true))return Fail();
+            if(segment_.empty()&&!BufferSegment(list_.init,true))return Fail(segmentFailure_);
             const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
             std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
             if(segmentOffset_==segment_.size()){segment_.clear();segmentOffset_=0;initDone_=true;}
@@ -238,16 +253,21 @@ public:
             const uint64_t end=list_.sequence+list_.segments.size();
             if(next_>=end){
                 if(list_.ended)return 0;
-                if(++refreshes>3||!wait_||!wait_(std::min(5000u,std::max(500u,list_.target*500u))))return Fail();
+                if(++refreshes>3)return Fail(refreshFailure_);
+                if(!wait_||!wait_(std::min(5000u,std::max(500u,list_.target*500u))))return Fail(Failure::Cancelled);
                 List updated;
-                if(!Fetch(playlist_,updated))continue;
-                if(!Accept(updated))return Fail();
+                if(!Fetch(playlist_,updated)){
+                    if(fetchFailure_==Failure::InvalidPlaylist)return Fail(fetchFailure_);
+                    refreshFailure_=Failure::Transport;continue;
+                }
+                if(!Accept(updated))return Fail(refreshFailure_);
+                refreshFailure_=Failure::StalePlaylist;
                 continue;
             }
-            if(next_<list_.sequence)return Fail();
+            if(next_<list_.sequence)return Fail(Failure::WindowExpired);
             if(buffered_&&!streamingSegment_){
                 if(segment_.empty()&&!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)])){
-                    if(!streamingSegment_)return Fail();
+                    if(!streamingSegment_)return Fail(segmentFailure_);
                     // No bytes from this segment have reached the decoder. Reopen in streaming mode.
                     continue;
                 }
@@ -260,41 +280,42 @@ public:
                 reader_=open_(list_.segments[static_cast<size_t>(next_-list_.sequence)],false);
                 bytes_=0;
                 if(!reader_){
-                    if(++attempts<=2&&wait_&&wait_(250u*attempts))continue;
-                    return Fail();
+                    if(++attempts<=2&&wait_){if(wait_(250u*attempts))continue;return Fail(Failure::Cancelled);}
+                    return Fail(Failure::Transport);
                 }
             }
             int n=reader_->Read(buffer,capacity);
             if(n<0){
-                if(!bytes_&&++attempts<=2&&wait_&&wait_(250u*attempts)){reader_.reset();continue;}
-                return Fail();
+                if(!bytes_&&++attempts<=2&&wait_){if(!wait_(250u*attempts))return Fail(Failure::Cancelled);reader_.reset();continue;}
+                return Fail(Failure::Transport);
             }
-            if(static_cast<unsigned>(n)>capacity||static_cast<size_t>(n)>MaxSegment-bytes_)return Fail();
+            if(static_cast<unsigned>(n)>capacity||static_cast<size_t>(n)>MaxSegment-bytes_)return Fail(Failure::InvalidSegment);
             if(n){bytes_+=n;return n;}
-            if(!bytes_||bytes_%188)return Fail();
+            if(!bytes_||bytes_%188)return Fail(Failure::InvalidSegment);
             reader_.reset();++next_;attempts=0;streamingSegment_=false;
         }
     }
 private:
     bool BufferSegment(const std::string& url,bool init=false){
-        unsigned char block[8192];
+        unsigned char block[8192];segmentFailure_=Failure::Transport;
         for(unsigned attempt=0;attempt<3;++attempt){
-            if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
+            if(attempt&&!wait_)break;
+            if(attempt&&!wait_(250u*attempt)){segmentFailure_=Failure::Cancelled;segment_.clear();return false;}
             segment_.clear();segmentOffset_=0;
             if(segment_.capacity()<MaxBufferedSegment)segment_.reserve(MaxBufferedSegment);
-            auto reader=open_(url,false);if(!reader)continue;
+            auto reader=open_(url,false);if(!reader){segmentFailure_=Failure::Transport;continue;}
             for(;;){
                 const int n=reader->Read(block,sizeof block);
-                if(n<0)break;
+                if(n<0){segmentFailure_=Failure::Transport;break;}
                 if(n==0){
                     if(!segment_.empty()&&(Fragmented()?ValidBoxes(segment_,init):segment_.size()%188==0)){
                         if(attempt)++recovered_;return true;
                     }
-                    break;
+                    segmentFailure_=Failure::InvalidSegment;break;
                 }
-                if(n>static_cast<int>(sizeof block)){segment_.clear();return false;}
+                if(n>static_cast<int>(sizeof block)){segmentFailure_=Failure::InvalidSegment;segment_.clear();return false;}
                 if(static_cast<size_t>(n)>MaxBufferedSegment-segment_.size()){
-                    std::vector<unsigned char>().swap(segment_);
+                    segmentFailure_=Failure::InvalidSegment;std::vector<unsigned char>().swap(segment_);
                     if(largeStreaming_&&!Fragmented())streamingSegment_=true;
                     return false;
                 }
@@ -324,9 +345,10 @@ private:
         return main&&(init||media);
     }
     bool Accept(List& updated){
+        refreshFailure_=Failure::InvalidPlaylist;
         if(updated.init!=list_.init||!updated.variants.empty()||updated.segments.empty()||!updated.hasSequence||
-           updated.sequence<list_.sequence||updated.sequence>next_||
-           updated.sequence+updated.segments.size()<next_)return false;
+           updated.sequence<list_.sequence||updated.sequence+updated.segments.size()<next_)return false;
+        if(updated.sequence>next_){refreshFailure_=Failure::WindowExpired;return false;}
         const uint64_t overlapEnd=std::min(list_.sequence+list_.segments.size(),updated.sequence+updated.segments.size());
         for(uint64_t seq=updated.sequence;seq<overlapEnd;++seq)
             if(list_.segments[static_cast<size_t>(seq-list_.sequence)]!=updated.segments[static_cast<size_t>(seq-updated.sequence)])return false;
@@ -336,16 +358,18 @@ private:
         for(unsigned attempt=0;attempt<3;++attempt){
             if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
             if(Fetch(url,list))return true;
+            if(fetchFailure_==Failure::InvalidPlaylist)return false;
         }
         return false;
     }
     bool Fetch(const std::string& url,List& list){
-        auto reader=open_(url,true);if(!reader)return false;
+        fetchFailure_=Failure::Transport;auto reader=open_(url,true);if(!reader)return false;
         std::string text;unsigned char block[4096];
-        for(;;){int n=reader->Read(block,sizeof block);if(n<0||n>int(sizeof block)||size_t(n)>MaxPlaylist-text.size())return false;if(!n)break;text.append(reinterpret_cast<char*>(block),n);}
-        return Parse(url,text,list,allowLive_);
+        for(;;){int n=reader->Read(block,sizeof block);if(n<0)return false;if(n>int(sizeof block)||size_t(n)>MaxPlaylist-text.size()){fetchFailure_=Failure::InvalidPlaylist;return false;}if(!n)break;text.append(reinterpret_cast<char*>(block),n);}
+        if(!Parse(url,text,list,allowLive_)){fetchFailure_=Failure::InvalidPlaylist;return false;}return true;
     }
-    int Fail(){failed_=true;reader_.reset();return -1;}
+    int Fail(Failure reason){failed_=true;failure_=reason;reader_.reset();return -1;}
+    Failure failure_=Failure::None,refreshFailure_=Failure::StalePlaylist,segmentFailure_=Failure::Transport,fetchFailure_=Failure::Transport;
     Open open_;Wait wait_;Clock clock_;unsigned throughput_=0;std::unique_ptr<Reader> reader_;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;

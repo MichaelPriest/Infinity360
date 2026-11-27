@@ -116,6 +116,21 @@ int main(){
         return false;
     };
     if(!liveMp4(false)||!liveMp4(true))return 1;
+    // Classify a live window skip separately from identity changes; only the former permits a fresh decoder restart.
+    auto reason=[&](const std::string& refresh){
+        unsigned count=0;
+        VodReader<Reader> r([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+            return std::make_unique<Reader>(Reader{playlist?(++count==1?first:refresh):std::string(188,'x')});
+        },[](unsigned){return true;});
+        if(!r.Start(base,2000000,true))return Failure::None;
+        for(unsigned i=0;i<100;++i){int n=r.Read(block,sizeof block);if(n<0)return r.LastFailure();if(!n)break;}
+        return Failure::None;
+    };
+    if(reason(Playlist(15,{"f","g"}))!=Failure::WindowExpired||
+       reason(Playlist(11,{"changed","c","d"}))!=Failure::InvalidPlaylist||
+       reason(first)!=Failure::StalePlaylist||
+       !RecoverLive(Failure::Transport)||!RecoverLive(Failure::WindowExpired)||!RecoverLive(Failure::StalePlaylist)||
+       RecoverLive(Failure::InvalidPlaylist)||RecoverLive(Failure::InvalidSegment)||RecoverLive(Failure::Cancelled))return 1;
     std::puts("live sequence, retry, overlap, stale window and partial failure passed");
     return 0;
 }

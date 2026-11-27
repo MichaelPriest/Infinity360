@@ -53,8 +53,9 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_LEFT)?CloudPlaybackControls::Backward:0u)|
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
-inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
+inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive){
+    retryLive=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
     CloudAvStreamQueue timeline;
@@ -67,7 +68,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     std::string hlsError;
     CloudHls::VodReader<XsdkMpeg::RemoteReader> hls([&](const std::string& url,bool playlist){
         auto r=std::make_unique<XsdkMpeg::RemoteReader>();
-        if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4"))){hlsError=r->Error();return std::unique_ptr<XsdkMpeg::RemoteReader>{};}
+        if(!r->Open(url,root,!playlist,playlist,!playlist&&CloudHls::Extension(url,".mp4"),!playlist&&CloudHls::Extension(url,".m4s"))){hlsError=r->Error();return std::unique_ptr<XsdkMpeg::RemoteReader>{};}
         return r;
     },[](unsigned ms){
         if(curl_global_init(CURL_GLOBAL_DEFAULT)!=CURLE_OK)return false;
@@ -112,7 +113,12 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         if(local.empty())return "Caminho local invalido.";
         session=cloud_container_open(local.c_str(),CloudAvStreamQueue::Capture,&timeline,1);
     }
-    if(!session)return "Fonte FFmpeg indisponivel ou incompativel.";
+    if(!session){
+#ifdef INFINITY_AV_NETWORK
+        if(hls.LastFailure()!=CloudHls::Failure::None)return CloudHls::FailureLabel(hls.LastFailure());
+#endif
+        return Cancelled()?"Reproducao cancelada.":"Fonte FFmpeg indisponivel ou incompativel.";
+    }
     int rc=1;
     auto prepare=[&](){unsigned prefill=0;while(rc>0&&timeline.WantsInput(0)&&prefill++<4096&&!Cancelled())rc=cloud_container_step(session,1);if(rc==0)timeline.EndInput();return !Cancelled()&&rc>=0&&timeline.Prepare();};
     if(!prepare()){cloud_container_close(session);return Cancelled()?"Reproducao cancelada.":"Falha ao preparar audio e video FFmpeg.";}
@@ -172,7 +178,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
         }
         if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused())){overlay();if(!present(true)){ok=false;break;}}
         const int seek=controls.TakeSeek();
-        if(seek&&duration&&!controls.Paused()){
+        if(seek&&duration>0&&!controls.Paused()){
             const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));
             // A bounded local keyframe seek, not frame-accurate scrubbing.
             if(audioOpen){xsdk_audio_close();audioOpen=false;}
@@ -206,6 +212,34 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
     if(audioOpen)xsdk_audio_close();
     xsdk_log_write("Cloud360 AV timeline ok=%d cancelled=%d frames=%u samples=%u dropped=%u",ok,cancelled,shown,submitted,static_cast<unsigned>(timeline.Dropped()));
     xsdk_log_write("Cloud360 read stalls=%u compensated_ms=%u ahead_ms=%u",playbackClock.Stalls(),static_cast<unsigned>(playbackClock.Stalled()/1000),static_cast<unsigned>(playbackClock.Ahead()/1000));
-    return cancelled||Cancelled()?"Reproducao cancelada.":ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
+    if(cancelled||Cancelled())return "Reproducao cancelada.";
+#ifdef INFINITY_AV_NETWORK
+    if(hls.LastFailure()!=CloudHls::Failure::None){
+        // Restart only a previously playing live HLS stream after transport/window failure.
+        // All decoder/reader/audio objects are destroyed before restarting; never concatenate streams.
+        retryLive=!ok&&shown&&submitted&&hls.Live()&&CloudHls::RecoverLive(hls.LastFailure());
+        return CloudHls::FailureLabel(hls.LastFailure());
+    }
+#endif
+    return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
+}
+inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
+                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={}){
+    std::string result;
+    for(unsigned attempt=0;attempt<3;++attempt){
+        bool retry=false;result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry);
+        if(!retry||attempt==2||Cancelled())return Cancelled()?"Reproducao cancelada.":result;
+        canvas.Background();canvas.SeriesTile(160,240,960,220,false,220);
+        canvas.TextFit(190,265,"Cloud360 | Reconectando transmissao ao vivo",30,0xfff2f7f3u,900);
+        canvas.TextFit(190,320,result,22,0xffb7c9c1u,900);
+        canvas.TextFit(190,379,"Tentativa "+std::to_string(attempt+1)+"/2 | B Cancelar",20,0xff9dec31u,900);
+        if(!present(true))return "Falha ao apresentar reconexao IPTV.";
+        const auto start=std::chrono::steady_clock::now();
+        while(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(500*(attempt+1))){
+            if(Cancelled())return "Reproducao cancelada.";
+            if(!present(false))return "Falha ao apresentar reconexao IPTV.";
+        }
+    }
+    return result;
 }
 }
