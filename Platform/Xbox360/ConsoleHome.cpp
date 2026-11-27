@@ -510,7 +510,7 @@ void ConsoleHome::PressLibraryPaths(Key key){
                 libraryPickerStack_.assign(1,devices[libraryDevice_]);notice_.clear();RefreshLibraryPicker();}
             return;
         }
-        if(key==Up||key==Down){libraryPickerRow_+=key==Down?1:-1;clampRow(libraryPickerRow_,libraryPickerFolders_.size());return;}
+        if(key==Up||key==Down){libraryPickerRow_=std::max(0,libraryPickerRow_+(key==Down?1:-1));clampRow(libraryPickerRow_,libraryPickerFolders_.size());return;}
         if(key==Accept&&static_cast<size_t>(libraryPickerRow_)<libraryPickerFolders_.size()){
             const auto path=FileWorkspace::Join(libraryPickerStack_.back(),libraryPickerFolders_[libraryPickerRow_]);
             if(libraryPickerStack_.size()>=17){notice_="Limite de 16 niveis do navegador.";return;}
@@ -526,7 +526,7 @@ void ConsoleHome::PressLibraryPaths(Key key){
     const auto& configured=packagePathsPage_?configuredPackageRoots_:configuredRoots_;
     if(key==Back){libraryPathsPage_=false;notice_.clear();return;}
     if(key==PageUp||key==PageDown){packagePathsPage_=!packagePathsPage_;libraryPathRow_=0;notice_.clear();RefreshLibraryPathStatus();return;}
-    if(key==Up||key==Down){libraryPathRow_+=key==Down?1:-1;clampRow(libraryPathRow_,configured.size());return;}
+    if(key==Up||key==Down){libraryPathRow_=std::max(0,libraryPathRow_+(key==Down?1:-1));clampRow(libraryPathRow_,configured.size());return;}
     if(key==Favorite){ToggleLibraryRoot();RefreshLibraryPathStatus();return;}
     if(!packagePathsPage_&&(key==Left||key==Right)){ChangeLibraryDepth(key==Right?1:-1);return;}
     if(key==Refresh&&!TransferRunning()&&!ftp_.Running()){

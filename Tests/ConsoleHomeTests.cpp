@@ -1401,7 +1401,9 @@ int main(int argc,char** argv) {
     pathManager.Press(ConsoleHome::Right);pathManager.Press(ConsoleHome::Down);pathManager.Press(ConsoleHome::Right);pathManager.Press(ConsoleHome::Accept); // System
     pathManager.Press(ConsoleHome::Accept); // Console details
     pathManager.Press(ConsoleHome::Guide); // library paths
+    pathManager.Press(ConsoleHome::Up); // clamp at first row
     pathManager.Press(ConsoleHome::Accept); // picker
+    pathManager.Press(ConsoleHome::Up); // clamp at first folder
     pathManager.Press(ConsoleHome::Favorite); // reject device root
     assert(fs::file_size(scanUiConfig)==0);
     pathManager.Press(ConsoleHome::Accept); // CustomGames
