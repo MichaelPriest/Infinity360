@@ -20,6 +20,12 @@ function(infinity_enable_lua target)
     endforeach()
     add_library(infinity_lua STATIC ${sources})
     target_include_directories(infinity_lua PUBLIC "${src}")
+    # The XSDK libc limits header omits C99 long-long macros in C++.
+    # Force the same compatibility header into Lua and all its consumers;
+    # retain the default 64-bit Lua integer ABI (unsigned title IDs fit).
+    if(CMAKE_CROSSCOMPILING AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+      target_compile_options(infinity_lua PUBLIC -include "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/LuaLimitsCompat.h")
+    endif()
     if(NOT WIN32)
       target_link_libraries(infinity_lua PUBLIC m)
     endif()

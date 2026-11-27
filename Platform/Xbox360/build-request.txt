@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.75 Alpha
+INFINITY 360 V0.3.76 Alpha
 Requested: 2026-11-27
-Baseline: 4cb5a3a4dbd7aaa4111479d74105d833dcf372ec
-Authorized unified Xbox360 FFmpeg and Android APK prerelease; mandatory gates retained.
+Baseline: 1eb94bd62acbfe591abc888fa12695635e49dc7d
+Retry authorized unified FFmpeg XEX and Android APK release after Lua limits and obsolete SDK package fixes; gates retained.

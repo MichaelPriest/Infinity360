@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.76 — Correções de compilação da release
+
+- Corrige macros C99 de limites long long ausentes no XSDK usando os limites do compilador GCC, compartilhados entre Lua C e consumidores C++; mantém ABI Lua de 64 bits.
+- Remove pacote Android SDK obsoleto `tools` da instalação do action, mantendo platform-tools, API 35 e build-tools 35.0.0.
+- V0.3.75: 29/29 regressões portáteis e gate Cloud360 aprovados; 113 capturas publicadas. Nova solicitação explícita de build unificada; release depende dos gates. Sem alegação de binários ou homologação antes da confirmação.
+
 ## V0.3.75 — Preparação de release unificada Xbox/Android
 
 - Corrige navegação do teste IPTV após inclusão da aba Histórico; não remove testes nem relaxa os gates.
