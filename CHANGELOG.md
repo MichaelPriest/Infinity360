@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.63 — Abas Android e logotipos locais
+
+- Android Remote 0.6.0 Alpha: quatro abas (Controle, Catalogo, Sistema e Conexao) com status compartilhado e campos preservados. Consulta autenticada por ID de logo IPTV sob demanda, RGBA reduzido a 32x18, sem URL ou caminho fornecido pelo cliente. Imagem ausente ou ID ambiguo retorna indisponivel. Sem downloads externos, sem consultas de arte por quadro. Testes de protocolo ampliados; APK e XSDK pendentes. Sem XEX/release.
+
 ## V0.3.62 — Selecao direta de canais e cards Android
 
 - Android Remote 0.5.0 Alpha: cards reais de jogos e canais, favoritos, EPG e botao Assistir no Xbox com confirmacao. Comando autenticado por ID decimal de 64 bits, validado contra lista ativa, rejeita ID ambiguo/ausente, fonte nao autorizada ou formato nao suportado. Troca direta somente durante reproducao live FFmpeg, fora de Guide e menus; reutiliza encerramento limpo e reinicio de canal. Sem iniciar midia da Home ou controlar jogos diretamente. Testes de protocolo ampliados; APK/XSDK pendentes. Sem XEX/release.

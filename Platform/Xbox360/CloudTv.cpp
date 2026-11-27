@@ -403,9 +403,13 @@ std::string CloudTv::ChooseRemoteChannel(const std::string& id,const std::functi
 }
 std::vector<unsigned char> CloudTv::PlayingLogo()const{
     if(view_!=Details||detail_>=Count()||catalog_.Items()[detail_].category!=TvLive)return {};
+    return LogoAt(detail_);
+}
+std::vector<unsigned char> CloudTv::LogoAt(size_t index)const{
+    if(index>=Count())return {};
     const std::string slash=dir_.find('\\')!=std::string::npos?"\\":"/";
     const auto dot=source_.find_last_of('.');
-    const auto file=countText(detail_)+".rgba";
+    const auto file=countText(index)+".rgba";
     auto read=[&](const std::string& path){
         std::vector<unsigned char> rgba(128*72*4);
         std::ifstream in(path.c_str(),std::ios::binary);
@@ -415,6 +419,22 @@ std::vector<unsigned char> CloudTv::PlayingLogo()const{
     auto rgba=read(dir_+source_.substr(0,dot)+".logos"+slash+file);
     if(rgba.empty()&&tvLower(source_)=="playlist.m3u")rgba=read(dir_+"logos"+slash+file);
     return rgba;
+}
+std::string CloudTv::RemoteLogo(const std::string& id)const{
+    const auto& items=catalog_.Items();size_t found=items.size();
+    for(size_t i=0;i<items.size();++i)if(items[i].category==TvLive&&items[i].id&&std::to_string(items[i].id)==id){
+        if(found!=items.size())return "{\"available\":false}";found=i;
+    }
+    if(found==items.size())return "{\"available\":false}";
+    const auto rgba=LogoAt(found);
+    if(rgba.size()!=128u*72u*4u)return "{\"available\":false}";
+    const char* hex="0123456789abcdef";
+    std::string out="{\"available\":true,\"w\":32,\"h\":18,\"rgba\":\"";
+    for(unsigned y=0;y<18;++y)for(unsigned x=0;x<32;++x){
+        const size_t off=(y*4*128+x*4)*4;
+        for(unsigned k=0;k<4;++k){const auto b=rgba[off+k];out+=hex[b>>4];out+=hex[b&15];}
+    }
+    return out+"\"}";
 }
 void CloudTv::DrawSettings(HomeCanvas& c)const{
     const auto audio=TvPreferences::LoadAudio(dir_);

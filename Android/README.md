@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.5.0 Alpha
+# INFINITY 360 Remote — Android 0.6.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -33,3 +33,7 @@ Use Consultar jogos ou Consultar canais ao vivo, com busca opcional e Próxima p
 ## Trocar canal pelo catálogo
 
 Com um canal live FFmpeg já em reprodução, consulte canais e toque em **Assistir no Xbox**. Confirme o nome. O console resolve o ID na lista ativa e verifica a autorização e formato antes de trocar. Feche Guide ou seletores antes de trocar. Se a fonte mudou, consulte novamente. Não inicia vídeo a partir da Home e não transmite vídeo ao celular. Jogos continuam somente consulta.
+
+## Interface e logotipos
+
+Abas Controle, Catálogo, Sistema e Conexão mantêm os campos na sessão. Em um card IPTV, Carregar logotipo consulta a miniatura local do Xbox (32x18 RGBA); não baixa imagens externas. A arte pode estar ausente. Capas de jogos ainda não são transferidas. O controle segue restrito ao IP e à chave configurados.

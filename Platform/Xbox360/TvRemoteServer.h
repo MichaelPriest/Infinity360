@@ -54,7 +54,7 @@ public:
             if(request_.size()>2048){CloseClient();return Key::None;}
             if(request_.find("\r\n\r\n")==std::string::npos)return Key::None;
             const auto parsed=Parse(request_,host_,secret_);
-            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog;
+            const bool listing=parsed.key==Key::Games||parsed.key==Key::TvCatalog||parsed.key==Key::Logo;
             const bool allowed=parsed.key!=Key::None&&(!lastCommand_||now-lastCommand_>=150)&&(parsed.key==Key::Status||(listing?bool(catalog):parsed.key==Key::Snapshot?bool(snapshot):parsed.key==Key::Tune?bool(tune)&&tune(parsed):!permit||permit(parsed.key)));
             if(allowed){if(parsed.key!=Key::Status&&parsed.key!=Key::Snapshot&&!listing)result=parsed.key;lastCommand_=now;}
             const bool json=allowed&&(parsed.key==Key::Snapshot||listing);

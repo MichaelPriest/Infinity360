@@ -28,6 +28,16 @@ public final class MainActivity extends Activity {
     private int catalogNext=-1;
     private String activeQuery="";
     private LinearLayout content;
+    private final LinearLayout[] screens=new LinearLayout[4];
+    private final Button[] tabs=new Button[4];
+    private ScrollView scroll;
+    private int activeScreen=0;
+    private void showScreen(int index){
+        activeScreen=index;
+        for(int i=0;i<screens.length;i++)if(screens[i]!=null){screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);tabs[i].setBackground(shape(i==index?ACCENT:PANEL));tabs[i].setTextColor(i==index?BG:TEXT);}
+        if(scroll!=null)scroll.smoothScrollTo(0,0);
+    }
+    private LinearLayout screen(LinearLayout root,int index){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);root.addView(panel);screens[index]=panel;return panel;}
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private boolean busy=false;
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -39,22 +49,30 @@ public final class MainActivity extends Activity {
     private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(61),1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
+        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(18),dp(18),dp(18),dp(24));scroll.addView(content);setContentView(scroll);
+        final LinearLayout root=content;
         scroll.setOnApplyWindowInsetsListener((view,insets)->{
-            if(Build.VERSION.SDK_INT>=30){android.graphics.Insets safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());content.setPadding(dp(18)+safe.left,dp(18)+safe.top,dp(18)+safe.right,dp(24)+safe.bottom);}
+            if(Build.VERSION.SDK_INT>=30){android.graphics.Insets safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(dp(18)+safe.left,dp(18)+safe.top,dp(18)+safe.right,dp(24)+safe.bottom);}
             return insets;
         });
         TextView brand=text("∞  INFINITY 360",29,ACCENT);brand.setTypeface(null,Typeface.BOLD);content.addView(brand);
         content.addView(text("REMOTE  •  DASHBOARD & IPTV",13,MUTED));
+        LinearLayout nav=new LinearLayout(this);String[] names={"Controle","Catálogo","Sistema","Conexão"};
+        for(int i=0;i<4;i++){final int index=i;tabs[i]=button(names[i],PANEL,()->showScreen(index));tabs[i].setTextSize(12);tabs[i].setPadding(dp(2),0,dp(2),0);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(52),1);lp.setMargins(dp(2),dp(8),dp(2),dp(8));nav.addView(tabs[i],lp);}
+        root.addView(nav);
+        status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(status);
+        content=screen(root,3);
         label("IP do Xbox 360");consoleIp=field("192.168.x.x",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         consoleIp.setText(getPreferences(MODE_PRIVATE).getString("console_ip",""));
         label("Chave de pareamento (32 caracteres)");key=field("Chave hexadecimal",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});
         content.addView(button("Verificar conexão e chave",PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,dp(54)));
-        status=text("Abra a INFINITY 360 no Xbox e habilite o controle remoto.",14,MUTED);status.setPadding(0,dp(10),0,dp(10));status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);content.addView(status);
+        content=screen(root,2);
         label("Monitoramento do console");
         monitor=text("Nenhuma leitura recebida.",15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));monitor.setBackground(shape(PANEL));content.addView(monitor);
         content.addView(button("Consultar indicadores",PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content=screen(root,1);
         label("Biblioteca e catálogo IPTV");
         catalogQuery=field("Buscar por título ou grupo IPTV",InputType.TYPE_CLASS_TEXT);
         content.addView(button("Consultar jogos",PANEL,()->loadCatalog(false,true)),new LinearLayout.LayoutParams(-1,dp(54)));
@@ -62,6 +80,7 @@ public final class MainActivity extends Activity {
         catalogResult=text("Nenhuma consulta.",15,TEXT);catalogResult.setPadding(dp(14),dp(14),dp(14),dp(14));catalogResult.setBackground(shape(PANEL));content.addView(catalogResult);
         catalogCards=new LinearLayout(this);catalogCards.setOrientation(LinearLayout.VERTICAL);content.addView(catalogCards);
         content.addView(button("Próxima página",PANEL,()->loadCatalog(tvCatalog,false)),new LinearLayout.LayoutParams(-1,dp(54)));
+        content=screen(root,0);
         label("Navegação geral");
         row(new String[]{"Guide","↑","Atualizar"},new String[]{"guide","up","refresh"});
         row(new String[]{"←","A / OK","→"},new String[]{"left","accept","right"});
@@ -73,11 +92,13 @@ public final class MainActivity extends Activity {
         row(new String[]{"Vol −","↓","Vol +"},new String[]{"quieter","down","louder"});
         row(new String[]{"Mudo"},new String[]{"mute"});
         Button exit=button("Encerrar reprodução",0xff702e34,()->new AlertDialog.Builder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton("Cancelar",null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,dp(56)));
+        content=screens[3];
         label("Configuração manual de pareamento");
         phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
+        content=root;showScreen(consoleIp.getText().toString().isEmpty()?3:0);
     }
     private String size(org.json.JSONObject data,String name)throws org.json.JSONException{
         if(data.isNull(name))return "Indisponível";
@@ -139,12 +160,36 @@ public final class MainActivity extends Activity {
                 card.addView(text(item.optString("group"),13,MUTED));
                 if(!item.optString("current").isEmpty())card.addView(text("Agora: "+item.optString("current"),14,ACCENT));
                 if(!item.optString("next").isEmpty())card.addView(text("A seguir: "+item.optString("next"),14,MUTED));
+                if(id.matches("[1-9][0-9]{0,19}")){
+                    ImageView logo=new ImageView(this);logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setVisibility(View.GONE);card.addView(logo,new LinearLayout.LayoutParams(-1,dp(88)));
+                    Button load=button("Carregar logotipo",PANEL,()->loadLogo(id,ip,secret,logo));card.addView(load);
+                }
                 if(id.matches("[1-9][0-9]{0,19}"))card.addView(button("Assistir no Xbox",ACCENT,()->{
                     if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
                     new AlertDialog.Builder(this).setTitle("Trocar canal?").setMessage(name).setNegativeButton("Cancelar",null).setPositiveButton("Assistir",(d,w)->send("tune/"+id)).show();
                 }));
             }
         }
+    }
+    private void loadLogo(String id,String ip,String secret,ImageView target){
+        if(busy)return;
+        if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
+        busy=true;status.setText("Consultando logotipo local...");
+        worker.execute(()->{
+            android.graphics.Bitmap bitmap=null;String result="Logotipo local indisponível.";
+            try{
+                org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.logo(ip,secret,id));
+                if(obj.optBoolean("available")&&obj.getInt("w")==32&&obj.getInt("h")==18){
+                    String raw=obj.getString("rgba");if(raw.length()!=32*18*8||!raw.matches("[a-f0-9]+"))throw new java.io.IOException("Imagem inválida");
+                    int[] pixels=new int[32*18];for(int i=0;i<pixels.length;i++){
+                        int p=i*8;int r=Integer.parseInt(raw.substring(p,p+2),16),g=Integer.parseInt(raw.substring(p+2,p+4),16),b=Integer.parseInt(raw.substring(p+4,p+6),16),a=Integer.parseInt(raw.substring(p+6,p+8),16);
+                        pixels[i]=android.graphics.Color.argb(a,r,g,b);}
+                    bitmap=android.graphics.Bitmap.createBitmap(pixels,32,18,android.graphics.Bitmap.Config.ARGB_8888);result="Logotipo recebido.";
+                }
+            }catch(Exception e){result="Falha ao consultar logotipo.";}
+            final android.graphics.Bitmap image=bitmap;final String message=result;
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;if(image!=null&&target.isAttachedToWindow()){target.setImageBitmap(image);target.setVisibility(View.VISIBLE);}status.setText(message);});
+        });
     }
     private void refreshMonitor(){
         if(busy)return;

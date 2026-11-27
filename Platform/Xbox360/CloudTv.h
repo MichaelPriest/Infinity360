@@ -23,6 +23,7 @@ public:
     std::string ChooseChannel(size_t row);
     std::string ChooseRemoteChannel(const std::string& id,const std::function<bool(const std::string&)>& supported);
     std::vector<unsigned char> PlayingLogo()const;
+    std::string RemoteLogo(const std::string& id)const;
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
     std::string RemoteCatalog(unsigned offset,const std::string& query,int64_t now)const;
@@ -69,6 +70,7 @@ private:
     void CollectEpisodes();
     void OpenItem(size_t index);
     void Toggle(size_t index,bool refresh=true);
+    std::vector<unsigned char> LogoAt(size_t index)const;
     void DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const;
     void DrawList(HomeCanvas& c,int64_t now) const;
     void DrawModernList(HomeCanvas& c,int64_t now) const;

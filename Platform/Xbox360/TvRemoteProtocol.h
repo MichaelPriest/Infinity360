@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 namespace TvRemote {
-enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune };
+enum class Key { None,Up,Down,Left,Right,Accept,Back,Mute,Quality,Quieter,Louder,Channels,Guide,Favorite,Refresh,PageUp,PageDown,Status,Snapshot,Games,TvCatalog,Tune,Logo };
 inline bool ValidSecret(const std::string& s){
     if(s.size()!=32)return false;
     for(char c:s)if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;
@@ -59,6 +59,7 @@ inline Request Parse(const std::string& request,const std::string& host,const st
     const std::string prefix="POST /cmd/",suffix=" HTTP/1.1";
     if(line.size()<=prefix.size()+suffix.size()||line.compare(0,prefix.size(),prefix)||line.compare(line.size()-suffix.size(),suffix.size(),suffix)||!SameSecret(token,secret))return {};
     const auto command=line.substr(prefix.size(),line.size()-prefix.size()-suffix.size());
+    if(command.compare(0,5,"logo/")==0){const auto id=command.substr(5);return ValidChannelId(id)?Request{false,Key::Logo,0,id}:Request{};}
     if(command.compare(0,5,"tune/")==0){const auto id=command.substr(5);return ValidChannelId(id)?Request{false,Key::Tune,0,id}:Request{};}
     const auto catalog=CatalogRequest(command);if(catalog.key!=Key::None)return catalog;
     return {false,Command(command)};

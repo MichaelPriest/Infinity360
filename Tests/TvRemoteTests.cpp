@@ -30,5 +30,8 @@ int main(){
     if(Parse(request("tune/18446744073709551616",key,host),host,key).key!=Key::None)return 22;
     if(Parse(request("tune/0",key,host),host,key).key!=Key::None)return 23;
     if(Parse(request("tune/1","wrong",host),host,key).key!=Key::None)return 24;
+    if(Parse(request("logo/1",key,host),host,key).key!=Key::Logo)return 25;
+    if(Parse(request("logo/../file",key,host),host,key).key!=Key::None)return 26;
+    if(Parse(request("logo/1","wrong",host),host,key).key!=Key::None)return 27;
     return 0;
 }
