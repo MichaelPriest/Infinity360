@@ -1,6 +1,9 @@
 #pragma once
 #include <string>
 #include <algorithm>
+#include <cstdint>
+#include <fstream>
+#include <vector>
 namespace TvRemote {
 inline std::string LowerAscii(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Matches(const std::string& text,const std::string& query){return query.empty()||LowerAscii(text).find(LowerAscii(query))!=std::string::npos;}
@@ -16,6 +19,24 @@ inline std::string Quote(const std::string& input,size_t limit=48){
         if(!good){out+='?';++i;}else{out.append(input,i,n);i+=n;}
     }
     return out+"\"";
+}
+inline std::string GameArtId(const std::string& path){
+    uint64_t hash=14695981039346656037ull;
+    for(unsigned char c:path){hash^=c;hash*=1099511628211ull;}
+    return std::to_string(hash?hash:1);
+}
+inline std::string CoverThumbnail(const std::string& path){
+    if(path.empty())return "{\"available\":false}";
+    std::vector<unsigned char> data(160u*240u*4u);
+    std::ifstream in(path.c_str(),std::ios::binary);
+    if(!in.read(reinterpret_cast<char*>(data.data()),data.size())||in.peek()!=std::char_traits<char>::eof())return "{\"available\":false}";
+    const char* hex="0123456789abcdef";
+    std::string out="{\"available\":true,\"w\":20,\"h\":30,\"rgba\":\"";
+    for(unsigned y=0;y<30;++y)for(unsigned x=0;x<20;++x){
+        const size_t offset=((y*8+4)*160+x*8+4)*4;
+        for(unsigned k=0;k<4;++k){const auto value=data[offset+k];out+=hex[value>>4];out+=hex[value&15];}
+    }
+    return out+"\"}";
 }
 template<class Row> std::string CatalogPage(size_t total,unsigned offset,Row row){
     size_t i=std::min<size_t>(offset,total),count=0,scanned=0;

@@ -33,5 +33,10 @@ int main(){
     if(Parse(request("logo/1",key,host),host,key).key!=Key::Logo)return 25;
     if(Parse(request("logo/../file",key,host),host,key).key!=Key::None)return 26;
     if(Parse(request("logo/1","wrong",host),host,key).key!=Key::None)return 27;
+    if(Parse(request("cover/1",key,host),host,key).key!=Key::Cover)return 28;
+    if(Parse(request("cover/../x",key,host),host,key).key!=Key::None)return 29;
+    if(Parse(request("cover/1","wrong",host),host,key).key!=Key::None)return 30;
+    if(GameArtId("game:/a")==GameArtId("game:/b")||GameArtId("game:/a")!=GameArtId("game:/a"))return 31;
+    if(CoverThumbnail("")!="{\"available\":false}")return 32;
     return 0;
 }

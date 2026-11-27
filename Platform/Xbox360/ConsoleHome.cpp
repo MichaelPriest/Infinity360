@@ -1359,12 +1359,20 @@ bool ConsoleHome::RemoteKey(TvRemote::Key command,Key& key){
     }return true;
 }
 std::string ConsoleHome::RemoteCatalog(const TvRemote::Request& request)const{
+    if(request.key==TvRemote::Key::Cover){
+        const Game* found=nullptr;
+        for(const auto& game:games_)if(!game.executable.empty()&&TvRemote::GameArtId(game.executable)==request.query){
+            if(found)return "{\"available\":false}";
+            found=&game;
+        }
+        return found?TvRemote::CoverThumbnail(ArtPath(*found,true)):"{\"available\":false}";
+    }
     if(request.key==TvRemote::Key::Logo)return tv_.RemoteLogo(request.query);
     if(request.key==TvRemote::Key::TvCatalog)return tv_.RemoteCatalog(request.offset,request.query,std::time(nullptr));
     if(request.key!=TvRemote::Key::Games)return "{}";
     return TvRemote::CatalogPage(games_.size(),request.offset,[&](size_t i)->std::string{
         const auto& game=games_[i];if(!TvRemote::Matches(game.name,request.query))return "";
-        return "{\"name\":"+TvRemote::Quote(game.name)+",\"favorite\":"+
+        return "{\"id\":\""+TvRemote::GameArtId(game.executable)+"\",\"name\":"+TvRemote::Quote(game.name)+",\"favorite\":"+
             (std::find(favorites_.begin(),favorites_.end(),game.executable)!=favorites_.end()?"true":"false")+"}";
     });
 }

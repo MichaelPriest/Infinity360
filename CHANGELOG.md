@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.64 — Capas locais e pareamento assistido
+
+- Android Remote 0.7.0 Alpha: capas locais via identificador opaco da biblioteca, miniaturas 20x30 RGBA sob demanda, validação de tamanho, rejeição de ID ambiguo e ausencia de caminhos fornecidos pelo cliente. Identificação de IPv4 privado do celular com seleção em caso de múltiplas interfaces; exportação de cloud360-remote.txt pelo seletor Android com aviso sobre chave em texto simples. QR e descoberta do console ainda pendentes. Testes de protocolo ampliados, APK/XSDK pendentes. Sem XEX/release.
+
 ## V0.3.63 — Abas Android e logotipos locais
 
 - Android Remote 0.6.0 Alpha: quatro abas (Controle, Catalogo, Sistema e Conexao) com status compartilhado e campos preservados. Consulta autenticada por ID de logo IPTV sob demanda, RGBA reduzido a 32x18, sem URL ou caminho fornecido pelo cliente. Imagem ausente ou ID ambiguo retorna indisponivel. Sem downloads externos, sem consultas de arte por quadro. Testes de protocolo ampliados; APK e XSDK pendentes. Sem XEX/release.

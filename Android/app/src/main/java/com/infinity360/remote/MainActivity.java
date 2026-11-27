@@ -95,6 +95,8 @@ public final class MainActivity extends Activity {
         content=screens[3];
         label("Configuração manual de pareamento");
         phoneIp=field("IPv4 do celular na rede Wi-Fi",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+        content.addView(button("Identificar IP do celular",PANEL,()->findLocalIp()),new LinearLayout.LayoutParams(-1,dp(54)));
+        content.addView(button("Exportar arquivo de pareamento",PANEL,()->exportPairing()),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Gerar nova chave",PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,dp(54)));
         content.addView(button("Copiar configuração do Xbox",PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,dp(54)));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
@@ -156,13 +158,17 @@ public final class MainActivity extends Activity {
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(8),0,0);catalogCards.addView(card,lp);
             final String name=item.optString("name"),id=item.optString("id");
             TextView title=text((item.optBoolean("favorite")?"★ ":"")+name,18,TEXT);title.setTypeface(null,Typeface.BOLD);card.addView(title);
+            if(!tv&&id.matches("[1-9][0-9]{0,19}")){
+                ImageView cover=new ImageView(this);cover.setScaleType(ImageView.ScaleType.FIT_CENTER);cover.setVisibility(View.GONE);card.addView(cover,new LinearLayout.LayoutParams(-1,dp(150)));
+                card.addView(button("Carregar capa",PANEL,()->loadArt(id,ip,secret,cover,false)));
+            }
             if(tv){
                 card.addView(text(item.optString("group"),13,MUTED));
                 if(!item.optString("current").isEmpty())card.addView(text("Agora: "+item.optString("current"),14,ACCENT));
                 if(!item.optString("next").isEmpty())card.addView(text("A seguir: "+item.optString("next"),14,MUTED));
                 if(id.matches("[1-9][0-9]{0,19}")){
                     ImageView logo=new ImageView(this);logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setVisibility(View.GONE);card.addView(logo,new LinearLayout.LayoutParams(-1,dp(88)));
-                    Button load=button("Carregar logotipo",PANEL,()->loadLogo(id,ip,secret,logo));card.addView(load);
+                    Button load=button("Carregar logotipo",PANEL,()->loadArt(id,ip,secret,logo,true));card.addView(load);
                 }
                 if(id.matches("[1-9][0-9]{0,19}"))card.addView(button("Assistir no Xbox",ACCENT,()->{
                     if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
@@ -171,22 +177,23 @@ public final class MainActivity extends Activity {
             }
         }
     }
-    private void loadLogo(String id,String ip,String secret,ImageView target){
+    private void loadArt(String id,String ip,String secret,ImageView target,boolean tv){
         if(busy)return;
         if(!consoleIp.getText().toString().trim().equals(ip)||!key.getText().toString().trim().equals(secret)){status.setText("Conexão alterada. Consulte novamente.");return;}
-        busy=true;status.setText("Consultando logotipo local...");
+        busy=true;status.setText("Consultando imagem local...");
         worker.execute(()->{
-            android.graphics.Bitmap bitmap=null;String result="Logotipo local indisponível.";
+            android.graphics.Bitmap bitmap=null;String result="Imagem local indisponível.";
             try{
-                org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.logo(ip,secret,id));
-                if(obj.optBoolean("available")&&obj.getInt("w")==32&&obj.getInt("h")==18){
-                    String raw=obj.getString("rgba");if(raw.length()!=32*18*8||!raw.matches("[a-f0-9]+"))throw new java.io.IOException("Imagem inválida");
-                    int[] pixels=new int[32*18];for(int i=0;i<pixels.length;i++){
+                org.json.JSONObject obj=new org.json.JSONObject(RemoteProtocol.art(ip,secret,id,tv));
+                final int width=tv?32:20,height=tv?18:30;
+                if(obj.optBoolean("available")&&obj.getInt("w")==width&&obj.getInt("h")==height){
+                    String raw=obj.getString("rgba");if(raw.length()!=width*height*8||!raw.matches("[a-f0-9]+"))throw new java.io.IOException("Imagem inválida");
+                    int[] pixels=new int[width*height];for(int i=0;i<pixels.length;i++){
                         int p=i*8;int r=Integer.parseInt(raw.substring(p,p+2),16),g=Integer.parseInt(raw.substring(p+2,p+4),16),b=Integer.parseInt(raw.substring(p+4,p+6),16),a=Integer.parseInt(raw.substring(p+6,p+8),16);
                         pixels[i]=android.graphics.Color.argb(a,r,g,b);}
-                    bitmap=android.graphics.Bitmap.createBitmap(pixels,32,18,android.graphics.Bitmap.Config.ARGB_8888);result="Logotipo recebido.";
+                    bitmap=android.graphics.Bitmap.createBitmap(pixels,width,height,android.graphics.Bitmap.Config.ARGB_8888);result="Imagem recebida.";
                 }
-            }catch(Exception e){result="Falha ao consultar logotipo.";}
+            }catch(Exception e){result="Falha ao consultar imagem.";}
             final android.graphics.Bitmap image=bitmap;final String message=result;
             runOnUiThread(()->{if(isDestroyed())return;busy=false;if(image!=null&&target.isAttachedToWindow()){target.setImageBitmap(image);target.setVisibility(View.VISIBLE);}status.setText(message);});
         });
@@ -202,6 +209,42 @@ public final class MainActivity extends Activity {
             final String message=result;final boolean success=ok;
             runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");});
         });
+    }
+    private static final int EXPORT_PAIRING=301;
+    private void findLocalIp(){
+        java.util.ArrayList<String> addresses=new java.util.ArrayList<>();
+        try{
+            java.util.Enumeration<java.net.NetworkInterface> interfaces=java.net.NetworkInterface.getNetworkInterfaces();
+            while(interfaces!=null&&interfaces.hasMoreElements()){
+                java.net.NetworkInterface network=interfaces.nextElement();if(!network.isUp()||network.isLoopback())continue;
+                java.util.Enumeration<java.net.InetAddress> ips=network.getInetAddresses();
+                while(ips.hasMoreElements()){String address=ips.nextElement().getHostAddress();if(RemoteProtocol.privateIp(address)&&!addresses.contains(address))addresses.add(address);}
+            }
+        }catch(Exception e){status.setText("Não foi possível consultar o IP local.");return;}
+        if(addresses.isEmpty()){status.setText("Nenhum IPv4 privado disponível. Confira o Wi-Fi.");return;}
+        if(addresses.size()==1){phoneIp.setText(addresses.get(0));status.setText("IP identificado. Confira se corresponde à rede do Xbox.");return;}
+        String[] options=addresses.toArray(new String[0]);
+        new AlertDialog.Builder(this).setTitle("Selecione o IP da rede do Xbox").setItems(options,(d,w)->phoneIp.setText(options[w])).show();
+    }
+    private void exportPairing(){
+        if(!RemoteProtocol.privateIp(phoneIp.getText().toString().trim())||!RemoteProtocol.validKey(key.getText().toString().trim())){status.setText("Informe o IP do celular e gere a chave.");return;}
+        new AlertDialog.Builder(this).setTitle("Exportar chave de pareamento?")
+            .setMessage("O arquivo contém a chave em texto simples. Salve em armazenamento confiável e remova a cópia após transferir ao Xbox.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Exportar",(d,w)->{
+                android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);intent.setType("text/plain");intent.putExtra(android.content.Intent.EXTRA_TITLE,"cloud360-remote.txt");
+                try{startActivityForResult(intent,EXPORT_PAIRING);}catch(Exception e){status.setText("Seletor de arquivos indisponível.");}
+            }).show();
+    }
+    @Override protected void onActivityResult(int request,int result,android.content.Intent data){
+        super.onActivityResult(request,result,data);
+        if(request!=EXPORT_PAIRING||result!=RESULT_OK||data==null||data.getData()==null)return;
+        String phone=phoneIp.getText().toString().trim(),secret=key.getText().toString().trim();
+        if(!RemoteProtocol.privateIp(phone)||!RemoteProtocol.validKey(secret)){status.setText("Pareamento alterado; exporte novamente.");return;}
+        try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData(),"wt")){
+            if(out==null)throw new java.io.IOException("Arquivo indisponível");
+            out.write((phone+"\n"+secret+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));status.setText("Arquivo exportado. Transfira para a pasta de dados do Xbox.");
+        }catch(Exception e){status.setText("Falha ao salvar arquivo de pareamento.");}
     }
     private void copyConfig(){
         String phone=phoneIp.getText().toString().trim(),secret=key.getText().toString().trim();
