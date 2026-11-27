@@ -140,6 +140,9 @@ public:
     void ToggleTvPlayingFavorite(){tv_.TogglePlayingFavorite();}
     void FinishTvPlayback(){tv_.FinishPlayback();}
     bool CanZapTv()const{return tv_.CanZap();}
+    std::vector<TvChannelChoice> TvChannelChoices()const{return tv_.ChannelChoices();}
+    std::string ChooseTvChannel(size_t row){return TransferRunning()?std::string{}:tv_.ChooseChannel(row);}
+    std::vector<unsigned char> PlayingTvLogo()const{return tv_.PlayingLogo();}
     std::string ZapTv(int direction){return TransferRunning()?std::string{}:tv_.Zap(direction);}
     bool Tick();
     void StopFtp() {ftp_.Stop();}

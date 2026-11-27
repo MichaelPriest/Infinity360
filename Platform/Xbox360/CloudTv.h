@@ -17,6 +17,9 @@ public:
     TvPlaybackInfo PlayingInfo(int64_t now)const;
     void TogglePlayingFavorite();
     void FinishPlayback();
+    std::vector<TvChannelChoice> ChannelChoices()const;
+    std::string ChooseChannel(size_t row);
+    std::vector<unsigned char> PlayingLogo()const;
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
@@ -33,7 +36,7 @@ private:
     std::vector<uint64_t> history_;
     void LoadHistory();
     size_t row_,episodeRow_,season_,detail_;
-    size_t lastLive_=static_cast<size_t>(-1);
+    size_t lastLive_=static_cast<size_t>(-1),activeLive_=static_cast<size_t>(-1);
     TvCategory tab_;
     View view_,behindDetails_,behindEpisodes_;
     int guideOffset_,letter_;

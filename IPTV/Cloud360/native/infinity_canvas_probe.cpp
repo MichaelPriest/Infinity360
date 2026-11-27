@@ -365,7 +365,7 @@ int main(){
                     std::string next;
                     std::function<bool(int)> zap;
                     if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
-                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();}):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();},[&](int64_t now){return menu.PlayingTvInfo(now);},[&](){menu.ToggleTvPlayingFavorite();},[&](){return menu.TvChannelChoices();},[&](size_t row){next=menu.ChooseTvChannel(row);return !next.empty();},menu.PlayingTvLogo()):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());

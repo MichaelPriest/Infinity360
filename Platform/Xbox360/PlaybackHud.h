@@ -16,15 +16,20 @@ public:
     void Reveal(int64_t now){until_=now+4000000;}
     void Toggle(int64_t now){pinned_=!pinned_;until_=pinned_?now+4000000:now;}
     bool Visible(int64_t now,bool paused)const{return pinned_||paused||now<until_;}
-    bool Draw(HomeCanvas& c,int64_t now,bool paused,const std::string& title,const std::string& state,const std::string& commands,int percent=-1,const std::string& details={})const{
+    bool Draw(HomeCanvas& c,int64_t now,bool paused,const std::string& title,const std::string& state,const std::string& commands,int percent=-1,const std::string& details={},int programmePercent=-1,const std::vector<unsigned char>* logo=nullptr,const std::string& startHint="START Controles")const{
         if(!c.RestoreBottom(Rows,bottom_))return false;
         if(!Visible(now,paused))return true;
         const unsigned white=0xfff2f7f3u,muted=0xffc3d2c9u,accent=0xffa8ff00u;
         c.Translucent(30,608,1220,102,0xff0d2118u,210,10);
-        c.TextFit(48,616,title,24,white,480);c.TextFit(542,619,state,18,muted,686);
+        const bool art=logo&&logo->size()==128u*72u*4u&&c.AvatarFrame(*logo,128,72,48,612,64,36);
+        c.TextFit(art?120:48,616,title,24,white,art?408:480);c.TextFit(542,619,state,18,muted,686);
         if(!details.empty())c.TextFit(48,647,details,17,muted,1180);
         else if(percent>=0){c.Box(48,650,1180,6,0xff4c5e54u,3);const int fill=1180*std::min(100,percent)/100;if(fill)c.Box(48,650,fill,6,accent,3);}
-        InfinityButtons::Strip(c,48,675,commands+" | START Controles | L3 Guia",18,white,1180);
+        if(programmePercent>=0&&!details.empty()){
+            c.Box(48,667,1180,3,0xff4c5e54u,1);
+            const int fill=1180*std::min(100,programmePercent)/100;if(fill)c.Box(48,667,fill,3,accent,1);
+        }
+        InfinityButtons::Strip(c,48,675,commands+" | "+startHint+" | L3 Guia",18,white,1180);
         return true;
     }
 };

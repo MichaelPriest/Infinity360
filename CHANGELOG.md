@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.53 — Seletor de canais, logos e progresso EPG
+
+- START abre seletor de canais live em janela limitada de ate 129 linhas da lista filtrada, cima/baixo navega, A confirma e START fecha; Guide fecha o seletor. Confirma somente destinos autorizados por movieTarget. HUD mostra nome/grupo do candidato, barra de progresso do programa baseada no XMLTV e logo RGBA local carregado uma vez por canal, sem downloads ou framebuffer adicional. Ultimo canal passa a ser registrado apos reproducao A/V, nao mera selecao; refiltro de favoritos/historico apos sair evita detalhes obsoletos. Testes de cursor incluidos; execucao XSDK e capturas pendentes. Sem XEX/release.
+
 ## V0.3.52 — EPG e favoritos durante reproducao
 
 - HUD do player FFmpeg live mostra nome do canal, marcador de favorito, programa atual e proximo (XMLTV local, atualizacao por segundo, sem consulta externa). A alterna favorito durante reproducao, exceto quando Guide ou menu de qualidade captura os controles; baixo alterna diagnostico. Lista de favoritos/historico permanece estavel durante zapping e e refiltrada ao sair. Sem programacao exibe fallback, sem inventar horarios. Reutiliza faixa translucida; escrita de favoritos permanece sincrona. Testes e XSDK pendentes; sem XEX/release.

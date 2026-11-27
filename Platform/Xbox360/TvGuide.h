@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <cstddef>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -7,7 +8,10 @@
 struct TvPlaybackInfo {
     std::string channel,programme,next;
     bool favorite=false;
+    int progress=-1;
+    std::string group;
 };
+struct TvChannelChoice { size_t row; std::string name,group; bool current; };
 struct TvProgramme {
     int64_t start, stop;
     std::string title;

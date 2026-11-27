@@ -137,7 +137,7 @@ bool CloudTv::Load(const std::string& source) {
     if(source.empty() || !catalog_.Load(dir_+source)) {
         notice_="Não foi possível abrir a lista. Confira o dispositivo e as fontes.";return false;
     }
-    lastLive_=static_cast<size_t>(-1);
+    lastLive_=activeLive_=static_cast<size_t>(-1);
     source_=source; const size_t dot=source.find_last_of('.');
     const std::string paired=source.substr(0,dot)+".xml";
     const TvGuide::Status state=guide_.Load(dir_+(fileExists(dir_+paired)?paired:"guide.xml"));
@@ -179,6 +179,7 @@ void CloudTv::LoadHistory(){
 }
 void CloudTv::RecordPlayed(){
     if(view_!=Details||detail_>=Count())return;
+    if(catalog_.Items()[detail_].category==TvLive&&activeLive_!=detail_){lastLive_=activeLive_;activeLive_=detail_;}
     const uint64_t id=catalog_.Items()[detail_].id;
     if(!id||(!history_.empty()&&history_.front()==id))return;
     history_.erase(std::remove(history_.begin(),history_.end(),id),history_.end());
@@ -249,12 +250,16 @@ TvPlaybackInfo CloudTv::PlayingInfo(int64_t now)const{
     if(view_!=Details||detail_>=Count())return info;
     const auto& item=catalog_.Items()[detail_];
     if(item.category!=TvLive)return info;
-    info.channel=item.name;
+    info.channel=item.name;info.group=item.group;
     info.favorite=cloud_favorite_has_id(&favorites_,item.id)!=0;
     const auto& schedule=guide_.For(item.channel,item.name);
     const auto* current=TvGuide::Current(schedule,now);
     const auto* next=TvGuide::Next(schedule,now);
     info.programme=current?current->title:"Sem programacao atual";
+    if(current&&current->stop>current->start&&now>=current->start&&now<current->stop){
+        const double fraction=double(now-current->start)/double(current->stop-current->start);
+        info.progress=std::max(0,std::min(100,int(fraction*100.0)));
+    }
     if(next)info.next=localTime(next->start)+" "+next->title;
     return info;
 }
@@ -267,6 +272,7 @@ void CloudTv::FinishPlayback(){
     if(view_==Details){
         const auto it=std::find(rows_.begin(),rows_.end(),detail_);
         if(it!=rows_.end())row_=static_cast<size_t>(it-rows_.begin());
+        else if(behindDetails_!=Episodes)view_=Browse;
     }
 }
 std::string CloudTv::TakeMovie() {std::string path;path.swap(pending_);return path;}
@@ -297,7 +303,46 @@ std::string CloudTv::Zap(int direction){
         }
     }
     if(path.empty())return "";
-    lastLive_=detail_;detail_=rows_[selected];row_=selected;return path;
+    detail_=rows_[selected];row_=selected;return path;
+}
+std::vector<TvChannelChoice> CloudTv::ChannelChoices()const{
+    std::vector<TvChannelChoice> choices;
+    if(!CanZap())return choices;
+    const auto& items=catalog_.Items();
+    const size_t current=static_cast<size_t>(std::find(rows_.begin(),rows_.end(),detail_)-rows_.begin());
+    // Bounded window around the current channel. Never copy source URLs.
+    const size_t begin=current>64?current-64:0,end=std::min(rows_.size(),current+65);
+    for(size_t i=begin;i<end;++i){
+        const auto& item=items[rows_[i]];
+        MediaUrl url;if(item.category!=TvLive||!url.Parse(item.uri))continue;
+        const auto target=url.target.substr(0,url.target.find('?'));
+        if(!(tvEndsWith(target,".ts")||tvEndsWith(target,".m3u8")||tvEndsWith(target,".mp4")||!url.NeedsConverter()))continue;
+        choices.push_back({i,item.name,item.group,rows_[i]==detail_});
+    }
+    return choices;
+}
+std::string CloudTv::ChooseChannel(size_t row){
+    if(!CanZap()||row>=rows_.size()||rows_[row]==detail_)return "";
+    const auto& item=catalog_.Items()[rows_[row]];
+    if(item.category!=TvLive)return "";
+    const auto path=movieTarget(dir_+source_,item.uri,dir_);
+    MediaUrl url;if(!url.Parse(path))return "";
+    detail_=rows_[row];row_=row;return path;
+}
+std::vector<unsigned char> CloudTv::PlayingLogo()const{
+    if(view_!=Details||detail_>=Count()||catalog_.Items()[detail_].category!=TvLive)return {};
+    const std::string slash=dir_.find('\\')!=std::string::npos?"\\":"/";
+    const auto dot=source_.find_last_of('.');
+    const auto file=countText(detail_)+".rgba";
+    auto read=[&](const std::string& path){
+        std::vector<unsigned char> rgba(128*72*4);
+        std::ifstream in(path.c_str(),std::ios::binary);
+        if(!in.read(reinterpret_cast<char*>(rgba.data()),rgba.size())||in.peek()!=std::char_traits<char>::eof())rgba.clear();
+        return rgba;
+    };
+    auto rgba=read(dir_+source_.substr(0,dot)+".logos"+slash+file);
+    if(rgba.empty()&&tvLower(source_)=="playlist.m3u")rgba=read(dir_+"logos"+slash+file);
+    return rgba;
 }
 bool CloudTv::Press(MenuKey key) {
     notice_.clear();

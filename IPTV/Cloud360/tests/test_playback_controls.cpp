@@ -38,5 +38,11 @@ int main(){
     if(!menu.Open({400000,800000},current)||menu.Confirm(current))return 21;
     if(!menu.Open({400000,800000},current))return 22;
     menu.Move(-1);menu.Move(-1);if(menu.Choice()!=0||!menu.Confirm(current)||current)return 23;
+    CloudChannelCursor channels;
+    if(channels.Open(1,0)||channels.Open(3,3)||channels.Active())return 24;
+    if(!channels.Open(3,1)||channels.Index()!=1)return 25;
+    channels.Move(1);channels.Move(1);if(channels.Index()!=2)return 26;
+    channels.Move(-1);channels.Move(-1);channels.Move(-1);if(channels.Index()!=0)return 27;
+    channels.Close();channels.Move(1);if(channels.Active()||channels.Index())return 28;
     return 0;
 }

@@ -79,3 +79,22 @@ private:
     std::size_t index_=0;
     bool active_=false;
 };
+
+ // Index-only cursor for a bounded channel window. No URLs or decoder state.
+class CloudChannelCursor {
+public:
+    bool Open(std::size_t count,std::size_t current){
+        Close();if(count<2||current>=count)return false;
+        count_=count;index_=current;return true;
+    }
+    void Close(){count_=index_=0;}
+    bool Active()const{return count_>0;}
+    std::size_t Index()const{return index_;}
+    void Move(int delta){
+        if(!Active())return;
+        if(delta<0&&index_)--index_;
+        if(delta>0&&index_+1<count_)++index_;
+    }
+private:
+    std::size_t count_=0,index_=0;
+};
