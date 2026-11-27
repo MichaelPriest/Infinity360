@@ -9,7 +9,7 @@
 #include <cstdint>
 
 namespace CloudHls {
-constexpr size_t MaxPlaylist=128*1024,MaxSegments=4096,MaxSegment=32*1024*1024;
+constexpr size_t MaxPlaylist=128*1024,MaxSegments=4096,MaxSegment=32*1024*1024,MaxBufferedSegment=2*1024*1024;
 struct Variant {std::string url;unsigned bandwidth=0,width=0,height=0;bool compatible=true;};
 struct List {std::vector<Variant> variants;std::vector<std::string> segments;bool ended=false,hasSequence=false;uint64_t sequence=0;unsigned target=0;};
 inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
@@ -134,7 +134,7 @@ inline bool Parse(const std::string& base,const std::string& text,List& result,b
             if(line!="#EXT-X-KEY:METHOD=NONE")return false;
         }else if(line[0]=='#'){
             // These tags describe presentation/time, not segment decoding.
-            if(line.compare(0,24,"#EXT-X-PROGRAM-DATE-TIME:")==0||line.compare(0,13,"#EXT-X-START:")==0)continue;
+            if(line.compare(0,25,"#EXT-X-PROGRAM-DATE-TIME:")==0||line.compare(0,13,"#EXT-X-START:")==0)continue;
             if(line.compare(0,7,"#EXT-X-")==0&&
                line.compare(0,15,"#EXT-X-VERSION:")!=0&&
                line.compare(0,22,"#EXT-X-TARGETDURATION:")!=0&&
@@ -192,6 +192,9 @@ public:
         list_=std::move(list);valid_=true;return true;
     }
     unsigned SelectedBitrate()const{return selectedBitrate_;}
+    // Optional atomic delivery for short TS segments; larger segments are rejected in this mode.
+    bool EnableBufferedSegments(){if(started_)return false;buffered_=true;return true;}
+    unsigned RecoveredSegments()const{return recovered_;}
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
         unsigned refreshes=0,attempts=0;
@@ -206,6 +209,13 @@ public:
                 continue;
             }
             if(next_<list_.sequence)return Fail();
+            if(buffered_){
+                if(segment_.empty()&&!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)]))return Fail();
+                const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
+                std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
+                if(segmentOffset_==segment_.size()){segment_.clear();segmentOffset_=0;++next_;}
+                return static_cast<int>(n);
+            }
             if(!reader_){
                 reader_=open_(list_.segments[static_cast<size_t>(next_-list_.sequence)],false);
                 bytes_=0;
@@ -226,6 +236,29 @@ public:
         }
     }
 private:
+    bool BufferSegment(const std::string& url){
+        unsigned char block[8192];
+        for(unsigned attempt=0;attempt<3;++attempt){
+            if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
+            segment_.clear();segmentOffset_=0;
+            auto reader=open_(url,false);if(!reader)continue;
+            for(;;){
+                const int n=reader->Read(block,sizeof block);
+                if(n<0)break;
+                if(n==0){
+                    if(!segment_.empty()&&segment_.size()%188==0){
+                        if(attempt)++recovered_;return true;
+                    }
+                    break;
+                }
+                if(n>static_cast<int>(sizeof block)||static_cast<size_t>(n)>MaxBufferedSegment-segment_.size()){
+                    segment_.clear();return false;
+                }
+                segment_.insert(segment_.end(),block,block+n);
+            }
+        }
+        segment_.clear();return false;
+    }
     bool Accept(List& updated){
         if(!updated.variants.empty()||updated.segments.empty()||!updated.hasSequence||
            updated.sequence<list_.sequence||updated.sequence>next_||
@@ -252,6 +285,7 @@ private:
     Open open_;Wait wait_;std::unique_ptr<Reader> reader_;
     std::string playlist_;List list_;
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
-    bool started_=false,failed_=false,valid_=false,allowLive_=false;
+    bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;
+    std::vector<unsigned char> segment_;size_t segmentOffset_=0;unsigned recovered_=0;
 };
 }

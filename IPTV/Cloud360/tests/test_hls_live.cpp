@@ -58,6 +58,20 @@ int main(){
     if(stop.Start(base,2000000,true)||cancelled!=1)return 1;
     const auto dated="#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:10\n#EXT-X-PROGRAM-DATE-TIME:2026-11-26T20:00:00Z\n#EXTINF:2,\na.ts\n";
     if(!Parse(base,dated,l,true)||l.segments.size()!=1)return 1;
+    unsigned segmentAttempts=0;
+    VodReader<Reader> buffered([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+        if(playlist)return std::make_unique<Reader>(Reader{Playlist(1,{"a"},true)});
+        if(++segmentAttempts==1)return std::make_unique<Reader>(Reader{std::string(97,'x'),0,true});
+        return std::make_unique<Reader>(Reader{std::string(188,'y')});
+    },[](unsigned){return true;});
+    if(!buffered.EnableBufferedSegments()||!buffered.Start(base,2000000,true))return 1;
+    std::string recovered;
+    for(;;){const int n=buffered.Read(block,sizeof block);if(n<0)return 1;if(!n)break;recovered.append(reinterpret_cast<char*>(block),n);}
+    if(recovered!=std::string(188,'y')||buffered.RecoveredSegments()!=1||segmentAttempts!=2)return 1;
+    VodReader<Reader> oversized([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+        return std::make_unique<Reader>(Reader{playlist?Playlist(1,{"a"},true):std::string(MaxBufferedSegment+188,'z')});
+    },[](unsigned){return true;});
+    if(!oversized.EnableBufferedSegments()||!oversized.Start(base,2000000,true)||oversized.Read(block,sizeof block)>=0)return 1;
     std::puts("live sequence, retry, overlap, stale window and partial failure passed");
     return 0;
 }

@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.90 — Recuperação HLS com buffer limitado
+
+- Modo opcional de entrega atômica de segmentos TS de até 2 MiB, com retentativa antes de entregar bytes ao decoder; fluxo anterior preservado por padrão. Não habilitado no presenter nesta revisão.
+- Corrige reconhecimento de PROGRAM-DATE-TIME; regressões específicas de recuperação e limite de memória.
+- CI Cloud360/FFmpeg independente passa a rodar em alterações relevantes da main; sem XEX.
+
 ## V0.2.89 — Recuperação inicial HLS
 
 - Até três tentativas de abertura do manifesto inicial com espera cancelável de 250/500 ms; sem repetir segmentos parcialmente entregues.
