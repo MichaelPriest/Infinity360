@@ -83,6 +83,7 @@ inline std::string Play(const std::string& path,const std::string& root,HomeCanv
             if(quality){char raw[32]{};quality.getline(raw,sizeof raw);std::string value=raw;
                 if(!value.empty()&&value.back()=='\r')value.pop_back();
                 if(quality.fail()||quality.peek()!=std::char_traits<char>::eof()||!CloudHls::BitrateCap(value,cap))return "Limite HLS invalido (100000 a 4000000 bps).";}
+            hls.EnableBufferedSegments(true);
             if(!hls.Start(path,cap,true))return "Playlist HLS recusada ou indisponivel.";
             selectedBitrate=hls.SelectedBitrate();
             session=cloud_container_open_ts([](void* u,uint8_t* b,unsigned n){return static_cast<CloudHls::VodReader<XsdkMpeg::RemoteReader>*>(u)->Read(b,n);},&hls,CloudAvStreamQueue::Capture,&timeline);

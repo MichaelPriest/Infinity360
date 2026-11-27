@@ -1,4 +1,4 @@
-# Status V0.2.90
+# Status V0.2.91
 
 Último XEX compilado: V0.2.77 (XSDK e FFmpeg). Último gate portátil confirmado: V0.2.87. A V0.2.88 não foi compilada em XDK nem Xbox físico.
 
@@ -19,3 +19,5 @@ Próximo marco: P0.1 IPTV e FFmpeg, com validação das fontes, reprodução e e
 V0.2.89: retentativa do manifesto HLS inicial e tolerância a tags informativas. Recuperação após segmento parcial, ABR e MP4 remoto continuam pendentes.
 
 V0.2.90: buffer de segmentos HLS opcional no core, ainda não habilitado no console. CI específico Cloud360/FFmpeg acionado automaticamente.
+
+V0.2.91: recuperação HLS habilitada no código do presenter XSDK, limite de 2 MiB e fallback de streaming para segmentos grandes. Segmento grande interrompido após entrega continua terminal. CI V0.2.90 geral e Cloud360 aprovados; V0.2.91 aguarda testes.

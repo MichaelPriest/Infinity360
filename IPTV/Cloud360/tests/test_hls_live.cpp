@@ -72,6 +72,20 @@ int main(){
         return std::make_unique<Reader>(Reader{playlist?Playlist(1,{"a"},true):std::string(MaxBufferedSegment+188,'z')});
     },[](unsigned){return true;});
     if(!oversized.EnableBufferedSegments()||!oversized.Start(base,2000000,true)||oversized.Read(block,sizeof block)>=0)return 1;
+    // Large segment fallback must reopen before exposing any buffered bytes.
+    unsigned largeOpens=0;
+    const size_t largeSize=(MaxBufferedSegment/188+1)*188;
+    VodReader<Reader> large([&](const std::string&,bool playlist)->std::unique_ptr<Reader>{
+        if(playlist)return std::make_unique<Reader>(Reader{Playlist(1,{"large","next"},true)});
+        ++largeOpens;
+        return std::make_unique<Reader>(Reader{largeOpens==1?std::string(largeSize,'a'):largeOpens==2?std::string(largeSize,'b'):std::string(188,'c')});
+    },[](unsigned){return true;});
+    if(!large.EnableBufferedSegments(true)||!large.Start(base,2000000,true))return 1;
+    size_t total=0;unsigned char bulk[8192];
+    for(;;){const int n=large.Read(bulk,sizeof bulk);if(n<0)return 1;if(!n)break;
+        for(int i=0;i<n;++i)if(bulk[i]!=(total+size_t(i)<largeSize?'b':'c'))return 1;
+        total+=size_t(n);}
+    if(total!=largeSize+188||largeOpens!=3)return 1;
     std::puts("live sequence, retry, overlap, stale window and partial failure passed");
     return 0;
 }

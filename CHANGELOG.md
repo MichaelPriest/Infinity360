@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.2.91 — Recuperação HLS no player
+
+- Habilita buffer atômico de 2 MiB no player XSDK; segmentos maiores reabrem em streaming antes de qualquer entrega ao decoder, sem duplicação.
+- Recupera modo protegido no segmento seguinte; teste de conteúdo, tamanho e ordem no fallback.
+- Gate portátil geral e Cloud360/FFmpeg da V0.2.90 aprovados. Nova revisão aguarda CI e compilação física.
+
 ## V0.2.90 — Recuperação HLS com buffer limitado
 
 - Modo opcional de entrega atômica de segmentos TS de até 2 MiB, com retentativa antes de entregar bytes ao decoder; fluxo anterior preservado por padrão. Não habilitado no presenter nesta revisão.

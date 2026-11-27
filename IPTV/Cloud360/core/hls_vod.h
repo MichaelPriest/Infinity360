@@ -193,7 +193,7 @@ public:
     }
     unsigned SelectedBitrate()const{return selectedBitrate_;}
     // Optional atomic delivery for short TS segments; larger segments are rejected in this mode.
-    bool EnableBufferedSegments(){if(started_)return false;buffered_=true;return true;}
+    bool EnableBufferedSegments(bool allowLargeStreaming=false){if(started_)return false;buffered_=true;largeStreaming_=allowLargeStreaming;return true;}
     unsigned RecoveredSegments()const{return recovered_;}
     int Read(unsigned char* buffer,unsigned capacity){
         if(failed_||!valid_||!buffer||!capacity)return -1;
@@ -209,8 +209,12 @@ public:
                 continue;
             }
             if(next_<list_.sequence)return Fail();
-            if(buffered_){
-                if(segment_.empty()&&!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)]))return Fail();
+            if(buffered_&&!streamingSegment_){
+                if(segment_.empty()&&!BufferSegment(list_.segments[static_cast<size_t>(next_-list_.sequence)])){
+                    if(!streamingSegment_)return Fail();
+                    // No bytes from this segment have reached the decoder. Reopen in streaming mode.
+                    continue;
+                }
                 const auto n=std::min<size_t>(capacity,segment_.size()-segmentOffset_);
                 std::copy_n(segment_.data()+segmentOffset_,n,buffer);segmentOffset_+=n;
                 if(segmentOffset_==segment_.size()){segment_.clear();segmentOffset_=0;++next_;}
@@ -232,7 +236,7 @@ public:
             if(static_cast<unsigned>(n)>capacity||static_cast<size_t>(n)>MaxSegment-bytes_)return Fail();
             if(n){bytes_+=n;return n;}
             if(!bytes_||bytes_%188)return Fail();
-            reader_.reset();++next_;attempts=0;
+            reader_.reset();++next_;attempts=0;streamingSegment_=false;
         }
     }
 private:
@@ -241,6 +245,7 @@ private:
         for(unsigned attempt=0;attempt<3;++attempt){
             if(attempt&&(!wait_||!wait_(250u*attempt)))return false;
             segment_.clear();segmentOffset_=0;
+            if(segment_.capacity()<MaxBufferedSegment)segment_.reserve(MaxBufferedSegment);
             auto reader=open_(url,false);if(!reader)continue;
             for(;;){
                 const int n=reader->Read(block,sizeof block);
@@ -251,8 +256,11 @@ private:
                     }
                     break;
                 }
-                if(n>static_cast<int>(sizeof block)||static_cast<size_t>(n)>MaxBufferedSegment-segment_.size()){
-                    segment_.clear();return false;
+                if(n>static_cast<int>(sizeof block)){segment_.clear();return false;}
+                if(static_cast<size_t>(n)>MaxBufferedSegment-segment_.size()){
+                    std::vector<unsigned char>().swap(segment_);
+                    if(largeStreaming_)streamingSegment_=true;
+                    return false;
                 }
                 segment_.insert(segment_.end(),block,block+n);
             }
@@ -287,5 +295,6 @@ private:
     uint64_t next_=0;size_t bytes_=0;unsigned selectedBitrate_=0;
     bool started_=false,failed_=false,valid_=false,allowLive_=false,buffered_=false;
     std::vector<unsigned char> segment_;size_t segmentOffset_=0;unsigned recovered_=0;
+    bool largeStreaming_=false,streamingSegment_=false;
 };
 }
