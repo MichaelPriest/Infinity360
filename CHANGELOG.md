@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## Android Remote V0.20.0 Alpha — Home estilo dashboard
+
+- Home com estado da última leitura autenticada, atalhos em grade, superfícies Material 3 grafite/verde-lima, botões preenchidos e contornados, navegação inferior e preferências de aparência. Mantém logo oficial, idiomas e módulos existentes. APK independente; Xbox V0.3.76 inalterado.
+
 ## Android Remote V0.19.0 Alpha — Material 3 e navegação
 
 - Kotlin 2.0.21, Java 17, AndroidX AppCompat e Material Components 1.12.0; barra inferior com cinco destinos e ícones, controles e diálogos Material 3.

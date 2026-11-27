@@ -74,7 +74,7 @@ Na pasta de dados IPTV, crie `cloud360-remote.txt` com duas linhas: IPv4 privado
 
 ### Aplicativo Android INFINITY 360 Remote
 
-Projeto nativo: [Android/](Android/README.md). Interface Android SDK Material, tema claro/escuro e logo oficial INFINITY 360. Remote V0.19.0 Alpha (código), Material 3, Kotlin/Java e navegação inferior; idiomas PT/EN/ES parcialmente localizados. APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla a dashboard e o player IPTV por rede local, consulta biblioteca e loja, solicita downloads no Xbox e transfere arquivos por FTP; não reproduz conteúdo no telefone. A release unificada inclui o APK de teste somente após compilação e validação bem-sucedidas.
+Projeto nativo: [Android/](Android/README.md). Interface Android SDK Material, tema claro/escuro e logo oficial INFINITY 360. Remote V0.20.0 Alpha (código), Material 3, Kotlin/Java e navegação inferior; idiomas PT/EN/ES parcialmente localizados. APK de teste: [GitHub Actions — Android Remote](https://github.com/MichaelPriest/Infinity360/actions/workflows/android-remote.yml), artefato `infinity360-remote-debug` quando a compilação concluir com sucesso. O aplicativo controla a dashboard e o player IPTV por rede local, consulta biblioteca e loja, solicita downloads no Xbox e transfere arquivos por FTP; não reproduz conteúdo no telefone. A release unificada inclui o APK de teste somente após compilação e validação bem-sucedidas.
 
 ### FTP Android
 

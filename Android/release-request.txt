@@ -1,2 +1,2 @@
-Remote 0.19.0-alpha
-Android-only: Material 3, bottom navigation, Kotlin, AppCompat and locale resources; locale selection dialog corrected.
+Remote 0.20.0-alpha
+Android-only: dashboard-inspired graphite Home, quick access, authenticated indicators and appearance settings.

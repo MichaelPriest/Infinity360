@@ -57,4 +57,16 @@
     <string name="ftp_cancel">Cancelar transferencia</string>
     <string name="ftp_back">Volver a Remote</string>
     <string name="cancel">Cancelar</string>
+    <string name="nav_home">Inicio</string>
+    <string name="home_last_verified">Última consulta autenticada</string>
+    <string name="home_ready">Emparejamiento indicado · verificar</string>
+    <string name="home_not_paired">Consola no verificada</string>
+    <string name="home_no_ip">Sin dirección configurada</string>
+    <string name="home_shortcuts">Acceso rápido</string>
+    <string name="home_iptv">Cloud360 IPTV</string>
+    <string name="home_library">Biblioteca</string>
+    <string name="home_downloads">Descargas</string>
+    <string name="home_theme">Apariencia</string>
+    <string name="theme_dark">Grafito Xbox</string>
+    <string name="theme_light">Claro</string>
 </resources>

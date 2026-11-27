@@ -1,4 +1,4 @@
-# INFINITY 360 Remote — Android 0.19.0 Alpha
+# INFINITY 360 Remote — Android 0.20.0 Alpha
 
 Controle remoto nativo do Cloud360 IPTV via Wi-Fi local. Android 6.0 ou superior. Não reproduz vídeos no celular.
 
@@ -96,3 +96,7 @@ Tema Material do Android SDK, claro/escuro conforme configuração do sistema. C
 ## Material 3 e idiomas
 
 Remote 0.19 usa Kotlin 2.0.21, Java 17, AndroidX AppCompat e Material Components 1.12.0, com navegação inferior de cinco seções, ícones vetoriais, botões Material, diálogos Material e tema DayNight. Idioma em Conexão > Preferências; português, inglês e espanhol para navegação, campos e principais ações. Mensagens de diagnóstico, FTP dinâmico e confirmações técnicas ainda podem aparecer em português. A troca de idioma recria a Activity; a chave não é persistida. Sem plugins externos carregados em execução; dependências são fixadas no Gradle. A logo oficial permanece. Validação visual em aparelho pendente.
+
+## Home inspirada na dashboard
+
+Tema Grafite Xbox padrão, verde-lima, cards Material 3, logo oficial, menu inferior Início/Controle/Catálogo/Loja/Sistema e atalhos para IPTV, biblioteca, FTP e downloads. Conexão permanece acessível no cabeçalho. A Home mostra somente indicadores consultados de forma autenticada, nunca simula conexão. Aparência em Conexão > Preferências: padrão do sistema, grafite ou claro. Mudança de tema recria a interface e pode exigir a chave novamente. Capturas Android e teste em aparelho ainda pendentes.

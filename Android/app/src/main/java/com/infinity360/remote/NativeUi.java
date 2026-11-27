@@ -8,6 +8,9 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.widget.*;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import android.graphics.drawable.GradientDrawable;
+import android.content.res.ColorStateList;
 import com.google.android.material.textfield.TextInputEditText;
 
 final class NativeUi {
@@ -26,12 +29,26 @@ final class NativeUi {
         t.setText(value);t.setTextSize(sp);return t;
     }
     static Button button(Context c,String value,Runnable action){
-        Button b=new MaterialButton(c);b.setText(value);b.setAllCaps(false);b.setMinHeight(dp(c,48));b.setOnClickListener(v->action.run());return b;
+        return button(c,value,NORMAL,action);
+    }
+    static Button button(Context c,String value,int role,Runnable action){
+        MaterialButton b=new MaterialButton(c,null,role==EMPHASIS?com.google.android.material.R.attr.materialButtonStyle:com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        b.setCornerRadius(dp(c,12));b.setText(value);b.setAllCaps(false);b.setMinHeight(dp(c,48));b.setOnClickListener(v->action.run());return b;
+    }
+    static int themeColor(Context c,int attribute){
+        TypedValue v=new TypedValue();if(!c.getTheme().resolveAttribute(attribute,v,true))return Color.GRAY;
+        return v.resourceId!=0?c.getColor(v.resourceId):v.data;
+    }
+    static MaterialCardView card(Context c){
+        MaterialCardView card=new MaterialCardView(c);card.setRadius(dp(c,12));card.setCardElevation(0);card.setStrokeWidth(dp(c,1));
+        card.setStrokeColor(themeColor(c,com.google.android.material.R.attr.colorOutline));
+        card.setCardBackgroundColor(ColorStateList.valueOf(themeColor(c,com.google.android.material.R.attr.colorSurface)));return card;
     }
     static EditText field(Context c,String hint,int type){
         EditText e=new TextInputEditText(c);e.setSingleLine(true);e.setInputType(type);e.setHint(hint);e.setSaveEnabled(false);e.setMinHeight(dp(c,48));return e;
     }
     static void brand(Context c,LinearLayout parent,String subtitle){
+        parent.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{themeColor(c,android.R.attr.colorBackground),themeColor(c,com.google.android.material.R.attr.colorSurface)}));
         ImageView logo=new ImageView(c);logo.setImageResource(R.drawable.infinity_official_logo);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setBackgroundColor(Color.rgb(16,28,22));
         logo.setPadding(dp(c,16),dp(c,8),dp(c,16),dp(c,8));logo.setContentDescription("INFINITY 360");

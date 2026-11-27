@@ -35,7 +35,10 @@ public final class MainActivity extends AppCompatActivity {
     private int catalogNext=-1;
     private String activeQuery="";
     private LinearLayout content;
-    private final LinearLayout[] screens=new LinearLayout[5];
+    private final LinearLayout[] screens=new LinearLayout[6];
+    private TextView homeConsole,homeMetrics;
+    private boolean metricReady=false;
+    private String metricHost="",metricKey="";
     private BottomNavigationView navigation;
     private ScrollView scroll;
     private int activeScreen=0;
@@ -56,6 +59,7 @@ public final class MainActivity extends AppCompatActivity {
         activeScreen=index;
         for(int i=0;i<screens.length;i++)if(screens[i]!=null)screens[i].setVisibility(i==index?View.VISIBLE:View.GONE);
         RemoteNavigation.select(navigation,index);
+        if(index==5)updateHomeConsole();
         if(scroll!=null)scroll.smoothScrollTo(0,0);
         updateDownloadPolling();
     }
@@ -66,13 +70,16 @@ public final class MainActivity extends AppCompatActivity {
     private TextView text(String s,int size,int role){return NativeUi.text(this,s,size,role);}
     private void label(String s){TextView v=text(s,14,MUTED);v.setPadding(0,dp(12),0,dp(4));content.addView(v);}
     private EditText field(String hint,int type){EditText v=NativeUi.field(this,hint,type);content.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;}
-    private Button button(String label,int role,Runnable action){return NativeUi.button(this,label,action);}
+    private Button button(String label,int role,Runnable action){return NativeUi.button(this,label,role,action);}
     private void row(String[] labels,String[] commands){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);for(int i=0;i<labels.length;i++){final String cmd=commands[i];View b=cmd==null?new View(this):button(labels[i],cmd.equals("accept")?ACCENT:PANEL,()->send(cmd));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);}content.addView(row);}
     @Override public void onCreate(Bundle saved){
+        RemoteNavigation.applyTheme(this);
         super.onCreate(saved);
         LinearLayout outer=new LinearLayout(this);outer.setOrientation(LinearLayout.VERTICAL);
         setContentView(outer);NativeUi.insets(outer);
         NativeUi.brand(this,outer,getString(R.string.remote_title));
+        Button connection=NativeUi.button(this,getString(R.string.nav_connection),PANEL,()->showScreen(3));
+        outer.addView(connection,new LinearLayout.LayoutParams(-1,-2));
         navigation=RemoteNavigation.create(this);
         scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         outer.addView(navigation,new LinearLayout.LayoutParams(-1,-2));
@@ -86,11 +93,7 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.verify_connection),PANEL,()->send("status")),new LinearLayout.LayoutParams(-1,-2));
         content=screen(root,2);
         label(getString(R.string.files_ftp));
-        content.addView(button(getString(R.string.ftp_title),ACCENT,()->{
-            if(busy)return;
-            android.content.Intent intent=new android.content.Intent(this,FtpActivity.class);
-            intent.putExtra("console_ip",consoleIp.getText().toString().trim());startActivity(intent);
-        }),new LinearLayout.LayoutParams(-1,-2));
+        content.addView(button(getString(R.string.ftp_title),ACCENT,this::openFtp),new LinearLayout.LayoutParams(-1,-2));
         label(getString(R.string.monitor));
         monitor=text(getString(R.string.no_readings),15,TEXT);monitor.setPadding(dp(14),dp(14),dp(14),dp(14));content.addView(monitor);
         content.addView(button(getString(R.string.query_metrics),PANEL,()->refreshMonitor()),new LinearLayout.LayoutParams(-1,-2));
@@ -136,6 +139,7 @@ public final class MainActivity extends AppCompatActivity {
         Button exit=button("Encerrar reprodução",PANEL,()->new MaterialAlertDialogBuilder(this).setTitle("Encerrar IPTV?").setMessage("A reprodução no Xbox será encerrada.").setNegativeButton(getString(R.string.cancel),null).setPositiveButton("Encerrar",(d,w)->send("back")).show());content.addView(exit,new LinearLayout.LayoutParams(-1,-2));
         content=screens[3];
         label(getString(R.string.preferences_title));
+        content.addView(button(getString(R.string.home_theme),PANEL,()->{if(!busy)new MaterialAlertDialogBuilder(this).setTitle(R.string.home_theme).setItems(new String[]{getString(R.string.system_default),getString(R.string.theme_dark),getString(R.string.theme_light)},(d,w)->RemoteNavigation.theme(this,w)).show();}));
         content.addView(text(getString(R.string.language_note),13,MUTED));
         content.addView(button(getString(R.string.language),PANEL,()->{
             if(busy)return;
@@ -150,8 +154,52 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(button(getString(R.string.new_key),PANEL,()->{key.setText(RemoteProtocol.newKey());status.setText("Nova chave gerada. Copie a configuração para o console.");}),new LinearLayout.LayoutParams(-1,-2));
         content.addView(button(getString(R.string.copy_config),PANEL,()->copyConfig()),new LinearLayout.LayoutParams(-1,-2));
         TextView note=text("Salve as duas linhas em cloud360-remote.txt na pasta de dados do Xbox. Para navegar na dashboard, crie enable-dashboard-remote.txt com ENABLE-DASHBOARD-REMOTE e reinicie a dashboard. HTTP local sem criptografia: use somente Wi-Fi confiável. A chave fica apenas na memória do aplicativo.",13,MUTED);note.setPadding(0,dp(12),0,0);content.addView(note);
-        content=root;showScreen(consoleIp.getText().toString().isEmpty()?3:0);
+        content=screen(root,5);buildHome();
+        content=root;showScreen(5);
         navigation.setOnItemSelectedListener(item->{int index=RemoteNavigation.index(item.getItemId());if(index<0)return false;if(index!=activeScreen)showScreen(index);return true;});
+    }
+    private void openFtp(){
+        if(busy)return;
+        android.content.Intent intent=new android.content.Intent(this,FtpActivity.class);
+        intent.putExtra("console_ip",consoleIp.getText().toString().trim());startActivity(intent);
+    }
+    private void updateHomeConsole(){
+        if(homeConsole==null)return;
+        String ip=consoleIp.getText().toString().trim();
+        boolean valid=RemoteProtocol.privateIp(ip)&&RemoteProtocol.validKey(key.getText().toString().trim());
+        boolean verified=valid&&metricReady&&ip.equals(metricHost)&&key.getText().toString().trim().equals(metricKey);
+        homeConsole.setText((verified?getString(R.string.home_last_verified):getString(valid?R.string.home_ready:R.string.home_not_paired))+"\n"+(ip.isEmpty()?getString(R.string.home_no_ip):ip));
+        if(!verified&&homeMetrics!=null)homeMetrics.setText(getString(R.string.no_readings));
+    }
+    private void homeTile(LinearLayout row,int icon,int title,Runnable action){
+        com.google.android.material.card.MaterialCardView card=NativeUi.card(this);
+        LinearLayout inside=new LinearLayout(this);inside.setOrientation(LinearLayout.VERTICAL);inside.setPadding(dp(14),dp(16),dp(14),dp(12));
+        ImageView image=new ImageView(this);image.setImageResource(icon);image.setColorFilter(NativeUi.themeColor(this,com.google.android.material.R.attr.colorPrimary));image.setContentDescription(null);
+        inside.addView(image,new LinearLayout.LayoutParams(dp(32),dp(32)));
+        TextView name=text(getString(title),16,TEXT);name.setPadding(0,dp(10),0,0);inside.addView(name);
+        card.addView(inside);card.setClickable(true);card.setFocusable(true);card.setContentDescription(getString(title));card.setOnClickListener(v->action.run());
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);lp.setMargins(dp(4),dp(4),dp(4),dp(4));row.addView(card,lp);
+    }
+    private void buildHome(){
+        TextView heading=text(getString(R.string.nav_home),28,TEXT);heading.setTypeface(null,Typeface.BOLD);content.addView(heading);
+        com.google.android.material.card.MaterialCardView device=NativeUi.card(this);
+        LinearLayout inside=new LinearLayout(this);inside.setOrientation(LinearLayout.VERTICAL);inside.setPadding(dp(16),dp(16),dp(16),dp(16));
+        inside.addView(text("Xbox 360",23,TEXT));homeConsole=text("",14,ACCENT);inside.addView(homeConsole);
+        homeMetrics=text(getString(R.string.no_readings),14,MUTED);homeMetrics.setPadding(0,dp(10),0,dp(8));inside.addView(homeMetrics);
+        inside.addView(button(getString(R.string.query_metrics),ACCENT,()->{
+            if(!RemoteProtocol.privateIp(consoleIp.getText().toString().trim())||!RemoteProtocol.validKey(key.getText().toString().trim())){showScreen(3);return;}
+            refreshMonitor();
+        }));device.addView(inside);content.addView(device,new LinearLayout.LayoutParams(-1,-2));
+        label(getString(R.string.home_shortcuts));
+        LinearLayout row1=new LinearLayout(this),row2=new LinearLayout(this),row3=new LinearLayout(this);
+        homeTile(row1,R.drawable.nav_control,R.string.nav_control,()->showScreen(0));
+        homeTile(row1,R.drawable.nav_tv,R.string.home_iptv,()->{showScreen(1);loadCatalog(true,true);});
+        homeTile(row2,R.drawable.nav_catalog,R.string.home_library,()->{showScreen(1);loadCatalog(false,true);});
+        homeTile(row2,R.drawable.nav_store,R.string.nav_store,()->showScreen(4));
+        homeTile(row3,R.drawable.nav_folder,R.string.ftp_title,this::openFtp);
+        homeTile(row3,R.drawable.nav_download,R.string.home_downloads,()->{showScreen(2);refreshDownloads();});
+        content.addView(row1);content.addView(row2);content.addView(row3);
+        updateHomeConsole();
     }
     private String size(org.json.JSONObject data,String name)throws org.json.JSONException{
         if(data.isNull(name))return "Indisponível";
@@ -433,7 +481,7 @@ public final class MainActivity extends AppCompatActivity {
             try{result=formatSnapshot(RemoteProtocol.snapshot(ip,secret));ok=true;}
             catch(Exception e){result="Não foi possível obter uma leitura autenticada. Confira a conexão e a versão da dashboard.";ok=false;}
             final String message=result;final boolean success=ok;
-            runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");});
+            runOnUiThread(()->{if(isDestroyed())return;busy=false;monitor.setText(message);status.setText(success?"Leitura recebida.":"Consulta indisponível.");metricReady=success;metricHost=ip;metricKey=secret;updateHomeConsole();if(success&&ip.equals(consoleIp.getText().toString().trim())&&secret.equals(key.getText().toString().trim())&&homeMetrics!=null)homeMetrics.setText(message);});
         });
     }
     private static final int EXPORT_PAIRING=301;
