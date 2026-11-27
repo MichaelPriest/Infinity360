@@ -1,6 +1,7 @@
 #pragma once
 #include "av_timeline.h"
 #include <deque>
+#include "audio_rate.h"
 
 // Single-threaded bounded local playback. Read ahead by packet, not whole file.
 // Fail closed if an input has excessive interleave skew, discontinuous audio,
@@ -32,14 +33,18 @@ public:
             lastVideo_=pts;haveVideo_=true;used_+=bytes;video_.push_back(std::move(v));
         }else{
             // Native sink is 48 kHz and submits complete 256-sample frames.
-            if(f->sample_rate!=48000||f->nb_samples<1||f->nb_samples>8192||
+            if(!CloudAudioRate::Supported(f->sample_rate)||f->nb_samples<1||f->nb_samples>8192||
                 audio_.size()>=256)return false;
             if(haveAudio_&&(pts<lastAudio_||pts-audioEnd_>5000||audioEnd_-pts>5000))return false;
-            size_t n=static_cast<size_t>(f->nb_samples)*2,bytes=n*sizeof(float);
-            if(bytes>MaxBytes-used_)return false;
-            Audio a{pts,static_cast<unsigned>(f->nb_samples),{}};
-            a.pcm.resize(n);
-            if(cloud_frame_stereo(f,a.pcm.data(),n))return false;
+            const size_t n=static_cast<size_t>(f->nb_samples)*2;
+            std::vector<float> source(n);
+            if(cloud_frame_stereo(f,source.data(),n))return false;
+            Audio a{pts,0,{}};
+            if(!rate_.Convert(source,static_cast<unsigned>(f->sample_rate),a.pcm))return false;
+            a.samples=static_cast<unsigned>(a.pcm.size()/2);
+            const size_t bytes=a.pcm.size()*sizeof(float);
+            if(!a.samples||bytes>MaxBytes-used_)return false;
+            // Source PTS remains authoritative; converted samples retain fractional phase.
             lastAudio_=pts;audioEnd_=pts+int64_t(a.samples)*1000000/48000;
             haveAudio_=true;used_+=bytes;audio_.push_back(std::move(a));
         }
@@ -109,6 +114,7 @@ public:
     size_t Peak()const{return peak_;}
     size_t Dropped()const{return dropped_;}
 private:
+    CloudAudioRate rate_;
     std::deque<Video> video_;
     std::deque<Audio> audio_;
     float pcm_[512]{};

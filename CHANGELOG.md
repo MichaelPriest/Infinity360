@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.0 — Conversão de frequência de áudio
+
+- Fila audiovisual incremental aceita 32/44,1/48 kHz, converte para 48 kHz com interpolação linear causal e fase persistente entre frames, sem biblioteca adicional.
+- Testes de contagem de amostras, continuidade, reset e fixture MP4 44,1 kHz; conversão multicanal e filtragem avançada permanecem pendentes.
+- CI V0.2.99 aprovado. Nova revisão aguarda CI e homologação XSDK. Sem XEX.
+
 ## V0.2.99 — Áudio MP3 e AC3 em vídeo
 
 - Amplia allowlist de áudio do decoder audiovisual para AAC, MP3 e AC3; conversão estéreo de FLT/S16/S32 em formatos planares ou intercalados.

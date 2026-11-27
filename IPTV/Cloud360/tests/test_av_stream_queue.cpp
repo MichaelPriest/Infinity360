@@ -1,7 +1,8 @@
 #include "av_stream_queue.h"
 #include <cstdio>
 int main(int argc,char** argv){
-    if(argc!=2)return 2;
+    if(argc!=2&&argc!=3)return 2;
+    const unsigned sourceRate=argc==3?44100:48000;
     static_assert(CloudAvStreamQueue::MaxDuration==21600000000LL,"six hour timeline");
     static_assert(CloudAvStreamQueue::MaxBytes==32u*1024u*1024u,"unchanged memory ceiling");
     CloudAvStreamQueue queue;
@@ -25,7 +26,7 @@ int main(int argc,char** argv){
     }
     const auto report=*cloud_container_report(s);
     ok=ok&&queue.Finished(elapsed)&&elapsed>8000000&&report.video_frames==shown+queue.Dropped()&&
-        report.audio_samples==samples&&queue.Bytes()==0&&queue.Peak()<4*1024*1024;
+        (report.audio_samples*48000/sourceRate==samples||report.audio_samples*48000/sourceRate+1==samples)&&queue.Bytes()==0&&queue.Peak()<4*1024*1024;
     std::printf("shown=%u dropped=%zu samples=%llu peak=%zu elapsed=%lld\n",shown,queue.Dropped(),
         (unsigned long long)samples,queue.Peak(),(long long)elapsed);
     cloud_container_close(s);return ok?0:1;
