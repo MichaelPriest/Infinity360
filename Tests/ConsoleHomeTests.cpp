@@ -1,6 +1,7 @@
 #include "WeatherJson.h"
 #include "ConsoleHome.h"
 #include "PlaybackHud.h"
+#include "DashboardMotion.h"
 #include "LaunchStatistics.h"
 #include "DashboardLayout.h"
 #include "ApprovedHome.h"
@@ -1708,6 +1709,18 @@ int main(int argc,char** argv) {
         assert(ClockWeather::ParseReading(R"({"utc_offset_seconds":0,"current":{"temperature_2m":24.2,"weather_code":2,"is_day":1,"time":1704067200},"daily":{"time":[1704078000],"temperature_2m_min":[29],"temperature_2m_max":[18],"weather_code":[2],"precipitation_probability_max":[80]}})",1,wx)&&wx.dayCount==0);
         assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":null,"weather_code":2,"is_day":1,"time":1704067200}})",1,wx));
         assert(!ClockWeather::ParseReading(R"({"current":{"temperature_2m":20,"weather_code":999,"is_day":1,"time":1704067200}})",1,wx));
+    }
+    {
+        DashboardMotion motion;
+        motion.Observe(100,1,false,true);assert(!motion.Sample(100,true).redraw);
+        motion.Observe(110,2,true,true);const auto start=motion.Sample(110,true);
+        assert(start.redraw&&start.focus==0&&start.scene==0);
+        const auto mid=motion.Sample(200,true);assert(mid.focus>0&&mid.focus<100&&mid.scene>0&&mid.scene<100);
+        assert(motion.Sample(260,true).focus==100);assert(motion.Sample(330,true).scene==100);
+        assert(!motion.Sample(331,true).redraw);
+        motion.Observe(340,3,true,true);assert(motion.Sample(340,false).focus==100);
+        assert(!motion.Sample(341,false).redraw);
+        motion.Observe(350,4,true,true);assert(motion.Sample(349,true).scene==100);
     }
     // Appearance: invalid profile values leave the old preferences intact.
     {

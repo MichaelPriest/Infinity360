@@ -6,6 +6,7 @@
 #include "TvCatalog.h"
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
+#include "DashboardMotion.h"
 #include "NativeSocialUiXsdk.h"
 #include "NativeProfilePrivilegesXsdk.h"
 #include "NativeAvatarProbeXsdk.h"
@@ -260,7 +261,7 @@ int main(){
         INPUT_GAMEPAD_START,INPUT_GAMEPAD_BACK};
     uint16_t previous=0;
     bool ok=true,dirty=true,systemExit=false;
-    unsigned focusFrames=0;
+    DashboardMotion motion;
     FileWorkspace captureWorkspace(dir);
     IdleScreen idleScreen;
     InfinitySocial::XsdkSocialListener socialListener(dir);
@@ -284,10 +285,11 @@ int main(){
         const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
         const bool capture=!systemUiOpen&&(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
         if(capture)edge=0;
-        if(!systemUiOpen&&pendingLaunch.empty()&&(edge&INPUT_GAMEPAD_LEFT_THUMB)){
-            menu.Press(ConsoleHome::GlobalGuide);edge=0;dirty=true;focusFrames=3;
+        const bool guideEdge=!systemUiOpen&&pendingLaunch.empty()&&(edge&INPUT_GAMEPAD_LEFT_THUMB);
+        if(guideEdge){
+            menu.Press(ConsoleHome::GlobalGuide);edge=0;dirty=true;
         }
-        if(edge)focusFrames=3;
+        bool uiInput=guideEdge;for(const auto key:keys)if(edge&key)uiInput=true;
         // BACK opens contextual options; R3 alone is not a command.
         if(!pendingLaunch.empty()){
             if(edge&INPUT_GAMEPAD_B){pendingLaunch.clear();launchNotice="Lancamento cancelado.";dirty=true;}
@@ -743,10 +745,12 @@ int main(){
         if(socialListener.Poll(menu.SocialHeader(),TransferRate::Now(),pendingLaunch.empty()&&!menu.TransferRunning(),
             [&](const char* label){menu.NativeSocialSignal(label);}))dirty=true;
         if(p.safeArea!=menu.SafeArea()){p.safeArea=menu.SafeArea();dirty=true;}
-        if(!menu.AnimationsEnabled())focusFrames=0;
-        if(focusFrames&& !idleScreen.Active()){
-            canvas.SetFocusAnimation((4-focusFrames)*100/3);--focusFrames;dirty=true;
-        }else canvas.SetFocusAnimation(100);
+        const auto motionNow=TransferRate::Now();
+        const bool animate=menu.AnimationsEnabled()&&!idleScreen.Active();
+        motion.Observe(motionNow,menu.VisualScene(),uiInput,animate);
+        const auto animation=motion.Sample(motionNow,animate);
+        canvas.SetFocusAnimation(animation.focus);canvas.SetSceneAnimation(animation.scene);
+        if(animation.redraw||uiInput)dirty=true;
         if(dirty&&idleScreen.Active())IdleScreen::Draw(canvas,idleScreen.Step());
         else if(dirty){
             menu.Draw(canvas,clock.empty()?"--:--":clock);

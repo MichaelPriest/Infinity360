@@ -4681,6 +4681,22 @@ void ConsoleHome::DrawContext(HomeCanvas& c)const{
     }
     InfinityButtons::Strip(c,352,top+height-45,"A Selecionar | B Fechar | BACK Fechar",19,White,576);
 }
+uint64_t ConsoleHome::VisualScene()const{
+    // Exclude row/focus indices: moving a selection should not restart a page transition.
+    uint64_t key=uint64_t(page_)*16+uint64_t(section_);
+    auto flag=[&](bool value){key=(key<<1)|unsigned(value);};
+    flag(quickGuideOpen_);flag(contextOpen_);flag(approvedGroup_>=0);
+    flag(friendGuideOpen_);flag(communicationGuideOpen_);flag(privilegeGuideOpen_);flag(avatarGuideOpen_);
+    flag(storeActive_);flag(storeDetails_);flag(storeProviders_);flag(storeManage_);
+    flag(appearanceEditor_);flag(layoutPreview_);flag(libraryPathsPage_);
+    flag(luaPage_);flag(luaRepoPage_);flag(contentActive_);flag(contentInstallActive_);
+    flag(artEditing_);flag(searchActive_);flag(collectionPicker_);flag(fileAction_);
+    flag(networkPeer_);flag(peerEditing_);flag(peerOptions_);flag(smbPage_);flag(smbEditing_);
+    flag(thermalPage_);flag(coolingPage_);flag(achievementsPage_);flag(saveCenter_);
+    flag(discSetActive_);flag(updateActive_);flag(powerPage_);
+    key=(key<<4)|unsigned(page_==Home?0:section_==System?systemTab_:subtab_)&15u;
+    return key;
+}
 void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const {
     if(artDirty_) {c.ClearLocalArt();artDirty_=false;}
     if(wallpaperDirty_){c.ClearWallpaper();wallpaperDirty_=false;}
@@ -4690,6 +4706,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     const bool approved=ApprovedHeader()&&!weatherPanel_;
     c.SeriesBackground();
     DrawApprovedHeader(c,approved&&focus_==ApprovedHome::Weather);
+    c.SceneAccent();
     const int64_t stamp=now<0?static_cast<int64_t>(std::time(nullptr)):now;
     c.SeriesTile(1046,12,206,52,false);
     c.TextFit(1058,18,clockSettings_.offset==ClockWeather::Auto?clock:ClockLabel(stamp),26,White,97);
@@ -5219,7 +5236,7 @@ const SettingRow SettingsRows[]={
     {StMargin,"Margem segura da tela","Ajuste a margem para TVs com overscan; aplicada ao salvar."},
     {StIdle,"Protetor de tela","Tempo de inatividade antes de ativar o protetor."},
     {StGlass,"Transparencia dos paineis","Ajuste o vidro em toda a dashboard."},
-    {StAnimation,"Animacoes de foco","Desative para reduzir movimento e redesenhos."},
+    {StAnimation,"Animacoes de foco","Foco suave, entrada de paginas e escurecimento gradual dos menus."},
     {StStorage,"Armazenamento","Abra a central de discos e espaco livre."},
     {StNetwork,"Rede e FTP","Abra os ajustes e diagnosticos de rede existentes."},
     {StPlugins,"Plugins e scripts Lua","Abra a central de extensoes; BACK > Scripts Lua."},

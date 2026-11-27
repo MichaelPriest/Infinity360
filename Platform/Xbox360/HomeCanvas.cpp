@@ -476,14 +476,21 @@ void HomeCanvas::SeriesTile(int x,int y,int w,int h,bool focused,unsigned opacit
     }
     if(focused){Translucent(x+3,y+3,w-6,h-6,0xff448a18u,24+(appearance_.animations?focusAnimation_:100)*26/100,8);SeriesFocus(x,y,w,h);}
 }
+void HomeCanvas::SceneAccent(){
+    if(!appearance_.animations||sceneAnimation_>=100)return;
+    const int width=24+int(sceneAnimation_)*12;
+    Translucent(28,79,std::min(1224,width),2,0xffa8ff00u,(100-sceneAnimation_)*170/100);
+}
 void HomeCanvas::DimBackdrop(){
     // Bounded three-sample horizontal softening, in place, no additional full-size buffer.
+    const unsigned target=appearance_.glass==AppearanceSettings::OpaqueGlass?165:appearance_.glass==AppearanceSettings::DenseGlass?105:appearance_.glass==AppearanceSettings::LightGlass?48:72;
+    const unsigned strength=appearance_.animations?target*(40+sceneAnimation_*60/100)/100:target;
     for(int y=0;y<Height;++y){
         unsigned prev=frame_[y*Width];
         for(int x=0;x<Width;++x){
             const unsigned current=frame_[y*Width+x];
             const unsigned next=frame_[y*Width+std::min(x+1,int(Width)-1)];
-            frame_[y*Width+x]=blend(0xff040e08u,blend(current,blend(prev,next,128),128),appearance_.glass==AppearanceSettings::OpaqueGlass?165:appearance_.glass==AppearanceSettings::DenseGlass?105:appearance_.glass==AppearanceSettings::LightGlass?48:72);
+            frame_[y*Width+x]=blend(0xff040e08u,blend(current,blend(prev,next,128),128),strength);
             prev=current;
         }
     }

@@ -39,6 +39,8 @@ public:
     void DimBackdrop();
     void SeriesTile(int x,int y,int w,int h,bool focused=false,unsigned opacity=204);
     void SetFocusAnimation(unsigned percent){focusAnimation_=percent>100?100:percent;}
+    void SetSceneAnimation(unsigned percent){sceneAnimation_=percent>100?100:percent;}
+    void SceneAccent();
     void TextFit(int x,int y,const std::string& text,int size,unsigned color,int maxWidth);
     void Translucent(int x,int y,int w,int h,unsigned color,unsigned opacity,int radius=0);
     void Shade(int x,int y,int w,int h,unsigned color,unsigned leftAlpha,unsigned rightAlpha);
@@ -62,7 +64,7 @@ private:
     };
     std::vector<ArtEntry> localArt_;
     std::vector<unsigned> frame_, art_;
-    unsigned theme_=0,language_=0,focusAnimation_=100;
+    unsigned theme_=0,language_=0,focusAnimation_=100,sceneAnimation_=100;
     AppearanceSettings appearance_;
     std::string wallpaperPath_;
     bool wallpaperTried_=false;

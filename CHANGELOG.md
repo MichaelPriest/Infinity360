@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.35 — Animações temporizadas e transições leves
+
+- Substitui a animação de três quadros por interpolação baseada no tempo: foco em 150 ms, entrada de página em 220 ms, linha de destaque e escurecimento gradual dos modais. Sem buffer de tela adicional; respeita a desativação das animações e não redesenha continuamente após a transição.
+- Integra ambos os presenters e mantém R3 sem ação individual. Testes portáteis de duração, finalização, desativação e relógio regressivo. Galeria de 113 capturas solicitada novamente. Sem XEX/release.
+
 ## V0.3.34 — Refinamento da composição translúcida
 
 - Painéis de agrupamento mais leves para evitar escurecimento cumulativo nos cards internos de configurações, biblioteca, conteúdo, arquivos, notificações, Lua, loja e IPTV. Cabeçalho, navegação e rodapé respeitam a preferência de vidro e a paleta; divisores não usam mais cinza sólido.
