@@ -1,5 +1,6 @@
 #pragma once
 #include "StorePackage.h"
+#include "Modules/Scripts/LuaRepository.h"
 #include "UnityCatalog.h"
 #include "ClockWeather.h"
 #include <functional>
@@ -9,6 +10,9 @@ std::string XsdkDownload(const StoreItem& item,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
 
 // Fetch a bounded, explicitly pinned remote catalog; never download its items automatically.
+std::string XsdkLuaDownload(const InfinityLuaRepo::Entry& entry,const std::string& root,
+    const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
+
 std::string XsdkSyncProvider(const StoreProvider& provider,const std::string& root,
     const std::function<bool(unsigned long long,unsigned long long)>& progress,bool& success);
 

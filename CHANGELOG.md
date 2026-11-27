@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.17 — Download HTTPS de scripts Lua
+
+- Catálogo V2 admite URL HTTPS opcional por script; V1 segue aceito. A instalação confirmada prefere fonte local verificada e, se ausente/inválida, solicita download nativo com TLS, host permitido, limite de 64 KiB, tamanho exato e SHA-256 antes da gravação. Nenhum overwrite ou execução automática.
+- URLs iniciais fixadas ao commit V0.3.16; raw.githubusercontent.com na allowlist padrão. Status do repositório em cache evita hashing a cada frame. Testes de integridade e URL, CI portátil e Cloud360 V0.3.16 aprovados. Sincronização de novos catálogos remotos permanece pendente. Sem solicitação XEX.
+
 ## V0.3.16 — Repositório local de scripts
 
 - START no gerenciador Lua abre catálogo local com três scripts próprios. Instalação e remoção confirmadas pelo controle; SHA-256 e tamanho validados, arquivos personalizados preservados. Catálogo limitado, sem execução automática. Reutiliza StoreSha256 e SavedFile.

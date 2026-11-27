@@ -34,3 +34,5 @@ Compatibilidade inicial: filtros Aurora de um callback em GameListFilterCategori
 V0.3.15: GameListSubtitles aceita um callback simples com campos suportados; em Sorts, esquerda/direita escolhem crescente/decrescente antes de A aplicar.
 
 START em Scripts Lua abre o repositório local. A instala e X remove com confirmação; Y relê o catálogo. Inclui três scripts próprios; valida tamanho e SHA-256 e não sobrescreve alterações locais. Sincronização remota pendente.
+
+V0.3.17: catálogo V2 permite baixar fontes HTTPS ausentes ou inválidas por entrada confirmada. Reutiliza HTTPS da Store (host exato, TLS, CA e tamanho/SHA-256). Não sobrescreve destino existente. Y relê manifesto local; sincronização de novos manifestos pendente.

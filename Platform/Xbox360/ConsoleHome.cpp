@@ -512,11 +512,21 @@ const std::string* ConsoleHome::LuaSubtitleAt(int row)const{
     if(slot>=luaSubtitleLines_.size() || luaSubtitleLines_[slot].empty())return nullptr;
     return &luaSubtitleLines_[slot];
 }
+void ConsoleHome::RefreshLuaRepositoryStatuses(){
+    luaRepoStatuses_.clear();for(const auto& entry:luaRepoEntries_)luaRepoStatuses_.push_back(InfinityLuaRepo::Status(dir_,entry));
+}
+bool ConsoleHome::TakeLuaDownload(InfinityLuaRepo::Entry& entry){
+    if(!luaDownloadPending_)return false;
+    luaDownloadPending_=false;entry=luaDownloadEntry_;return true;
+}
+void ConsoleHome::LuaDownloadResult(const std::string& message,bool success){
+    RefreshLuaRepositoryStatuses();notice_=message;RecordEvent(success?"Script Lua instalado via HTTPS":"Download Lua recusado");
+}
 void ConsoleHome::RefreshLuaRepository(){
     luaRepoConfirm_=false;
     if(!InfinityLuaRepo::Load(dir_,luaRepoEntries_))notice_="Catalogo Lua ausente ou invalido.";
     else notice_.clear();
-    clampRow(luaRepoRow_,luaRepoEntries_.size());
+    clampRow(luaRepoRow_,luaRepoEntries_.size());RefreshLuaRepositoryStatuses();
 }
 void ConsoleHome::PressLuaRepository(Key key){
     if(luaRepoConfirm_){
@@ -524,8 +534,20 @@ void ConsoleHome::PressLuaRepository(Key key){
         if(key!=Accept){notice_="Operacao cancelada.";return;}
         if(TransferRunning()||ftp_.Running()||luaRepoEntries_.empty())return;
         const auto& item=luaRepoEntries_[luaRepoRow_];
-        notice_=luaRepoRemove_?InfinityLuaRepo::Remove(dir_,item):InfinityLuaRepo::Install(dir_,item);
-        return;
+        if(luaRepoRemove_)notice_=InfinityLuaRepo::Remove(dir_,item);
+        else if(fileExists(InfinityLuaRepo::Destination(dir_,item)))notice_="Destino existente; arquivo preservado.";
+        else{
+            std::string data;
+            if(InfinityLuaRepo::ReadVerified(InfinityLuaRepo::Source(dir_,item),item,data))notice_=InfinityLuaRepo::InstallData(dir_,item,data);
+            else if(!item.url.empty()){
+#if defined(__XSDK__) && defined(INFINITY_XSDK_HTTPS)
+                luaDownloadEntry_=item;luaDownloadPending_=true;notice_="Download Lua solicitado.";
+#else
+                notice_="HTTPS nativo indisponivel nesta build.";
+#endif
+            }else notice_="Fonte ausente ou SHA-256 invalido.";
+        }
+        RefreshLuaRepositoryStatuses();return;
     }
     if(key==Back||key==Guide){luaRepoPage_=false;RefreshLuaScripts();notice_.clear();return;}
     if(key==Refresh){RefreshLuaRepository();return;}
@@ -3181,7 +3203,7 @@ bool ConsoleHome::PowerBusy()const{
     if(smbUi_!=SmbClosed)return true;
 #endif
     return TransferRunning()||ftp_.Running()||peerProbe_.Running()||smbProbe_.Running()||
-        nativeStorePending_||nativeBatch_||storeInstallPending_||providerPending_||
+        nativeStorePending_||nativeBatch_||storeInstallPending_||providerPending_||luaDownloadPending_||
         discPending_||discSystemExit_||packageImportPending_||backupPending_||
         recoverPending_||contentInstallPending_||artPending_||coverBatchPending_||
         updatePending_||unityPending_||unityDownloadPending_;
@@ -3258,15 +3280,15 @@ void ConsoleHome::DrawLibraryPaths(HomeCanvas& c)const{
     InfinityButtons::Strip(c,48,605,packagePathsPage_?"LB/RB XEX | A Pastas | X Alternar | Y Varrer | B Voltar":"LB/RB Pacotes | A Pastas | Esq/Dir Nivel | X Alternar | Y Varrer",18,Lime,1170);
 }
 void ConsoleHome::DrawLuaRepository(HomeCanvas& c)const{
-    c.Text(45,93,"Scripts Lua | Repositorio local",36,White,1180);
-    c.Text(48,150,"Catalogo verificado SHA-256 | Instalacao manual",21,Muted,1160);
+    c.Text(45,93,"Scripts Lua | Repositorio",36,White,1180);
+    c.Text(48,150,"Catalogo local/HTTPS | SHA-256 | Instalacao manual",21,Muted,1160);
     const int first=(luaRepoRow_/7)*7;
     for(int i=first;i<first+7&&size_t(i)<luaRepoEntries_.size();++i){
         const auto& item=luaRepoEntries_[i];const int y=190+(i-first)*54;
         panel(c,48,y,1180,49,Panel,i==luaRepoRow_);
         c.TextFit(62,y+4,item.file,21,White,760);
         c.TextFit(62,y+26,item.category,15,Muted,760);
-        const auto status=InfinityLuaRepo::Status(dir_,item);
+        const auto status=static_cast<size_t>(i)<luaRepoStatuses_.size()?luaRepoStatuses_[i]:std::string("Atualize");
         c.TextFit(850,y+10,status,18,Lime,350);
     }
     if(luaRepoEntries_.empty())c.Text(48,245,"Nenhum script no catalogo local.",22,Muted,1170);

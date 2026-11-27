@@ -143,7 +143,11 @@ int main(int argc,char** argv){
         assert(InfinityLuaRepo::Remove(root,entry)=="Script removido.");
         assert(InfinityLuaRepo::Status(root,entry)=="Disponivel");
     }
-    const auto entry=entries[0];assert(InfinityLuaRepo::Install(root,entry)=="Script instalado.");
+    const auto entry=entries[0];assert(!entry.url.empty()&&InfinityLuaRepo::RemoteUrl(entry.url));
+    std::string payload;assert(InfinityLuaRepo::ReadVerified(InfinityLuaRepo::Source(root,entry),entry,payload));
+    assert(InfinityLuaRepo::InstallData(root,entry,payload+"x")!="Script instalado.");
+    auto wrong=payload;wrong[0]=wrong[0]=='x'?'y':'x';assert(InfinityLuaRepo::InstallData(root,entry,wrong)!="Script instalado.");
+    assert(InfinityLuaRepo::InstallData(root,entry,payload)=="Script instalado.");
     std::ofstream(InfinityLuaRepo::Destination(root,entry),std::ios::trunc)<<"custom";
     assert(InfinityLuaRepo::Status(root,entry)=="Local diferente");
     assert(InfinityLuaRepo::Install(root,entry)!="Script instalado.");
@@ -151,6 +155,8 @@ int main(int argc,char** argv){
     fs::remove(InfinityLuaRepo::Destination(root,entry));
     std::ofstream(InfinityLuaRepo::Source(root,entry),std::ios::app)<<"tamper";
     assert(InfinityLuaRepo::Install(root,entry)!="Script instalado.");
+    assert(InfinityLuaRepo::Status(root,entry)=="Online");
+    assert(!InfinityLuaRepo::RemoteUrl("http://example.org/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://user@example.org/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://example.org:8443/a.lua")&&!InfinityLuaRepo::RemoteUrl("https://example.org/a.lua#x"));
     std::ofstream(temp/"Scripts"/"Repository"/"catalog.tsv",std::ios::trunc)<<"INFINITY-LUA-REPO-V1\nFilters\t../bad.lua\t1\t"<<std::string(64,'a')<<"\n";
     assert(!InfinityLuaRepo::Load(root,entries)&&entries.empty());
     fs::remove_all(temp);

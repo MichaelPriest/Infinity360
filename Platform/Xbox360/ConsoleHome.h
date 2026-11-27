@@ -135,6 +135,8 @@ public:
     bool AvatarLaunchBusy()const{return TransferRunning()||ftp_.Running()||peerProbe_.Running();}
     bool TakeNativeStoreRequest(StoreItem& item);
     bool TakeProviderRequest(StoreProvider& provider);
+    bool TakeLuaDownload(InfinityLuaRepo::Entry& entry);
+    void LuaDownloadResult(const std::string& message,bool success);
     bool TakeUnityRequest(XboxExecutionInfo& info);
     bool TakeArtRequest(unsigned& title,bool& cover,bool& remote);
     bool TakeCoverBatch(std::vector<unsigned>& titles);
@@ -336,6 +338,10 @@ private:
     void PressLuaScripts(Key key);
     bool luaRepoPage_=false,luaRepoConfirm_=false,luaRepoRemove_=false;
     int luaRepoRow_=0;
+    bool luaDownloadPending_=false;
+    InfinityLuaRepo::Entry luaDownloadEntry_;
+    std::vector<std::string> luaRepoStatuses_;
+    void RefreshLuaRepositoryStatuses();
     std::vector<InfinityLuaRepo::Entry> luaRepoEntries_;
     void RefreshLuaRepository();
     void PressLuaRepository(Key key);
