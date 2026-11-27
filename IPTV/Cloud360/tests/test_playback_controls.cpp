@@ -27,5 +27,16 @@ int main(){
     C restarted(false);restarted.RestoreAudio(local.Audio());
     if(restarted.Volume()!=10||restarted.Muted()||restarted.Clock(200)!=200)return 12;
     restarted.RestoreAudio(C::AudioPreference{150,true});if(restarted.Volume()!=100||restarted.Gain()!=0)return 13;
+    CloudQualityMenu menu;unsigned current=800000;
+    if(menu.Open({400000},current)||menu.Active())return 14;
+    if(!menu.Open({800000,400000,800000,0},current)||menu.Count()!=3||menu.Choice()!=800000)return 15;
+    menu.Move(1);if(menu.Choice()!=800000)return 16;
+    menu.Move(-1);if(menu.Choice()!=400000||current!=800000)return 17;
+    menu.Close();if(menu.Confirm(current)||current!=800000)return 18;
+    if(!menu.Open({400000,800000},current))return 19;
+    menu.Move(-1);if(!menu.Confirm(current)||current!=400000||menu.Active())return 20;
+    if(!menu.Open({400000,800000},current)||menu.Confirm(current))return 21;
+    if(!menu.Open({400000,800000},current))return 22;
+    menu.Move(-1);menu.Move(-1);if(menu.Choice()!=0||!menu.Confirm(current)||current)return 23;
     return 0;
 }

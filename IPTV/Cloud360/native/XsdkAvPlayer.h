@@ -154,6 +154,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     bool lastHud=true;
     bool liveAudioFailure=false,showDetails=false;
+    CloudQualityMenu qualityMenu;
     CloudContainerInfo mediaInfo{};cloud_container_info(session,&mediaInfo);
     auto overlay=[&](){
         guide.Restore(canvas);
@@ -172,8 +173,12 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(mediaInfo.sample_rate)detailLine+=" | Audio "+std::to_string(mediaInfo.sample_rate)+" Hz";
             detailLine+=" | Quadros descartados "+std::to_string(timeline.Dropped())+" | Pausas leitura "+std::to_string(playbackClock.Stalls());
         }
-        lastHud=hud.Visible(wall(),controls.Paused()||showDetails);
-        hud.Draw(canvas,wall(),controls.Paused()||showDetails,"Cloud360 IPTV | FFmpeg",info+bufferInfo,remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine);
+        if(qualityMenu.Active()){
+            const unsigned choice=qualityMenu.Choice();
+            detailLine="Qualidade: < "+(choice?std::to_string(choice/1000)+" kbps (teto)":std::string("Automatica"))+" >  | "+std::to_string(qualityMenu.Index()+1)+"/"+std::to_string(qualityMenu.Count())+(choice==manualCap?" | Atual":" | A Aplicar");
+        }
+        lastHud=hud.Visible(wall(),controls.Paused()||showDetails||qualityMenu.Active());
+        hud.Draw(canvas,wall(),controls.Paused()||showDetails||qualityMenu.Active(),"Cloud360 IPTV | FFmpeg",info+bufferInfo,qualityMenu.Active()?"Esq/Dir Selecionar | A Aplicar | Y Voltar | B Sair":remoteSource&&duration<=0?("X Mudo | LB/RB Volume | B Sair | Baixo Info"+qualityHint):duration>0?"A Pausa | X Mudo | LB/RB Volume | Esq/Dir 30s | B Sair":"A Pausar/Retomar | X Mudo | LB/RB Volume | B Sair",duration>0?int(100.0*std::min(duration,position())/duration):-1,detailLine);
         guide.Draw(canvas);
     };
     auto video=[&](const CloudAvStreamQueue::Video& v){
@@ -198,26 +203,40 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         const bool guideEdge=(edges&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available();
         const bool wasGuide=guide.Active();if(guideEdge)guide.Toggle();
         bool guideChanged=guideEdge;
+        if(guideEdge&&qualityMenu.Active())qualityMenu.Close();
         if(guide.Active()){
             if(edges&INPUT_GAMEPAD_DPAD_UP){guide.Move(-1);guideChanged=true;}
             if(edges&INPUT_GAMEPAD_DPAD_DOWN){guide.Move(1);guideChanged=true;}
         }
         bool changed=false;
-        if(inputOk&&(guide.Active()||wasGuide||guideEdge))controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
+#ifdef INFINITY_AV_NETWORK
+        const bool wasQuality=qualityMenu.Active();
+        if(inputOk&&!guide.Active()&&!wasGuide&&!guideEdge){
+            if(wasQuality){
+                if(edges&INPUT_GAMEPAD_Y){qualityMenu.Close();changed=true;}
+                else if(edges&INPUT_GAMEPAD_A){
+                    if(qualityMenu.Confirm(manualCap)){
+                        previousBitrate=selectedBitrate;adaptiveCap=0;manualChange=true;retryLive=true;break;
+                    }
+                    changed=true;
+                }else if(edges&(INPUT_GAMEPAD_DPAD_LEFT|INPUT_GAMEPAD_DPAD_RIGHT)){
+                    qualityMenu.Move((edges&INPUT_GAMEPAD_DPAD_LEFT)?-1:1);changed=true;
+                }
+            }else if(qualityAvailable&&(edges&INPUT_GAMEPAD_Y)&&shown&&submitted){
+                changed=qualityMenu.Open(hls.QualityCaps(userHlsCap),manualCap);showDetails=false;
+            }
+        }
+#else
+        const bool wasQuality=false;
+#endif
+        if(inputOk&&(guide.Active()||wasGuide||guideEdge||wasQuality||qualityMenu.Active()))controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
         else if(inputOk){
             changed=controls.Update(ControlKeys(state.gamepad.buttons),wall());
             if(remoteSource&&duration<=0&&(edges&INPUT_GAMEPAD_DPAD_DOWN)){showDetails=!showDetails;hud.Reveal(wall());changed=true;}
             if(edges&INPUT_GAMEPAD_START){showDetails=false;hud.Toggle(wall());changed=true;}
             else if(edges&&ControlKeys(edges))hud.Reveal(wall());
         }
-        if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused()||showDetails)){overlay();if(!present(true)){ok=false;break;}}
-#ifdef INFINITY_AV_NETWORK
-        if(qualityAvailable&&!guide.Active()&&!wasGuide&&!guideEdge&&(edges&INPUT_GAMEPAD_Y)&&shown&&submitted){
-            previousBitrate=selectedBitrate;
-            manualCap=hls.NextQualityCap(manualCap,userHlsCap);
-            adaptiveCap=0;manualChange=true;retryLive=true;break;
-        }
-#endif
+        if(changed||guideChanged||lastHud!=hud.Visible(wall(),controls.Paused()||showDetails||qualityMenu.Active())){overlay();if(!present(true)){ok=false;break;}}
         const int seek=controls.TakeSeek();
         if(seek&&duration>0&&!controls.Paused()){
             const auto target=std::max<int64_t>(0,std::min<int64_t>(duration-1,position()+seek*30000000LL));

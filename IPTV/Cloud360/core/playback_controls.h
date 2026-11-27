@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <cstdint>
+#include <vector>
+#include <cstddef>
 
 // Input edges and pause accounting independent of XSDK. Wall time is
 // monotonic microseconds; pause is available only for local media.
@@ -42,4 +44,38 @@ private:
     unsigned previous_=0;bool local_,paused_=false,muted_=false;
     int volume_=100,seek_=0;
     int64_t pausedAt_=0,pausedTotal_=0;
+};
+
+class CloudQualityMenu {
+public:
+    bool Open(const std::vector<unsigned>& caps,unsigned current){
+        Close();options_.push_back(0);
+        for(auto cap:caps)if(cap)options_.push_back(cap);
+        std::sort(options_.begin(),options_.end());
+        options_.erase(std::unique(options_.begin(),options_.end()),options_.end());
+        if(options_.size()<3){Close();return false;}
+        auto it=std::lower_bound(options_.begin(),options_.end(),current);
+        index_=it!=options_.end()&&*it==current?static_cast<std::size_t>(it-options_.begin()):0;
+        active_=true;return true;
+    }
+    void Close(){active_=false;index_=0;options_.clear();}
+    bool Active()const{return active_;}
+    void Move(int delta){
+        if(!active_)return;
+        if(delta<0&&index_>0)--index_;
+        if(delta>0&&index_+1<options_.size())++index_;
+    }
+    unsigned Choice()const{return active_?options_[index_]:0;}
+    std::size_t Index()const{return index_;}
+    std::size_t Count()const{return options_.size();}
+    bool Confirm(unsigned& current){
+        if(!active_)return false;
+        const unsigned selected=Choice();Close();
+        if(selected==current)return false;
+        current=selected;return true;
+    }
+private:
+    std::vector<unsigned> options_;
+    std::size_t index_=0;
+    bool active_=false;
 };
