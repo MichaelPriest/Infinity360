@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-enum TvCategory { TvAll, TvLive, TvFilm, TvSeries, TvAnime, TvCartoon, TvFavorites, TvSources, TvTabCount };
+enum TvCategory { TvAll, TvLive, TvFilm, TvSeries, TvAnime, TvCartoon, TvFavorites, TvSources, TvHistory, TvTabCount };
 struct TvItem {
     std::string name, group, uri, channel;
     uint64_t id;

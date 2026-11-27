@@ -135,6 +135,7 @@ public:
     std::string Press(Key key);  // Only confirmation on an installed title supplies a launch path.
     void Draw(HomeCanvas& canvas, const std::string& clock, int64_t now=-1) const;
     std::string TakeMovie();
+    void RecordTvPlayed(){tv_.RecordPlayed();}
     bool CanZapTv()const{return tv_.CanZap();}
     std::string ZapTv(int direction){return TransferRunning()?std::string{}:tv_.Zap(direction);}
     bool Tick();

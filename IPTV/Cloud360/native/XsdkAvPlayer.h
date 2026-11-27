@@ -54,7 +54,7 @@ inline unsigned ControlKeys(unsigned buttons){
            ((buttons&INPUT_GAMEPAD_DPAD_RIGHT)?CloudPlaybackControls::Forward:0u);
 }
 inline std::string PlayAttempt(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange){
+                        const std::function<bool(bool)>& present,bool diagnostic,const PlaybackGuideOverlay::DrawCallback& drawGuide,bool& retryLive,unsigned& adaptiveCap,CloudPlaybackControls::AudioPreference& audioPreference,bool allowSwitch,bool allowUpgrade,bool& upgrade,unsigned& previousBitrate,bool& played,unsigned& manualCap,bool allowManual,bool& manualChange,const std::function<bool(int)>& zap,bool& channelChange,const std::function<void()>& onPlaying){
     retryLive=false;upgrade=false;previousBitrate=0;played=false;manualChange=false;channelChange=false;
     if(!Supports(path))return "Formato FFmpeg experimental nao suportado.";
     if(!diagnostic&&!Enabled(root))return "Habilite enable-iptv-playback.txt.";
@@ -167,7 +167,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 #endif
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
     unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
-    bool lastHud=true;
+    bool lastHud=true,reportedPlaying=false;
     bool liveAudioFailure=false,showDetails=false;
     CloudQualityMenu qualityMenu;
     CloudContainerInfo mediaInfo{};cloud_container_info(session,&mediaInfo);
@@ -210,6 +210,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         xsdk_audio_queue_frame();submitted+=count;return true;
     };
     while(ok){
+        if(!reportedPlaying&&shown&&submitted){reportedPlaying=true;if(onPlaying)onPlaying();}
         INPUT_STATE state{};
         const bool inputOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
         if(inputOk&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;break;}
@@ -297,6 +298,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(ok&&shown==before)ok=present(false);
     }
     played=shown&&submitted;
+    if(played&&!reportedPlaying&&onPlaying)onPlaying();
     const auto pumpFailure=timeline.LastPumpFailure();
     liveAudioFailure=pumpFailure==CloudAvStreamQueue::PumpFailure::AudioLate||pumpFailure==CloudAvStreamQueue::PumpFailure::AudioSink;
     xsdk_log_write("Cloud360 AV pump failure=%u",static_cast<unsigned>(pumpFailure));
@@ -330,15 +332,16 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     return ok&&shown&&submitted?"Reproducao encerrada.":"Falha na reproducao FFmpeg.";
 }
 inline std::string Play(const std::string& path,const std::string& root,HomeCanvas& canvas,
-                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={}){
-    std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference audioPreference;
+                        const std::function<bool(bool)>& present,bool diagnostic=false,const PlaybackGuideOverlay::DrawCallback& drawGuide={},const std::function<bool(int)>& zap={},CloudPlaybackControls::AudioPreference* sharedAudio=nullptr,const std::function<void()>& onPlaying={}){
+    std::string result;unsigned adaptiveCap=0;CloudPlaybackControls::AudioPreference localAudio;
+    auto& audioPreference=sharedAudio?*sharedAudio:localAudio;
     unsigned normalRetries=0,rollbackCap=0,manualCap=0,rollbackManual=0,manualChanges=0;bool upgradeUsed=false;
     // Two ordinary retries, one upgrade/rollback, and four user changes with rollback.
     for(unsigned attempt=0;attempt<13;++attempt){
         bool retry=false,upgrade=false,played=false,manualChange=false,channelChange=false;unsigned previousBitrate=0;
         const unsigned oldManual=manualCap;
         result=PlayAttempt(path,root,canvas,present,diagnostic,drawGuide,retry,adaptiveCap,audioPreference,
-            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange,zap,channelChange);
+            normalRetries<2,!upgradeUsed,upgrade,previousBitrate,played,manualCap,manualChanges<4,manualChange,zap,channelChange,onPlaying);
         if(Cancelled()||result=="Reproducao cancelada.")return "Reproducao cancelada.";
         if(channelChange)return result;
         if(rollbackCap&&!played&&!retry){

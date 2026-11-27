@@ -14,7 +14,7 @@
 #include <sstream>
 
 namespace {
-const char* const tabs[]={"Todos","TV ao vivo","Filmes","Séries","Animes","Desenhos","Favoritos","Fontes"};
+const char* const tabs[]={"Todos","TV ao vivo","Filmes","Séries","Animes","Desenhos","Favoritos","Fontes","Histórico"};
 const unsigned Ink=0xffeff6eeu, Soft=0xffb1c8bbu, Lime=0xffa7ed48u, Panel=0xff153127u, Edge=0xff365344u;
 const size_t PageSize=5;
 const char letters[]="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -151,6 +151,7 @@ bool CloudTv::Load(const std::string& source) {
 }
 void CloudTv::Open() {
     row_=0;tab_=TvAll;view_=Browse;pending_.clear();notice_.clear();query_.clear();guideOffset_=0;
+    LoadHistory();
     favorites_.count=0;cloud_favorites_load(&favorites_,savedFile(dir_+"favorites.txt").c_str());
     Discover();
     std::string chosen;std::ifstream in(savedFile(dir_+"cloud360-source.txt").c_str());std::getline(in,chosen);
@@ -167,6 +168,26 @@ void CloudTv::Open() {
     }
     Filter();
 }
+void CloudTv::LoadHistory(){
+    history_.clear();
+    std::ifstream in(savedFile(dir_+"cloud360-history.txt").c_str());
+    char line[32];
+    for(unsigned lines=0;lines<64&&in.getline(line,sizeof line);++lines){
+        std::istringstream row(line);uint64_t id=0;char extra;
+        if(row>>id&&id&&!(row>>extra)&&std::find(history_.begin(),history_.end(),id)==history_.end())history_.push_back(id);
+    }
+}
+void CloudTv::RecordPlayed(){
+    if(view_!=Details||detail_>=Count())return;
+    const uint64_t id=catalog_.Items()[detail_].id;
+    if(!id||(!history_.empty()&&history_.front()==id))return;
+    history_.erase(std::remove(history_.begin(),history_.end(),id),history_.end());
+    history_.insert(history_.begin(),id);if(history_.size()>64)history_.resize(64);
+    const std::string file=dir_+"cloud360-history.txt";
+    std::ofstream out((file+".tmp").c_str());
+    for(auto value:history_)out<<value<<"\n";
+    out.close();if(out)replaceSavedFile(file);
+}
 void CloudTv::Filter() {
     rows_.clear();std::set<std::string> shows;
     const std::vector<TvItem>& items=catalog_.Items();
@@ -174,8 +195,9 @@ void CloudTv::Filter() {
     if(tab_!=TvSources) {
         std::set<uint64_t> marked;
         if(tab_==TvFavorites) marked.insert(favorites_.ids,favorites_.ids+favorites_.count);
+        if(tab_==TvHistory)marked.insert(history_.begin(),history_.end());
         for(size_t i=0;i<items.size();++i) {
-            if(tab_==TvFavorites ? marked.count(items[i].id)==0 : tab_!=TvAll && items[i].category!=tab_) continue;
+            if((tab_==TvFavorites||tab_==TvHistory) ? marked.count(items[i].id)==0 : tab_!=TvAll && items[i].category!=tab_) continue;
             if(!needle.empty() && searchText(items[i].name).find(needle)==std::string::npos &&
                searchText(items[i].group).find(needle)==std::string::npos) continue;
             if(tab_==TvSeries || tab_==TvAnime || tab_==TvCartoon) {
@@ -184,6 +206,7 @@ void CloudTv::Filter() {
             }
             rows_.push_back(i);
         }
+        if(tab_==TvHistory)std::stable_sort(rows_.begin(),rows_.end(),[&](size_t a,size_t b){return std::find(history_.begin(),history_.end(),items[a].id)<std::find(history_.begin(),history_.end(),items[b].id);});
     }
     const size_t count=tab_==TvSources?sources_.size():rows_.size();
     if(row_>=count) row_=count?count-1:0;
@@ -197,7 +220,7 @@ void CloudTv::OpenItem(size_t index) {
             if(other.category==item.category && tvEpisode(other.name,ep) && tvLower(ep.show)==showKey) seasons.insert(ep.season);
         }
         seasons_.assign(seasons.begin(),seasons.end());season_=0;episodeRow_=0;behindEpisodes_=view_;
-        const bool specific=tab_==TvAll || tab_==TvFavorites || !query_.empty();
+        const bool specific=tab_==TvAll || tab_==TvFavorites || tab_==TvHistory || !query_.empty();
         if(specific && tvEpisode(item.name,ep))
             season_=std::find(seasons_.begin(),seasons_.end(),ep.season)-seasons_.begin();
         view_=Episodes;CollectEpisodes();
@@ -345,14 +368,14 @@ void CloudTv::DrawArt(HomeCanvas& c,size_t index,int x,int y,int w,int h) const 
 void CloudTv::DrawList(HomeCanvas& c,int64_t now) const {
     const bool picking=tab_==TvSources;
     c.Text(44,76,picking?c.Tr("Fontes de conteúdo"):tab_==TvAll?"Cloud360 IPTV":tab_==TvLive?c.Tr("TV ao vivo"):
-           tab_==TvFavorites?"Favoritos":"Cinema",40,Ink,750);
+           tab_==TvFavorites?"Favoritos":tab_==TvHistory?"Histórico":"Cinema",40,Ink,750);
     const size_t total=picking?sources_.size():rows_.size();
     if(!query_.empty() && !picking) c.Text(723,98,"Busca  "+query_,17,Lime,215);
     c.Text(944,98,countText(total)+(picking?" listas":" itens"),19,Soft,280);
     for(int i=0;i<TvTabCount;++i) {
-        const int x=45+i*150;
-        tile(c,x,146,143,42,i==tab_);
-        c.Text(x+12,152,c.Tr(tabs[i]),19,i==tab_?Ink:Soft,122);
+        const int x=45+i*132;
+        tile(c,x,146,125,42,i==tab_);
+        c.TextFit(x+8,152,c.Tr(tabs[i]),18,i==tab_?Ink:Soft,109);
     }
     if(!total) {
         c.Text(58,250,picking?c.Tr("Nenhuma lista encontrada."):c.Tr("Nenhum item nesta seção."),26,Soft,1130);
@@ -515,9 +538,9 @@ void CloudTv::DrawModernList(HomeCanvas& c,int64_t now) const {
     InfinityIcons::Draw(c,3,46,91,32,Ink);c.TextFit(91,76,"Cloud360 IPTV",38,Ink,695);
     c.TextFit(830,94,countText(total)+" "+c.Tr(picking?"listas":"itens"),20,Lime,400);
     c.GroupGlass(45,141,264,447);
-    const int icons[]={2,3,52,53,54,54,21,48};
+    const int icons[]={2,3,52,53,54,54,21,48,3};
     for(int i=0;i<TvTabCount;++i){
-        const int y=151+i*53;tile(c,54,y,246,47,i==tab_);
+        const int y=151+i*48;tile(c,54,y,246,42,i==tab_);
         InfinityIcons::Draw(c,icons[i],65,y+11,24,i==tab_?Lime:Ink);
         c.TextFit(101,y+12,c.Tr(tabs[i]),19,Ink,187);
     }

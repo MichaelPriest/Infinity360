@@ -1,5 +1,9 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.51 — Historico IPTV e preferencias entre canais
+
+- Aba Historico nos layouts moderno e classico, com ate 64 IDs de itens recentes, deduplicados e ordenados; mostra apenas itens da lista ativa. Grava somente apos apresentar video e enviar audio via FFmpeg, sem persistir URL. Grava arquivo temporario e usa substituicao existente; falha de escrita conserva historico em memoria. Volume e mudo compartilhados entre canais na mesma sessao de zapping; qualidade continua especifica por canal. Player legado, testes, capturas e XSDK pendentes. Sem XEX/release.
+
 ## V0.3.50 — Navegacao rapida de canais IPTV
 
 - Durante FFmpeg remoto sem duracao indexada, direcional esquerdo/direito seleciona canal anterior/proximo da lista filtrada; cima retorna ao ultimo canal selecionado. Ignora itens nao-live e destinos nao autorizados/incompativeis via movieTarget; nao altera selecao sem destino valido. Fecha decoder/audio antes de abrir a proxima midia, sem sessoes paralelas. Guide e seletor de qualidade tem prioridade. Ultimo canal em memoria, reiniciado ao carregar lista; volume e qualidade reiniciam em cada canal. Player legado nao recebe zap. Testes e XSDK pendentes; sem XEX/release.

@@ -13,6 +13,7 @@ public:
     void Draw(HomeCanvas& canvas,int64_t now,bool modern=false) const;
     std::string TakeMovie();
     bool CanZap()const;
+    void RecordPlayed();
     std::string Zap(int direction); // -1 previous, +1 next, 0 last selected
     void PlayerMessage(const std::string& text) { notice_=text; }
     size_t Count() const { return catalog_.Items().size(); }
@@ -26,6 +27,8 @@ private:
     TvCatalog catalog_;
     TvGuide guide_;
     CloudFavorites favorites_;
+    std::vector<uint64_t> history_;
+    void LoadHistory();
     size_t row_,episodeRow_,season_,detail_;
     size_t lastLive_=static_cast<size_t>(-1);
     TvCategory tab_;

@@ -360,11 +360,12 @@ int main(){
                 auto drawGuide=[&](HomeCanvas& frame,int row){menu.DrawPlaybackGuide(frame,row);};
 #ifdef INFINITY_MENU_FFMPEG
                 std::string result;
+                CloudPlaybackControls::AudioPreference channelAudio;
                 do{
                     std::string next;
                     std::function<bool(int)> zap;
                     if(menu.CanZapTv())zap=[&](int direction){next=menu.ZapTv(direction);return !next.empty();};
-                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
+                    result=XsdkAv::Supports(movie)?XsdkAv::Play(movie,dir,canvas,presentMovie,false,drawGuide,zap,&channelAudio,[&](){menu.RecordTvPlayed();}):XsdkMpeg::Play(movie,dir,canvas,presentMovie,drawGuide);
                     if(result!="Alterando canal."||next.empty()||presentFailed)break;
                     movie=next;
                 }while(!XsdkAv::Cancelled());
