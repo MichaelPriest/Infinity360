@@ -340,6 +340,7 @@ private:
     const std::string* LuaSubtitleAt(int row)const;
     enum LuaCategory { LuaUtilities, LuaFilters, LuaSorts, LuaSubtitles, LuaCategoryCount };
     unsigned luaCategory_=LuaUtilities;
+    bool luaSortDescending_=false;
     std::string luaActiveSubtitle_,luaSubtitleCode_;
     std::vector<std::string> luaSubtitleLines_;
     int luaSubtitleFirst_=-1;

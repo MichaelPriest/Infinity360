@@ -13,7 +13,7 @@ int main(int argc,char** argv){
     assert(InfinityLua::RunText("local g=infinity.game(1); return g.name..':'..g.device..':'..tostring(g.favorite)",library)=="Lua: Game A:HDD:true");
     assert(InfinityLua::RunText("return tostring(infinity.game(0))..tostring(infinity.game(2))",library)=="Lua: nilnil");
     assert(InfinityLua::RunText("local g=infinity.game(1); g.name='changed'; return infinity.game(1).name",library)=="Lua: Game A");
-    assert(InfinityLua::RunText("return infinity.api_version",library)=="Lua: 4");
+    assert(InfinityLua::RunText("return infinity.api_version",library)=="Lua: 5");
     assert(InfinityLua::RunText("local g=infinity.game(1); return tostring(g.hidden)..tostring(g.pinned)",library)=="Lua: truefalse");
     assert(InfinityLua::RunText("local t={}; while true do t[#t+1]={} end",library).find("Lua erro:")==0);
     unsigned reads=0;
@@ -111,4 +111,17 @@ int main(int argc,char** argv){
         assert(!FilterText(script,compat).ok);
     }
     assert(RunText("return type(string.dump)..type(load)..type(io)",0)=="Lua: nilnilnil");
+    const std::string directional="GameListSorters['ID']=function(a,b,t) if t==SortType.Descending then return a.TitleId>b.TitleId end return a.TitleId<b.TitleId end";
+    auto ascending=FilterText(directional,compat,true,false),descending=FilterText(directional,compat,true,true);
+    assert(ascending.ok&&ascending.indices==std::vector<size_t>({2,1,0}));
+    assert(descending.ok&&descending.indices==std::vector<size_t>({0,1,2}));
+    auto reverseNative=FilterText("return {3,1,2}",compat,true,true);
+    assert(reverseNative.ok&&reverseNative.indices==std::vector<size_t>({1,0,2}));
+    auto oldSubtitle=SubtitlePage("GameListSubtitles['ID']=function(c) return string.format('%s %08X',c.Name,c.TitleId) end",compat,{2,0});
+    assert(oldSubtitle.error.empty()&&oldSubtitle.lines==std::vector<std::string>({"Gamma 00000001","Alpha 00000003"}));
+    for(const auto* script:{"GameListSubtitles['x']=function(c) return c.ReleaseDate end",
+                            "GameListSubtitles['x']=function(c) return 'x' end; GameListSubtitles['y']=function(c) return 'y' end",
+                            "GameListSubtitles['x']=function(c) while true do end end","GameListSubtitles['x']=function(c) return 1 end"}){
+        auto bad=SubtitlePage(script,compat,{0});assert(!bad.error.empty()&&bad.lines.empty());
+    }
 }

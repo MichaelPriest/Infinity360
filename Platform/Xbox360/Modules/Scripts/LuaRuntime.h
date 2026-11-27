@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <vector>
+#include <algorithm>
 #ifdef INFINITY_WITH_LUA
 extern "C" {
 #include "lua.h"
@@ -147,10 +148,11 @@ inline int Setup(lua_State* L){
     lua_newtable(L);lua_pushinteger(L,static_cast<lua_Integer>(count));lua_setfield(L,-2,"game_count");
     lua_pushcfunction(L,GameAt);lua_setfield(L,-2,"game");
     lua_pushcfunction(L,MetadataAt);lua_setfield(L,-2,"metadata");
-    lua_pushinteger(L,4);lua_setfield(L,-2,"api_version");
+    lua_pushinteger(L,5);lua_setfield(L,-2,"api_version");
     lua_setglobal(L,"infinity");
     lua_newtable(L);lua_newtable(L);lua_setfield(L,-2,"User");lua_setglobal(L,"GameListFilterCategories");
     lua_newtable(L);lua_setglobal(L,"GameListSorters");
+    lua_newtable(L);lua_setglobal(L,"GameListSubtitles");
     lua_newtable(L);UIntField(L,"Xbox360",1);UIntField(L,"XBLA",2);UIntField(L,"XboxOriginal",3);lua_setglobal(L,"ContentGroup");
     lua_newtable(L);UIntField(L,"Ascending",1);UIntField(L,"Descending",2);lua_setglobal(L,"SortType");
     lua_pushcfunction(L,AuroraContent);lua_setglobal(L,"__infinity_aurora_content");return 0;
@@ -185,17 +187,19 @@ inline std::string RunText(const std::string& code,const Library& library){
 #endif
 }
 inline std::string RunText(const std::string& code,size_t count){return RunText(code,Library{count});}
-inline FilterResult FilterText(const std::string& code,const Library& library,bool ordered=false){
+inline FilterResult FilterText(const std::string& code,const Library& library,bool ordered=false,bool descending=false){
     FilterResult result;
     if(code.size()>MaxSourceBytes||library.count>32768){result.message="Limite de filtro excedido.";return result;}
 #ifdef INFINITY_WITH_LUA
     Budget b;b.library=library;lua_State* L=lua_newstate(Alloc,&b);
     if(!L){result.message="Memoria Lua indisponivel.";return result;}
     int rc=ExecuteChunk(L,code,"filter");
+    bool legacy=false;
     // A native script returns indices. A legacy script registers exactly one callback and returns nil.
     if(rc==LUA_OK&&lua_isnil(L,-1)){
-        lua_pop(L,1);
+        legacy=true;lua_pop(L,1);
         const char* adapter=ordered?R"LUA(
+local descending = ...
 local cb
 for _,v in pairs(GameListSorters) do
     if cb or type(v)~="function" then error("Use uma unica ordenacao Aurora por arquivo.") end
@@ -205,7 +209,7 @@ if not cb then error("Ordenacao Aurora nao registrada.") end
 local r={}
 for i=1,infinity.game_count do r[i]=i end
 table.sort(r,function(a,b)
-    local v=cb(__infinity_aurora_content(a),__infinity_aurora_content(b),SortType.Ascending)
+    local v=cb(__infinity_aurora_content(a),__infinity_aurora_content(b),descending and SortType.Descending or SortType.Ascending)
     if type(v)~="boolean" then error("Comparador Aurora deve retornar booleano.") end
     return v
 end)
@@ -229,7 +233,7 @@ end
 return r
 )LUA";
         rc=luaL_loadbufferx(L,adapter,std::char_traits<char>::length(adapter),"aurora-adapter","t");
-        if(rc==LUA_OK)rc=lua_pcall(L,0,1,0);
+        if(rc==LUA_OK){lua_pushboolean(L,descending);rc=lua_pcall(L,1,1,0);}
     }
     if(rc!=LUA_OK)result.message="Lua erro: "+Result(L,"filtro recusado.");
     else if(lua_type(L,-1)!=LUA_TTABLE)result.message="Filtro deve retornar uma lista de indices.";
@@ -252,7 +256,7 @@ return r
             }
         }
         if(valid&&entries==n){
-            if(ordered)result.indices.swap(order);
+            if(ordered){if(descending&&!legacy)std::reverse(order.begin(),order.end());result.indices.swap(order);}
             else for(size_t i=0;i<seen.size();++i)if(seen[i])result.indices.push_back(i);
             result.ok=true;result.message=std::string(ordered?"Ordenacao aplicada: ":"Filtro aplicado: ")+std::to_string(result.indices.size())+" jogos.";
         }else result.message=ordered?"Ordenacao invalida: inclua todos os indices uma vez.":"Filtro invalido: indices unicos, inteiros e lista sem lacunas.";
@@ -275,6 +279,20 @@ inline SubtitleResult SubtitlePage(const std::string& code,const Library& librar
     if(!L)return {{},"Memoria Lua indisponivel."};
     SubtitleResult result;
     int rc=ExecuteChunk(L,code,"subtitle");
+    if(rc==LUA_OK&&lua_isnil(L,-1)){
+        lua_pop(L,1);
+        const char* adapter=R"LUA(
+local cb
+for _,f in pairs(GameListSubtitles) do
+    if cb or type(f)~="function" then error("Use uma unica legenda Aurora por arquivo.") end
+    cb=f
+end
+if not cb then error("Legenda Aurora nao registrada.") end
+return function(i) return cb(__infinity_aurora_content(i)) end
+)LUA";
+        rc=luaL_loadbufferx(L,adapter,std::char_traits<char>::length(adapter),"aurora-subtitle","t");
+        if(rc==LUA_OK)rc=lua_pcall(L,0,1,0);
+    }
     if(rc==LUA_OK && !lua_isfunction(L,-1))result.error="A legenda deve retornar uma funcao.";
     for(size_t index:indices){
         if(rc!=LUA_OK || !result.error.empty())break;
@@ -319,11 +337,11 @@ inline std::string ReadSource(const std::string& path,std::string& code){
     if(length && !f.read(&code[0],length))return "Falha de leitura do script.";
     return {};
 }
-inline FilterResult FilterFile(const std::string& path,const Library& library,bool ordered=false){
+inline FilterResult FilterFile(const std::string& path,const Library& library,bool ordered=false,bool descending=false){
     std::string code;
     const auto error=ReadSource(path,code);
     if(!error.empty())return {false,{},error};
-    return FilterText(code,library,ordered);
+    return FilterText(code,library,ordered,descending);
 }
 inline std::string RunFile(const std::string& path,const Library& library){
     std::string code;

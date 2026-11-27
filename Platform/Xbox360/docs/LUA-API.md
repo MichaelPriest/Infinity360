@@ -1,4 +1,4 @@
-# API Lua — INFINITY 360 v4
+# API Lua — INFINITY 360 v5
 
 Em Sistema > Plugins > R3, execute um arquivo .lua local em MenuPreview/Scripts.
 A execução é manual e isolada; não expõe rede, disco arbitrário, código nativo ou alterações de jogos.
@@ -7,7 +7,7 @@ O interpretador é Lua 5.4.9, com limite de 64 KiB de fonte, 2 MiB de memória L
 - `infinity.game_count`: quantidade de entradas da biblioteca, incluindo XEX e pacotes.
 - `infinity.game(i)`: índice de 1 a game_count, retorna name, device, storage, favorite, package, hidden, pinned e index. Para pacotes, device contém a classificação do pacote. O campo storage identifica a unidade do arquivo (por exemplo, Usb0:) e usa Local para caminhos sem unidade. Tabela copiada.
 - `infinity.metadata(i)`: lê cabeçalho do item, retorna title_id, media_id, version, base_version, disc_number, disc_count, content_type, volume_type (inteiros), title_id_hex (oito dígitos hexadecimais) e version_text (major.minor.build.qfe do cabeçalho). Campos não aplicáveis podem ser zero; cabeçalho ausente retorna nil e motivo. Cache de até 128 índices distintos por execução.
-- `infinity.api_version` vale 4. Retorne texto ou número para mostrar o resultado.
+- `infinity.api_version` vale 5. Retorne texto ou número para mostrar o resultado.
 
 ```lua
 local g = infinity.game(1)
@@ -74,7 +74,7 @@ A dashboard chama a função para os jogos da página visível, na ordem exibida
 
 ## Compatibilidade inicial Aurora (V0.3.14)
 
-Referência inspecionada: [XboxUnity/AuroraScripts, ce50c7e](https://github.com/XboxUnity/AuroraScripts/tree/ce50c7e9eb3bc065cd94dfeaa7d07033657894c8). Coloque arquivos autorizados nas pastas Filters ou Sorts existentes. Se o script não retornar uma lista e registrar exatamente uma função em GameListFilterCategories.User ou GameListSorters, a dashboard chama o callback com um objeto Content limitado. Campos disponíveis: Name, Group (ContentGroup.Xbox360, XBLA, XboxOriginal), TitleId, MediaId, DiscNum e DiscCount (metadados sob demanda; cabeçalhos ausentes ou orçamento excedido geram erro). A ordenação recebe SortType.Ascending. O retorno deve ser booleano. A biblioteca string é disponível, sem string.dump. Exemplo próprio:
+Referência inspecionada: [XboxUnity/AuroraScripts, ce50c7e](https://github.com/XboxUnity/AuroraScripts/tree/ce50c7e9eb3bc065cd94dfeaa7d07033657894c8). Coloque arquivos autorizados nas pastas Filters ou Sorts existentes. Se o script não retornar uma lista e registrar exatamente uma função em GameListFilterCategories.User ou GameListSorters, a dashboard chama o callback com um objeto Content limitado. Campos disponíveis: Name, Group (ContentGroup.Xbox360, XBLA, XboxOriginal), TitleId, MediaId, DiscNum e DiscCount (metadados sob demanda; cabeçalhos ausentes ou orçamento excedido geram erro). A ordenação recebe SortType.Ascending ou SortType.Descending (V0.3.15). O retorno deve ser booleano. A biblioteca string é disponível, sem string.dump. Exemplo próprio:
 
 ```lua
 GameListFilterCategories.User["Arcade"] = function(c)
@@ -82,4 +82,16 @@ GameListFilterCategories.User["Arcade"] = function(c)
 end
 ```
 
-Não há emulação integral de Aurora: múltiplas funções, categorias aninhadas, Type, dados SQL, filesystem, rede, UI, legendas Aurora e utilitários permanecem não suportados. O limite de 128 metadados distintos por execução pode impedir ordenação por ID em bibliotecas grandes. A classificação Group segue as categorias atuais da INFINITY, não valores numéricos internos do Aurora. Erros preservam a seleção anterior. Não redistribuímos scripts externos.
+Não há emulação integral de Aurora: múltiplas funções, categorias aninhadas, Type, dados SQL, filesystem, rede, UI e utilitários permanecem não suportados. O limite de 128 metadados distintos por execução pode impedir ordenação por ID em bibliotecas grandes. A classificação Group segue as categorias atuais da INFINITY, não valores numéricos internos do Aurora. Erros preservam a seleção anterior. Não redistribuímos scripts externos.
+
+## Compatibilidade de legendas e direção (V0.3.15)
+
+A categoria Legendas aceita também um único callback registrado em `GameListSubtitles`. Use Name, Group, TitleId, MediaId, DiscNum ou DiscCount. Campos como ReleaseDate, Id e CapabilitiesFlag e funções como bit32 não estão disponíveis. Não há suporte geral a scripts de legendas com múltiplos callbacks. Os limites de saída e processamento por página são os mesmos da API nativa.
+
+```lua
+GameListSubtitles['Identificador'] = function(Content)
+    return string.format('Title ID %08X', Content.TitleId)
+end
+```
+
+Em Ordenação, esquerda escolhe crescente, direita decrescente, e A aplica. Callbacks Aurora recebem a direção selecionada; para a API INFINITY, DESC inverte a sequência retornada pelo script. Erros não substituem o script ativo.

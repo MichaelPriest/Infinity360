@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.15 — Legendas Aurora e ordenação bidirecional
+
+- API v5: aceita um callback em GameListSubtitles por arquivo, usando o mesmo Content limitado. Mantém os limites de página, memória e saída. Campos e APIs ausentes continuam recusados.
+- Esquerda/direita em Ordenação selecionam ASC/DESC; callbacks Aurora recebem SortType correspondente, scripts INFINITY têm a permutação invertida em DESC. Testes dos dois sentidos e das legendas. Sem nova solicitação XEX.
+
 ## V0.3.14 — Compatibilidade inicial Aurora Lua
 
 - API v4 aceita filtros registrados em GameListFilterCategories.User e ordenações em GameListSorters, uma função por arquivo. Mapeia Name, Group, TitleId, MediaId, DiscNum e DiscCount, com metadados sob demanda e limites existentes. Ordenação Aurora ascendente nesta etapa.

@@ -27,6 +27,8 @@ Em **Sistema > Plugins > R3**, use LB/RB para alternar entre Utilitários, Filtr
 | Ordenação | `Scripts/Sorts/` | A aplica a sequência completa de índices. X limpa a ordenação |
 | Legendas | `Scripts/Subtitles/` | A aplica a legenda sob os jogos. X restaura a apresentação padrão |
 
-Os arquivos de legenda incluídos mostram Title ID, versão, dispositivo ou tipo de conteúdo. Você pode editá-los e reaplicá-los. Na biblioteca, RS restaura a ordenação nativa e a aba Fixados mantém a ordem manual. Consulte os exemplos e os limites da API v4 em `Platform/Xbox360/docs/LUA-API.md` no repositório.
+Os arquivos de legenda incluídos mostram Title ID, versão, dispositivo ou tipo de conteúdo. Você pode editá-los e reaplicá-los. Na biblioteca, RS restaura a ordenação nativa e a aba Fixados mantém a ordem manual. Consulte os exemplos e os limites da API v5 em `Platform/Xbox360/docs/LUA-API.md` no repositório.
 
-Compatibilidade inicial: filtros Aurora de um callback em GameListFilterCategories.User e ordenações GameListSorters (ascendente) podem ser executados nas categorias correspondentes quando utilizam campos suportados. Consulte LUA-API.md. Não é compatibilidade integral.
+Compatibilidade inicial: filtros Aurora de um callback em GameListFilterCategories.User e ordenações GameListSorters (ASC/DESC) podem ser executados nas categorias correspondentes quando utilizam campos suportados. Consulte LUA-API.md. Não é compatibilidade integral.
+
+V0.3.15: GameListSubtitles aceita um callback simples com campos suportados; em Sorts, esquerda/direita escolhem crescente/decrescente antes de A aplicar.

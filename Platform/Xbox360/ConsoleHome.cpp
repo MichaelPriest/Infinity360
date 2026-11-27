@@ -526,6 +526,10 @@ void ConsoleHome::PressLuaScripts(Key key){
         notice_.clear();
         return;
     }
+    if(luaCategory_==LuaSorts&&(key==Left||key==Right)){
+        luaSortDescending_=key==Right;
+        notice_=luaSortDescending_?"Ordem decrescente selecionada. A aplica.":"Ordem crescente selecionada. A aplica.";return;
+    }
     if(key==Refresh){RefreshLuaScripts();return;}
     if(key==Favorite){
         if(luaCategory_==LuaSubtitles){
@@ -564,12 +568,12 @@ void ConsoleHome::PressLuaScripts(Key key){
         return;
     }
     const bool ordered=luaCategory_==LuaSorts;
-    const auto result=InfinityLua::FilterFile(path,LuaLibrary(),ordered);
+    const auto result=InfinityLua::FilterFile(path,LuaLibrary(),ordered,ordered&&luaSortDescending_);
     if(!result.ok){notice_=result.message;return;}
     if(ordered){
         std::map<std::string,size_t> ranks;
         for(size_t i=0;i<result.indices.size();++i)ranks.emplace(games_[result.indices[i]].executable,i);
-        luaSortRanks_.swap(ranks);luaActiveSort_=name;
+        luaSortRanks_.swap(ranks);luaActiveSort_=name+(luaSortDescending_?" (DESC)":" (ASC)");
     }else{
         std::set<std::string> selected;
         for(const auto i:result.indices)selected.insert(games_[i].executable);
@@ -3231,6 +3235,7 @@ void ConsoleHome::DrawLuaScripts(HomeCanvas& c)const{
     static const char* const titles[LuaCategoryCount]={"Utilitários","Filtros","Ordenação","Legendas"};
     c.Text(45,93,std::string("Scripts Lua | ")+titles[luaCategory_],36,White,1180);
     c.Text(48,150,InfinityLua::Available()?"Lua 5.4 | Execução manual":"Runtime Lua indisponível",21,Muted,1160);
+    if(luaCategory_==LuaSorts)c.TextFit(610,150,luaSortDescending_?"Esq/Dir: Decrescente":"Esq/Dir: Crescente",20,Lime,610);
     const int first=(luaRow_/7)*7;
     for(int i=first;i<first+7&&size_t(i)<luaScripts_.size();++i){
         const int y=190+(i-first)*54;panel(c,48,y,1180,49,Panel,i==luaRow_);
