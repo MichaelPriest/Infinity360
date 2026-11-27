@@ -13,7 +13,7 @@ int main(int argc,char** argv){
     assert(InfinityLua::RunText("local g=infinity.game(1); return g.name..':'..g.device..':'..tostring(g.favorite)",library)=="Lua: Game A:HDD:true");
     assert(InfinityLua::RunText("return tostring(infinity.game(0))..tostring(infinity.game(2))",library)=="Lua: nilnil");
     assert(InfinityLua::RunText("local g=infinity.game(1); g.name='changed'; return infinity.game(1).name",library)=="Lua: Game A");
-    assert(InfinityLua::RunText("return infinity.api_version",library)=="Lua: 3");
+    assert(InfinityLua::RunText("return infinity.api_version",library)=="Lua: 4");
     assert(InfinityLua::RunText("local g=infinity.game(1); return tostring(g.hidden)..tostring(g.pinned)",library)=="Lua: truefalse");
     assert(InfinityLua::RunText("local t={}; while true do t[#t+1]={} end",library).find("Lua erro:")==0);
     unsigned reads=0;
@@ -92,4 +92,23 @@ int main(int argc,char** argv){
     assert(example("Versao.lua")==std::vector<std::string>({"v2.15.4660.171","v2.15.4660.171",""}));
     assert(example("Dispositivo.lua")==std::vector<std::string>({"Hdd1:","Usb1:","Usb1:"}));
     assert(example("Tipo.lua")==std::vector<std::string>({"Pacote XBLA","XEX","XEX"}));
+    Library compat{3,nullptr,[](const void*,size_t i)->GameView{
+        static const std::string names[]={"Alpha","Beta","Gamma"};
+        return {&names[i],nullptr,false,false,false,false,"Local",unsigned(i+1)};
+    },[](const void*,size_t i)->MetadataView{return {true,unsigned(3-i),unsigned(i+1),0,0, unsigned(i+1),3};}};
+    auto legacy=FilterText("GameListFilterCategories.User['Group']=function(c) return c.Group==ContentGroup.Xbox360 or c.Group==ContentGroup.XBLA end",compat);
+    assert(legacy.ok&&legacy.indices==std::vector<size_t>({0,1}));
+    legacy=FilterText("GameListFilterCategories.User['Disc']=function(c) return c.DiscNum<=1 end",compat);
+    assert(legacy.ok&&legacy.indices==std::vector<size_t>({0}));
+    legacy=FilterText("GameListFilterCategories.User['Name']=function(c) return string.lower(c.Name)=='beta' end",compat);
+    assert(legacy.ok&&legacy.indices==std::vector<size_t>({1}));
+    legacy=FilterText("GameListSorters['ID']=function(a,b,t) return a.TitleId<b.TitleId end",compat,true);
+    assert(legacy.ok&&legacy.indices==std::vector<size_t>({2,1,0}));
+    for(const auto* script:{"GameListFilterCategories.User['x']=function(c) return c.Missing==0 end",
+                            "GameListFilterCategories.User['x']=function(c) return true end; GameListFilterCategories.User['y']=function(c) return false end",
+                            "GameListFilterCategories.Other={a=function(c) return true end}",
+                            "GameListFilterCategories.User['x']=function(c) while true do end end"}){
+        assert(!FilterText(script,compat).ok);
+    }
+    assert(RunText("return type(string.dump)..type(load)..type(io)",0)=="Lua: nilnilnil");
 }

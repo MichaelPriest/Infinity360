@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.14 — Compatibilidade inicial Aurora Lua
+
+- API v4 aceita filtros registrados em GameListFilterCategories.User e ordenações em GameListSorters, uma função por arquivo. Mapeia Name, Group, TitleId, MediaId, DiscNum e DiscCount, com metadados sob demanda e limites existentes. Ordenação Aurora ascendente nesta etapa.
+- Biblioteca string disponível (dump removido); campos desconhecidos falham explicitamente. Sem categorias aninhadas, legendas Aurora ou utilitários dependentes de APIs de sistema. Nenhum script de terceiros redistribuído; testes próprios. Sem solicitação XEX.
+
 ## V0.3.13 — Legendas Lua na biblioteca
 
 - A lista e a grade exibem uma legenda por jogo na biblioteca, nos recentes e nos favoritos. Quatro scripts mostram Title ID, versão, dispositivo ou tipo de conteúdo. Em Sistema > Plugins > R3, abra Legendas com LB, aplique com A e remova com X.

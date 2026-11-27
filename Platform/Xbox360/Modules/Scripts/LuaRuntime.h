@@ -15,7 +15,7 @@ extern "C" {
 #endif
 namespace InfinityLua {
 // Borrowed synchronous view: no executable paths or writable console handles.
-struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false,hidden=false,pinned=false;std::string_view storage="Local";};
+struct GameView{const std::string* name=nullptr;const std::string* device=nullptr;bool favorite=false,package=false,hidden=false,pinned=false;std::string_view storage="Local";unsigned auroraGroup=0;};
 inline std::string_view StorageLabel(std::string_view path){
     const auto end=path.find_first_of(":/\\");
     if(end==path.npos||end==0||end>32||path[end]!=':')return "Local";
@@ -111,18 +111,49 @@ inline int MetadataAt(lua_State* L){
     lua_pushstring(L,text);lua_setfield(L,-2,"version_text");
     return 1;
 }
+// Aurora compatibility deliberately exposes only fields with a known local meaning.
+// Group constants are internal symbolic values, not an assertion of Aurora's ABI.
+inline int AuroraField(lua_State* L){
+    if(lua_type(L,2)!=LUA_TSTRING)return 0;
+    const std::string_view field(lua_tostring(L,2));
+    if(field!="TitleId"&&field!="MediaId"&&field!="DiscNum"&&field!="DiscCount")
+        return luaL_error(L,"Campo Aurora nao suportado: %s",lua_tostring(L,2));
+    lua_pushcfunction(L,MetadataAt);
+    lua_pushvalue(L,lua_upvalueindex(1));
+    lua_call(L,1,2);
+    if(!lua_istable(L,-2))return luaL_error(L,"Metadados Aurora indisponiveis ou limite excedido.");
+    lua_pop(L,1);
+    lua_getfield(L,-1,field=="TitleId"?"title_id":field=="MediaId"?"media_id":field=="DiscNum"?"disc_number":"disc_count");
+    return 1;
+}
+inline int AuroraContent(lua_State* L){
+    void* ud=nullptr;lua_getallocf(L,&ud);
+    const auto& lib=static_cast<Budget*>(ud)->library;
+    const auto index=luaL_checkinteger(L,1);
+    if(index<=0||static_cast<unsigned long long>(index)>lib.count||!lib.get)return luaL_error(L,"Item Aurora indisponivel.");
+    const auto g=lib.get(lib.context,static_cast<size_t>(index-1));
+    lua_createtable(L,0,2);Field(L,"Name",g.name);UIntField(L,"Group",g.auroraGroup);
+    lua_newtable(L);lua_pushinteger(L,index);lua_pushcclosure(L,AuroraField,1);lua_setfield(L,-2,"__index");
+    lua_pushboolean(L,0);lua_setfield(L,-2,"__metatable");lua_setmetatable(L,-2);return 1;
+}
 inline int Setup(lua_State* L){
     void* ud=nullptr;lua_getallocf(L,&ud);
     const auto count=static_cast<Budget*>(ud)->library.count;
     luaL_requiref(L,"_G",luaopen_base,1);lua_pop(L,1);
     luaL_requiref(L,"table",luaopen_table,1);lua_pop(L,1);
+    luaL_requiref(L,"string",luaopen_string,1);lua_pushnil(L);lua_setfield(L,-2,"dump");lua_pop(L,1);
     const char* blocked[]={"dofile","loadfile","load","collectgarbage","pcall","xpcall","setmetatable","getmetatable","print","warn"};
     for(const auto* name:blocked){lua_pushnil(L);lua_setglobal(L,name);}
     lua_newtable(L);lua_pushinteger(L,static_cast<lua_Integer>(count));lua_setfield(L,-2,"game_count");
     lua_pushcfunction(L,GameAt);lua_setfield(L,-2,"game");
     lua_pushcfunction(L,MetadataAt);lua_setfield(L,-2,"metadata");
-    lua_pushinteger(L,3);lua_setfield(L,-2,"api_version");
-    lua_setglobal(L,"infinity");return 0;
+    lua_pushinteger(L,4);lua_setfield(L,-2,"api_version");
+    lua_setglobal(L,"infinity");
+    lua_newtable(L);lua_newtable(L);lua_setfield(L,-2,"User");lua_setglobal(L,"GameListFilterCategories");
+    lua_newtable(L);lua_setglobal(L,"GameListSorters");
+    lua_newtable(L);UIntField(L,"Xbox360",1);UIntField(L,"XBLA",2);UIntField(L,"XboxOriginal",3);lua_setglobal(L,"ContentGroup");
+    lua_newtable(L);UIntField(L,"Ascending",1);UIntField(L,"Descending",2);lua_setglobal(L,"SortType");
+    lua_pushcfunction(L,AuroraContent);lua_setglobal(L,"__infinity_aurora_content");return 0;
 }
 inline std::string Result(lua_State* L,const char* fallback){
     if(lua_type(L,-1)==LUA_TNUMBER)return lua_isinteger(L,-1)?std::to_string(lua_tointeger(L,-1)):std::to_string(lua_tonumber(L,-1));
@@ -160,7 +191,46 @@ inline FilterResult FilterText(const std::string& code,const Library& library,bo
 #ifdef INFINITY_WITH_LUA
     Budget b;b.library=library;lua_State* L=lua_newstate(Alloc,&b);
     if(!L){result.message="Memoria Lua indisponivel.";return result;}
-    const int rc=ExecuteChunk(L,code,"filter");
+    int rc=ExecuteChunk(L,code,"filter");
+    // A native script returns indices. A legacy script registers exactly one callback and returns nil.
+    if(rc==LUA_OK&&lua_isnil(L,-1)){
+        lua_pop(L,1);
+        const char* adapter=ordered?R"LUA(
+local cb
+for _,v in pairs(GameListSorters) do
+    if cb or type(v)~="function" then error("Use uma unica ordenacao Aurora por arquivo.") end
+    cb=v
+end
+if not cb then error("Ordenacao Aurora nao registrada.") end
+local r={}
+for i=1,infinity.game_count do r[i]=i end
+table.sort(r,function(a,b)
+    local v=cb(__infinity_aurora_content(a),__infinity_aurora_content(b),SortType.Ascending)
+    if type(v)~="boolean" then error("Comparador Aurora deve retornar booleano.") end
+    return v
+end)
+return r
+)LUA":R"LUA(
+local cb
+for k,v in pairs(GameListFilterCategories) do
+    if k~="User" then error("Categorias Aurora aninhadas ainda nao suportadas.") end
+    for _,f in pairs(v) do
+        if cb or type(f)~="function" then error("Use um unico filtro Aurora por arquivo.") end
+        cb=f
+    end
+end
+if not cb then error("Filtro Aurora nao registrado.") end
+local r={}
+for i=1,infinity.game_count do
+    local v=cb(__infinity_aurora_content(i))
+    if type(v)~="boolean" then error("Filtro Aurora deve retornar booleano.") end
+    if v then r[#r+1]=i end
+end
+return r
+)LUA";
+        rc=luaL_loadbufferx(L,adapter,std::char_traits<char>::length(adapter),"aurora-adapter","t");
+        if(rc==LUA_OK)rc=lua_pcall(L,0,1,0);
+    }
     if(rc!=LUA_OK)result.message="Lua erro: "+Result(L,"filtro recusado.");
     else if(lua_type(L,-1)!=LUA_TTABLE)result.message="Filtro deve retornar uma lista de indices.";
     else{

@@ -479,7 +479,8 @@ InfinityLua::Library ConsoleHome::LuaLibrary()const{
         const auto& home=*static_cast<const ConsoleHome*>(ctx);
         const auto& g=home.games_[i];
         return {&g.name,&g.device,home.Starred(g),isContentPackage(g),contains(home.hidden_,g.executable),
-                contains(home.pinned_,g.executable),InfinityLua::StorageLabel(g.executable)};
+                contains(home.pinned_,g.executable),InfinityLua::StorageLabel(g.executable),
+                libraryTabMatch(g,2)?2u:libraryTabMatch(g,3)?3u:1u};
     },[](const void* ctx,size_t i)->InfinityLua::MetadataView{
         const auto& g=static_cast<const ConsoleHome*>(ctx)->games_[i];
         const auto m=ContentCatalog::DescribeTitle(g.executable,isContentPackage(g));

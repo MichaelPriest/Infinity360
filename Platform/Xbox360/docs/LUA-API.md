@@ -1,4 +1,4 @@
-# API Lua — INFINITY 360 v3
+# API Lua — INFINITY 360 v4
 
 Em Sistema > Plugins > R3, execute um arquivo .lua local em MenuPreview/Scripts.
 A execução é manual e isolada; não expõe rede, disco arbitrário, código nativo ou alterações de jogos.
@@ -7,7 +7,7 @@ O interpretador é Lua 5.4.9, com limite de 64 KiB de fonte, 2 MiB de memória L
 - `infinity.game_count`: quantidade de entradas da biblioteca, incluindo XEX e pacotes.
 - `infinity.game(i)`: índice de 1 a game_count, retorna name, device, storage, favorite, package, hidden, pinned e index. Para pacotes, device contém a classificação do pacote. O campo storage identifica a unidade do arquivo (por exemplo, Usb0:) e usa Local para caminhos sem unidade. Tabela copiada.
 - `infinity.metadata(i)`: lê cabeçalho do item, retorna title_id, media_id, version, base_version, disc_number, disc_count, content_type, volume_type (inteiros), title_id_hex (oito dígitos hexadecimais) e version_text (major.minor.build.qfe do cabeçalho). Campos não aplicáveis podem ser zero; cabeçalho ausente retorna nil e motivo. Cache de até 128 índices distintos por execução.
-- `infinity.api_version` vale 3. Retorne texto ou número para mostrar o resultado.
+- `infinity.api_version` vale 4. Retorne texto ou número para mostrar o resultado.
 
 ```lua
 local g = infinity.game(1)
@@ -17,7 +17,7 @@ return g.name .. " | Title ID decimal: " .. m.title_id
 ```
 
 Referência para compatibilidade futura: [XboxUnity/AuroraScripts](https://github.com/XboxUnity/AuroraScripts), categorias Filters, Sorts, Subtitles e UtilityScripts.
-Não implementamos ainda as funções Script, Aurora, FileSystem, SQL ou interfaces de filtro/ordenação do Aurora.
+Não implementamos ainda as funções Script, Aurora, FileSystem, SQL. A compatibilidade inicial de filtros/ordenação está descrita abaixo.
 Não copie scripts de terceiros para o pacote distribuído sem verificar a licença. Não há compatibilidade geral com Aurora/Freestyle nesta revisão.
 
 ## Filtros da biblioteca (V0.3.11)
@@ -71,3 +71,15 @@ end
 ```
 
 A dashboard chama a função para os jogos da página visível, na ordem exibida. Cada página compartilha os limites de memória, instruções e metadados da API. Mudar de página ou atualizar a biblioteca recalcula as legendas. Ao aplicar um script, um erro na primeira página preserva a seleção anterior. Se outra página falhar, ela usa a apresentação padrão e a dashboard mostra o erro.
+
+## Compatibilidade inicial Aurora (V0.3.14)
+
+Referência inspecionada: [XboxUnity/AuroraScripts, ce50c7e](https://github.com/XboxUnity/AuroraScripts/tree/ce50c7e9eb3bc065cd94dfeaa7d07033657894c8). Coloque arquivos autorizados nas pastas Filters ou Sorts existentes. Se o script não retornar uma lista e registrar exatamente uma função em GameListFilterCategories.User ou GameListSorters, a dashboard chama o callback com um objeto Content limitado. Campos disponíveis: Name, Group (ContentGroup.Xbox360, XBLA, XboxOriginal), TitleId, MediaId, DiscNum e DiscCount (metadados sob demanda; cabeçalhos ausentes ou orçamento excedido geram erro). A ordenação recebe SortType.Ascending. O retorno deve ser booleano. A biblioteca string é disponível, sem string.dump. Exemplo próprio:
+
+```lua
+GameListFilterCategories.User["Arcade"] = function(c)
+    return c.Group == ContentGroup.XBLA
+end
+```
+
+Não há emulação integral de Aurora: múltiplas funções, categorias aninhadas, Type, dados SQL, filesystem, rede, UI, legendas Aurora e utilitários permanecem não suportados. O limite de 128 metadados distintos por execução pode impedir ordenação por ID em bibliotecas grandes. A classificação Group segue as categorias atuais da INFINITY, não valores numéricos internos do Aurora. Erros preservam a seleção anterior. Não redistribuímos scripts externos.

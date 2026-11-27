@@ -1,6 +1,6 @@
-# Status V0.3.12
+# Status V0.3.14
 
-Último XEX compilado com sucesso: V0.3.5 (XSDK e FFmpeg). Gates portáteis V0.3.7–V0.3.10 aprovados. V0.3.11 aguarda CI; Lua e caminhos novos ainda não homologados em XSDK/Xbox físico.
+Último XEX compilado com sucesso: V0.3.5 (XSDK e FFmpeg). Gates portáteis V0.3.7–V0.3.13 aprovados. V0.3.13 também teve CI Cloud360 e capturas aprovados. V0.3.14 aguarda CI; Lua e caminhos novos ainda não homologados em XSDK/Xbox físico.
 
 | Área | Estado |
 |---|---|
@@ -63,3 +63,6 @@ V0.3.10: API Lua v2 consulta metadados de cabeçalhos por índice, cache de 128 
 V0.3.11: filtros Lua por lista de índices aplicados temporariamente à biblioteca; X limpa no gerenciador. Seleção é snapshot, não reexecuta automaticamente. CI pendente.
 
 V0.3.12: ordenação Lua por permutação completa e biblioteca table. CI pendente, sem XEX solicitado. API Aurora ainda não compatível.
+
+V0.3.13: legendas Lua por página, API v3 e quatro scripts distribuídos; CI portátil, Cloud360 e capturas aprovados.
+V0.3.14: adaptador inicial para callbacks Aurora de filtros e ordenações; API v4. Sem nova build XEX.
