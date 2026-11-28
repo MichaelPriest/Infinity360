@@ -1344,7 +1344,7 @@ void ConsoleHome::RebuildStore() {
     static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc","translation"};
     storeVisible_.clear();
     for(size_t i=0;i<store_.Items().size();++i)
-        if((storeTab_==0||store_.Items()[i].category==tabs[storeTab_])&&StoreSourceDirectory::Matches(storeSource_,store_.Items()[i])&&(!storeDownloadableOnly_||!store_.Items()[i].url.empty()))storeVisible_.push_back(i);
+        if((storeTab_==0||store_.Items()[i].category==tabs[storeTab_])&&StoreSourceDirectory::Matches(storeSource_,store_.Items()[i])&&(!storeDownloadableOnly_||!store_.Items()[i].url.empty())&&(storeSearchTerm_.empty()||tvLower(store_.Items()[i].name+" "+store_.Items()[i].id).find(tvLower(storeSearchTerm_))!=std::string::npos))storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
 }
 bool ConsoleHome::StartNativeStore(const StoreItem& item){
@@ -1464,7 +1464,7 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
         searchActive_||collectionPicker_||fileAction_||pasteConfirm_||scanPathConfirm_||deleteConfirm_||
         updateActive_||discSetActive_||discConfirm_||powerPage_||saveCenter_||achievementsPage_||
         artArchiveConfirm_||contentInstallActive_||backupConfirm_||recoverConfirm_||archiveTuConfirm_||
-        restoreArchivedConfirm_||toggleTuConfirm_||unityActive_||storeProviders_||storeManage_||storeConfirm_||
+        restoreArchivedConfirm_||toggleTuConfirm_||unityActive_||storeProviders_||storeManage_||storeConfirm_||storeSearchOpen_||
         luaRepoConfirm_||luaManifestConfirm_||peerEditing_||peerOptions_||smbEditing_)return a;
 #if defined(__XSDK__) && defined(INFINITY_EXPERIMENTAL_SMB_MENU)
     if(smbUi_!=SmbClosed||smbConfirm_)return a;
@@ -1476,7 +1476,7 @@ std::vector<ConsoleHome::ContextAction> ConsoleHome::ContextActions()const{
         else{add("Repositorio de scripts",Guide);add("Atualizar scripts locais",Refresh);}
     }else if(storeActive_){
         if(storeDetails_){if(!storeVisible_.empty()){add("Instalar ou atualizar XEX/ZIP",Search);add("Gerenciar pacote",PageDown);add("Baixar pacote",Guide);}}
-        else{add("Fontes e provedores",Search);add("Alterar destino HDD/USB",PageUp);add("Atualizar catalogo",Refresh);}
+        else{add("Buscar na loja",Guide);add("Fontes e provedores",Search);add("Alterar destino HDD/USB",PageUp);add("Atualizar catalogo",Refresh);}
     }else if(artEditing_){
         add("Importar arte local",Search);if(artEditRow_==0)add("Buscar capa XboxUnity",Guide);add("Recarregar arte",PageDown);
     }else if(contentActive_){
@@ -1730,7 +1730,7 @@ bool ConsoleHome::RemoteAllowed(Key key)const{
     if(key==GlobalGuide)return true;
     if(approvedGroup_>=0)return key==Up||key==Down||key==Back||key==Accept;
     if(weatherPanel_)return key==Back||key==Refresh;
-    if(storeActive_)return direction||key==Back||(!storeDetails_&&key==Accept);
+    if(storeActive_)return !storeSearchOpen_&&(direction||key==Back||(!storeDetails_&&key==Accept));
     if(page_==Home)return direction||key==Accept||key==Refresh||paging;
     if(section_==Iptv)return tv_.RemoteAllowed(static_cast<MenuKey>(key));
     if(section_==System){
@@ -1924,6 +1924,19 @@ std::string ConsoleHome::Press(Key key) {
         if(key==Back&&discConfirm_){discConfirm_=false;notice_="Confirmacao cancelada.";return "";}
     }
     if(storeActive_) {
+        if(storeSearchOpen_){
+            static const std::string chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+            if(key==Back){storeSearchOpen_=false;notice_.clear();return "";}
+            if(key==Left)storeSearchCursor_=(storeSearchCursor_+36)%37;
+            if(key==Right)storeSearchCursor_=(storeSearchCursor_+1)%37;
+            if(key==Up)storeSearchCursor_=(storeSearchCursor_+30)%37;
+            if(key==Down)storeSearchCursor_=(storeSearchCursor_+7)%37;
+            if(key==Accept&&storeSearchDraft_.size()<36)storeSearchDraft_+=chars[storeSearchCursor_];
+            if(key==Favorite&&!storeSearchDraft_.empty())storeSearchDraft_.pop_back();
+            if(key==PageUp)storeSearchDraft_.clear();
+            if(key==Refresh){storeSearchTerm_=storeSearchDraft_;storeSearchOpen_=false;storeRow_=0;RebuildStore();}
+            return "";
+        }
         if(storeProviders_){
             if(key==Back){storeProviders_=false;notice_.clear();return "";}
             if(key==Refresh){store_.Load();providerRow_=0;RebuildStore();notice_="Configuracao e caches recarregados.";return "";}
@@ -1998,6 +2011,7 @@ std::string ConsoleHome::Press(Key key) {
                 notice_="Nenhum outro workspace gravavel. Prepare Infinity360Files no dispositivo.";return "";
             }
             if(key==Search){storeProviders_=true;providerRow_=0;notice_.clear();return "";}
+            if(key==Guide){storeSearchOpen_=true;storeSearchDraft_=storeSearchTerm_;storeSearchCursor_=0;notice_.clear();return "";}
             if(key==Favorite){storeDownloadableOnly_=!storeDownloadableOnly_;storeRow_=0;RebuildStore();return "";}
             if(key==PageDown){storeRow_=std::min(storeRow_+5,std::max(0,int(storeVisible_.size())-1));return "";}
             if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
@@ -3288,6 +3302,7 @@ void ConsoleHome::DrawProviders(HomeCanvas& c) const{
     InfinityButtons::Strip(c,45,602,"A Abrir fonte | START Sincronizar | X Todos | Y Recarregar | B Voltar",18,Lime,1175);
 }
 void ConsoleHome::DrawStore(HomeCanvas& c) const {
+    if(storeSearchOpen_){DrawStoreSearch(c);return;}
     if(storeProviders_){DrawProviders(c);return;}
     if(!storeManage_){DrawModernStore(c);return;}
     InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
@@ -5141,7 +5156,7 @@ uint64_t ConsoleHome::VisualScene()const{
     auto flag=[&](bool value){key=(key<<1)|unsigned(value);};
     flag(quickGuideOpen_);flag(contextOpen_);flag(approvedGroup_>=0);
     flag(friendGuideOpen_);flag(communicationGuideOpen_);flag(privilegeGuideOpen_);flag(avatarGuideOpen_);
-    flag(storeActive_);flag(storeDetails_);flag(storeProviders_);flag(storeManage_);
+    flag(storeActive_);flag(storeDetails_);flag(storeProviders_);flag(storeManage_);flag(storeSearchOpen_);
     flag(appearanceEditor_);flag(layoutPreview_);flag(libraryPathsPage_);flag(libraryPicker_);
     flag(luaPage_);flag(luaRepoPage_);flag(contentActive_);flag(contentInstallActive_);
     flag(artEditing_);flag(searchActive_);flag(collectionPicker_);flag(fileAction_);
@@ -5191,7 +5206,7 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     // Modals and specialised pages must not inherit unrelated Home commands.
     if(weatherPanel_){InfinityButtons::Strip(c,45,674,"Y Atualizar | B Voltar",19,White,1190);return;}
     if(storeActive_){
-        const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?
+        const char* commands=storeSearchOpen_?"B Cancelar | Y Buscar":storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?
 #if defined(INFINITY_XSDK_HTTPS)
         "A Baixar/Instalar | X Fila | B Voltar":
 #else
@@ -6043,9 +6058,16 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
     c.Text(45,597,game.executable,16,Muted,1180);
     if(m.discCount>1)c.Text(45,619,c.Tr("BACK Selecionar disco"),17,Lime,1180);
 }
+void ConsoleHome::DrawStoreSearch(HomeCanvas& c)const{
+    static const std::string chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+    c.TextFit(45,87,"INFINITY Store | Buscar",36,White,1180);
+    c.SeriesTile(45,151,1189,66,false);c.TextFit(61,169,storeSearchDraft_.empty()?"Digite um nome...":storeSearchDraft_+"_",28,White,1145);
+    for(int i=0;i<37;++i){const int x=45+(i%7)*169,y=235+(i/7)*54;c.SeriesTile(x,y,157,49,i==storeSearchCursor_);c.CenterText(x,y+10,157,i==36?"Espaco":std::string(1,chars[i]),24,White);}
+    InfinityButtons::Strip(c,45,600,"A Letra | X Apagar | LB Limpar | Y Buscar | B Cancelar",18,Lime,1180);
+}
 void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
-    c.TextFit(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage())+" | "+number(storeVisible_.size())+" itens"+(storeDownloadableOnly_?" | Downloads":""),20,Muted,1175);
+    c.TextFit(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage())+" | "+number(storeVisible_.size())+" itens"+(storeDownloadableOnly_?" | Downloads":"")+(storeSearchTerm_.empty()?"":" | Busca: "+storeSearchTerm_),20,Muted,1175);
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     if(!storeDetails_){
         c.GroupGlass(45,171,250,417);
@@ -6058,7 +6080,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     if(storeVisible_.empty()){
         c.SeriesTile(310,171,925,417,false);
         c.TextFit(330,250,c.Tr("Nenhum item no catalogo desta categoria."),23,White,880);
-        c.TextFit(330,300,"X Alternar filtro | BACK Fontes",19,Muted,880);return;
+        c.TextFit(330,300,"START Buscar | X Alternar filtro | BACK Fontes",19,Muted,880);return;
     }
     const auto& item=store_.Items()[storeVisible_[storeRow_]];
     const auto status=[&](const StoreItem& p)->const char*{
@@ -6105,7 +6127,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     }else{
         c.Text(x+20,528,c.Tr("A Detalhes"),21,Lime,w-40);
         InfinityButtons::Strip(c,45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
-        InfinityButtons::Strip(c,45,608,"X Downloads | LB Destino | RB Pagina | BACK Fontes | Y Atualizar",17,Muted,1170);
+        InfinityButtons::Strip(c,45,608,"START Buscar | X Downloads | LB Destino | RB Pagina | BACK Fontes",17,Muted,1170);
     }
 }
 

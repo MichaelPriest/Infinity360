@@ -445,7 +445,10 @@ private:
     bool storeProviders_=false,providerPending_=false;
     int providerRow_=0;
     std::string storeSource_="*";
-    bool storeDownloadableOnly_=false;
+    bool storeDownloadableOnly_=false,storeSearchOpen_=false;
+    int storeSearchCursor_=0;
+    std::string storeSearchTerm_,storeSearchDraft_;
+    void DrawStoreSearch(HomeCanvas& c)const;
     std::string StoreSourceLabel()const;
     StoreProvider providerRequest_;
     void DrawProviders(HomeCanvas& c) const;

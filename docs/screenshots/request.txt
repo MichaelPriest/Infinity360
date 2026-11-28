@@ -119,3 +119,4 @@ V0.3.78 — library path manager
 V0.3.79 — refresh gallery after library and controller navigation updates
 V0.3.80 — HTTPS network diagnostic
 V0.3.81 — native store layout
+V0.3.81 — store text search

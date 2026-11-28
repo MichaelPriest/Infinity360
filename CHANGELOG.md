@@ -2,7 +2,7 @@
 
 ## V0.3.81 — Loja nativa
 
-- A baixa/instala no Xbox com confirmação; X gerencia fila. Filtro de downloads e paginação.
+- A baixa/instala no Xbox com confirmação; X gerencia fila. Busca textual por nome/ID, filtro de downloads e paginação.
 - ZIPs Homebrew oficiais com XEX nomeado: quatro identidades exatas aprovadas pelo snapshot upstream, normalizadas para default.xex. Outros XEX continuam recusados.
 - Pré-validação do host e limite nativo antes do download. Sem API de terceiros não confirmada.
 
