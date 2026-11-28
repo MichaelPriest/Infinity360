@@ -445,6 +445,7 @@ private:
     bool storeProviders_=false,providerPending_=false;
     int providerRow_=0;
     std::string storeSource_="*";
+    bool storeDownloadableOnly_=false;
     std::string StoreSourceLabel()const;
     StoreProvider providerRequest_;
     void DrawProviders(HomeCanvas& c) const;

@@ -1,6 +1,7 @@
 #include "StoreSourceDirectory.h"
 #include "StoreHostPolicy.h"
 #include "StorePackage.h"
+#include "StoreLaunchAlias.h"
 #include "StoreStorage.h"
 #include "TransferRate.h"
 #include "DiscInstaller.h"
@@ -9,6 +10,12 @@
 #include <fstream>
 namespace fs=std::filesystem;
 int main(){
+    {
+        StoreItem item{};item.id="swanstation";item.category="emulator";item.sha256="9eae76effddb10a1c1b4c7e5f852b64018842b01eea7c00a3c31c993a51a0d25";
+        assert(StoreLaunchAlias::Entry(item)=="swanstation.xex");
+        item.provider="remote";assert(StoreLaunchAlias::Entry(item)=="default.xex");
+        item.provider.clear();item.sha256[0]='0';assert(StoreLaunchAlias::Entry(item)=="default.xex");
+    }
     TransferRate rate;
     assert(rate.Sample(500,4500,100)); // resume at 500 bytes
     assert(rate.BytesPerSecond()==0);

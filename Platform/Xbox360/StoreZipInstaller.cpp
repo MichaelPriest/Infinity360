@@ -1,5 +1,6 @@
 #include "StoreZipInstaller.h"
 #include "StoreInstallPath.h"
+#include "StoreLaunchAlias.h"
 #include "DashboardUpdate.h"
 #include "ContentCatalog.h"
 #include "StorageInfo.h"
@@ -75,7 +76,7 @@ std::string lower(std::string s){
     return s;
 }
 struct Node {std::string name;bool directory;unsigned index;unsigned long long size;};
-bool plan(Archive& a,std::map<std::string,Node>& nodes,unsigned long long& expanded,unsigned long long& xexSize){
+bool plan(Archive& a,std::map<std::string,Node>& nodes,unsigned long long& expanded,unsigned long long& xexSize,const std::string& launch){
     const unsigned count=mz_zip_reader_get_num_files(&a.zip);
     if(!count||count>4096)return false;
     std::set<std::string> explicitNames;
@@ -98,8 +99,8 @@ bool plan(Archive& a,std::map<std::string,Node>& nodes,unsigned long long& expan
         if(st.m_is_directory&&st.m_uncomp_size)return false;
         if(!st.m_is_directory){
             if(st.m_uncomp_size>MaxPackage||st.m_uncomp_size>MaxExpanded-expanded)return false;
-            if(key.size()>=4&&key.substr(key.size()-4)==".xex"&&key!="default.xex")return false;
-            if(key=="default.xex"){if(rel!="default.xex"||st.m_uncomp_size<4096)return false;xexSize=st.m_uncomp_size;}
+            if(key.size()>=4&&key.substr(key.size()-4)==".xex"&&key!=launch)return false;
+            if(key==launch){if(rel!=launch||st.m_uncomp_size<4096)return false;xexSize=st.m_uncomp_size;rel="default.xex";}
             expanded+=st.m_uncomp_size;
         }
         size_t begin=0;unsigned depth=0;
@@ -189,7 +190,7 @@ bool StoreInstallPackage(const FileWorkspace& ws,const StoreItem& item,const std
     Archive a;
     if(!progress(0,1)||!a.Open(r))return reject("ZIP invalido ou limite de memoria.");
     std::map<std::string,Node> nodes;unsigned long long expanded=0,xexSize=0;
-    if(!plan(a,nodes,expanded,xexSize))return reject("ZIP recusado: caminhos, duplicatas, tamanho ou default.xex.");
+    if(!plan(a,nodes,expanded,xexSize,StoreLaunchAlias::Entry(item)))return reject("ZIP recusado: caminhos, duplicatas, tamanho ou executavel principal.");
     if(dashboard){
         const auto required=[&](const char* key,unsigned long long min,unsigned long long max){auto it=nodes.find(key);return it!=nodes.end()&&!it->second.directory&&it->second.size>=min&&it->second.size<=max;};
         if(expanded>128ULL*1024*1024||!required("home.tga",18,8*1024*1024)||!required("cacert.pem",1024,1024*1024)||!required("menupreview/infinity-preview.txt",24,64))return reject("Recursos obrigatorios da dashboard ausentes.");

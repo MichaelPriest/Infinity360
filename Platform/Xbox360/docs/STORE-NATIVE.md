@@ -41,3 +41,9 @@ R3 abre Central de fontes. A filtra o catálogo por origem (inclusive fonte vazi
 ## V0.2.40 — Nexus Dashboard oficial
 
 Incluído no catálogo local o pacote NexusDashbord.zip v1.0 (15.616.416 bytes), conforme https://github.com/DevIshimura/Nexus/blob/main/update.json e https://github.com/DevIshimura/Nexus/releases/tag/v1.0 . Tamanho e SHA-256 do asset conferidos via GitHub. Download e instalação não testados; não se trata de integração Andromeda. Instalação manual recomendada, nunca substitua a dashboard de boot.
+
+## V0.3.81 — Fluxo nativo e ZIP Homebrew
+
+Na build XSDK com HTTPS, A abre detalhes e confirma download ou instalação de app/homebrew/emulador já baixado; X alterna fila nativa. X na lista filtra itens com URL; RB avança cinco itens, LB seleciona armazenamento, BACK fontes. O fluxo PC permanece nas variantes sem XSDK HTTPS. O filtro de downloads não comprova disponibilidade do servidor.
+
+Quatro ZIPs do snapshot oficial xenosworks/homebrew-app-catalogue 88542fda8a098b00fc4c37b9c70a4cb9ba35730e possuem executáveis nomeados: SwanStation, Dusklight, Starship e Homebrew App Store. A identidade ID + SHA-256 fixa permite normalizar somente esse executável para default.xex no staging, sem aceitar XEX adicionais. Os dados comerciais/BIOS/ROMs próprios continuam necessários quando declarados. Os pacotes reais não foram instalados no Xbox; compatibilidade de nomes e execução deve ser homologada. Nexus Dashboard mantém instalação manual. As fontes Series360, X-Store e Andromeda ainda precisam de endpoint de catálogo autorizado e metadados verificáveis; metadados locais Andromeda não são downloads. HTTPS exige certificado válido, host permitido e integridade SHA-256.

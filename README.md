@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.80 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.81 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -109,3 +109,5 @@ O Remote inclui gerenciador FTP bidirecional em Sistema. [Configuração e limit
 [Compatibilidade MPEG e HTTPS nativos](Platform/Xbox360/docs/MPEG-HTTPS-NATIVE.md)
 
 [Análise técnica Series360 0.12.79](Platform/Xbox360/docs/SERIES360-01279-INSPECTION.md)
+
+[INFINITY Store — fluxo nativo e pacotes autorizados](Platform/Xbox360/docs/STORE-NATIVE.md#v0381--fluxo-nativo-e-zip-homebrew)

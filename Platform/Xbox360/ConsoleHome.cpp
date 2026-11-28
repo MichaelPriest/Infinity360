@@ -1344,12 +1344,15 @@ void ConsoleHome::RebuildStore() {
     static const char* const tabs[]={"","game","xbla","homebrew","app","emulator","dlc","translation"};
     storeVisible_.clear();
     for(size_t i=0;i<store_.Items().size();++i)
-        if((storeTab_==0||store_.Items()[i].category==tabs[storeTab_])&&StoreSourceDirectory::Matches(storeSource_,store_.Items()[i]))storeVisible_.push_back(i);
+        if((storeTab_==0||store_.Items()[i].category==tabs[storeTab_])&&StoreSourceDirectory::Matches(storeSource_,store_.Items()[i])&&(!storeDownloadableOnly_||!store_.Items()[i].url.empty()))storeVisible_.push_back(i);
     clampRow(storeRow_,storeVisible_.size());
 }
 bool ConsoleHome::StartNativeStore(const StoreItem& item){
     if(item.url.empty()){notice_="Catalogo de referencia; sem pacote autorizado.";return false;}
 #if defined(INFINITY_XSDK_HTTPS) || defined(_XBOX)
+    if(nativeStorePending_||storeInstallPending_||providerPending_){notice_="Ja existe operacao pendente.";return false;}
+    if(!StoreHostPolicy::Allowed(item.url,dir_)){notice_="Fonte HTTPS nao autorizada; revise servidores da loja.";return false;}
+    if(item.bytes>512ULL*1024*1024){notice_="Pacote excede o limite nativo de 512 MiB.";return false;}
     if(TransferRunning()||!TranslationMatches(item)){notice_="Copia ativa ou traducao incompativel.";return false;}
     if(store_.Staged(item)){notice_="Arquivo local ja existe; RB gerencia pacote na ficha.";return false;}
     if(store_.PackagePresent(item)){notice_="Pacote anterior presente; RB gerenciar > arquivar pacote.";return false;}
@@ -1995,6 +1998,8 @@ std::string ConsoleHome::Press(Key key) {
                 notice_="Nenhum outro workspace gravavel. Prepare Infinity360Files no dispositivo.";return "";
             }
             if(key==Search){storeProviders_=true;providerRow_=0;notice_.clear();return "";}
+            if(key==Favorite){storeDownloadableOnly_=!storeDownloadableOnly_;storeRow_=0;RebuildStore();return "";}
+            if(key==PageDown){storeRow_=std::min(storeRow_+5,std::max(0,int(storeVisible_.size())-1));return "";}
             if(key==Left&&storeTab_>0) {--storeTab_;storeRow_=0;RebuildStore();}
             if(key==Right&&storeTab_<7) {++storeTab_;storeRow_=0;RebuildStore();}
             if(key==Up&&storeRow_>0)--storeRow_;
@@ -2045,6 +2050,27 @@ std::string ConsoleHome::Press(Key key) {
                 notice_=store_.DiscardPartial(item)?"Parcial descartado.":"Nao foi possivel descartar parcial.";
                 return "";
             }
+#if defined(INFINITY_XSDK_HTTPS)
+            if(key==Favorite){
+                storeConfirm_=false;
+                if(store_.NativeQueued(item))notice_=store_.RemoveNative(item)?"Removido da fila; parcial preservado.":"Falha ao salvar fila.";
+                else if(store_.Staged(item)||!TranslationMatches(item)||item.bytes>512ULL*1024*1024||!StoreHostPolicy::Allowed(item.url,dir_))notice_="Item local, fonte nao autorizada ou pacote incompativel.";
+                else notice_=store_.QueueNative(item)?"Adicionado a fila nativa.":"Fila cheia, invalida ou falha ao salvar.";
+                return "";
+            }
+            if(key==Accept){
+                if(store_.Installed(item)){storeConfirm_=false;notice_="Ja instalado; RB abre gerenciamento.";return "";}
+                const bool install=store_.Staged(item)&&(item.category=="app"||item.category=="homebrew"||item.category=="emulator");
+                if(store_.Staged(item)&&!install){storeConfirm_=false;notice_="Pacote baixado; instalacao deste formato e manual.";return "";}
+                if(!storeConfirm_){storeConfirm_=true;notice_=install?"A confirma instalacao verificada | B cancela.":"A confirma download no Xbox | B cancela.";return "";}
+                storeConfirm_=false;
+                if(install){
+                    if(TransferRunning()||nativeStorePending_||providerPending_){notice_="Conclua a operacao ativa.";return "";}
+                    storeInstallItem_=item;storeInstallPending_=true;notice_="Verificando pacote e instalando.";
+                }else{nativeBatch_=false;StartNativeStore(item);}
+                return "";
+            }
+#endif
             if(key==Favorite) {
                 storeConfirm_=false;
                 const bool cancelled=store_.Cancel(item);
@@ -5165,7 +5191,13 @@ void ConsoleHome::Draw(HomeCanvas& c,const std::string& clock,int64_t now) const
     // Modals and specialised pages must not inherit unrelated Home commands.
     if(weatherPanel_){InfinityButtons::Strip(c,45,674,"Y Atualizar | B Voltar",19,White,1190);return;}
     if(storeActive_){
-        const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?"A Pedido PC | B Voltar | X Remover PC | START Baixar":"A Detalhes | B Voltar | Y Atualizar | BACK Fontes";
+        const char* commands=storeProviders_?"A Abrir fonte | B Voltar | X Todos | Y Recarregar":storeManage_?"A Preparar | B Voltar":storeConfirm_?"A Confirmar | B Cancelar":storeDetails_?
+#if defined(INFINITY_XSDK_HTTPS)
+        "A Baixar/Instalar | X Fila | B Voltar":
+#else
+        "A Pedido PC | B Voltar | X Remover PC | START Baixar":
+#endif
+        "A Detalhes | X Downloads | B Voltar | Y Atualizar | BACK Fontes";
         InfinityButtons::Strip(c,45,674,commands,19,White,1190);return;
     }
     if(appearanceEditor_&&!libraryPathsPage_){InfinityButtons::Strip(c,45,674,layoutPreview_?"B Voltar da previa":"A Alterar | B Voltar | X Padrao | Y Salvar | LB/RB Categoria | BACK Previa | L3 Guia",16,White,1190);return;}
@@ -6013,7 +6045,7 @@ void ConsoleHome::DrawModernGameDetails(HomeCanvas& c)const{
 }
 void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     InfinityIcons::Draw(c,4,46,91,32,White);c.TextFit(91,78,"INFINITY Store",40,White,1128);
-    c.Text(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage()),20,Muted,1175);
+    c.TextFit(48,133,StoreSourceLabel()+" | "+StoreStorage::Label(store_.Storage())+" | "+number(storeVisible_.size())+" itens"+(storeDownloadableOnly_?" | Downloads":""),20,Muted,1175);
     const char* tabs[]={"Todos","Jogos","XBLA","Homebrew","Apps","Emuladores","DLC","PT-BR"};
     if(!storeDetails_){
         c.GroupGlass(45,171,250,417);
@@ -6026,7 +6058,7 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     if(storeVisible_.empty()){
         c.SeriesTile(310,171,925,417,false);
         c.TextFit(330,250,c.Tr("Nenhum item no catalogo desta categoria."),23,White,880);
-        c.TextFit(330,300,c.Tr("Configure aurorax-store.tsv com fontes e licencas autorizadas."),19,Muted,880);return;
+        c.TextFit(330,300,"X Alternar filtro | BACK Fontes",19,Muted,880);return;
     }
     const auto& item=store_.Items()[storeVisible_[storeRow_]];
     const auto status=[&](const StoreItem& p)->const char*{
@@ -6064,12 +6096,16 @@ void ConsoleHome::DrawModernStore(HomeCanvas& c)const{
     if(storeDetails_){
         if(item.url.empty()){c.Text(x+20,515,"Sem pacote autorizado para download.",16,Muted,w-40);InfinityButtons::Strip(c,45,581,"B Voltar",19,Lime,1170);return;}
         c.Text(x+20,515,item.url,16,Muted,w-40);
+        #if defined(INFINITY_XSDK_HTTPS)
+        InfinityButtons::Strip(c,45,581,storeConfirm_?"A Confirmar | B Cancelar":store_.Installed(item)?"RB Gerenciar | B Voltar":store_.Staged(item)?"A Instalar (XEX/ZIP) | X Fila | B Voltar":"A Baixar no Xbox | X Fila | B Voltar",19,Lime,1170);
+#else
         InfinityButtons::Strip(c,45,581,c.Tr(storeConfirm_?"A Confirmar pedido | B Cancelar":"START Baixar | A Pedido PC | X Remover PC | B Voltar"),19,Lime,1170);
+#endif
         InfinityButtons::Strip(c,45,608,c.Tr("LB Fila nativa | RB Gerenciar | BACK Instalar XEX/ZIP"),18,Muted,1170);
     }else{
         c.Text(x+20,528,c.Tr("A Detalhes"),21,Lime,w-40);
         InfinityButtons::Strip(c,45,584,c.Tr("Esq/Dir Categorias | Cima/Baixo Itens | A Detalhes"),18,Lime,1170);
-        InfinityButtons::Strip(c,45,608,c.Tr("LB Destino HDD/USB | BACK Provedores | Y Atualizar | B Voltar"),18,Muted,1170);
+        InfinityButtons::Strip(c,45,608,"X Downloads | LB Destino | RB Pagina | BACK Fontes | Y Atualizar",17,Muted,1170);
     }
 }
 

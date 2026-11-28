@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.81 — Loja nativa
+
+- A baixa/instala no Xbox com confirmação; X gerencia fila. Filtro de downloads e paginação.
+- ZIPs Homebrew oficiais com XEX nomeado: quatro identidades exatas aprovadas pelo snapshot upstream, normalizadas para default.xex. Outros XEX continuam recusados.
+- Pré-validação do host e limite nativo antes do download. Sem API de terceiros não confirmada.
+
 ## V0.3.80 — Diagnóstico HTTPS e referência Series360
 
 - Sistema > Rede mostra presença da compilação HTTPS, backend TLS e certificado CA. Não equivale a teste de conexão.
