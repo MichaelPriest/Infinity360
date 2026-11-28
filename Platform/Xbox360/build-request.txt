@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.76 Alpha
+INFINITY 360 V0.3.81 Alpha
 Requested: 2026-11-27
-Baseline: 1eb94bd62acbfe591abc888fa12695635e49dc7d
-Retry authorized unified FFmpeg XEX and Android APK release after Lua limits and obsolete SDK package fixes; gates retained.
+Baseline: b728661ca25311648c2528edf07f917d078651ea
+Authorized unified FFmpeg XEX and Android APK release, including MPEG-PS, TLS diagnostics, controller navigation, HD artwork, library path manager and native Store. All packaging, integrity and portable test gates retained.
