@@ -1,6 +1,5 @@
 #pragma once
 #include "HomeCanvas.h"
-#include "XsdkControllerNavigation.h"
 #include "PlaybackHud.h"
 #include "TvGuide.h"
 #include "TvPreferences.h"
@@ -28,7 +27,7 @@
 namespace XsdkAv {
 inline bool Cancelled(){
     INPUT_STATE state{};
-    return XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
+    return XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
 }
 inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Suffix(const std::string& path,const std::string& ext){
@@ -133,7 +132,6 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             session=hls.Fragmented()?cloud_container_open_mp4(readHls,&hls,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(readHls,&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             const bool mp4=CloudHls::Extension(path,".mp4");
-            const bool ps=CloudHls::Extension(path,".mpg")||CloudHls::Extension(path,".mpeg")||CloudHls::Extension(path,".ps");
             if(mp4&&ranged.Open(path,root)){
                 if(!loading(1,"Abrindo decoder MP4"))return loadingError();
                 session=cloud_container_open_mp4_seekable(XsdkMpeg::RangeReader::ReadCallback,XsdkMpeg::RangeReader::SeekCallback,ranged.Length(),&ranged,CloudAvStreamQueue::Capture,&timeline);
@@ -142,6 +140,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(!remote.Open(path,root,!mp4,false,mp4))return remote.Error();
             if(!loading(1,"Identificando codecs da fonte"))return loadingError();
             auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
+            const bool ps=CloudHls::Extension(path,".mpg")||CloudHls::Extension(path,".mpeg")||CloudHls::Extension(path,".ps");
             session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):ps?cloud_container_open_ps(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
             }
         }
@@ -172,7 +171,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudReadClock playbackClock;
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     INPUT_STATE initial{};
-    CloudPlaybackControls controls(!remoteSource||duration>0,XsdkControllerNavigation::Poll(initial)?ControlKeys(initial.gamepad.buttons):0);
+    CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
     controls.RestoreAudio(audioPreference);
 #ifdef INFINITY_AV_NETWORK
     if(allowSwitch&&!manualCap)hls.ArmRuntimeAdaptation(allowUpgrade?userHlsCap:selectedBitrate);
@@ -190,8 +189,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(qualityAvailable)qualityHint=" | Y Qualidade";
 #endif
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
-    ControllerNavigation::State navigation;navigation.Suppress();
-    bool suppressControls=true;
+    unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     bool lastHud=true,reportedPlaying=false;
     bool liveAudioFailure=false,showDetails=false;
     CloudQualityMenu qualityMenu;
@@ -256,18 +254,16 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     while(ok){
         if(!reportedPlaying&&shown&&submitted){reportedPlaying=true;if(onPlaying)onPlaying();}
         INPUT_STATE state{};
-        const bool physicalOk=XsdkControllerNavigation::Poll(state);
-        const auto nav=XsdkControllerNavigation::Read(navigation,state,physicalOk,guide.Active()||qualityMenu.Active()||channelMenu.Active());
-        const unsigned physical=nav.held;
-        const bool physicalBusy=physical||(physicalOk&&state.gamepad.buttons);
-        const auto remoteKey=remoteSource&&remoteInput?remoteInput(!physicalBusy&&liveMetadata&&shown&&submitted&&!guide.Active()&&!qualityMenu.Active()&&!channelMenu.Active()&&!programme.channel.empty()):TvRemote::Key::None;
+        const bool physicalOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
+        const unsigned physical=physicalOk?state.gamepad.buttons:0;
+        const auto remoteKey=remoteSource&&remoteInput?remoteInput(!physical&&liveMetadata&&shown&&submitted&&!guide.Active()&&!qualityMenu.Active()&&!channelMenu.Active()&&!programme.channel.empty()):TvRemote::Key::None;
         if(remoteKey==TvRemote::Key::Tune){channelChange=true;break;}
-        const unsigned pulse=physicalBusy?0:RemoteButtons(remoteKey);
+        const unsigned pulse=physical?0:RemoteButtons(remoteKey);
         const bool inputOk=physicalOk||bool(remoteInput);
         state.gamepad.buttons=physical|pulse;
         if(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)){cancelled=true;break;}
-        const unsigned edges=nav.edges|pulse;
-        if(!physicalOk)suppressControls=true;else if(!physical||nav.edges)suppressControls=false;
+        const unsigned edges=(physical&~held)|pulse;
+        held=physical;
         // Preserve separate physical edges; remote pulses are released on the next poll.
         const bool guideEdge=(edges&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available();
         const bool wasGuide=guide.Active();if(guideEdge)guide.Toggle();
@@ -319,8 +315,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 #endif
         if(inputOk&&(guide.Active()||wasGuide||guideEdge||wasQuality||qualityMenu.Active()||wasChannel||channelMenu.Active()))controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
         else if(inputOk){
-            if(suppressControls&&!pulse)controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
-            else changed=controls.Update(ControlKeys(state.gamepad.buttons),wall())||changed;
+            changed=controls.Update(ControlKeys(state.gamepad.buttons),wall())||changed;
             if(!programme.channel.empty()&&favorite&&shown&&submitted&&(edges&INPUT_GAMEPAD_A)){
                 favorite();epgSecond=-1;refreshEpg();hud.Reveal(wall());changed=true;
             }

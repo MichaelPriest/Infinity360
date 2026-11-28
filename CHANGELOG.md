@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.83 — Restauração de controles (regressão Xenia)
+
+- Restaura exatamente a leitura XAM e o processamento de bordas da V0.3.76 no menu, diagnóstico e player MPEG; no player FFmpeg restaura somente o processamento de entrada, mantendo os formatos MPEG-PS adicionados posteriormente.
+- Retira do caminho nativo ativo o novo normalizador, repetição temporizada e seleção de quatro slots introduzidos em V0.3.79–82. Mantém D-pad e analógico esquerdo no menu com o mapeamento original.
+- Preserva loja, TLS, HD, gerenciador de pastas e APK. A regressão foi relatada no Xenia; causa exata e correção em execução ainda exigem teste.
+
 ## V0.3.82 — Correção de controles
 
 - Consulta os quatro índices XAM, prioriza controle ativo e mantém o último conectado quando ocioso; dashboard, IPTV e cancelamento de operações usam a mesma leitura.

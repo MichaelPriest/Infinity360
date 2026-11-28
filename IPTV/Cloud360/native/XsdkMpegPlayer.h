@@ -1,7 +1,6 @@
 #pragma once
 #include "MpegPlayback.h"
 #include "HomeCanvas.h"
-#include "XsdkControllerNavigation.h"
 #include "PlaybackHud.h"
 #include "MediaUrl.h"
 #include "XsdkPaths.h"
@@ -18,7 +17,7 @@
 #endif
 namespace XsdkMpeg {
 inline bool Cancelled(){
-    INPUT_STATE input{};return XsdkControllerNavigation::Poll(input)&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
+    INPUT_STATE input{};return XamInputGetState(0,0,&input)==ERROR_SUCCESS&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
 }
 class LocalReader:public MediaReader{
     std::ifstream file_;
@@ -87,13 +86,11 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-started).count();};hud.Reveal(0);
     bool lastHud=true;
     auto overlay=[&](){guide.Restore(canvas);lastHud=hud.Visible(wall(),paused);hud.Draw(canvas,wall(),paused,"Cloud360 IPTV | MPEG",std::string(paused?"Pausado":"Reproduzindo")+(muted?" | Mudo":""),local?"A Pausa | X Mudo | B Sair":"X Mudo | B Sair");guide.Draw(canvas);};
-    ControllerNavigation::State navigation;navigation.Suppress();
+    INPUT_STATE initial{};unsigned previous=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
     while(!Cancelled()){
         INPUT_STATE input{};bool refresh=false;
-        const bool connected=XsdkControllerNavigation::Poll(input);
-        const auto nav=XsdkControllerNavigation::Read(navigation,input,connected,guide.Active());
-        if(connected){
-            const unsigned edge=nav.edges;
+        if(XamInputGetState(0,0,&input)==ERROR_SUCCESS){
+            const unsigned buttons=input.gamepad.buttons,edge=buttons&~previous;previous=buttons;
             const bool wasGuide=guide.Active();
             if((edge&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available()){guide.Toggle();refresh=true;}
             if(guide.Active()){

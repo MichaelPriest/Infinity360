@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.82 Alpha
+INFINITY 360 V0.3.83 Alpha
 Requested: 2026-11-27
-Baseline: 547786c8531a1ed24c27b8d4e6a7c16bde0d9717
-Corrective unified build after controller failure reported on V0.3.81. Keep native XEX, APK, FFmpeg and release validation gates.
+Baseline: 052b4a47a80f1c646268436e7fec8c779367032b
+Corrective unified build: restore V0.3.76 input path after user-reported Xenia regression; retain recent store, MPEG-PS and TLS features. All release gates retained.

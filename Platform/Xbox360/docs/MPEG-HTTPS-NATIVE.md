@@ -9,3 +9,5 @@ O ZIP Series360 0.12.79 foi recebido e inspecionado posteriormente: [relatório 
 D-pad e analógico esquerdo usam navegação comum no XSDK; 380ms de atraso inicial e 115ms de repetição. L3 continua Guide. Não repetir ações nem troca de canal fora dos menus. Homologação física e nova compilação nativa pendentes.
 
 V0.3.82: seleção automática entre 4 controles XAM; um controle ativo por vez. Desbloqueio individual após reconexão/retorno, bits reservados ignorados. Não desabilita proteção do Guide oficial. Testar em Xenia e Xbox físico; se persistir, registrar índice, conexão e estado da UI oficial.
+
+V0.3.83: rollback isolado de entrada para V0.3.76 após relato de regressão no Xenia. As mudanças de V0.3.82 não estão ativas no menu e players. Mantém XAM slot 0, bordas de botões originais, analógico esquerdo no menu, proteção original do Guide e MPEG-PS/HTTPS. Teste primeiro com configuração anterior do emulador; compare D-pad, analógico, A/B/X/Y e IPTV. Sem validação de execução nesta etapa.
