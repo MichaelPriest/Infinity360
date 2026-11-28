@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.84 — Diagnóstico de entrada Xenia
+
+- Diagnóstico opt-in visual e log limitado a 256 registros: resultado XAM, botão bruto, analógico, máscara mapeada, borda antes/depois da UI oficial, despacho e estado idle. Sem alterar o caminho restaurado na V0.3.83.
+- Ative com MenuPreview/enable-input-diagnostics.txt contendo ENABLE-INPUT-DIAGNOSTICS. Log em MenuPreview/UserFiles/input-diagnostic.log quando o volume permite escrita. Não registra perfil ou credenciais. Remova o marcador para desativar.
+
 ## V0.3.83 — Restauração de controles (regressão Xenia)
 
 - Restaura exatamente a leitura XAM e o processamento de bordas da V0.3.76 no menu, diagnóstico e player MPEG; no player FFmpeg restaura somente o processamento de entrada, mantendo os formatos MPEG-PS adicionados posteriormente.

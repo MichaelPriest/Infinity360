@@ -6,6 +6,8 @@
 #include "TvCatalog.h"
 #ifdef INFINITY_FULL_MENU_PREVIEW
 #include "ConsoleHome.h"
+#include "InfinityVersion.h"
+#include "XsdkInputTrace.h"
 #include "DashboardMotion.h"
 #include "NativeSocialUiXsdk.h"
 #include "NativeProfilePrivilegesXsdk.h"
@@ -257,6 +259,7 @@ int main(){
     Presenter p;
     if(!p.Open()){xsdk_log_write("FAIL: menu presenter open");p.Close();return 3;}
     p.safeArea=menu.SafeArea();
+    XsdkInputTrace inputTrace(dir);
     const uint16_t keys[]={INPUT_GAMEPAD_DPAD_LEFT,INPUT_GAMEPAD_DPAD_RIGHT,
         INPUT_GAMEPAD_DPAD_UP,INPUT_GAMEPAD_DPAD_DOWN,INPUT_GAMEPAD_A,
         INPUT_GAMEPAD_B,INPUT_GAMEPAD_X,INPUT_GAMEPAD_Y,0x0100,0x0200,
@@ -277,14 +280,17 @@ int main(){
     for(unsigned frame=0;continuous||frame<3600;++frame){
         if(frame%60==0){const auto value=menu.ClockLabel(std::time(nullptr));if(clock!=value){clock=value;dirty=true;}}
         INPUT_STATE input{};
-        uint16_t buttons=XamInputGetState(0,0,&input)==ERROR_SUCCESS?input.gamepad.buttons:0;
+        const unsigned inputResult=XamInputGetState(0,0,&input);
+        uint16_t buttons=inputResult==ERROR_SUCCESS?input.gamepad.buttons:0;
         if(input.gamepad.thumb_lx < -16000)buttons|=INPUT_GAMEPAD_DPAD_LEFT;
         if(input.gamepad.thumb_lx > 16000)buttons|=INPUT_GAMEPAD_DPAD_RIGHT;
         if(input.gamepad.thumb_ly > 16000)buttons|=INPUT_GAMEPAD_DPAD_UP;
         if(input.gamepad.thumb_ly < -16000)buttons|=INPUT_GAMEPAD_DPAD_DOWN;
         uint16_t edge=buttons&~previous;previous=buttons;
         const bool systemUiOpen=xsdk_system_ui_open();
+        const unsigned rawEdge=edge;
         if(systemUiOpen)edge=0;
+        if(inputTrace.Observe(frame,inputResult,input,buttons,rawEdge,edge,systemUiOpen))dirty=true;
         bool remoteStoreJob=false;
 #ifdef INFINITY_MENU_FFMPEG
         if(dashboardRemoteEnabled){
@@ -304,6 +310,7 @@ int main(){
         const bool activity=remoteStoreJob||buttons||edge||input.gamepad.left_trigger>30||input.gamepad.right_trigger>30||input.gamepad.thumb_rx>16000||input.gamepad.thumb_rx< -16000||input.gamepad.thumb_ry>16000||input.gamepad.thumb_ry< -16000;
         if(idleScreen.Update(IdleScreen::Now(),menu.IdleMinutes(),continuous&&pendingLaunch.empty()&&menu.IdleEligible(),activity))dirty=true;
         if(wasIdle&&activity)edge=0;
+        inputTrace.Dispatch(edge,wasIdle);
         const uint16_t captureChord=INPUT_GAMEPAD_LEFT_THUMB|INPUT_GAMEPAD_RIGHT_THUMB;
         const bool capture=!systemUiOpen&&(buttons&captureChord)==captureChord&&(edge&captureChord)!=0;
         if(capture)edge=0;
@@ -817,6 +824,7 @@ int main(){
                 canvas.Text(210,392,"A Confirmar | B Cancelar | retorna pela dashboard do console",20,LIME,850);
             }
         }
+        if(dirty&&inputTrace.Enabled())inputTrace.Draw(canvas);
         if(!p.Show(canvas,dirty)){ok=false;break;}
         dirty=false;
         if(capture&&pendingLaunch.empty()){

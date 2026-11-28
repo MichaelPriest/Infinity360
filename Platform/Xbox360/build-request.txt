@@ -1,4 +1,4 @@
-INFINITY 360 V0.3.83 Alpha
+INFINITY 360 V0.3.84 Alpha
 Requested: 2026-11-27
-Baseline: 052b4a47a80f1c646268436e7fec8c779367032b
-Corrective unified build: restore V0.3.76 input path after user-reported Xenia regression; retain recent store, MPEG-PS and TLS features. All release gates retained.
+Baseline: c3c8cc3fc759cb1329c054aaf66610536b47ab42
+Diagnostic build after Xenia input regression persisted with restored original controls. Add opt-in visible and bounded raw XAM / system UI / dispatch trace; retain release gates.
