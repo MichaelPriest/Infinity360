@@ -20,7 +20,8 @@ int main(int argc,char** argv){
     if(argc!=2)return 2;
     const std::string path=argv[1];
     const bool mp4=path.size()>=4&&path.substr(path.size()-4)==".mp4";
-    auto open=mp4?cloud_container_open_mp4:cloud_container_open_ts;
+    const bool ps=path.size()>=4&&path.substr(path.size()-4)==".mpg";
+    auto open=mp4?cloud_container_open_mp4:ps?cloud_container_open_ps:cloud_container_open_ts;
     CloudContainerReport expected{};
     auto* local=cloud_container_open(argv[1],nullptr,nullptr,1);
     if(!local)return 1;

@@ -53,6 +53,9 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c:v copy -c:a eac3 -ar 48000 -f mpegts fixtures/generated/audio-eac3.ts
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c:v mpeg2video -pix_fmt yuv420p -c:a copy -f mpegts fixtures/generated/video-mpeg2.ts
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 -ar 48000 -f mpegts fixtures/generated/video-mpeg2-mp2.ts
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=25" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 1 -c:v mpeg1video -pix_fmt yuv420p -c:a mp2 -f mpeg fixtures/generated/video-mpeg1.mpg
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=128x72:rate=25" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 1 -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 -f mpeg fixtures/generated/video-mpeg2.mpg
+          ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/test.mp4 -c:v mpeg4 -pix_fmt yuv420p -c:a aac fixtures/generated/video-mpeg4.mp4
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/long.mp4 -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 -ar 48000 -f mpegts fixtures/generated/long-mpeg2-mp2.ts
           ffmpeg -hide_banner -loglevel error -y -i fixtures/generated/long.mp4 -c:v copy -c:a aac -ar 44100 fixtures/generated/rate44100.mp4
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=5" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 2 -c:v libx264 -pix_fmt yuv420p -preset ultrafast -threads 1 -c:a aac fixtures/generated/fullhd.mp4
