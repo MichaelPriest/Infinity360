@@ -18,7 +18,7 @@
 #endif
 namespace XsdkMpeg {
 inline bool Cancelled(){
-    INPUT_STATE input{};return XamInputGetState(0,0,&input)==ERROR_SUCCESS&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
+    INPUT_STATE input{};return XsdkControllerNavigation::Poll(input)&&(input.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
 }
 class LocalReader:public MediaReader{
     std::ifstream file_;
@@ -90,7 +90,7 @@ inline std::string PlayReader(MediaReader& reader,HomeCanvas& canvas,const std::
     ControllerNavigation::State navigation;navigation.Suppress();
     while(!Cancelled()){
         INPUT_STATE input{};bool refresh=false;
-        const bool connected=XamInputGetState(0,0,&input)==ERROR_SUCCESS;
+        const bool connected=XsdkControllerNavigation::Poll(input);
         const auto nav=XsdkControllerNavigation::Read(navigation,input,connected,guide.Active());
         if(connected){
             const unsigned edge=nav.edges;

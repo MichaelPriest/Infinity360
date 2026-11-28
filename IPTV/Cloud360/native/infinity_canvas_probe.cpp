@@ -203,7 +203,7 @@ int main(){
     bool ok=true,dirty=true;
     for(unsigned frame=0;frame<MaxFrames;++frame){
         INPUT_STATE input{};
-        const bool connected=XamInputGetState(0,0,&input)==ERROR_SUCCESS;
+        const bool connected=XsdkControllerNavigation::Poll(input);
         const unsigned edge=XsdkControllerNavigation::Read(navigation,input,connected).edges;
         if(edge&INPUT_GAMEPAD_BACK)break;
         if(edge&INPUT_GAMEPAD_B){if(!page)break;page=0;row=0;dirty=true;}
@@ -278,7 +278,7 @@ int main(){
     for(unsigned frame=0;continuous||frame<3600;++frame){
         if(frame%60==0){const auto value=menu.ClockLabel(std::time(nullptr));if(clock!=value){clock=value;dirty=true;}}
         INPUT_STATE input{};
-        const bool connected=XamInputGetState(0,0,&input)==ERROR_SUCCESS;
+        const bool connected=XsdkControllerNavigation::Poll(input);
         const bool systemUiOpen=xsdk_system_ui_open();
         const auto nav=XsdkControllerNavigation::Read(navigation,input,connected,!systemUiOpen&&pendingLaunch.empty());
         const uint16_t buttons=static_cast<uint16_t>(nav.held|(connected?input.gamepad.buttons:0));
@@ -416,7 +416,7 @@ int main(){
                 for(size_t index=0;index<coverBatch.size()&&!cancelled;++index){
                     auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                     auto progress=[&](unsigned long long done,unsigned long long total){
-                        INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;return false;}
+                        INPUT_STATE state{};if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK))){cancelled=true;return false;}
                         const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
                         canvas.Background();canvas.Text(48,100,"XboxUnity | Capas em lote",36,WHITE,1180);
                         canvas.Text(48,220,std::to_string(index+1)+" / "+std::to_string(coverBatch.size())+" | Salvas "+std::to_string(saved),28,WHITE,1180);
@@ -437,7 +437,7 @@ int main(){
                 menu.StopFtp();bool success=false,videoFailed=false;std::string result;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
-                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    INPUT_STATE state{};if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
                     canvas.Background();canvas.Text(48,100,"INFINITY | Importar arte",36,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
@@ -452,7 +452,7 @@ int main(){
             if(menu.TakeContentInstall(contentInstall,contentGame)){
                 menu.StopFtp();bool videoFailed=false;auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
-                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    INPUT_STATE state{};if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
                     canvas.Background();canvas.Text(48,100,"INFINITY | Instalar TU/DLC",36,WHITE,1180);
                     canvas.Text(48,210,contentInstall.filename,24,WHITE,1180);
@@ -470,7 +470,7 @@ int main(){
             if(recover||menu.TakeBackupRequest(backup)){
                 menu.StopFtp();bool videoFailed=false;auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
-                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    INPUT_STATE state{};if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
                     canvas.Background();canvas.Text(48,100,recover?(verifyOnly?"INFINITY | Verificar backup":"INFINITY | Recuperar backup"):"INFINITY | Backup de conteudo",36,WHITE,1180);
                     canvas.Text(48,300,StorageInfo::FormatBytes(done)+" / "+StorageInfo::FormatBytes(total),24,MUTED,1180);
@@ -490,7 +490,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
@@ -511,7 +511,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
@@ -533,7 +533,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
@@ -555,7 +555,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
@@ -577,7 +577,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
                     last=now;canvas.Background();
@@ -598,7 +598,7 @@ int main(){
                 menu.StopFtp();FileWorkspace workspace(dir);bool videoFailed=false;
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 auto progress=[&](unsigned long long done,unsigned long long total){
-                    INPUT_STATE state{};if(XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
+                    INPUT_STATE state{};if(XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();if(done!=total&&now-last<std::chrono::milliseconds(200))return true;last=now;
                     canvas.Background();canvas.Text(48,100,"INFINITY | Importar GOD/XBLA",36,WHITE,1180);
                     canvas.Text(48,210,importTicket.package.name,24,WHITE,1180);
@@ -619,7 +619,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
+                    if(XsdkControllerNavigation::Poll(state) &&
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(now-last<std::chrono::milliseconds(200))return true;
@@ -649,7 +649,7 @@ int main(){
                 auto last=std::chrono::steady_clock::now()-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
+                    if(XsdkControllerNavigation::Poll(state) &&
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     const auto now=std::chrono::steady_clock::now();
                     if(done!=total&&now-last<std::chrono::milliseconds(200))return true;
@@ -684,7 +684,7 @@ int main(){
                 auto last=started-std::chrono::seconds(1);
                 const auto progress=[&](unsigned long long done,unsigned long long total){
                     INPUT_STATE state{};
-                    if(XamInputGetState(0,0,&state)==ERROR_SUCCESS &&
+                    if(XsdkControllerNavigation::Poll(state) &&
                        (state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)))return false;
                     rate.Sample(done,total,TransferRate::Now());
 #ifdef INFINITY_MENU_FFMPEG
@@ -728,7 +728,7 @@ int main(){
             unsigned weatherCity=0;
             if(!menu.TransferRunning()&&menu.TakeWeatherRequest(weatherCity)){
                 ClockWeather::Reading reading;
-                auto progress=[&](unsigned long long,unsigned long long){INPUT_STATE state{};return XamInputGetState(0,0,&state)!=ERROR_SUCCESS||!(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));};
+                auto progress=[&](unsigned long long,unsigned long long){INPUT_STATE state{};return !XsdkControllerNavigation::Poll(state)||!(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));};
                 auto message=XsdkWeather(weatherCity,dir,progress,reading);menu.WeatherResult(reading,message);dirty=true;
             }
         }

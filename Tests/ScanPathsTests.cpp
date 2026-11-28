@@ -19,6 +19,8 @@ int main() {
     {
         using namespace ControllerNavigation;
         State n;
+        {const bool connected[]={false,true,false,true},active[]={false,false,false,true};assert(Choose(0,connected,active)==3);assert(Choose(1,connected,active)==3);const bool idle[]={false,false,false,false};assert(Choose(3,connected,idle)==3);assert(Choose(-1,connected,idle)==1);}
+        {State recovery;recovery.Suppress();assert(recovery.Poll(true,0x4000|0x0400,22000,0,0).edges==0);assert(recovery.Poll(true,0x4000|0x0400|Up,22000,0,10).edges==Up);assert(recovery.Poll(true,0x4000|0x0400|Up|0x1000,22000,0,20).edges==0x1000);assert(recovery.Poll(true,0x0400,0,0,30).held==0);assert(recovery.Poll(true,0x0400|0x4000,0,0,40).edges==0x4000);}
         assert(n.Poll(true,Up,0,0,0).edges==Up);
         assert(n.Poll(true,Up,0,0,379).edges==0);
         assert(n.Poll(true,Up,0,0,380).edges==Up);

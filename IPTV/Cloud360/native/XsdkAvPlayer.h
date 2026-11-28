@@ -28,7 +28,7 @@
 namespace XsdkAv {
 inline bool Cancelled(){
     INPUT_STATE state{};
-    return XamInputGetState(0,0,&state)==ERROR_SUCCESS&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
+    return XsdkControllerNavigation::Poll(state)&&(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK));
 }
 inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;return s;}
 inline bool Suffix(const std::string& path,const std::string& ext){
@@ -172,7 +172,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     CloudReadClock playbackClock;
     auto wall=[&](){return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count();};
     INPUT_STATE initial{};
-    CloudPlaybackControls controls(!remoteSource||duration>0,XamInputGetState(0,0,&initial)==ERROR_SUCCESS?ControlKeys(initial.gamepad.buttons):0);
+    CloudPlaybackControls controls(!remoteSource||duration>0,XsdkControllerNavigation::Poll(initial)?ControlKeys(initial.gamepad.buttons):0);
     controls.RestoreAudio(audioPreference);
 #ifdef INFINITY_AV_NETWORK
     if(allowSwitch&&!manualCap)hls.ArmRuntimeAdaptation(allowUpgrade?userHlsCap:selectedBitrate);
@@ -256,7 +256,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     while(ok){
         if(!reportedPlaying&&shown&&submitted){reportedPlaying=true;if(onPlaying)onPlaying();}
         INPUT_STATE state{};
-        const bool physicalOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
+        const bool physicalOk=XsdkControllerNavigation::Poll(state);
         const auto nav=XsdkControllerNavigation::Read(navigation,state,physicalOk,guide.Active()||qualityMenu.Active()||channelMenu.Active());
         const unsigned physical=nav.held;
         const bool physicalBusy=physical||(physicalOk&&state.gamepad.buttons);
@@ -267,7 +267,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         state.gamepad.buttons=physical|pulse;
         if(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)){cancelled=true;break;}
         const unsigned edges=nav.edges|pulse;
-        if(!physicalOk)suppressControls=true;else if(!physicalBusy)suppressControls=false;
+        if(!physicalOk)suppressControls=true;else if(!physical||nav.edges)suppressControls=false;
         // Preserve separate physical edges; remote pulses are released on the next poll.
         const bool guideEdge=(edges&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available();
         const bool wasGuide=guide.Active();if(guideEdge)guide.Toggle();

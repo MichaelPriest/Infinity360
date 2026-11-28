@@ -7,3 +7,5 @@ O FFmpeg integrado mantém rede externa via curl e I/O customizado. Demuxers mov
 O ZIP Series360 0.12.79 foi recebido e inspecionado posteriormente: [relatório de dependências](SERIES360-01279-INSPECTION.md). As bibliotecas identificam XDK 21256, não o firmware real; TLS e codecs específicos permanecem indeterminados. Não substituir xboxkrnl.exe, XAM ou drivers do console; uma dashboard é um título que usa os serviços existentes. Referência de arquitetura: https://github.com/HG-ERIK/x360-homebrew-libs (bibliotecas XDK HTTPS/TLS e decodificação; não incorporadas nesta revisão, ABI distinta). Não presumir compatibilidade com XSDK.
 
 D-pad e analógico esquerdo usam navegação comum no XSDK; 380ms de atraso inicial e 115ms de repetição. L3 continua Guide. Não repetir ações nem troca de canal fora dos menus. Homologação física e nova compilação nativa pendentes.
+
+V0.3.82: seleção automática entre 4 controles XAM; um controle ativo por vez. Desbloqueio individual após reconexão/retorno, bits reservados ignorados. Não desabilita proteção do Guide oficial. Testar em Xenia e Xbox físico; se persistir, registrar índice, conexão e estado da UI oficial.

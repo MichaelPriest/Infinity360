@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.82 — Correção de controles
+
+- Consulta os quatro índices XAM, prioriza controle ativo e mantém o último conectado quando ocioso; dashboard, IPTV e cancelamento de operações usam a mesma leitura.
+- Máscara de botões reconhecidos, recuperação individual após reconexão ou retorno de overlay. Um botão mantido ou analógico com drift não bloqueia todos os demais comandos. Testes portáteis adicionais. Homologação Xbox/Xenia necessária.
+
 ## V0.3.81 — Loja nativa
 
 - A baixa/instala no Xbox com confirmação; X gerencia fila. Busca textual por nome/ID, filtro de downloads e paginação.
