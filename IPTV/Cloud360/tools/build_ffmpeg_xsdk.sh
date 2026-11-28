@@ -51,14 +51,14 @@ test -s xsdk-math-probe.elf
   --disable-shared --enable-static --enable-small \
   --disable-programs --disable-doc \
   --disable-everything --disable-autodetect \
-  --disable-avdevice --disable-avfilter --enable-avformat --enable-demuxer=mov,mpegts \
+  --disable-avdevice --disable-avfilter --enable-avformat --enable-demuxer=mov,mpegts,mpegps \
   --disable-network --disable-postproc --disable-swresample --disable-swscale \
   --disable-gpl --disable-nonfree \
   --disable-pthreads --disable-w32threads --disable-os2threads \
   --disable-asm --disable-runtime-cpudetect --disable-iconv \
   --disable-bzlib --disable-zlib \
-  --enable-decoder=h264,mpeg2video,aac,mp2,mp3,ac3,eac3 \
-  --enable-parser=h264,mpegvideo,aac,mpegaudio,ac3 \
+  --enable-decoder=h264,mpeg1video,mpeg2video,mpeg4,aac,mp2,mp3,ac3,eac3 \
+  --enable-parser=h264,mpegvideo,mpeg4video,aac,mpegaudio,ac3 \
   --extra-cflags="-mcpu=cell -fno-pic -O2 -fno-strict-aliasing -I$SDK/include"
 grep -qx "#define HAVE_ERF 1" config.h
 grep -qx "#define HAVE_HYPOT 1" config.h

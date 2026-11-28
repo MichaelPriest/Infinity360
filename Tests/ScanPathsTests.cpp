@@ -1,4 +1,5 @@
 #include "GameScanner.h"
+#include "../Platform/Xbox360/ControllerNavigation.h"
 #include "XsdkPaths.h"
 #include "XexLaunchCheck.h"
 #include "DiscSet.h"
@@ -15,6 +16,32 @@
 namespace fs = std::filesystem;
 
 int main() {
+    {
+        using namespace ControllerNavigation;
+        State n;
+        assert(n.Poll(true,Up,0,0,0).edges==Up);
+        assert(n.Poll(true,Up,0,0,379).edges==0);
+        assert(n.Poll(true,Up,0,0,380).edges==Up);
+        assert(n.Poll(true,Up,0,0,495).edges==Up);
+        assert(n.Poll(true,0,0,20000,500).edges==0);
+        assert(n.Poll(true,0,0,12000,510).held==Up);
+        assert(n.Poll(true,0,0,10000,520).held==0);
+        assert(n.Poll(true,0,18000,19000,530).edges==Up);
+        assert(n.Poll(true,0,20000,19000,540).held==Up);
+        assert(n.Poll(true,Left,25000,0,550).edges==Left);
+        assert(n.Poll(true,Left|Right,25000,0,560).held==0);
+        assert(n.Poll(true,Right|0x1000,0,0,570).edges==0x1000);
+        assert(n.Poll(true,Right|0x1000,0,0,600).edges==0);
+        n.Suppress();
+        assert(n.Poll(true,Right,0,0,1000).edges==0);
+        assert(n.Poll(true,0,0,0,1001).edges==0);
+        assert(n.Poll(true,Right,0,0,1002,false).edges==Right);
+        assert(n.Poll(true,Right,0,0,5000,false).edges==0);
+        assert(n.Poll(false,0,0,0,5100).edges==0);
+        assert(n.Poll(true,0,-25000,0,5200).edges==0);
+        assert(n.Poll(true,0,0,0,5201).edges==0);
+        assert(n.Poll(true,0,-32768,0,5202).edges==Left);
+    }
     assert(DownloadRange::Matches("bytes 100-999/1000",100,1000));
     assert(!DownloadRange::Matches("bytes 0-999/1000",100,1000));
     assert(!DownloadRange::Matches("bytes 100-999/1001",100,1000));

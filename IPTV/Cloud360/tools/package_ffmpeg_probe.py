@@ -106,7 +106,11 @@ def main():
     for relative in ("config.h","config_components.h","ffbuild/config.mak"):
         shutil.copy2(args.ffbuild/relative, stage/"config"/Path(relative).name)
     shutil.copy2(args.repo/"IPTV/Cloud360/tools/build_ffmpeg_xsdk.sh",stage/"config")
-    shutil.copy2(args.tls/"programs/xsdk/cacert.pem",stage/"bin")
+    ca=args.tls/"programs/xsdk/cacert.pem"
+    ca_bytes=ca.read_bytes()
+    if not 1024 <= len(ca_bytes) <= 1024*1024 or ca_bytes.count(b"-----BEGIN CERTIFICATE-----") < 10:
+        raise ValueError("Missing or malformed TLS CA bundle")
+    shutil.copy2(ca,stage/"bin")
     shutil.copy2(args.miniz/"LICENSE",stage/"licenses"/"miniz-LICENSE.txt")
     lua_notice = args.build / "_deps/infinity_lua-src/doc/readme.html"
     if lua_notice.is_file():
@@ -181,6 +185,8 @@ def main():
     with zipfile.ZipFile(install) as z:
         assert z.testzip() is None
         assert z.read("default.xex")[:4] == b"XEX2"
+        assert z.read("cacert.pem")==ca_bytes
+        assert z.read("MenuPreview/enable-https-store.txt")==b"ENABLE-HTTPS-STORE\n"
         assert [n for n in z.namelist() if n.endswith(".xex")] == ["default.xex"]
         assert b"#EXTINF:" in z.read("MenuPreview/playlist.m3u")
         for script in ("Dispositivo.lua", "Tipo.lua", "Title-ID.lua", "Versao.lua"):

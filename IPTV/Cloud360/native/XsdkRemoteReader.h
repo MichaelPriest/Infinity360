@@ -28,7 +28,7 @@ class RemoteReader:public MediaReader {
         int left=0;while(auto* msg=curl_multi_info_read(multi_,&left)){
             if(msg->msg==CURLMSG_DONE){ended_=true;failed_=msg->data.result!=CURLE_OK;
                 if(failed_){long status=0;curl_easy_getinfo(easy_,CURLINFO_RESPONSE_CODE,&status);
-                    error_=status==401||status==403?"Servidor recusou autorizacao IPTV.":status==404?"Recurso IPTV nao encontrado.":msg->data.result==CURLE_OPERATION_TIMEDOUT?"Tempo limite de rede IPTV.":"Falha de transporte IPTV.";}}
+                    error_=status==401||status==403?"Servidor recusou autorizacao IPTV.":status==404?"Recurso IPTV nao encontrado.":msg->data.result==CURLE_OPERATION_TIMEDOUT?"Tempo limite de rede IPTV.":msg->data.result==CURLE_PEER_FAILED_VERIFICATION?"Certificado HTTPS recusado; confira data/hora e CA.":msg->data.result==CURLE_SSL_CONNECT_ERROR?"Falha no handshake TLS; confira servidor e relogio.":msg->data.result==CURLE_SSL_CACERT_BADFILE?"CA cacert.pem ausente ou invalida.":msg->data.result==CURLE_COULDNT_RESOLVE_HOST?"Falha DNS do servidor IPTV.":"Falha de transporte IPTV.";}}
         }
         return !failed_;
     }

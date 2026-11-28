@@ -1,5 +1,6 @@
 #pragma once
 #include "HomeCanvas.h"
+#include "XsdkControllerNavigation.h"
 #include "PlaybackHud.h"
 #include "TvGuide.h"
 #include "TvPreferences.h"
@@ -33,17 +34,18 @@ inline std::string Lower(std::string s){for(char& c:s)if(c>='A'&&c<='Z')c+=32;re
 inline bool Suffix(const std::string& path,const std::string& ext){
     const auto p=Lower(path);return p.size()>=ext.size()&&p.compare(p.size()-ext.size(),ext.size(),ext)==0;
 }
+inline bool ProgramStream(const std::string& path){return Suffix(path,".mpg")||Suffix(path,".mpeg")||Suffix(path,".ps");}
 inline bool Supports(const std::string& path){
     MediaUrl url;
     if(url.Parse(path)){
 #ifdef INFINITY_AV_NETWORK
         const auto target=url.target.substr(0,url.target.find('?'));
-        return path.find('#')==std::string::npos&&(Suffix(target,".ts")||Suffix(target,".m3u8")||Suffix(target,".mp4"));
+        return path.find('#')==std::string::npos&&(Suffix(target,".ts")||Suffix(target,".m3u8")||Suffix(target,".mp4")||ProgramStream(target));
 #else
         return false;
 #endif
     }
-    return Suffix(path,".mp4")||Suffix(path,".ts");
+    return Suffix(path,".mp4")||Suffix(path,".ts")||ProgramStream(path);
 }
 inline bool Enabled(const std::string& root){
     std::ifstream file((root+"enable-iptv-playback.txt").c_str());std::string marker;
@@ -131,6 +133,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             session=hls.Fragmented()?cloud_container_open_mp4(readHls,&hls,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(readHls,&hls,CloudAvStreamQueue::Capture,&timeline);
         }else{
             const bool mp4=CloudHls::Extension(path,".mp4");
+            const bool ps=CloudHls::Extension(path,".mpg")||CloudHls::Extension(path,".mpeg")||CloudHls::Extension(path,".ps");
             if(mp4&&ranged.Open(path,root)){
                 if(!loading(1,"Abrindo decoder MP4"))return loadingError();
                 session=cloud_container_open_mp4_seekable(XsdkMpeg::RangeReader::ReadCallback,XsdkMpeg::RangeReader::SeekCallback,ranged.Length(),&ranged,CloudAvStreamQueue::Capture,&timeline);
@@ -139,7 +142,7 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
             if(!remote.Open(path,root,!mp4,false,mp4))return remote.Error();
             if(!loading(1,"Identificando codecs da fonte"))return loadingError();
             auto read=[](void* u,uint8_t* b,unsigned n){return static_cast<XsdkMpeg::RemoteReader*>(u)->Read(b,n);};
-            session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
+            session=mp4?cloud_container_open_mp4(read,&remote,CloudAvStreamQueue::Capture,&timeline):ps?cloud_container_open_ps(read,&remote,CloudAvStreamQueue::Capture,&timeline):cloud_container_open_ts(read,&remote,CloudAvStreamQueue::Capture,&timeline);
             }
         }
     }else
@@ -187,7 +190,8 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
     if(qualityAvailable)qualityHint=" | Y Qualidade";
 #endif
     PlaybackHud hud;hud.Reveal(wall());PlaybackGuideOverlay guide(drawGuide);
-    unsigned held=XamInputGetState(0,0,&initial)==ERROR_SUCCESS?initial.gamepad.buttons:0;
+    ControllerNavigation::State navigation;navigation.Suppress();
+    bool suppressControls=true;
     bool lastHud=true,reportedPlaying=false;
     bool liveAudioFailure=false,showDetails=false;
     CloudQualityMenu qualityMenu;
@@ -253,15 +257,17 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
         if(!reportedPlaying&&shown&&submitted){reportedPlaying=true;if(onPlaying)onPlaying();}
         INPUT_STATE state{};
         const bool physicalOk=XamInputGetState(0,0,&state)==ERROR_SUCCESS;
-        const unsigned physical=physicalOk?state.gamepad.buttons:0;
-        const auto remoteKey=remoteSource&&remoteInput?remoteInput(!physical&&liveMetadata&&shown&&submitted&&!guide.Active()&&!qualityMenu.Active()&&!channelMenu.Active()&&!programme.channel.empty()):TvRemote::Key::None;
+        const auto nav=XsdkControllerNavigation::Read(navigation,state,physicalOk,guide.Active()||qualityMenu.Active()||channelMenu.Active());
+        const unsigned physical=nav.held;
+        const bool physicalBusy=physical||(physicalOk&&state.gamepad.buttons);
+        const auto remoteKey=remoteSource&&remoteInput?remoteInput(!physicalBusy&&liveMetadata&&shown&&submitted&&!guide.Active()&&!qualityMenu.Active()&&!channelMenu.Active()&&!programme.channel.empty()):TvRemote::Key::None;
         if(remoteKey==TvRemote::Key::Tune){channelChange=true;break;}
-        const unsigned pulse=physical?0:RemoteButtons(remoteKey);
+        const unsigned pulse=physicalBusy?0:RemoteButtons(remoteKey);
         const bool inputOk=physicalOk||bool(remoteInput);
         state.gamepad.buttons=physical|pulse;
         if(state.gamepad.buttons&(INPUT_GAMEPAD_B|INPUT_GAMEPAD_BACK)){cancelled=true;break;}
-        const unsigned edges=(physical&~held)|pulse;
-        held=physical;
+        const unsigned edges=nav.edges|pulse;
+        if(!physicalOk)suppressControls=true;else if(!physicalBusy)suppressControls=false;
         // Preserve separate physical edges; remote pulses are released on the next poll.
         const bool guideEdge=(edges&INPUT_GAMEPAD_LEFT_THUMB)&&guide.Available();
         const bool wasGuide=guide.Active();if(guideEdge)guide.Toggle();
@@ -313,7 +319,8 @@ inline std::string PlayAttempt(const std::string& path,const std::string& root,H
 #endif
         if(inputOk&&(guide.Active()||wasGuide||guideEdge||wasQuality||qualityMenu.Active()||wasChannel||channelMenu.Active()))controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
         else if(inputOk){
-            changed=controls.Update(ControlKeys(state.gamepad.buttons),wall())||changed;
+            if(suppressControls&&!pulse)controls.SynchronizeKeys(ControlKeys(state.gamepad.buttons));
+            else changed=controls.Update(ControlKeys(state.gamepad.buttons),wall())||changed;
             if(!programme.channel.empty()&&favorite&&shown&&submitted&&(edges&INPUT_GAMEPAD_A)){
                 favorite();epgSecond=-1;refreshEpg();hud.Reveal(wall());changed=true;
             }

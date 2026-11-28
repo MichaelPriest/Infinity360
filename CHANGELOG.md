@@ -1,5 +1,11 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.79 — Navegação, MPEG e HTTPS
+
+- D-pad e analógico esquerdo unificados no presenter XSDK; repetição direcional, zona morta, prioridade digital e eixo dominante. Players recebem a mesma entrada. Ações não repetem.
+- FFmpeg passa a aceitar MPEG-PS (.mpg/.mpeg/.ps), MPEG-1 e MPEG-4 Part 2, além dos formatos anteriores. Nova configuração de compilação; validação XEX e hardware pendentes.
+- Gate de empacotamento para cacert.pem e marcador HTTPS, diagnóstico específico de DNS/CA/handshake; validação TLS mantida. Nenhuma alteração do kernel.
+
 ## V0.3.78 — Gerenciador de pastas de jogos
 
 - Seletor dedicado e somente leitura, sem sair da configuração; LB/RB troca dispositivo, A abre subpasta, X adiciona a atual.

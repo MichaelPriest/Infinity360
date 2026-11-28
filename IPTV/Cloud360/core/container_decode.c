@@ -115,9 +115,9 @@ void cloud_container_close(CloudContainerSession* s){
     if(s->input.file)fclose(s->input.file);
     free(s);
 }
-static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended,int mp4,CloudContainerSeek seek,int64_t length){
+static CloudContainerSession* open_session(const char* path,CloudContainerRead read,void* reader,CloudContainerFrame output,void* user,int extended,int format,CloudContainerSeek seek,int64_t length){
     if(!read&&(!path||strstr(path,"://")))return NULL;
-    if(seek&&(!read||!mp4||length<=0||length>8LL*1024*1024*1024))return NULL;
+    if(seek&&(!read||format!=1||length<=0||length>8LL*1024*1024*1024))return NULL;
     CloudContainerSession* s=calloc(1,sizeof *s);if(!s)return NULL;
     const int64_t max_bytes=extended?ExtendedBytes:MAX_BYTES;
     s->input.budget=max_bytes*4;
@@ -136,16 +136,16 @@ static CloudContainerSession* open_session(const char* path,CloudContainerRead r
     s->fmt=avformat_alloc_context();if(!s->fmt)goto fail;
     s->fmt->pb=s->io;s->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;s->fmt->io_open=deny_open;
     s->fmt->probesize=256*1024;s->fmt->max_analyze_duration=2000000;s->fmt->max_streams=8;
-    av_dict_set(&options,"format_whitelist",read?(mp4?"mov,mp4,m4a,3gp,3g2,mj2":"mpegts"):"mov,mp4,m4a,3gp,3g2,mj2,mpegts",0);
+    av_dict_set(&options,"format_whitelist",read?(format==1?"mov,mp4,m4a,3gp,3g2,mj2":format==2?"mpeg":"mpegts"):"mov,mp4,m4a,3gp,3g2,mj2,mpegts,mpeg",0);
     av_dict_set(&options,"protocol_whitelist","file",0);
-    const AVInputFormat* forced=read?av_find_input_format(mp4?"mov":"mpegts"):NULL;
+    const AVInputFormat* forced=read?av_find_input_format(format==1?"mov":format==2?"mpeg":"mpegts"):NULL;
     if((read&&!forced)||avformat_open_input(&s->fmt,NULL,forced,&options)<0||avformat_find_stream_info(s->fmt,NULL)<0||s->input.failed)goto fail;
     s->vi=av_find_best_stream(s->fmt,AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0);
     s->ai=av_find_best_stream(s->fmt,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
     if(s->vi<0||s->ai<0)goto fail;
     const enum AVCodecID video_id=s->fmt->streams[s->vi]->codecpar->codec_id;
     const enum AVCodecID audio_id=s->fmt->streams[s->ai]->codecpar->codec_id;
-    if(video_id!=AV_CODEC_ID_H264&&video_id!=AV_CODEC_ID_MPEG2VIDEO)goto fail;
+    if(video_id!=AV_CODEC_ID_H264&&video_id!=AV_CODEC_ID_MPEG2VIDEO&&video_id!=AV_CODEC_ID_MPEG1VIDEO&&video_id!=AV_CODEC_ID_MPEG4)goto fail;
     if(audio_id!=AV_CODEC_ID_AAC&&audio_id!=AV_CODEC_ID_MP2&&audio_id!=AV_CODEC_ID_MP3&&audio_id!=AV_CODEC_ID_AC3&&audio_id!=AV_CODEC_ID_EAC3)goto fail;
     s->video=open_codec(s->fmt->streams[s->vi],video_id);
     s->audio=open_codec(s->fmt->streams[s->ai],audio_id);
@@ -159,6 +159,7 @@ fail:
 }
 CloudContainerSession* cloud_container_open(const char* path,CloudContainerFrame output,void* user,int extended){return open_session(path,NULL,NULL,output,user,extended,0,NULL,0);}
 CloudContainerSession* cloud_container_open_ts(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,0,NULL,0):NULL;}
+CloudContainerSession* cloud_container_open_ps(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,2,NULL,0):NULL;}
 CloudContainerSession* cloud_container_open_mp4(CloudContainerRead read,void* reader,CloudContainerFrame output,void* user){return read?open_session(NULL,read,reader,output,user,1,1,NULL,0):NULL;}
 CloudContainerSession* cloud_container_open_mp4_seekable(CloudContainerRead read,CloudContainerSeek seek,int64_t length,void* reader,CloudContainerFrame output,void* user){return read&&seek?open_session(NULL,read,reader,output,user,1,1,seek,length):NULL;}
 const CloudContainerReport* cloud_container_report(const CloudContainerSession* s){return s?&s->report:NULL;}
