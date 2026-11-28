@@ -1,5 +1,10 @@
 # Histórico de versões — INFINITY 360
 
+## V0.3.80 — Diagnóstico HTTPS e referência Series360
+
+- Sistema > Rede mostra presença da compilação HTTPS, backend TLS e certificado CA. Não equivale a teste de conexão.
+- Análise estática da Series360 0.12.79: importações XAM/kernel, XDK, Guide separado, fontes HD. Sem copiar binários ou substituir firmware.
+
 ## V0.3.79 — Navegação, MPEG e HTTPS
 
 - D-pad e analógico esquerdo unificados no presenter XSDK; repetição direcional, zona morta, prioridade digital e eixo dominante. Players recebem a mesma entrada. Ações não repetem.

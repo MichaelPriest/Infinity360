@@ -10,6 +10,7 @@
 #include "StorageInfo.h"
 #include "TransferRate.h"
 #include "NetworkInfo.h"
+#include "HttpsStatus.h"
 #include "LanPeerProbe.h"
 #include "LanPeerConfig.h"
 #include "SmbProbe.h"
@@ -310,6 +311,7 @@ private:
     bool settingsReturnSystem_=false,settingsChild_=false;
     void ReturnToSettings();
     NetworkSnapshot network_;
+    InfinityHttps::Status httpsStatus_;
     LanPeerProbe peerProbe_;
     bool networkPeer_=false,peerEditing_=false,peerOptions_=false;
     unsigned peerMode_=0,peerDuration_=0;

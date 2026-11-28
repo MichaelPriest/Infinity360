@@ -2,7 +2,7 @@
 
 ![INFINITY 360](Platform/Xbox360/Assets/infinity-header.png)
 
-**Dashboard open-source para Xbox 360 · V0.3.79 Alpha (código-fonte)**
+**Dashboard open-source para Xbox 360 · V0.3.80 Alpha (código-fonte)**
 
 **Controle:** L3 abre o Guide; BACK abre as opções da tela (A seleciona, B fecha); R3 sozinho não executa ações. L3+R3 captura tela no presenter XSDK. Durante IPTV XSDK, START fixa o HUD e L3 abre o Guide de consulta; outras funções exigem sair da reprodução.
 
@@ -107,3 +107,5 @@ Console desconectado; sem dados ou credenciais reais. Não representa homologaç
 O Remote inclui gerenciador FTP bidirecional em Sistema. [Configuração e limites](Android/README.md#ftp-bidirecional). O servidor do Xbox permanece manual, restrito a `UserFiles` ou `Infinity360Files` de HDD/USB previamente preparado. Upload padrão de 32 MiB, opcional de até 512 MiB. Suporte a lotes e pastas, renomeação e retomada de download individual durante a sessão. FTP e HTTP de controle não são criptografados; use apenas LAN confiável.
 
 [Compatibilidade MPEG e HTTPS nativos](Platform/Xbox360/docs/MPEG-HTTPS-NATIVE.md)
+
+[Análise técnica Series360 0.12.79](Platform/Xbox360/docs/SERIES360-01279-INSPECTION.md)

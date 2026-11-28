@@ -1095,7 +1095,7 @@ void ConsoleHome::ToggleFtp(bool allowUpload) {
 #endif
 }
 void ConsoleHome::RefreshNetwork() {
-    network_=NetworkInfo::Read();
+    network_=NetworkInfo::Read();httpsStatus_=InfinityHttps::Status::Read(dir_);
 }
 void ConsoleHome::Enter(Section s) {
     section_=s; page_=Listing; row_=0; subtab_=0; systemTab_=0;gridFilter_=false;settingsChild_=false;
@@ -4232,7 +4232,9 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
         c.TextFit(65,295,c.Tr(NetworkInfo::StateLabel(network_.state)),21,Muted,510);
         c.TextFit(65,348,network_.ethernetKnown?(network_.ethernetActive?"Ethernet: ativo":"Ethernet: sem link"):"Ethernet: leitura indisponivel",21,White,510);
         if(network_.linkMbps)c.TextFit(65,385,number(network_.linkMbps)+" Mbps | "+network_.duplex,18,Muted,510);
-        c.TextFit(65,466,"Internet e Xbox Live: nao testados",19,Muted,510);
+        c.TextFit(65,424,httpsStatus_.Label(),20,httpsStatus_.compiled&&httpsStatus_.ssl&&httpsStatus_.https&&httpsStatus_.ca?Lime:Muted,510);
+        if(!httpsStatus_.backend.empty())c.TextFit(65,455,httpsStatus_.backend+std::string(httpsStatus_.store?" | Loja ativa":" | Loja bloqueada"),16,Muted,510);
+        c.TextFit(65,500,"Internet e Xbox Live: nao testados",18,Muted,510);
         c.SeriesTile(608,183,626,377,false,200);
         const int yy[]={197,293,389};
         const char* labels[]={"Servidor FTP","Diagnostico UDP / System Link","SMB experimental"};
@@ -4257,7 +4259,8 @@ void ConsoleHome::DrawNetwork(HomeCanvas& c) const {
     c.Text(660,404,c.Tr("Servicos de rede"),25,White,558);
     c.Text(660,447,ftp_.Running()?(ftp_.Connected()?std::string(c.Tr("FTP: cliente conectado")):std::string(c.Tr("FTP: aguardando cliente"))):std::string(c.Tr("FTP: desligado")),21,ftp_.Running()?Lime:Muted,558);
     c.Text(660,486,ftp_.Running()?std::string(c.Tr("Porta "))+number(ftp_.Port())+" | "+(ftp_.UploadEnabled()?std::string(c.Tr("Leitura/upload")):std::string(c.Tr("Somente leitura"))):std::string("BACK Destino: ")+StoreStorage::Label(FtpRootId()),20,Muted,558);
-    c.Text(660,534,std::string(c.Tr("Internet e Xbox Live: nao testados")),19,Muted,558);
+    c.TextFit(660,530,httpsStatus_.Label(),19,Muted,558);
+    c.TextFit(660,553,"Conexao HTTPS nao testada",15,Muted,558);
     InfinityButtons::Strip(c,45,607,std::string(c.Tr("A Leitura | X Upload | A/X Parar | LB/RB UDP | START SMB | Y Atualizar | B Voltar")),18,Muted,1180);
 }
 void ConsoleHome::DrawEvents(HomeCanvas& c) const {
